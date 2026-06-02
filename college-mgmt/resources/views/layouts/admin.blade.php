@@ -87,6 +87,12 @@
         <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif">
             <i class="bi bi-file-earmark-text"></i> Exams & Results
         </a>
+        <a href="{{ route('admin.enrollments.index') }}" class="nav-link @if(request()->routeIs('admin.enrollments.*')) active @endif">
+            <i class="bi bi-person-check"></i> Enrollments
+        </a>
+        <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif">
+            <i class="bi bi-award"></i> Grade Reports
+        </a>
         <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif">
             <i class="bi bi-cash-coin"></i> Fees
         </a>

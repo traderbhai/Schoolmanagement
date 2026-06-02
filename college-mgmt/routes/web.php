@@ -47,6 +47,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('exams/{exam}/results',  [Admin\ExamController::class, 'enterResults'])->name('exams.results');
     Route::post('exams/{exam}/results', [Admin\ExamController::class, 'saveResults'])->name('exams.results.save');
 
+    // Enrollments
+    Route::resource('enrollments', Admin\EnrollmentController::class)->except(['show','edit','update']);
+    Route::post('enrollments/bulk', [Admin\EnrollmentController::class, 'bulkEnroll'])->name('enrollments.bulk');
+
+    // Results / Grade Report
+    Route::get('results', [Admin\ResultController::class, 'index'])->name('results.index');
+
     // Fees
     Route::resource('fees', Admin\FeeController::class);
     Route::get('fees-collect',   [Admin\FeeController::class, 'collectPayment'])->name('fees.collect');
