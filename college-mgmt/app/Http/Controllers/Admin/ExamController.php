@@ -74,12 +74,12 @@ class ExamController extends Controller
     public function saveResults(Request $request, Exam $exam) {
         $request->validate(['results' => 'required|array']);
         foreach ($request->results as $studentId => $result) {
-            ExamResult::updateOrCreate(
+            $isAbsent = !empty($result['is_absent']);
+            \App\Models\ExamResult::updateOrCreate(
                 ['exam_id' => $exam->id, 'student_id' => $studentId],
                 [
-                    'marks_obtained' => $result['is_absent'] ?? false ? null : ($result['marks'] ?? null),
-                    'grade'          => $result['grade'] ?? null,
-                    'is_absent'      => $result['is_absent'] ?? false,
+                    'marks_obtained' => $isAbsent ? null : ($result['marks_obtained'] ?? null),
+                    'is_absent'      => $isAbsent,
                     'remarks'        => $result['remarks'] ?? null,
                 ]
             );

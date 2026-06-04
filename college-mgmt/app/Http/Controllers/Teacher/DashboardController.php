@@ -9,7 +9,8 @@ class DashboardController extends Controller
     public function __construct(private TimetableService $service) {}
 
     public function index() {
-        $teacher = auth()->user()->teacher;
+        $user = auth()->user()->load('teacher.department');
+        $teacher = $user->teacher;
         if (!$teacher) return redirect()->route('login');
 
         $currentSemester = Semester::current();

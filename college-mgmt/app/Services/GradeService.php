@@ -102,7 +102,9 @@ class GradeService
 
     public function calculateCGPA(int $studentId): float
     {
-        $semesters = Semester::all();
+        $semesters = \App\Models\Semester::whereHas('enrollments', function ($q) use ($studentId) {
+            $q->where('student_id', $studentId);
+        })->get();
         $totalPoints  = 0.0;
         $totalCredits = 0;
 

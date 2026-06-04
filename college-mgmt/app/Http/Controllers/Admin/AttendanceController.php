@@ -7,9 +7,34 @@ use Illuminate\Http\Request;
 class AttendanceController extends Controller
 {
     public function index(Request $request) {
-        $semesters = Semester::with('academicYear')->get();
-        $courses = Course::where('is_active',true)->get();
-        return view('admin.attendance.index', compact('semesters','courses'));
+        $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
+        $courses   = Course::where('is_active', true)->orderBy('name')->get();
+        $students  = Student::with('user')->orderBy('id')->get();
+        return view('admin.attendance.index', compact('semesters', 'courses', 'students'));
+    }
+
+    public function entriesJson(Request $request)
+    {
+        $request->validate([
+            'semester_id' => 'required|exists:semesters,id',
+            'course_id'   => 'required|exists:courses,id',
+            'date'        => 'required|date',
+        ]);
+
+        $dayOfWeek = (int) date('N', strtotime($request->date)); // 1=Mon, 7=Sun
+
+        $entries = \App\Models\TimetableEntry::with(['subject', 'slot', 'classroom'])
+            ->where('semester_id', $request->semester_id)
+            ->where('course_id', $request->course_id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->get()
+            ->map(fn($e) => [
+                'id'    => $e->id,
+                'label' => $e->subject->name . ' — ' . $e->slot->name . ' (' . $e->slot->start_time . '-' . $e->slot->end_time . ') · ' . $e->classroom->room_number,
+            ]);
+
+        return response()->json($entries);
     }
 
     public function mark(Request $request) {

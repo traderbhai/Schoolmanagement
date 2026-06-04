@@ -38,6 +38,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     // Attendance
     Route::get('attendance',        [Admin\AttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('attendance/entries', [Admin\AttendanceController::class, 'entriesJson'])->name('attendance.entries');
     Route::get('attendance/mark',   [Admin\AttendanceController::class, 'mark'])->name('attendance.mark');
     Route::post('attendance/store', [Admin\AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('attendance/report', [Admin\AttendanceController::class, 'report'])->name('attendance.report');
