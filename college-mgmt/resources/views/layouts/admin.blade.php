@@ -162,10 +162,10 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>{{ auth()->user()->name }}</span>
+            <span class="text-muted small d-none d-md-inline"><i class="bi bi-person-circle me-1"></i>{{ auth()->user()->name }}</span>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right"></i> Logout</button>
+                <button class="btn btn-sm btn-outline-secondary" aria-label="Logout"><i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Logout</span></button>
             </form>
         </div>
     </div>
@@ -174,14 +174,14 @@
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
         @if($errors->any())
             <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 @foreach($errors->all() as $error) <div>{{ $error }}</div> @endforeach
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 

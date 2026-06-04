@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendWelcomeEmail;
 use App\Models\{Student, User, Department, Course};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -54,11 +55,14 @@ class StudentController extends Controller
         ]);
         $user->assignRole('student');
 
-        Student::create([...$request->only([
+        $student = Student::create([...$request->only([
             'department_id','course_id','enrollment_number','roll_number',
             'date_of_birth','gender','phone','address','guardian_name',
             'guardian_phone','admission_date','current_semester',
         ]), 'user_id' => $user->id]);
+
+        $student->load('user');
+        SendWelcomeEmail::dispatch($student);
 
         return redirect()->route('admin.students.index')->with('success', 'Student registered successfully.');
     }

@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendFeeReceiptEmail;
 use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear};
 use Illuminate\Http\Request;
 
@@ -69,7 +70,8 @@ class FeeController extends Controller
             'remarks'          => 'nullable|string',
         ]);
         $data['receipt_number'] = 'RCP-' . strtoupper(uniqid());
-        FeePayment::create($data);
+        $payment = FeePayment::create($data);
+        SendFeeReceiptEmail::dispatch($payment);
         return redirect()->route('admin.fees.index')->with('success', 'Payment recorded. Receipt: ' . $data['receipt_number']);
     }
 }

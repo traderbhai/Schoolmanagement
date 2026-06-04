@@ -16,6 +16,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Compatibility alias so Breeze tests and legacy redirects still work
+Route::get('/dashboard', function () {
+    $user = auth()->user();
+    if ($user?->hasRole('admin'))   return redirect()->route('admin.dashboard');
+    if ($user?->hasRole('teacher')) return redirect()->route('teacher.dashboard');
+    return redirect()->route('student.dashboard');
+})->middleware(['auth'])->name('dashboard');
+
 // ── Admin routes ────────────────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
