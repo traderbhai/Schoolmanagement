@@ -65,7 +65,7 @@ class StudentController extends Controller
 
     public function show(Student $student)
     {
-        $student->load(['user','department','course','enrollments.subject','feePayments.feeStructure','examResults.exam.subject']);
+        $student->load(['user', 'department', 'course', 'enrollments.subject', 'examResults.exam', 'feePayments.feeStructure']);
         return view('admin.students.show', compact('student'));
     }
 

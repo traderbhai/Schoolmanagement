@@ -78,4 +78,36 @@
         </div>
     </div>
 </div>
+
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-cash-coin me-2 text-success"></i>Fee Payment History</span>
+        <a href="{{ route('admin.fees.collect') }}?student_id={{ $student->id }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-plus-circle me-1"></i>Collect Payment
+        </a>
+    </div>
+    <div class="card-body p-0">
+        @if($student->feePayments->count())
+        <table class="table table-sm mb-0">
+            <thead><tr>
+                <th>Receipt #</th><th>Fee Type</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+            @foreach($student->feePayments()->with('feeStructure')->latest('payment_date')->get() as $payment)
+            <tr>
+                <td class="small">{{ $payment->receipt_number ?? '—' }}</td>
+                <td class="small">{{ optional($payment->feeStructure)->fee_type ?? '—' }}</td>
+                <td class="small fw-semibold">₹{{ number_format($payment->amount_paid) }}</td>
+                <td class="small">{{ \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') }}</td>
+                <td class="small text-capitalize">{{ $payment->payment_method }}</td>
+                <td><span class="badge bg-{{ $payment->status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($payment->status) }}</span></td>
+            </tr>
+            @endforeach
+            </tbody>
+        </table>
+        @else
+        <div class="text-center text-muted py-3 small">No payment records found.</div>
+        @endif
+    </div>
+</div>
 @endsection

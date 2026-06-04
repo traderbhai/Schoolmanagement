@@ -3,11 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\{User, Department, Course, Subject, Classroom, AcademicYear, Semester,
-    Teacher, Student, TimetableSlot, TimetableEntry, Notice};
+    Teacher, Student, TimetableSlot, TimetableEntry, Notice,
+    Enrollment, FeeStructure, FeePayment, Exam, ExamResult, Attendance};
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
@@ -151,23 +151,7 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Sample student
-        $studentUser = User::firstOrCreate(['email' => 'student@college.com'], [
-            'name'     => 'John Student',
-            'password' => Hash::make('password'),
-        ]);
-        $studentUser->assignRole('student');
-        Student::firstOrCreate(['enrollment_number' => 'ENR2025001'], [
-            'user_id'           => $studentUser->id,
-            'department_id'     => $departments['CS']->id,
-            'course_id'         => $courses['BTCS']->id,
-            'enrollment_number' => 'ENR2025001',
-            'roll_number'       => 'CS-5-01',
-            'current_semester'  => 5,
-            'admission_date'    => '2022-08-01',
-        ]);
-
-        // Sample timetable entries (no conflicts guaranteed by unique slots)
+        // Timetable entries
         $ttDefs = [
             ['course' => 'BTCS', 'subject' => 'CS101', 'teacher' => 'TCH001', 'room' => 'LH-A', 'slot' => 1, 'day' => 1],
             ['course' => 'BTCS', 'subject' => 'CS102', 'teacher' => 'TCH001', 'room' => 'LH-A', 'slot' => 2, 'day' => 1],
@@ -177,8 +161,9 @@ class DatabaseSeeder extends Seeder
             ['course' => 'BTEC', 'subject' => 'EC101', 'teacher' => 'TCH003', 'room' => 'SR-1', 'slot' => 1, 'day' => 1],
             ['course' => 'BTEC', 'subject' => 'EC102', 'teacher' => 'TCH003', 'room' => 'SR-1', 'slot' => 2, 'day' => 2],
         ];
+        $timetableEntries = [];
         foreach ($ttDefs as $tt) {
-            TimetableEntry::firstOrCreate([
+            $timetableEntries[] = TimetableEntry::firstOrCreate([
                 'semester_id'       => $semester->id,
                 'course_id'         => $courses[$tt['course']]->id,
                 'subject_id'        => $subjects[$tt['subject']]->id,
@@ -200,9 +185,175 @@ class DatabaseSeeder extends Seeder
             'is_published' => true,
         ]);
 
+        // 10 Students
+        $studentDefs = [
+            ['name'=>'Aarav Sharma',  'email'=>'aarav@college.com',   'dept'=>'CS','course'=>'BTCS','sem'=>5,'enr'=>'ENR2025001','roll'=>'CS-5-01','year'=>'2022-08-01'],
+            ['name'=>'Priya Patel',   'email'=>'priya@college.com',   'dept'=>'CS','course'=>'BTCS','sem'=>5,'enr'=>'ENR2025002','roll'=>'CS-5-02','year'=>'2022-08-01'],
+            ['name'=>'Rohan Mehta',   'email'=>'rohan@college.com',   'dept'=>'CS','course'=>'BTCS','sem'=>3,'enr'=>'ENR2024001','roll'=>'CS-3-01','year'=>'2023-08-01'],
+            ['name'=>'Sneha Gupta',   'email'=>'sneha@college.com',   'dept'=>'CS','course'=>'BTCS','sem'=>1,'enr'=>'ENR2026001','roll'=>'CS-1-01','year'=>'2025-08-01'],
+            ['name'=>'Arjun Singh',   'email'=>'arjun.s@college.com', 'dept'=>'EC','course'=>'BTEC','sem'=>5,'enr'=>'ENR2025003','roll'=>'EC-5-01','year'=>'2022-08-01'],
+            ['name'=>'Divya Nair',    'email'=>'divya@college.com',   'dept'=>'EC','course'=>'BTEC','sem'=>5,'enr'=>'ENR2025004','roll'=>'EC-5-02','year'=>'2022-08-01'],
+            ['name'=>'Kiran Reddy',   'email'=>'kiran@college.com',   'dept'=>'ME','course'=>'BTME','sem'=>5,'enr'=>'ENR2025005','roll'=>'ME-5-01','year'=>'2022-08-01'],
+            ['name'=>'Meera Joshi',   'email'=>'meera@college.com',   'dept'=>'CS','course'=>'BTCS','sem'=>7,'enr'=>'ENR2023001','roll'=>'CS-7-01','year'=>'2021-08-01'],
+            ['name'=>'Vikram Das',    'email'=>'vikram@college.com',  'dept'=>'CS','course'=>'BTCS','sem'=>7,'enr'=>'ENR2023002','roll'=>'CS-7-02','year'=>'2021-08-01'],
+            ['name'=>'Neha Verma',    'email'=>'neha@college.com',    'dept'=>'ME','course'=>'BTME','sem'=>3,'enr'=>'ENR2024002','roll'=>'ME-3-01','year'=>'2023-08-01'],
+        ];
+
+        $students = [];
+        foreach ($studentDefs as $sd) {
+            $u = User::firstOrCreate(['email' => $sd['email']], [
+                'name'     => $sd['name'],
+                'password' => Hash::make('password'),
+            ]);
+            $u->assignRole('student');
+            $students[$sd['enr']] = Student::firstOrCreate(['enrollment_number' => $sd['enr']], [
+                'user_id'           => $u->id,
+                'department_id'     => $departments[$sd['dept']]->id,
+                'course_id'         => $courses[$sd['course']]->id,
+                'enrollment_number' => $sd['enr'],
+                'roll_number'       => $sd['roll'],
+                'current_semester'  => $sd['sem'],
+                'admission_date'    => $sd['year'],
+            ]);
+        }
+
+        // Enrollments
+        $enrollmentMap = [
+            'ENR2025001' => ['CS101','CS102','CS103','CS104','CS105'],
+            'ENR2025002' => ['CS101','CS102','CS103','CS104','CS105'],
+            'ENR2024001' => ['CS101','CS102','CS103'],
+            'ENR2026001' => ['CS101'],
+            'ENR2025003' => ['EC101','EC102'],
+            'ENR2025004' => ['EC101','EC102'],
+            'ENR2025005' => ['ME101','ME102'],
+            'ENR2023001' => ['CS102','CS103','CS105'],
+            'ENR2023002' => ['CS102','CS103','CS105'],
+            'ENR2024002' => ['CS101','CS102','CS103'],
+        ];
+
+        foreach ($enrollmentMap as $enr => $subjectCodes) {
+            $student = $students[$enr];
+            foreach ($subjectCodes as $code) {
+                Enrollment::firstOrCreate(
+                    ['student_id' => $student->id, 'subject_id' => $subjects[$code]->id, 'semester_id' => $semester->id],
+                    ['status' => 'active']
+                );
+            }
+        }
+
+        // Fee Structures
+        $feeStructDefs = [
+            ['course'=>'BTCS','type'=>'tuition','amount'=>85000,'description'=>'B.Tech CS Annual Tuition'],
+            ['course'=>'BTCS','type'=>'lab',    'amount'=>15000,'description'=>'CS Lab Fee'],
+            ['course'=>'BTEC','type'=>'tuition','amount'=>82000,'description'=>'B.Tech EC Annual Tuition'],
+            ['course'=>'BTME','type'=>'tuition','amount'=>80000,'description'=>'B.Tech ME Annual Tuition'],
+        ];
+        $feeStructures = [];
+        foreach ($feeStructDefs as $fs) {
+            $feeStructures[$fs['course'].'_'.$fs['type']] = FeeStructure::firstOrCreate(
+                ['course_id' => $courses[$fs['course']]->id, 'academic_year_id' => $year->id, 'fee_type' => $fs['type']],
+                ['amount' => $fs['amount'], 'description' => $fs['description']]
+            );
+        }
+
+        // Fee Payments (skip Sneha ENR2026001 and Neha ENR2024002)
+        $tuitionMap = [
+            'BTCS' => $feeStructures['BTCS_tuition'],
+            'BTEC' => $feeStructures['BTEC_tuition'],
+            'BTME' => $feeStructures['BTME_tuition'],
+        ];
+        $skipPayment = ['ENR2026001', 'ENR2024002'];
+        $i = 1;
+        foreach ($studentDefs as $sd) {
+            if (!in_array($sd['enr'], $skipPayment)) {
+                $student   = $students[$sd['enr']];
+                $feeStruct = $tuitionMap[$sd['course']];
+                FeePayment::firstOrCreate(
+                    ['student_id' => $student->id, 'fee_structure_id' => $feeStruct->id, 'receipt_number' => 'RCP' . str_pad($i, 5, '0', STR_PAD_LEFT)],
+                    [
+                        'amount_paid'    => $feeStruct->amount,
+                        'payment_date'   => '2025-08-15',
+                        'payment_method' => 'online',
+                        'status'         => 'paid',
+                    ]
+                );
+            }
+            $i++;
+        }
+
+        // Exams
+        $examDefs = [
+            ['name'=>'Internal Assessment 1','subject'=>'CS101','type'=>'internal','date'=>'2025-09-15','max_marks'=>30],
+            ['name'=>'Internal Assessment 1','subject'=>'CS102','type'=>'internal','date'=>'2025-09-16','max_marks'=>30],
+            ['name'=>'Internal Assessment 1','subject'=>'CS103','type'=>'internal','date'=>'2025-09-17','max_marks'=>30],
+            ['name'=>'Midterm Exam',          'subject'=>'CS101','type'=>'midterm', 'date'=>'2025-10-15','max_marks'=>50],
+            ['name'=>'Midterm Exam',          'subject'=>'CS102','type'=>'midterm', 'date'=>'2025-10-16','max_marks'=>50],
+        ];
+        $exams = [];
+        foreach ($examDefs as $ed) {
+            $exams[] = Exam::firstOrCreate(
+                ['name' => $ed['name'], 'subject_id' => $subjects[$ed['subject']]->id],
+                [
+                    'semester_id'   => $semester->id,
+                    'type'          => $ed['type'],
+                    'exam_date'     => $ed['date'],
+                    'total_marks'   => $ed['max_marks'],
+                    'passing_marks' => (int) round($ed['max_marks'] * 0.4),
+                ]
+            );
+        }
+
+        // Exam Results for Aarav and Priya
+        $aarav      = $students['ENR2025001'];
+        $priya      = $students['ENR2025002'];
+        $aaravMarks = [25, 27, 22, 42, 44];
+        $priyaMarks = [20, 18, 24, 35, 38];
+
+        foreach ($exams as $idx => $exam) {
+            ExamResult::firstOrCreate(
+                ['exam_id' => $exam->id, 'student_id' => $aarav->id],
+                ['marks_obtained' => $aaravMarks[$idx], 'is_absent' => false]
+            );
+            ExamResult::firstOrCreate(
+                ['exam_id' => $exam->id, 'student_id' => $priya->id],
+                ['marks_obtained' => $priyaMarks[$idx], 'is_absent' => false]
+            );
+        }
+
+        // Attendance (3 weeks for timetable entries)
+        // day_of_week: 1=Mon, 2=Tue, 3=Wed
+        $attendanceDates = [
+            1 => ['2025-09-01', '2025-09-08', '2025-09-15'],
+            2 => ['2025-09-02', '2025-09-09', '2025-09-16'],
+            3 => ['2025-09-03', '2025-09-10', '2025-09-17'],
+        ];
+
+        $counter = 0;
+        foreach ($timetableEntries as $entry) {
+            $dayDates         = $attendanceDates[$entry->day_of_week] ?? [];
+            $enrolledStudents = Student::where('course_id', $entry->course_id)->get();
+
+            foreach ($enrolledStudents as $student) {
+                foreach ($dayDates as $date) {
+                    if ($counter % 10 === 0) {
+                        $status = 'absent';
+                    } elseif ($counter % 20 === 0) {
+                        $status = 'late';
+                    } else {
+                        $status = 'present';
+                    }
+                    Attendance::firstOrCreate(
+                        ['student_id' => $student->id, 'timetable_entry_id' => $entry->id, 'date' => $date],
+                        ['status' => $status]
+                    );
+                    $counter++;
+                }
+            }
+        }
+
         $this->command->info('College Management System seeded successfully!');
         $this->command->info('Admin: admin@college.com / password');
         $this->command->info('Teacher: ravi@college.com / password');
-        $this->command->info('Student: student@college.com / password');
+        $this->command->info('Students: aarav@college.com, priya@college.com, rohan@college.com, ... / password');
     }
 }
