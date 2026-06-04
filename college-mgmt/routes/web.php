@@ -64,6 +64,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 // ── Teacher routes ──────────────────────────────────────────────────────────
 Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|admin'])->group(function () {
     Route::get('dashboard', [Teacher\DashboardController::class, 'index'])->name('dashboard');
+
+    // Attendance
+    Route::get('attendance/mark',    [Teacher\AttendanceController::class, 'mark'])->name('attendance.mark');
+    Route::post('attendance/store',  [Teacher\AttendanceController::class, 'store'])->name('attendance.store');
+
+    // Exams & Results
+    Route::get('exams',                    [Teacher\ExamController::class, 'index'])->name('exams.index');
+    Route::get('exams/{exam}/results',     [Teacher\ExamController::class, 'enterResults'])->name('exams.results');
+    Route::post('exams/{exam}/results',    [Teacher\ExamController::class, 'saveResults'])->name('exams.results.save');
+
+    // Students
+    Route::get('students', [Teacher\StudentController::class, 'index'])->name('students.index');
 });
 
 // ── Student routes ──────────────────────────────────────────────────────────
