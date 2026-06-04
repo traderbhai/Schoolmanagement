@@ -53,13 +53,18 @@
         </a>
 
         <div class="section-label">Fees</div>
-        <a href="#" class="nav-link">
+        <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif">
             <i class="bi bi-cash-coin"></i> Fee Status
         </a>
 
         <div class="section-label">Info</div>
         <a href="#" class="nav-link">
             <i class="bi bi-megaphone"></i> Notices
+        </a>
+
+        <div class="section-label">Account</div>
+        <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
+            <i class="bi bi-person-circle"></i> My Profile
         </a>
     </div>
 </div>
