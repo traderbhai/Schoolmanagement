@@ -59,6 +59,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('fees', Admin\FeeController::class);
     Route::get('fees-collect',   [Admin\FeeController::class, 'collectPayment'])->name('fees.collect');
     Route::post('fees-payment',  [Admin\FeeController::class, 'storePayment'])->name('fees.payment');
+
+    // PDF downloads
+    Route::get('reports/grade-card/{student}/{semester}', [Admin\ReportController::class, 'gradeCard'])->name('reports.grade-card');
+    Route::get('reports/fee-receipt/{payment}',           [Admin\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
+    Route::get('reports/timetable/{semester}',            [Admin\ReportController::class, 'timetable'])->name('reports.timetable');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
@@ -86,6 +91,10 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('fees',       [Student\FeeController::class, 'index'])->name('fees');
     Route::get('profile',    [Student\ProfileController::class, 'index'])->name('profile');
     Route::patch('profile',  [Student\ProfileController::class, 'update'])->name('profile.update');
+
+    // PDF self-download
+    Route::get('reports/grade-card/{semester}', [Student\ReportController::class, 'gradeCard'])->name('reports.grade-card');
+    Route::get('reports/fee-receipt/{payment}', [Student\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

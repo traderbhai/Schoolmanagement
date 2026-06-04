@@ -16,6 +16,15 @@
         .sidebar .section-label { font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:#475569; padding:.8rem 1.4rem .2rem; }
         .main-content { margin-left:260px; }
         .topbar { background:#fff; border-bottom:1px solid #e2e8f0; padding:.75rem 1.75rem; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+        @media(max-width:991.98px){
+            .sidebar-desktop{display:none!important;}
+            .main-content{margin-left:0;}
+            .offcanvas-body .brand{padding:1rem 1.2rem;background:#0f172a;color:#f8fafc;font-weight:700;font-size:1rem;display:flex;align-items:center;gap:.6rem;margin:-1rem -1rem .5rem;}
+            .offcanvas-body .nav-link{color:var(--sidebar-text);padding:.42rem 1rem;font-size:.84rem;border-radius:6px;margin:1px 4px;display:flex;align-items:center;gap:.5rem;}
+            .offcanvas-body .nav-link:hover,.offcanvas-body .nav-link.active{background:var(--sidebar-active);color:#f1f5f9;}
+            .offcanvas-body .section-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;padding:.6rem 1rem .1rem;}
+        }
+        @media(min-width:992px){.sidebar-mobile{display:none!important;}}
         .page-body { padding:1.5rem 1.75rem; }
         .card { border:none; box-shadow:0 1px 4px rgba(0,0,0,.07); border-radius:10px; }
         .card-header { background:#fff; border-bottom:1px solid #f1f5f9; font-weight:600; padding:.8rem 1.2rem; }
@@ -33,7 +42,7 @@
 </head>
 <body>
 
-<div class="sidebar">
+<div class="sidebar sidebar-desktop">
     <div class="brand"><i class="bi bi-mortarboard-fill"></i> CollegeMS</div>
     <div class="mt-1 pb-4">
         <div class="section-label">Main</div>
@@ -102,9 +111,46 @@
     </div>
 </div>
 
+{{-- Mobile offcanvas sidebar --}}
+<div class="offcanvas offcanvas-start sidebar-mobile" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="background:var(--sidebar-bg);width:270px">
+    <div class="offcanvas-header border-bottom border-secondary py-2">
+        <span class="text-white fw-bold" id="mobileSidebarLabel"><i class="bi bi-mortarboard-fill me-2"></i>CollegeMS Admin</span>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0 pb-4">
+        <div class="section-label">Main</div>
+        <a href="{{ route('admin.dashboard') }}" class="nav-link @if(request()->routeIs('admin.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <div class="section-label">Academic Setup</div>
+        <a href="{{ route('admin.academic-years.index') }}" class="nav-link @if(request()->routeIs('admin.academic-years.*')) active @endif"><i class="bi bi-calendar3"></i> Academic Years</a>
+        <a href="{{ route('admin.semesters.index') }}" class="nav-link @if(request()->routeIs('admin.semesters.*')) active @endif"><i class="bi bi-calendar-range"></i> Semesters</a>
+        <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif"><i class="bi bi-building"></i> Departments</a>
+        <a href="{{ route('admin.courses.index') }}" class="nav-link @if(request()->routeIs('admin.courses.*')) active @endif"><i class="bi bi-journal-bookmark"></i> Courses</a>
+        <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif"><i class="bi bi-book"></i> Subjects</a>
+        <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif"><i class="bi bi-door-open"></i> Classrooms</a>
+        <div class="section-label">Timetable</div>
+        <a href="{{ route('admin.timetable-slots.index') }}" class="nav-link @if(request()->routeIs('admin.timetable-slots.*')) active @endif"><i class="bi bi-clock"></i> Time Slots</a>
+        <a href="{{ route('admin.timetable.index') }}" class="nav-link @if(request()->routeIs('admin.timetable.index')||request()->routeIs('admin.timetable.create')||request()->routeIs('admin.timetable.edit')) active @endif"><i class="bi bi-grid-3x3-gap"></i> Weekly Timetable</a>
+        <a href="{{ route('admin.timetable.teacher-view') }}" class="nav-link @if(request()->routeIs('admin.timetable.teacher-view')) active @endif"><i class="bi bi-person-lines-fill"></i> Teacher View</a>
+        <div class="section-label">People</div>
+        <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif"><i class="bi bi-person-badge"></i> Teachers</a>
+        <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
+        <div class="section-label">Academics</div>
+        <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
+        <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams &amp; Results</a>
+        <a href="{{ route('admin.enrollments.index') }}" class="nav-link @if(request()->routeIs('admin.enrollments.*')) active @endif"><i class="bi bi-person-check"></i> Enrollments</a>
+        <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif"><i class="bi bi-award"></i> Grade Reports</a>
+        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
+        <a href="{{ route('admin.notices.index') }}" class="nav-link @if(request()->routeIs('admin.notices.*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+    </div>
+</div>
+
 <div class="main-content">
     <div class="topbar">
-        <div>
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-sm btn-outline-secondary sidebar-mobile d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Open navigation menu">
+                <i class="bi bi-list fs-5"></i>
+            </button>
+            <div>
             <h6 class="mb-0 fw-semibold">@yield('page-title', 'Dashboard')</h6>
             @hasSection('breadcrumb')
             <nav aria-label="breadcrumb" class="mt-1">
@@ -113,6 +159,7 @@
                 </ol>
             </nav>
             @endif
+            </div>
         </div>
         <div class="d-flex align-items-center gap-3">
             <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>{{ auth()->user()->name }}</span>

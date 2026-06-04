@@ -126,6 +126,7 @@
                             <th>Date</th>
                             <th>Method</th>
                             <th>Status</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -145,6 +146,13 @@
                                         <span class="badge bg-warning text-dark">Pending</span>
                                     @else
                                         <span class="badge bg-secondary">{{ ucfirst($payment->status) }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($payment->status === 'paid')
+                                    <a href="{{ route('student.reports.fee-receipt', $payment->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.75rem" aria-label="Download receipt PDF">
+                                        <i class="bi bi-download me-1"></i>Receipt
+                                    </a>
                                     @endif
                                 </td>
                             </tr>

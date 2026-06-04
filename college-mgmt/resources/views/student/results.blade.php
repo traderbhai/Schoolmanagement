@@ -133,7 +133,14 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-table me-2 text-primary"></i>Subject-wise Results</span>
-        <span class="badge bg-secondary">{{ count($report['subjects']) }} subjects</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary">{{ count($report['subjects']) }} subjects</span>
+            @if($semesterId)
+            <a href="{{ route('student.reports.grade-card', $semesterId) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download grade card PDF">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Download Grade Card
+            </a>
+            @endif
+        </div>
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">

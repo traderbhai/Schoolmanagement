@@ -64,7 +64,12 @@
 </div>
 
 <div class="card">
-    <div class="card-header">Subject-wise Results — {{ $semester->name }}</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Subject-wise Results — {{ $semester->name }}</span>
+        <a href="{{ route('admin.reports.grade-card', [$student->id, $semester->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download grade card PDF">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Download Grade Card
+        </a>
+    </div>
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
             <thead>
