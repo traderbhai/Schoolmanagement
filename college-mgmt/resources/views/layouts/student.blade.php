@@ -45,26 +45,21 @@
         <a href="{{ route('student.dashboard') }}" class="nav-link @if(request()->routeIs('student.timetable')) active @endif">
             <i class="bi bi-grid-3x3-gap"></i> My Timetable
         </a>
-        <a href="#" class="nav-link">
+        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif">
             <i class="bi bi-check2-square"></i> My Attendance
         </a>
-        <a href="#" class="nav-link">
+        <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif">
             <i class="bi bi-award"></i> My Results
         </a>
 
         <div class="section-label">Fees</div>
-        <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif">
+        <a href="#" class="nav-link">
             <i class="bi bi-cash-coin"></i> Fee Status
         </a>
 
         <div class="section-label">Info</div>
         <a href="#" class="nav-link">
             <i class="bi bi-megaphone"></i> Notices
-        </a>
-
-        <div class="section-label">Account</div>
-        <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
-            <i class="bi bi-person-circle"></i> My Profile
         </a>
     </div>
 </div>

@@ -68,10 +68,9 @@ Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|ad
 
 // ── Student routes ──────────────────────────────────────────────────────────
 Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|admin'])->group(function () {
-    Route::get('dashboard', [Student\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('fees',      [Student\FeeController::class,     'index'])->name('fees');
-    Route::get('profile',   [Student\ProfileController::class, 'index'])->name('profile');
-    Route::patch('profile', [Student\ProfileController::class, 'update'])->name('profile.update');
+    Route::get('dashboard',  [Student\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('attendance', [Student\AttendanceController::class, 'index'])->name('attendance');
+    Route::get('results',    [Student\ResultController::class, 'index'])->name('results');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────
