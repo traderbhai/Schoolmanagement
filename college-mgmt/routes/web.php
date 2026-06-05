@@ -63,6 +63,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // Results / Grade Report
     Route::get('results', [Admin\ResultController::class, 'index'])->name('results.index');
 
+    // Admissions
+    Route::resource('admissions', Admin\AdmissionController::class);
+    Route::patch('admissions/{admission}/status', [Admin\AdmissionController::class, 'updateStatus'])->name('admissions.status');
+    Route::post('admissions/{admission}/convert', [Admin\AdmissionController::class, 'convertToStudent'])->name('admissions.convert');
+
     // Fees
     Route::resource('fees', Admin\FeeController::class);
     Route::get('fees-collect',   [Admin\FeeController::class, 'collectPayment'])->name('fees.collect');

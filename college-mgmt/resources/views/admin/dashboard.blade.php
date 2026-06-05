@@ -259,6 +259,18 @@
                             </div>
                         </a>
                     </div>
+                    <div class="col-sm-6">
+                        <a href="{{ route('admin.admissions.create') }}" class="card text-decoration-none quick-action-card">
+                            <div class="card-body d-flex align-items-center gap-3 py-3">
+                                <div class="kpi-icon kpi-cyan"><i class="bi bi-person-plus-fill"></i></div>
+                                <div>
+                                    <div class="fw-600 text-sm">Admission Enquiry</div>
+                                    <div class="text-xs text-muted">Add a new applicant</div>
+                                </div>
+                                <i class="bi bi-arrow-right ms-auto text-muted"></i>
+                            </div>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
