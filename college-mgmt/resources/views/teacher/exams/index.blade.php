@@ -7,22 +7,25 @@
 @endsection
 
 @section('content')
-<div class="card">
+
+<div class="card" style="box-shadow:var(--shadow-sm)">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-pencil-square me-2 text-primary"></i>Exams — Subjects You Teach</span>
-        <span class="text-muted small">{{ $exams->count() }} exam(s) found</span>
+        <span class="fw-semibold">
+            <i class="bi bi-pencil-square me-2 text-primary"></i>Exams — Subjects You Teach
+        </span>
+        <span class="badge bg-secondary">{{ $exams->count() }} exam(s)</span>
     </div>
     <div class="card-body p-0">
         @if($exams->isEmpty())
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-journal-x display-4 d-block mb-3"></i>
-                <h6>No exams found for your subjects.</h6>
-                <p class="small">Exams will appear here once the admin creates them for your subjects.</p>
-            </div>
+        <div class="empty-state py-5">
+            <div class="empty-icon"><i class="bi bi-journal-x" style="font-size:3rem;color:var(--clr-text-muted)"></i></div>
+            <h6 class="mt-3 text-muted">No Exams Found</h6>
+            <p class="text-muted small mb-0">Exams will appear here once the admin creates them for your subjects.</p>
+        </div>
         @else
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>#</th>
                         <th>Exam Name</th>
@@ -36,36 +39,42 @@
                 </thead>
                 <tbody>
                 @foreach($exams as $exam)
+                @php
+                    $hasResults = $exam->results->isNotEmpty();
+                    $typeBadge = match($exam->type) {
+                        'internal'   => 'bg-info text-dark',
+                        'external'   => 'bg-warning text-dark',
+                        'practical'  => 'bg-success',
+                        default      => 'bg-secondary'
+                    };
+                @endphp
                 <tr>
                     <td class="text-muted">{{ $loop->iteration }}</td>
                     <td class="fw-semibold">{{ $exam->name }}</td>
-                    <td>{{ $exam->subject->name ?? '—' }}</td>
                     <td>
-                        <span class="badge bg-{{ match($exam->type) {
-                            'internal' => 'info',
-                            'external' => 'warning',
-                            'practical' => 'success',
-                            default => 'secondary'
-                        } }} text-{{ in_array($exam->type,['internal','external','practical']) && $exam->type !== 'internal' ? 'dark' : 'white' }}">
-                            {{ ucfirst($exam->type) }}
-                        </span>
+                        <div style="font-size:.88rem">{{ $exam->subject->name ?? '—' }}</div>
                     </td>
-                    <td>{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : '—' }}</td>
+                    <td>
+                        <span class="badge {{ $typeBadge }}">{{ ucfirst($exam->type) }}</span>
+                    </td>
+                    <td class="small">{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : '—' }}</td>
                     <td>
                         <span class="fw-semibold">{{ $exam->total_marks }}</span>
-                        <span class="text-muted small">/ Pass: {{ $exam->passing_marks }}</span>
+                        <span class="text-muted small"> / Pass: {{ $exam->passing_marks }}</span>
                     </td>
-                    <td>{{ $exam->semester->name ?? '—' }}</td>
+                    <td class="small">{{ $exam->semester->name ?? '—' }}</td>
                     <td>
-                        @php $hasResults = $exam->results->isNotEmpty(); @endphp
-                        <div class="d-flex align-items-center gap-2">
-                            <a href="{{ route('teacher.exams.results', $exam) }}" class="btn btn-sm btn-{{ $hasResults ? 'outline-primary' : 'primary' }}">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <a href="{{ route('teacher.exams.results', $exam) }}"
+                               class="btn btn-sm {{ $hasResults ? 'btn-outline-primary' : 'btn-primary' }}">
                                 <i class="bi bi-pencil me-1"></i>{{ $hasResults ? 'Edit Results' : 'Enter Results' }}
                             </a>
                             @if($hasResults)
-                                <span class="badge bg-success">
+                                <span class="badge badge-active">
                                     <i class="bi bi-check-circle me-1"></i>{{ $exam->results->count() }} entered
                                 </span>
+                            @else
+                                <span class="badge badge-pending">Pending</span>
                             @endif
                         </div>
                     </td>
@@ -77,4 +86,5 @@
         @endif
     </div>
 </div>
+
 @endsection

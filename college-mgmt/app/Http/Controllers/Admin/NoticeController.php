@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendBulkNoticeEmail;
 use App\Models\Notice;
 use Illuminate\Http\Request;
 
@@ -29,7 +30,8 @@ class NoticeController extends Controller
             'is_published' => 'boolean',
         ]);
         $data['user_id'] = auth()->id();
-        Notice::create($data);
+        $notice = Notice::create($data);
+        SendBulkNoticeEmail::dispatch($notice);
         return redirect()->route('admin.notices.index')->with('success', 'Notice published.');
     }
 

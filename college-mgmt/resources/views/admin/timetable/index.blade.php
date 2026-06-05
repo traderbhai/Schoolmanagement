@@ -38,6 +38,12 @@
 
 @if($semesterId && count($grid))
 <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Weekly Timetable</span>
+        <a href="{{ route('admin.reports.timetable', $semesterId) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download timetable PDF">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+        </a>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-bordered timetable-grid mb-0">

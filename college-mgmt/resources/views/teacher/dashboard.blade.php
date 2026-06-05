@@ -2,27 +2,122 @@
 @section('title','Teacher Dashboard')
 @section('page-title','Teacher Dashboard')
 @section('content')
-<div class="row g-3 mb-3">
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">Name</div><div class="fw-bold">{{ $teacher->user->name }}</div><div class="text-muted small">{{ $teacher->designation }}</div></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">Employee ID</div><div class="fw-bold">{{ $teacher->employee_id }}</div></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">Weekly Load</div><div class="fw-bold">{{ $weeklyLoad }} periods/week</div></div></div></div>
+
+{{-- Teacher Info Banner --}}
+<div class="card border-0 mb-4 overflow-hidden" style="background:linear-gradient(135deg,#0d9488,#0284c7);min-height:110px">
+    <div class="card-body d-flex align-items-center justify-content-between py-4">
+        <div class="text-white">
+            <div class="opacity-75 small fw-semibold text-uppercase mb-1">
+                <i class="bi bi-person-workspace me-1"></i>Faculty Portal
+            </div>
+            <h3 class="fw-bold mb-1" style="font-size:1.5rem">{{ $teacher->user->name }}</h3>
+            <div class="d-flex gap-3 flex-wrap" style="font-size:.85rem">
+                <span class="opacity-85"><i class="bi bi-briefcase me-1 opacity-75"></i>{{ $teacher->designation }}</span>
+                <span class="opacity-85"><i class="bi bi-card-text me-1 opacity-75"></i>{{ $teacher->employee_id }}</span>
+                <span class="opacity-85"><i class="bi bi-clock me-1 opacity-75"></i>{{ $weeklyLoad }} periods/week</span>
+            </div>
+        </div>
+        <div class="d-none d-md-flex align-items-center justify-content-center rounded-circle"
+             style="width:90px;height:90px;background:rgba(255,255,255,.15);flex-shrink:0">
+            <i class="bi bi-person-workspace text-white" style="font-size:2.8rem"></i>
+        </div>
+    </div>
 </div>
-<div class="card">
-    <div class="card-header"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>My Weekly Schedule</div>
+
+{{-- KPI Cards --}}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="kpi-card kpi-cyan">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="kpi-label">Weekly Load</div>
+                    <div class="kpi-value">{{ $weeklyLoad }}<span style="font-size:1rem;opacity:.7"> periods</span></div>
+                    <div class="kpi-trend"><i class="bi bi-calendar-week me-1"></i>Per week</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card kpi-blue">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="kpi-label">My Classes Today</div>
+                    <div class="kpi-value">
+                        @php
+                            $todayDayNum = now()->dayOfWeek; // 0=Sun,1=Mon,...6=Sat
+                            $todayGrid = isset($grid[$todayDayNum]) ? count($grid[$todayDayNum]) : 0;
+                        @endphp
+                        {{ $todayGrid }}<span style="font-size:1rem;opacity:.7"> classes</span>
+                    </div>
+                    <div class="kpi-trend"><i class="bi bi-calendar-day me-1"></i>{{ now()->format('l') }}</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card kpi-amber">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="kpi-label">Mark Attendance</div>
+                    <div class="kpi-value" style="font-size:1.3rem">Today's Classes</div>
+                    <div class="kpi-trend">
+                        <a href="{{ route('teacher.attendance.mark') }}" class="text-white opacity-75 text-decoration-none" style="font-size:.78rem">
+                            <i class="bi bi-arrow-right-circle me-1"></i>Go mark now
+                        </a>
+                    </div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Weekly Schedule --}}
+<div class="card" style="box-shadow:var(--shadow-sm)">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-grid-3x3-gap text-primary"></i>
+        <span class="fw-semibold">My Weekly Schedule</span>
+    </div>
     <div class="card-body p-0">
         @if(count($grid))
         <div class="table-responsive">
             <table class="table table-bordered timetable-grid mb-0">
-                <thead><tr><th>Slot</th>@foreach(['Mon','Tue','Wed','Thu','Fri','Sat'] as $d)<th class="day-header">{{ $d }}</th>@endforeach</tr></thead>
+                <thead>
+                    <tr>
+                        <th style="min-width:80px">Slot</th>
+                        @foreach(['Mon','Tue','Wed','Thu','Fri','Sat'] as $d)
+                        <th class="day-header text-center">{{ $d }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
                 <tbody>
                 @foreach($slots as $slot)
                     @if($slot->is_break)
-                    <tr class="break-row"><td class="text-center">{{ $slot->name }}</td><td colspan="6" class="text-center">{{ $slot->start_time }}–{{ $slot->end_time }}</td></tr>
+                    <tr class="break-row">
+                        <td class="text-center fw-semibold small">{{ $slot->name }}</td>
+                        <td colspan="6" class="text-center">
+                            <i class="bi bi-cup-hot me-1 opacity-50"></i>
+                            {{ $slot->start_time }} – {{ $slot->end_time }}
+                        </td>
+                    </tr>
                     @else
                     <tr>
-                        <td class="text-center"><div class="fw-semibold small">{{ $slot->name }}</div><div class="text-muted" style="font-size:.7rem">{{ $slot->start_time }}-{{ $slot->end_time }}</div></td>
+                        <td class="text-center">
+                            <div class="fw-semibold small">{{ $slot->name }}</div>
+                            <div class="text-muted" style="font-size:.68rem">{{ $slot->start_time }}-{{ $slot->end_time }}</div>
+                        </td>
                         @for($day=1;$day<=6;$day++)
-                        <td>@if(isset($grid[$day][$slot->id]))<div class="timetable-cell"><div class="subj">{{ $grid[$day][$slot->id]->subject->name }}</div><div class="tchr">{{ $grid[$day][$slot->id]->course->code }}</div><span class="room-tag">{{ $grid[$day][$slot->id]->classroom->room_number }}</span></div>@endif</td>
+                        <td class="p-1">
+                            @if(isset($grid[$day][$slot->id]))
+                            <div class="timetable-cell">
+                                <div class="subj fw-semibold" style="font-size:.78rem;line-height:1.2">{{ $grid[$day][$slot->id]->subject->name }}</div>
+                                <div class="tchr text-muted mt-1" style="font-size:.68rem">{{ $grid[$day][$slot->id]->course->code }}</div>
+                                <span class="room-tag badge bg-light text-secondary border mt-1" style="font-size:.62rem">{{ $grid[$day][$slot->id]->classroom->room_number }}</span>
+                            </div>
+                            @endif
+                        </td>
                         @endfor
                     </tr>
                     @endif
@@ -31,8 +126,13 @@
             </table>
         </div>
         @else
-        <div class="text-center text-muted py-4">No timetable entries found.</div>
+        <div class="empty-state py-5">
+            <div class="empty-icon"><i class="bi bi-grid text-muted" style="font-size:3rem"></i></div>
+            <h6 class="mt-3 text-muted">No Timetable Entries</h6>
+            <p class="text-muted small mb-0">Your timetable hasn't been configured yet. Contact admin.</p>
+        </div>
         @endif
     </div>
 </div>
+
 @endsection

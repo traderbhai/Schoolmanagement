@@ -1,34 +1,75 @@
 @extends('layouts.admin')
-@section('title','Subjects')
-@section('page-title','Subjects')
+@section('title', 'Subjects')
+@section('page-title', 'Subjects')
 @section('content')
-<div class="d-flex justify-content-end mb-3">
-    <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Subject</a>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h5 class="mb-0 fw-bold">Subjects</h5>
+        <div class="text-muted" style="font-size:.82rem">Manage subject catalogue</div>
+    </div>
+    <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Add Subject
+    </a>
 </div>
+
 <div class="card">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead><tr><th>#</th><th>Name</th><th>Code</th><th>Department</th><th>Type</th><th>Credits</th><th>Hrs/Wk</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Credits</th>
+                    <th>Type</th>
+                    <th>Hrs/Week</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
             <tbody>
-            @foreach($subjects as $s)
+            @forelse($subjects as $s)
             <tr>
-                <td>{{ $subjects->firstItem() + $loop->index }}</td>
-                <td class="fw-semibold">{{ $s->name }}</td>
                 <td><code>{{ $s->code }}</code></td>
+                <td class="fw-semibold">{{ $s->name }}</td>
                 <td>{{ $s->department->code }}</td>
-                <td><span class="badge {{ match($s->type){'theory'=>'bg-primary','practical'=>'bg-warning text-dark','tutorial'=>'bg-info text-dark',default=>'bg-secondary'} }}">{{ ucfirst($s->type) }}</span></td>
-                <td>{{ $s->credits }}</td>
-                <td>{{ $s->hours_per_week }}</td>
-                <td><span class="badge {{ $s->is_active ? 'bg-success' : 'bg-danger' }}">{{ $s->is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td><span class="badge bg-primary">{{ $s->credits }} cr</span></td>
                 <td>
-                    <a href="{{ route('admin.subjects.edit', $s) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                    <form method="POST" action="{{ route('admin.subjects.destroy', $s) }}" class="d-inline" onsubmit="return confirm('Delete?')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">Del</button></form>
+                    <span class="badge {{ match($s->type){'theory'=>'bg-info text-dark','practical'=>'bg-warning text-dark','tutorial'=>'bg-secondary',default=>'bg-secondary'} }}">
+                        {{ ucfirst($s->type) }}
+                    </span>
+                </td>
+                <td>{{ $s->hours_per_week }}</td>
+                <td><span class="badge {{ $s->is_active ? 'badge-active' : 'badge-danger' }}">{{ $s->is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="{{ route('admin.subjects.edit', $s) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal"
+                            data-action="{{ route('admin.subjects.destroy', $s) }}"
+                            data-name="{{ $s->name }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state py-5">
+                        <div class="empty-icon"><i class="bi bi-book"></i></div>
+                        <div class="mt-2 fw-semibold">No subjects found</div>
+                        <a href="{{ route('admin.subjects.create') }}" class="btn btn-primary btn-sm mt-3">Add Subject</a>
+                    </div>
+                </td>
+            </tr>
+            @endforelse
             </tbody>
         </table>
     </div>
-    @if($subjects->hasPages())<div class="card-footer">{{ $subjects->links() }}</div>@endif
+    @if($subjects->hasPages())
+    <div class="card-footer">{{ $subjects->links() }}</div>
+    @endif
 </div>
 @endsection

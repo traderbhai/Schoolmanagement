@@ -55,7 +55,14 @@
             <div class="card-header">Recent Exam Results</div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead><tr><th>Exam</th><th>Subject</th><th>Marks</th><th>Grade</th><th>Result</th></tr></thead>
+                    <div class="px-3 pt-2 pb-1 d-flex gap-2 flex-wrap">
+                @foreach($student->enrollments->pluck('semester')->unique('id') as $sem)
+                <a href="{{ route('admin.reports.grade-card', [$student->id, $sem->id]) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:.75rem" aria-label="Download grade card for {{ $sem->name }}">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>{{ $sem->name }} Grade Card
+                </a>
+                @endforeach
+            </div>
+            <thead><tr><th>Exam</th><th>Subject</th><th>Marks</th><th>Grade</th><th>Result</th></tr></thead>
                     <tbody>
                     @forelse($student->examResults->take(10) as $r)
                     <tr>
@@ -90,7 +97,7 @@
         @if($student->feePayments->count())
         <table class="table table-sm mb-0">
             <thead><tr>
-                <th>Receipt #</th><th>Fee Type</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th>
+                <th>Receipt #</th><th>Fee Type</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th><th></th>
             </tr></thead>
             <tbody>
             @foreach($student->feePayments()->with('feeStructure')->latest('payment_date')->get() as $payment)
@@ -101,6 +108,7 @@
                 <td class="small">{{ \Carbon\Carbon::parse($payment->payment_date)->format('d M Y') }}</td>
                 <td class="small text-capitalize">{{ $payment->payment_method }}</td>
                 <td><span class="badge bg-{{ $payment->status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($payment->status) }}</span></td>
+                <td><a href="{{ route('admin.reports.fee-receipt', $payment->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.75rem" aria-label="Download receipt PDF"><i class="bi bi-download"></i></a></td>
             </tr>
             @endforeach
             </tbody>

@@ -27,7 +27,7 @@
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead><tr><th>Student</th><th>Receipt</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Student</th><th>Receipt</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th><th></th></tr></thead>
                     <tbody>
                     @forelse($fee->payments as $p)
                     <tr>
@@ -37,6 +37,7 @@
                         <td>{{ $p->payment_date->format('d M Y') }}</td>
                         <td>{{ ucfirst($p->payment_method) }}</td>
                         <td><span class="badge {{ $p->status === 'paid' ? 'bg-success' : 'bg-warning text-dark' }}">{{ ucfirst($p->status) }}</span></td>
+                        <td><a href="{{ route('admin.reports.fee-receipt', $p->id) }}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.75rem" aria-label="Download PDF receipt"><i class="bi bi-download"></i> PDF</a></td>
                     </tr>
                     @empty
                     <tr><td colspan="6" class="text-center text-muted py-3">No payments recorded.</td></tr>
