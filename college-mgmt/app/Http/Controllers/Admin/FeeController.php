@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendFeeReceiptEmail;
-use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear};
+use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear, ActivityLog};
 use Illuminate\Http\Request;
 
 class FeeController extends Controller
@@ -129,6 +129,8 @@ class FeeController extends Controller
         $data['receipt_number'] = 'RCP-' . strtoupper(uniqid());
         $data['status'] = 'paid';
         $payment = FeePayment::create($data);
+        $student = Student::with('user')->find($data['student_id']);
+        ActivityLog::record('created', "Fee payment ₹{$payment->amount_paid} for " . ($student->user->name ?? ''), $payment);
         SendFeeReceiptEmail::dispatch($payment);
         return redirect()->route('admin.fees.receipt', $payment)->with('success', 'Payment recorded successfully.');
     }
@@ -162,5 +164,40 @@ class FeeController extends Controller
             'payments', 'courses', 'academicYears',
             'totalAmount', 'paidCount', 'pendingCount'
         ));
+    }
+
+    public function export(Request $r)
+    {
+        $payments = FeePayment::with('student.user', 'student.course', 'feeStructure')
+            ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
+            ->when($r->status, fn($q) => $q->where('status', $r->status))
+            ->when($r->from, fn($q) => $q->whereDate('payment_date', '>=', $r->from))
+            ->when($r->to, fn($q) => $q->whereDate('payment_date', '<=', $r->to))
+            ->orderBy('payment_date', 'desc')
+            ->get();
+
+        $filename = 'fee_payments_' . now()->format('Ymd_His') . '.csv';
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename=\"{$filename}\""];
+
+        $callback = function () use ($payments) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Receipt No','Student','Enrollment','Course','Fee Type','Amount Paid','Payment Date','Method','Status']);
+            foreach ($payments as $p) {
+                fputcsv($file, [
+                    $p->receipt_number,
+                    $p->student->user->name ?? '',
+                    $p->student->enrollment_number ?? '',
+                    $p->student->course->name ?? '',
+                    $p->feeStructure->fee_type ?? '',
+                    $p->amount_paid,
+                    $p->payment_date?->format('d/m/Y') ?? '',
+                    $p->payment_method,
+                    $p->status,
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }
