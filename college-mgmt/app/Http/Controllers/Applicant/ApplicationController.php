@@ -63,6 +63,51 @@ class ApplicationController extends Controller
 
         $applicant->update([$column => $merged]);
 
+        // Sync category & entrance exam fields to direct columns when saving personal section
+        if ($section === 'personal') {
+            $syncData = [];
+            if (!empty($merged['category'])) {
+                // Map display value to enum key
+                $categoryMap = [
+                    'General' => 'general', 'OBC' => 'obc', 'OBC-NC' => 'obc_nc',
+                    'SC' => 'sc', 'ST' => 'st', 'EWS' => 'ews', 'PWD' => 'pwd',
+                    'NRI' => 'nri', 'Management Quota' => 'management_quota',
+                    // Pass-through if already a key
+                    'general' => 'general', 'obc' => 'obc', 'obc_nc' => 'obc_nc',
+                    'sc' => 'sc', 'st' => 'st', 'ews' => 'ews', 'pwd' => 'pwd',
+                    'nri' => 'nri', 'management_quota' => 'management_quota',
+                ];
+                $syncData['category'] = $categoryMap[$merged['category']] ?? 'general';
+            }
+            if (!empty($merged['pwd_percentage'])) {
+                $syncData['pwd_percentage'] = (float) $merged['pwd_percentage'];
+            }
+            if (!empty($merged['domicile_state'])) {
+                $syncData['domicile_state'] = $merged['domicile_state'];
+            }
+            if (!empty($merged['entrance_exam_type'])) {
+                $examMap = [
+                    'CAT' => 'cat', 'MAT' => 'mat', 'XAT' => 'xat', 'CMAT' => 'cmat',
+                    'ATMA' => 'atma', 'GMAT' => 'gmat', 'Other' => 'other', 'None' => 'none',
+                    'cat' => 'cat', 'mat' => 'mat', 'xat' => 'xat', 'cmat' => 'cmat',
+                    'atma' => 'atma', 'gmat' => 'gmat', 'other' => 'other', 'none' => 'none',
+                ];
+                $syncData['entrance_exam_type'] = $examMap[$merged['entrance_exam_type']] ?? null;
+            }
+            if (!empty($merged['entrance_exam_score'])) {
+                $syncData['entrance_exam_score'] = (float) $merged['entrance_exam_score'];
+            }
+            if (!empty($merged['entrance_exam_roll_number'])) {
+                $syncData['entrance_exam_roll_number'] = $merged['entrance_exam_roll_number'];
+            }
+            if (!empty($merged['entrance_exam_year'])) {
+                $syncData['entrance_exam_year'] = (int) $merged['entrance_exam_year'];
+            }
+            if (!empty($syncData)) {
+                $applicant->update($syncData);
+            }
+        }
+
         if ($request->wantsJson()) {
             return response()->json(['success' => true]);
         }

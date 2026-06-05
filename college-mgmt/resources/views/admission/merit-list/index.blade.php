@@ -94,11 +94,17 @@
                     </select>
                 </div>
                 <div class="col-sm-4">
-                    <label class="form-label small fw-semibold">Academic Score Weight: <span id="acad-val">20</span>%</label>
-                    <input type="range" name="academic_weight" id="academic_weight" class="form-range"
-                        min="0" max="100" step="5" value="20"
-                        oninput="document.getElementById('acad-val').textContent=this.value; document.getElementById('sel-val').textContent=100-parseInt(this.value)">
-                    <div class="text-muted small">Selection Score Weight: <span id="sel-val">80</span>%</div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Academic Weight: <span id="acad-val">20</span>%</label>
+                        <input type="range" name="academic_weight" id="academic_weight" class="form-range"
+                            min="0" max="60" step="5" value="20" oninput="updateWeights()">
+                    </div>
+                    <div>
+                        <label class="form-label small fw-semibold">Entrance Exam Weight: <span id="ent-val">30</span>%</label>
+                        <input type="range" name="entrance_exam_weight" id="entrance_exam_weight" class="form-range"
+                            min="0" max="60" step="5" value="30" oninput="updateWeights()">
+                    </div>
+                    <div class="text-muted small">Selection Process Weight: <span id="sel-val">50</span>% <span id="weight-warning" class="text-danger d-none">(must sum to 100%)</span></div>
                 </div>
                 <div class="col-sm-4">
                     <button type="submit" class="btn btn-{{ $latestVersion ? 'warning' : 'success' }} w-100"
@@ -111,4 +117,18 @@
         </form>
     </div>
 </div>
+@push('scripts')
+<script>
+function updateWeights() {
+    const acad = parseInt(document.getElementById('academic_weight').value);
+    const ent  = parseInt(document.getElementById('entrance_exam_weight').value);
+    const sel  = 100 - acad - ent;
+    document.getElementById('acad-val').textContent = acad;
+    document.getElementById('ent-val').textContent  = ent;
+    document.getElementById('sel-val').textContent  = sel;
+    const warn = document.getElementById('weight-warning');
+    warn.classList.toggle('d-none', sel >= 0);
+}
+</script>
+@endpush
 @endsection
