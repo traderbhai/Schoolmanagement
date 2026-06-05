@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -824,6 +824,56 @@ class DemoDataSeeder extends Seeder
                     'decided_at'           => $rank === 0 ? now() : null,
                 ]
             );
+        }
+
+        // ── P7: Admission Fee Payments ─────────────────────────────────────────
+        $firstInstallment = AdmissionFeeInstallment::where('program_id', $pgdm->id)
+            ->orderBy('installment_number')
+            ->first();
+
+        if ($firstInstallment) {
+            // Selected applicant: verified payment for first installment
+            $selectedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'selected')->first();
+            if ($selectedApplicant) {
+                AdmissionPayment::firstOrCreate(
+                    [
+                        'applicant_id'                 => $selectedApplicant->id,
+                        'admission_fee_installment_id' => $firstInstallment->id,
+                    ],
+                    [
+                        'amount_paid'          => $firstInstallment->amount,
+                        'payment_date'         => Carbon::now()->subDays(5)->toDateString(),
+                        'payment_mode'         => 'neft',
+                        'transaction_reference'=> 'NEFT' . strtoupper(substr(md5(rand()), 0, 12)),
+                        'bank_name'            => 'HDFC Bank',
+                        'status'               => 'verified',
+                        'verification_notes'   => 'Payment verified. Transaction confirmed.',
+                        'verified_by'          => $admHead->id,
+                        'verified_at'          => Carbon::now()->subDays(4),
+                        'submitted_by'         => $selectedApplicant->user_id,
+                    ]
+                );
+            }
+
+            // Shortlisted applicant: pending payment submission
+            $shortlistedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'shortlisted')->first();
+            if ($shortlistedApplicant) {
+                AdmissionPayment::firstOrCreate(
+                    [
+                        'applicant_id'                 => $shortlistedApplicant->id,
+                        'admission_fee_installment_id' => $firstInstallment->id,
+                    ],
+                    [
+                        'amount_paid'          => $firstInstallment->amount,
+                        'payment_date'         => Carbon::now()->subDays(2)->toDateString(),
+                        'payment_mode'         => 'upi',
+                        'transaction_reference'=> 'UPI' . strtoupper(substr(md5(rand()), 0, 12)),
+                        'bank_name'            => null,
+                        'status'               => 'pending',
+                        'submitted_by'         => $shortlistedApplicant->user_id,
+                    ]
+                );
+            }
         }
 
         $this->command->info('Demo data seeded successfully!');

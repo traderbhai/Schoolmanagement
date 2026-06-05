@@ -44,6 +44,9 @@
         <a href="{{ route('applicant.status') }}" class="nav-link @if(request()->routeIs('applicant.status')) active @endif">
             <i class="bi bi-clipboard2-check"></i> Status Tracker
         </a>
+        <a href="{{ route('applicant.fees.index') }}" class="nav-link @if(request()->routeIs('applicant.fees.*')) active @endif">
+            <i class="bi bi-cash-coin"></i> Fees & Payments
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -99,6 +102,9 @@
             </a>
             <a href="{{ route('applicant.status') }}" class="nav-link @if(request()->routeIs('applicant.status')) active @endif">
                 <i class="bi bi-clipboard2-check"></i> Status Tracker
+            </a>
+            <a href="{{ route('applicant.fees.index') }}" class="nav-link @if(request()->routeIs('applicant.fees.*')) active @endif">
+                <i class="bi bi-cash-coin"></i> Fees & Payments
             </a>
         </div>
     </div>

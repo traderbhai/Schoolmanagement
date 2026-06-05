@@ -11,6 +11,7 @@ use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
 use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
+use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Routes ──────────────────────────────────────────────
@@ -29,6 +30,10 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicantDocument::class, 'destroy'])->name('documents.destroy');
     Route::get('status', [ApplicantStatus::class, 'index'])->name('status');
+    // Fees — static route before parameterized
+    Route::get('fees', [ApplicantPayment::class, 'index'])->name('fees.index');
+    Route::get('fees/payment/{payment}', [ApplicantPayment::class, 'show'])->name('fees.show');
+    Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
 });
 
 Route::get('/', function () {
@@ -222,6 +227,14 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('merit-list/{program}/export', [Admission\MeritListController::class, 'exportMeritList'])->name('merit-list.export');
     Route::post('merit-list/{program}/bulk-decide', [Admission\MeritListController::class, 'bulkDecide'])->name('merit-list.bulk-decide');
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
+
+    // Payment Verification (static routes before parameterized)
+    Route::get('payments/queue', [Admission\PaymentVerificationController::class, 'pendingQueue'])->name('payments.queue');
+    Route::get('payments/{program}', [Admission\PaymentVerificationController::class, 'index'])->name('payments.index');
+    Route::get('applicants/{applicant}/payments', [Admission\PaymentVerificationController::class, 'applicantPayments'])->name('applicants.payments');
+    Route::post('payments/{payment}/verify', [Admission\PaymentVerificationController::class, 'verify'])->name('payments.verify');
+    Route::post('payments/{payment}/reject', [Admission\PaymentVerificationController::class, 'reject'])->name('payments.reject');
+    Route::get('payments/{payment}/proof', [Admission\PaymentVerificationController::class, 'downloadProof'])->name('payments.proof');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
