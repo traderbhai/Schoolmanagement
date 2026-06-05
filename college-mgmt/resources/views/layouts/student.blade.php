@@ -53,6 +53,15 @@
 
         <div class="sidebar-divider"></div>
 
+        <div class="sidebar-divider"></div>
+
+        <div class="section-label">Career</div>
+        <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif">
+            <i class="bi bi-briefcase"></i> Placements
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
@@ -85,6 +94,10 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Communication</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Career</div>
+        <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>

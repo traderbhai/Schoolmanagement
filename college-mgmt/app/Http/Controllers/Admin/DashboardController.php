@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Student, Teacher, Department, Course, Notice, Semester, TimetableEntry, Exam, FeeStructure, FeePayment, Attendance};
+use App\Models\{Student, Teacher, Department, Course, Notice, Semester, TimetableEntry, Exam, FeeStructure, FeePayment, Attendance, Placement, PlacementDrive};
 
 class DashboardController extends Controller
 {
@@ -55,6 +55,10 @@ class DashboardController extends Controller
         // Recent payments (last 5)
         $recentPayments = FeePayment::with(['student.user', 'feeStructure'])->latest()->take(5)->get();
 
+        // Placement stats
+        $placedStudents = Placement::where('application_status', 'selected')->count();
+        $upcomingDrives = PlacementDrive::where('status', 'upcoming')->count();
+
         // Upcoming exams in next 14 days
         $upcomingExams = Exam::with(['subject', 'semester'])
             ->whereBetween('exam_date', [today(), today()->addDays(14)])
@@ -99,7 +103,8 @@ class DashboardController extends Controller
             'studentCount', 'teacherCount', 'deptCount', 'courseCount',
             'todayAttendanceRate', 'totalFeeDue', 'totalFeeCollected', 'feeCollectionRate',
             'pendingNotices', 'recentStudents', 'recentPayments', 'upcomingExams',
-            'attendanceTrend', 'feeCollection', 'feeMonthly', 'enrollmentByDept'
+            'attendanceTrend', 'feeCollection', 'feeMonthly', 'enrollmentByDept',
+            'placedStudents', 'upcomingDrives'
         ));
     }
 }

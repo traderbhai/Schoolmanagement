@@ -83,6 +83,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('reports/grade-card/{student}/{semester}', [Admin\ReportController::class, 'gradeCard'])->name('reports.grade-card');
     Route::get('reports/fee-receipt/{payment}',           [Admin\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
     Route::get('reports/timetable/{semester}',            [Admin\ReportController::class, 'timetable'])->name('reports.timetable');
+
+    // Placement
+    Route::resource('companies', Admin\CompanyController::class);
+    Route::resource('placement-drives', Admin\PlacementDriveController::class);
+    Route::post('placement-drives/{drive}/apply', [Admin\PlacementDriveController::class, 'apply'])->name('placement-drives.apply');
+    Route::patch('placements/{placement}/status', [Admin\PlacementDriveController::class, 'updateApplication'])->name('placements.update-status');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
@@ -116,6 +122,11 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // PDF self-download
     Route::get('reports/grade-card/{semester}', [Student\ReportController::class, 'gradeCard'])->name('reports.grade-card');
     Route::get('reports/fee-receipt/{payment}', [Student\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
+
+    // Placements
+    Route::get('placements/my-applications', [Student\PlacementController::class, 'myApplications'])->name('placements.applications');
+    Route::get('placements', [Student\PlacementController::class, 'index'])->name('placements');
+    Route::post('placements/{drive}/apply', [Student\PlacementController::class, 'apply'])->name('placements.apply');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
