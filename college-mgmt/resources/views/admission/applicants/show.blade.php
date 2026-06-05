@@ -27,6 +27,24 @@
             <button type="submit" class="btn btn-sm btn-primary">Update</button>
         </form>
         @endif
+        {{-- Enrollment Actions --}}
+        @if($applicant->status === 'selected')
+            @if($applicant->isEnrolled())
+                @php $enrollment = $applicant->enrollmentConfirmation; @endphp
+                <a href="{{ route('admission.enrollment.show', $enrollment) }}" class="btn btn-sm btn-success">
+                    <i class="bi bi-person-check me-1"></i> View Enrollment
+                </a>
+                @if($enrollment->student)
+                <a href="{{ route('admin.students.show', $enrollment->student) }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-person me-1"></i> Student Profile
+                </a>
+                @endif
+            @else
+                <a href="{{ route('admission.enrollment.create', $applicant) }}" class="btn btn-sm btn-warning">
+                    <i class="bi bi-person-plus me-1"></i> Proceed to Enrollment
+                </a>
+            @endif
+        @endif
     </div>
 </div>
 
@@ -82,6 +100,12 @@
 
     {{-- DOCUMENTS TAB --}}
     <div class="tab-pane fade" id="documents">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-semibold">Documents ({{ $applicant->documents->count() }})</span>
+            <a href="{{ route('admission.documents.queue') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-folder-check me-1"></i>View All Pending Docs
+            </a>
+        </div>
         @if($applicant->documents->isEmpty())
             <div class="text-center text-muted py-5"><i class="bi bi-folder2-open fs-1"></i><p class="mt-2">No documents uploaded yet.</p></div>
         @else
@@ -93,60 +117,54 @@
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
                                 <div class="fw-semibold">{{ $doc->requiredDocument->name ?? $doc->original_name }}</div>
-                                <div class="small text-muted">{{ $doc->original_name }} ({{ $doc->file_size_kb }} KB)</div>
+                                <div class="small text-muted">
+                                    <i class="bi {{ $doc->file_icon }} me-1"></i>
+                                    {{ $doc->original_name }} &bull; {{ $doc->formatted_file_size }}
+                                    @if($doc->uploaded_at) &bull; {{ $doc->uploaded_at->diffForHumans() }} @endif
+                                </div>
                             </div>
-                            <span class="badge {{ $doc->status === 'verified' ? 'bg-success' : ($doc->status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark') }}">
-                                {{ ucfirst($doc->status) }}
-                            </span>
+                            {!! $doc->status_badge !!}
                         </div>
                         @if($doc->status === 'rejected' && $doc->rejection_reason)
                             <div class="alert alert-danger py-1 small mb-2">{{ $doc->rejection_reason }}</div>
                         @endif
-                        <div class="d-flex gap-2 mt-2">
-                            <a href="{{ Storage::url($doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-eye"></i> View
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i> Preview
                             </a>
-                            <button type="button" class="btn btn-sm btn-outline-success"
-                                data-bs-toggle="modal" data-bs-target="#verifyModal{{ $doc->id }}" data-action="verified">
-                                <i class="bi bi-check-circle"></i> Verify
-                            </button>
+                            <a href="{{ route('admission.documents.download', $doc) }}"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                            @if($doc->status !== 'verified')
+                            <form method="POST" action="{{ route('admission.documents.verify', $doc) }}" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-outline-success"
+                                        onclick="return confirm('Verify this document?')">
+                                    <i class="bi bi-check-circle"></i> Verify
+                                </button>
+                            </form>
+                            @endif
+                            @if($doc->status !== 'rejected')
                             <button type="button" class="btn btn-sm btn-outline-danger"
-                                data-bs-toggle="modal" data-bs-target="#verifyModal{{ $doc->id }}" data-action="rejected">
+                                data-bs-toggle="modal" data-bs-target="#rejectModal"
+                                data-doc-id="{{ $doc->id }}"
+                                data-doc-name="{{ $doc->requiredDocument->name ?? $doc->original_name }}"
+                                data-applicant="{{ $applicant->user->name ?? '—' }}">
                                 <i class="bi bi-x-circle"></i> Reject
                             </button>
+                            @endif
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {{-- Verify Modal --}}
-            <div class="modal fade" id="verifyModal{{ $doc->id }}" tabindex="-1">
-                <div class="modal-dialog">
-                    <form action="{{ route('admission.documents.verify', $doc) }}" method="POST">
-                        @csrf
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Document Action</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <input type="hidden" name="action" value="" class="doc-action-input">
-                                <div class="mb-3 rejection-reason-field d-none">
-                                    <label class="form-label">Rejection Reason</label>
-                                    <textarea name="rejection_reason" class="form-control" rows="3"></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Confirm</button>
-                            </div>
-                        </div>
-                    </form>
                 </div>
             </div>
             @endforeach
         </div>
         @endif
+
+        {{-- Reject Modal --}}
+        @include('admission.documents._reject-modal')
     </div>
 
     {{-- COUNSELLING LOG TAB --}}
@@ -276,15 +294,18 @@
 
 @push('scripts')
 <script>
-// Wire up verify modals
-document.querySelectorAll('[data-bs-target^="#verifyModal"]').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const modal = document.querySelector(this.getAttribute('data-bs-target'));
-        const action = this.getAttribute('data-action');
-        modal.querySelector('.doc-action-input').value = action;
-        modal.querySelector('.rejection-reason-field').classList.toggle('d-none', action !== 'rejected');
+// Wire up reject modal from show page
+const rejectModalEl = document.getElementById('rejectModal');
+if (rejectModalEl) {
+    rejectModalEl.addEventListener('show.bs.modal', function(event) {
+        const btn = event.relatedTarget;
+        if (!btn) return;
+        document.getElementById('rejectDocId').value  = btn.dataset.docId;
+        document.getElementById('rejectDocName').textContent   = btn.dataset.docName;
+        document.getElementById('rejectApplicant').textContent = btn.dataset.applicant;
+        document.getElementById('rejectForm').action = '/admission/documents/' + btn.dataset.docId + '/reject';
     });
-});
+}
 </script>
 @endpush
 @endsection

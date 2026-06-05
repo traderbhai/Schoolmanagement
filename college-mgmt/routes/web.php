@@ -11,6 +11,8 @@ use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
 use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
+use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
+use App\Http\Controllers\Departmental;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Routes ──────────────────────────────────────────────
@@ -25,10 +27,14 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     // Static route BEFORE parameterized
     Route::post('application/submit', [ApplicantApplication::class, 'submit'])->name('application.submit');
     Route::post('application/{section}', [ApplicantApplication::class, 'saveSection'])->name('application.section');
-    Route::get('documents', [ApplicantDocument::class, 'index'])->name('documents');
-    Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'upload'])->name('documents.upload');
+    Route::get('documents', [ApplicantDocument::class, 'index'])->name('documents.index');
+    Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicantDocument::class, 'destroy'])->name('documents.destroy');
     Route::get('status', [ApplicantStatus::class, 'index'])->name('status');
+    // Fees — static route before parameterized
+    Route::get('fees', [ApplicantPayment::class, 'index'])->name('fees.index');
+    Route::get('fees/payment/{payment}', [ApplicantPayment::class, 'show'])->name('fees.show');
+    Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
 });
 
 Route::get('/', function () {
@@ -54,7 +60,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 // ── Admin routes ────────────────────────────────────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer'])->group(function () {
     Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('departments',   Admin\DepartmentController::class);
@@ -178,6 +184,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     // Consolidated Student Report PDF
     Route::get('students/{student}/report', [Admin\ReportController::class, 'consolidatedReport'])->name('students.report');
+
+    // P9: Role Assignments (Access Control)
+    Route::get('role-assignments', [Admin\RoleAssignmentController::class, 'index'])->name('role-assignments.index');
+    Route::get('role-assignments/create', [Admin\RoleAssignmentController::class, 'create'])->name('role-assignments.create');
+    Route::post('role-assignments', [Admin\RoleAssignmentController::class, 'store'])->name('role-assignments.store');
+    Route::delete('role-assignments/{assignment}', [Admin\RoleAssignmentController::class, 'destroy'])->name('role-assignments.destroy');
 });
 
 // ── Admission Team routes ───────────────────────────────────────────────────
@@ -189,7 +201,13 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
-    Route::post('documents/{document}/verify', [Admission\ApplicantCrmController::class, 'verifyDocument'])->name('documents.verify');
+    // Document Verification Queue (static routes BEFORE {document} parameterized)
+    Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
+    Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])->name('documents.bulk-verify');
+    Route::post('documents/{document}/verify', [Admission\DocumentVerificationController::class, 'verify'])->name('documents.verify');
+    Route::post('documents/{document}/reject', [Admission\DocumentVerificationController::class, 'reject'])->name('documents.reject');
+    Route::get('documents/{document}/download', [Admission\DocumentVerificationController::class, 'downloadDocument'])->name('documents.download');
+    Route::get('documents/{document}/preview', [Admission\DocumentVerificationController::class, 'previewDocument'])->name('documents.preview');
 
     // Selection Sessions (static routes before parameterized)
     Route::get('sessions', [Admission\SelectionSessionController::class, 'index'])->name('sessions.index');
@@ -216,6 +234,21 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('merit-list/{program}/export', [Admission\MeritListController::class, 'exportMeritList'])->name('merit-list.export');
     Route::post('merit-list/{program}/bulk-decide', [Admission\MeritListController::class, 'bulkDecide'])->name('merit-list.bulk-decide');
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
+
+    // Payment Verification (static routes before parameterized)
+    Route::get('payments/queue', [Admission\PaymentVerificationController::class, 'pendingQueue'])->name('payments.queue');
+    Route::get('payments/{program}', [Admission\PaymentVerificationController::class, 'index'])->name('payments.index');
+    Route::get('applicants/{applicant}/payments', [Admission\PaymentVerificationController::class, 'applicantPayments'])->name('applicants.payments');
+    Route::post('payments/{payment}/verify', [Admission\PaymentVerificationController::class, 'verify'])->name('payments.verify');
+    Route::post('payments/{payment}/reject', [Admission\PaymentVerificationController::class, 'reject'])->name('payments.reject');
+    Route::get('payments/{payment}/proof', [Admission\PaymentVerificationController::class, 'downloadProof'])->name('payments.proof');
+
+    // Enrollment Confirmation (static routes BEFORE {applicant} parameterized)
+    Route::get('enrollment', [Admission\EnrollmentController::class, 'index'])->name('enrollment.index');
+    Route::get('enrollment/confirmation/{confirmation}', [Admission\EnrollmentController::class, 'show'])->name('enrollment.show');
+    Route::get('enrollment/confirmation/{confirmation}/letter', [Admission\EnrollmentController::class, 'printLetter'])->name('enrollment.letter');
+    Route::get('enrollment/{applicant}/create', [Admission\EnrollmentController::class, 'create'])->name('enrollment.create');
+    Route::post('enrollment/{applicant}', [Admission\EnrollmentController::class, 'store'])->name('enrollment.store');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
@@ -274,6 +307,42 @@ Route::middleware(['auth', 'role:parent|admin'])->prefix('parent')->name('parent
     Route::get('children/{student}/results',    [ParentController\DashboardController::class, 'results'])->name('children.results');
     Route::get('children/{student}/fees',       [ParentController\DashboardController::class, 'fees'])->name('children.fees');
     Route::get('notices', [ParentController\DashboardController::class, 'notices'])->name('notices');
+});
+
+// ── Dean Academics ──────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:dean_academics|admin'])->prefix('dean')->name('dean.')->group(function () {
+    Route::get('dashboard',  [Departmental\DeanController::class, 'dashboard'])->name('dashboard');
+    Route::get('programs',   [Departmental\DeanController::class, 'programs'])->name('programs');
+    Route::get('students',   [Departmental\DeanController::class, 'students'])->name('students');
+    Route::get('academics',  [Departmental\DeanController::class, 'academics'])->name('academics');
+    Route::get('attendance', [Departmental\DeanController::class, 'attendance'])->name('attendance');
+});
+
+// ── Program Chair / HOD ──────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->prefix('program-chair')->name('chair.')->group(function () {
+    Route::get('dashboard',  [Departmental\ProgramChairController::class, 'dashboard'])->name('dashboard');
+    Route::get('students',   [Departmental\ProgramChairController::class, 'students'])->name('students');
+    Route::get('curriculum', [Departmental\ProgramChairController::class, 'curriculum'])->name('curriculum');
+    Route::get('timetable',  [Departmental\ProgramChairController::class, 'timetable'])->name('timetable');
+    Route::get('exams',      [Departmental\ProgramChairController::class, 'exams'])->name('exams');
+});
+
+// ── Exam Cell ────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam-cell')->name('exam-cell.')->group(function () {
+    Route::get('dashboard',                          [Departmental\ExamCellController::class, 'dashboard'])->name('dashboard');
+    Route::get('exams',                              [Departmental\ExamCellController::class, 'exams'])->name('exams');
+    Route::get('results',                            [Departmental\ExamCellController::class, 'results'])->name('results');
+    Route::get('results/{exam}/grade-sheet',         [Departmental\ExamCellController::class, 'gradeSheet'])->name('grade-sheet');
+    Route::post('results/{exam}/publish',            [Departmental\ExamCellController::class, 'publishResults'])->name('publish');
+});
+
+// ── Accounts ─────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->name('accounts.')->group(function () {
+    Route::get('dashboard',          [Departmental\AccountsController::class, 'dashboard'])->name('dashboard');
+    Route::get('fee-collections',    [Departmental\AccountsController::class, 'feeCollections'])->name('fee-collections');
+    Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');
+    Route::get('admission-payments', [Departmental\AccountsController::class, 'admissionPayments'])->name('admission-payments');
+    Route::get('reports',            [Departmental\AccountsController::class, 'reports'])->name('reports');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

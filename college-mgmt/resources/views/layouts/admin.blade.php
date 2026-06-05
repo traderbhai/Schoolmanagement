@@ -107,12 +107,29 @@
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
             <i class="bi bi-calendar-event"></i> Sessions
         </a>
+        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif">
+            <i class="bi bi-folder-check"></i> Document Queue
+            @php $docsPending = \App\Models\ApplicantDocument::where('status','pending')->count(); @endphp
+            @if($docsPending > 0)
+                <span class="badge bg-warning text-dark ms-1">{{ $docsPending }}</span>
+            @endif
+        </a>
+        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.*')) active @endif">
+            <i class="bi bi-cash-coin"></i> Payment Queue
+            @php $paymentsPending = \App\Models\AdmissionPayment::where('status','pending')->count(); @endphp
+            @if($paymentsPending > 0)
+                <span class="badge bg-info text-dark ms-1">{{ $paymentsPending }}</span>
+            @endif
+        </a>
         @php $firstProgram = \App\Models\Program::where('is_active',true)->first(); @endphp
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
             <i class="bi bi-list-ol"></i> Merit List
         </a>
         @endif
+        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
+            <i class="bi bi-person-check-fill"></i> Enrollments
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -171,6 +188,39 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- ACCESS CONTROL --}}
+        <div class="section-label">Access Control</div>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
+            <i class="bi bi-shield-lock"></i> Role Assignments
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- DEPARTMENTAL PORTALS --}}
+        <div class="section-label">Departmental Portals</div>
+        @hasrole('dean_academics|admin')
+        <a href="{{ route('dean.dashboard') }}" class="nav-link @if(request()->routeIs('dean.*')) active @endif">
+            <i class="bi bi-mortarboard-fill"></i> Dean Academics
+        </a>
+        @endhasrole
+        @hasrole('program_chair|hod|dean_academics|admin')
+        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
+            <i class="bi bi-diagram-3"></i> Program Chair
+        </a>
+        @endhasrole
+        @hasrole('exam_cell|dean_academics|admin')
+        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.*')) active @endif">
+            <i class="bi bi-file-earmark-check"></i> Exam Cell
+        </a>
+        @endhasrole
+        @hasrole('accounts_officer|admin')
+        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.*')) active @endif">
+            <i class="bi bi-cash-stack"></i> Accounts
+        </a>
+        @endhasrole
+
+        <div class="sidebar-divider"></div>
+
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
@@ -224,9 +274,11 @@
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants CRM</a>
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif"><i class="bi bi-calendar-event"></i> Sessions</a>
+        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.*')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
         @endif
+        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
@@ -247,6 +299,9 @@
         <div class="section-label">Placement</div>
         <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Access Control</div>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif"><i class="bi bi-shield-lock"></i> Role Assignments</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>

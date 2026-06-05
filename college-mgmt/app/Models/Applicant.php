@@ -52,6 +52,31 @@ class Applicant extends Model
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }
     public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }
+    public function payments()            { return $this->hasMany(AdmissionPayment::class); }
+    public function enrollmentConfirmation() { return $this->hasOne(EnrollmentConfirmation::class); }
+
+    public function isEnrolled(): bool
+    {
+        return $this->enrollmentConfirmation()->where('status', 'completed')->exists();
+    }
+
+    public function getTotalPaidAttribute(): float
+    {
+        return (float) $this->payments()->where('status', 'verified')->sum('amount_paid');
+    }
+
+    public function getOutstandingAmountAttribute(): float
+    {
+        $installmentTotal = $this->program
+            ? AdmissionFeeInstallment::where('program_id', $this->program_id)
+                ->where(function ($q) {
+                    $q->whereNull('batch_id')->orWhere('batch_id', $this->batch_id);
+                })
+                ->where('is_active', true)
+                ->sum('amount')
+            : 0;
+        return max(0, (float) $installmentTotal - $this->total_paid);
+    }
 
     public function getStatusBadgeAttribute(): string
     {

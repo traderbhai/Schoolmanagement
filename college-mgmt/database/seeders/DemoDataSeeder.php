@@ -3,7 +3,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, RoleProgramAssignment};
+use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -12,7 +13,8 @@ class DemoDataSeeder extends Seeder
     public function run()
     {
         // Ensure roles exist
-        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head'] as $role) {
+        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head',
+                  'dean_academics', 'program_chair', 'exam_cell', 'hod', 'accounts_officer'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
 
@@ -561,6 +563,47 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
+        // ── Sample Document Uploads ─────────────────────────────────────────────
+        $docApplicants = Applicant::whereIn('status', ['submitted', 'shortlisted', 'selected'])
+            ->with('program')
+            ->get();
+
+        foreach ($docApplicants as $app) {
+            $requiredDocs = RequiredDocument::where('program_id', $app->program_id)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
+
+            foreach ($requiredDocs as $idx => $rdoc) {
+                // Skip some optional docs to keep data realistic
+                if (! $rdoc->is_mandatory && $idx % 2 === 0) continue;
+
+                $slug = \Illuminate\Support\Str::slug($rdoc->name);
+                $ext  = str_contains($rdoc->accepted_formats ?? 'pdf', 'pdf') ? 'pdf' : 'jpg';
+                $filePath = "applicant-documents/{$app->id}/{$slug}_v1_" . (1700000000 + $app->id * 100 + $idx) . ".{$ext}";
+
+                // Determine status: first 3 docs verified for selected/shortlisted, rest pending
+                $status = 'pending';
+                if (in_array($app->status, ['selected', 'shortlisted']) && $idx < 3) {
+                    $status = 'verified';
+                }
+
+                ApplicantDocument::firstOrCreate(
+                    ['applicant_id' => $app->id, 'required_document_id' => $rdoc->id],
+                    [
+                        'file_path'     => $filePath,
+                        'original_name' => $slug . '.' . $ext,
+                        'file_size_kb'  => rand(80, 800),
+                        'status'        => $status,
+                        'verified_by'   => $status === 'verified' ? $admin->id : null,
+                        'verified_at'   => $status === 'verified' ? Carbon::now()->subDays(rand(1, 5)) : null,
+                        'uploaded_at'   => Carbon::now()->subDays(rand(6, 15)),
+                        'version'       => 1,
+                    ]
+                );
+            }
+        }
+
         // ── Counselling Logs for sample applicants ─────────────────────────────
         $officerUser = User::where('email', 'officer@college.com')->first();
         if ($officerUser) {
@@ -785,6 +828,110 @@ class DemoDataSeeder extends Seeder
             );
         }
 
+        // ── P7: Admission Fee Payments ─────────────────────────────────────────
+        $firstInstallment = AdmissionFeeInstallment::where('program_id', $pgdm->id)
+            ->orderBy('installment_number')
+            ->first();
+
+        if ($firstInstallment) {
+            // Selected applicant: verified payment for first installment
+            $selectedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'selected')->first();
+            if ($selectedApplicant) {
+                AdmissionPayment::firstOrCreate(
+                    [
+                        'applicant_id'                 => $selectedApplicant->id,
+                        'admission_fee_installment_id' => $firstInstallment->id,
+                    ],
+                    [
+                        'amount_paid'          => $firstInstallment->amount,
+                        'payment_date'         => Carbon::now()->subDays(5)->toDateString(),
+                        'payment_mode'         => 'neft',
+                        'transaction_reference'=> 'NEFT' . strtoupper(substr(md5(rand()), 0, 12)),
+                        'bank_name'            => 'HDFC Bank',
+                        'status'               => 'verified',
+                        'verification_notes'   => 'Payment verified. Transaction confirmed.',
+                        'verified_by'          => $admHead->id,
+                        'verified_at'          => Carbon::now()->subDays(4),
+                        'submitted_by'         => $selectedApplicant->user_id,
+                    ]
+                );
+            }
+
+            // Shortlisted applicant: pending payment submission
+            $shortlistedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'shortlisted')->first();
+            if ($shortlistedApplicant) {
+                AdmissionPayment::firstOrCreate(
+                    [
+                        'applicant_id'                 => $shortlistedApplicant->id,
+                        'admission_fee_installment_id' => $firstInstallment->id,
+                    ],
+                    [
+                        'amount_paid'          => $firstInstallment->amount,
+                        'payment_date'         => Carbon::now()->subDays(2)->toDateString(),
+                        'payment_mode'         => 'upi',
+                        'transaction_reference'=> 'UPI' . strtoupper(substr(md5(rand()), 0, 12)),
+                        'bank_name'            => null,
+                        'status'               => 'pending',
+                        'submitted_by'         => $shortlistedApplicant->user_id,
+                    ]
+                );
+            }
+        }
+
+        // Enrollment Confirmation for selected applicant
+        $selectedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'selected')->first();
+        if ($selectedApplicant && !EnrollmentConfirmation::where('applicant_id', $selectedApplicant->id)->exists()) {
+            try {
+                $service = new EnrollmentService();
+                $service->enroll($selectedApplicant, [
+                    'roll_number' => 'PGDM-24-001',
+                    'term_id'     => $terms[0]->id ?? null,
+                    'notes'       => 'Enrolled via demo seeder.',
+                ], $admHead->id);
+            } catch (\Throwable $e) {
+                $this->command->warn('Enrollment seeder skipped: ' . $e->getMessage());
+            }
+        }
+
+        // ── P9: Departmental Role Users ─────────────────────────────────────────
+        $admin = User::where('email', 'admin@demo.edu')->first();
+
+        $deanUser = User::firstOrCreate(['email' => 'dean@college.com'], [
+            'name' => 'Dr. Meena Iyer', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $deanUser->syncRoles(['dean_academics']);
+
+        $chairUser = User::firstOrCreate(['email' => 'chair@college.com'], [
+            'name' => 'Prof. Anil Gupta', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $chairUser->syncRoles(['program_chair']);
+
+        $examUser = User::firstOrCreate(['email' => 'exam@college.com'], [
+            'name' => 'Ritu Verma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $examUser->syncRoles(['exam_cell']);
+
+        $hodUser = User::firstOrCreate(['email' => 'hod@college.com'], [
+            'name' => 'Dr. Suresh Nair', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $hodUser->syncRoles(['hod']);
+
+        $accountsUser = User::firstOrCreate(['email' => 'accounts@college.com'], [
+            'name' => 'Pradeep Sharma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $accountsUser->syncRoles(['accounts_officer']);
+
+        // RoleProgramAssignment records for program_chair and hod → PGDM
+        $assignById = $admin?->id ?? 1;
+        RoleProgramAssignment::firstOrCreate(
+            ['user_id' => $chairUser->id, 'role_name' => 'program_chair', 'program_id' => $pgdm->id],
+            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
+        );
+        RoleProgramAssignment::firstOrCreate(
+            ['user_id' => $hodUser->id, 'role_name' => 'hod', 'program_id' => $pgdm->id],
+            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
+        );
+
         $this->command->info('Demo data seeded successfully!');
         $this->command->info('  Admin: admin@demo.edu / password123');
         $this->command->info('  Teacher: anjali@demo.edu / password123');
@@ -792,5 +939,10 @@ class DemoDataSeeder extends Seeder
         $this->command->info('  Applicants: priya.sharma@applicant.demo / password123 (and 4 more)');
         $this->command->info('  Admission Officer: officer@college.com / password');
         $this->command->info('  Admission Head: head@college.com / password');
+        $this->command->info('  Dean of Academics: dean@college.com / password');
+        $this->command->info('  Program Chair: chair@college.com / password');
+        $this->command->info('  Exam Cell: exam@college.com / password');
+        $this->command->info('  HoD: hod@college.com / password');
+        $this->command->info('  Accounts Officer: accounts@college.com / password');
     }
 }
