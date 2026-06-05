@@ -100,8 +100,11 @@
 
         {{-- FINANCE --}}
         <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif">
+        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index') || request()->routeIs('admin.fees.show') || request()->routeIs('admin.fees.create') || request()->routeIs('admin.fees.edit') || request()->routeIs('admin.fees.collect') || request()->routeIs('admin.fees.receipt')) active @endif">
             <i class="bi bi-cash-coin"></i> Fees
+        </a>
+        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif">
+            <i class="bi bi-graph-up"></i> Fee Report
         </a>
 
         <div class="sidebar-divider"></div>
@@ -163,7 +166,8 @@
         <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif"><i class="bi bi-award"></i> Grade Reports</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
+        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index') || request()->routeIs('admin.fees.show') || request()->routeIs('admin.fees.create') || request()->routeIs('admin.fees.edit') || request()->routeIs('admin.fees.collect') || request()->routeIs('admin.fees.receipt')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
+        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif"><i class="bi bi-graph-up"></i> Fee Report</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Communication</div>
         <a href="{{ route('admin.notices.index') }}" class="nav-link @if(request()->routeIs('admin.notices.*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>

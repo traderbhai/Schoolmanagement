@@ -69,6 +69,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('admissions/{admission}/convert', [Admin\AdmissionController::class, 'convertToStudent'])->name('admissions.convert');
 
     // Fees
+    Route::get('fees/report', [Admin\FeeController::class, 'report'])->name('fees.report');
+    Route::get('fees/{payment}/receipt', [Admin\FeeController::class, 'receipt'])->name('fees.receipt');
     Route::resource('fees', Admin\FeeController::class);
     Route::get('fees-collect',   [Admin\FeeController::class, 'collectPayment'])->name('fees.collect');
     Route::post('fees-payment',  [Admin\FeeController::class, 'storePayment'])->name('fees.payment');
