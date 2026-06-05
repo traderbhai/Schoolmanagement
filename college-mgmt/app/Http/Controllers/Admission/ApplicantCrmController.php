@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ApplicationRejected;
+use App\Mail\ApplicationSelected;
+use App\Mail\ApplicationShortlisted;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\AdmissionTeamNote;
 use App\Models\CounsellingLog;
 use App\Models\Program;
 use App\Models\Batch;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -92,6 +96,17 @@ class ApplicantCrmController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        // Send status-based email notifications
+        $applicant->load(['user', 'program']);
+        if ($applicant->user) {
+            match ($request->status) {
+                'shortlisted' => NotificationService::send(ApplicationShortlisted::class, $applicant->user, ['applicant' => $applicant]),
+                'selected'    => NotificationService::send(ApplicationSelected::class, $applicant->user, ['applicant' => $applicant]),
+                'rejected'    => NotificationService::send(ApplicationRejected::class, $applicant->user, ['applicant' => $applicant]),
+                default       => null,
+            };
+        }
 
         return back()->with('success', 'Applicant status updated to ' . ucfirst(str_replace('_', ' ', $request->status)));
     }

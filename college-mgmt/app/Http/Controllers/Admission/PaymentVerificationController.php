@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PaymentRejected;
+use App\Mail\PaymentVerified;
 use App\Models\AdmissionPayment;
 use App\Models\Applicant;
 use App\Models\Program;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\ActivityLog;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -76,6 +79,15 @@ class PaymentVerificationController extends Controller
 
         ActivityLog::record('verify_payment', "Verified payment #{$payment->id} for applicant {$payment->applicant?->application_number}", $payment);
 
+        // Send payment verified notification
+        $payment->load(['applicant.user', 'installment']);
+        if ($payment->applicant && $payment->applicant->user) {
+            NotificationService::send(PaymentVerified::class, $payment->applicant->user, [
+                'applicant' => $payment->applicant,
+                'payment'   => $payment,
+            ]);
+        }
+
         return back()->with('success', 'Payment verified successfully.');
     }
 
@@ -91,6 +103,15 @@ class PaymentVerificationController extends Controller
             'verified_at'        => now(),
             'verification_notes' => $r->verification_notes,
         ]);
+
+        // Send payment rejected notification
+        $payment->load(['applicant.user', 'installment']);
+        if ($payment->applicant && $payment->applicant->user) {
+            NotificationService::send(PaymentRejected::class, $payment->applicant->user, [
+                'applicant' => $payment->applicant,
+                'payment'   => $payment,
+            ]);
+        }
 
         return back()->with('success', 'Payment rejected with notes.');
     }

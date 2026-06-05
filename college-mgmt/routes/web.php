@@ -35,6 +35,8 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('fees', [ApplicantPayment::class, 'index'])->name('fees.index');
     Route::get('fees/payment/{payment}', [ApplicantPayment::class, 'show'])->name('fees.show');
     Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
+    Route::get('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 Route::get('/', function () {
@@ -170,6 +172,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
     Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
 
+    // Bulk Mail
+    Route::get('bulk-mail', [Admin\BulkMailController::class, 'index'])->name('bulk-mail.index');
+    Route::get('bulk-mail/count', [Admin\BulkMailController::class, 'previewCount'])->name('bulk-mail.count');
+    Route::post('bulk-mail/send', [Admin\BulkMailController::class, 'send'])->name('bulk-mail.send');
+
+    // Email Logs
+    Route::get('email-logs', [Admin\EmailLogController::class, 'index'])->name('email-logs.index');
+
     // Settings
     Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
     Route::get('settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
@@ -297,6 +307,10 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('placements/my-applications', [Student\PlacementController::class, 'myApplications'])->name('placements.applications');
     Route::get('placements', [Student\PlacementController::class, 'index'])->name('placements');
     Route::post('placements/{drive}/apply', [Student\PlacementController::class, 'apply'])->name('placements.apply');
+
+    // Notification Preferences
+    Route::get('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

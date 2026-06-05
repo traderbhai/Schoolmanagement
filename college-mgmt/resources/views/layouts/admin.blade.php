@@ -303,6 +303,11 @@
         <div class="section-label">Access Control</div>
         <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif"><i class="bi bi-shield-lock"></i> Role Assignments</a>
         <div class="sidebar-divider"></div>
+        <div class="section-label">Communications</div>
+        <a href="{{ route('admin.bulk-mail.index') }}" class="nav-link @if(request()->routeIs('admin.bulk-mail.*')) active @endif"><i class="bi bi-envelope-paper"></i> Bulk Mail</a>
+        <a href="{{ route('admin.email-logs.index') }}" class="nav-link @if(request()->routeIs('admin.email-logs.*')) active @endif"><i class="bi bi-journal-text"></i> Email Logs</a>
+
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
