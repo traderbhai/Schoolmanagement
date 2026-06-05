@@ -35,9 +35,14 @@
                             <p class="text-muted small mb-0">{{ $program->description }}</p>
                         @endif
                     </div>
-                    <a href="{{ route('admin.programs.edit', $program) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-pencil me-1"></i> Edit
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.admission-config.index', $program) }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-sliders me-1"></i>Admission Config
+                        </a>
+                        <a href="{{ route('admin.programs.edit', $program) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </a>
+                    </div>
                 </div>
                 <hr>
                 <div class="row g-3 text-center">

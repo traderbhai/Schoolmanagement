@@ -53,7 +53,7 @@
 
         {{-- ACADEMIC STRUCTURE --}}
         <div class="section-label">Academic Structure</div>
-        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*')) active @endif">
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif">
             <i class="bi bi-mortarboard"></i> Programs
         </a>
         <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif">
@@ -183,7 +183,7 @@
         <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif"><i class="bi bi-door-open"></i> Classrooms</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academic Structure</div>
-        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
         <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif"><i class="bi bi-collection"></i> Batches</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Timetable</div>
