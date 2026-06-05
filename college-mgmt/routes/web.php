@@ -190,6 +190,19 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
     Route::post('documents/{document}/verify', [Admission\ApplicantCrmController::class, 'verifyDocument'])->name('documents.verify');
+
+    // Selection Sessions (static routes before parameterized)
+    Route::get('sessions', [Admission\SelectionSessionController::class, 'index'])->name('sessions.index');
+    Route::get('sessions/create', [Admission\SelectionSessionController::class, 'create'])->name('sessions.create');
+    Route::post('sessions', [Admission\SelectionSessionController::class, 'store'])->name('sessions.store');
+    Route::post('sessions/{session}/assign', [Admission\SelectionSessionController::class, 'assignApplicants'])->name('sessions.assign');
+    Route::post('sessions/{session}/attendance', [Admission\SelectionSessionController::class, 'markAttendance'])->name('sessions.attendance');
+    Route::post('sessions/{session}/complete', [Admission\SelectionSessionController::class, 'completeSession'])->name('sessions.complete');
+    Route::delete('sessions/{session}/applicants/{applicant}', [Admission\SelectionSessionController::class, 'removeApplicant'])->name('sessions.remove-applicant');
+    Route::get('sessions/{session}', [Admission\SelectionSessionController::class, 'show'])->name('sessions.show');
+    Route::get('sessions/{session}/edit', [Admission\SelectionSessionController::class, 'edit'])->name('sessions.edit');
+    Route::put('sessions/{session}', [Admission\SelectionSessionController::class, 'update'])->name('sessions.update');
+    Route::delete('sessions/{session}', [Admission\SelectionSessionController::class, 'destroy'])->name('sessions.destroy');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

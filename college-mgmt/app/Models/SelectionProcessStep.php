@@ -9,6 +9,7 @@ class SelectionProcessStep extends Model
 
     public function program() { return $this->belongsTo(Program::class); }
     public function scoringParameters() { return $this->hasMany(ScoringParameter::class)->orderBy('sort_order'); }
+    public function sessions() { return $this->hasMany(SelectionSession::class); }
 
     public function getTypeLabelAttribute(): string
     {

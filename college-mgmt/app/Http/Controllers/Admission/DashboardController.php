@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\CounsellingLog;
+use App\Models\SelectionSession;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -43,6 +44,12 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
-        return view('admission.dashboard', compact('kpis', 'pipeline', 'pipelineMax', 'followups', 'recentLogs'));
+        // Upcoming sessions (next 3)
+        $upcomingSessions = SelectionSession::with(['step', 'program', 'sessionApplicants'])
+            ->upcoming()
+            ->limit(3)
+            ->get();
+
+        return view('admission.dashboard', compact('kpis', 'pipeline', 'pipelineMax', 'followups', 'recentLogs', 'upcomingSessions'));
     }
 }

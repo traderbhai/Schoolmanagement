@@ -140,6 +140,45 @@
     </div>
 </div>
 
+{{-- Upcoming Sessions --}}
+@if($upcomingSessions->isNotEmpty())
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center fw-bold">
+        <span><i class="bi bi-calendar-event me-1 text-primary"></i> Upcoming Sessions</span>
+        <a href="{{ route('admission.sessions.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            @foreach($upcomingSessions as $s)
+            @php
+                $typeColors = ['gd'=>'success','pi'=>'primary','wat'=>'warning','written_test'=>'info','aptitude'=>'secondary','presentation'=>'dark'];
+                $stepType = $s->step->type ?? 'gd';
+            @endphp
+            <div class="col-md-4">
+                <div class="card border h-100">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <span class="badge bg-{{ $typeColors[$stepType] ?? 'secondary' }}">{{ strtoupper($stepType) }}</span>
+                            <span class="{{ $s->statusBadge }} small">{{ $s->statusLabel }}</span>
+                        </div>
+                        <div class="fw-semibold">{{ $s->session_name }}</div>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-calendar3 me-1"></i>{{ $s->scheduled_date->format('d M Y') }}<br>
+                            <i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }}<br>
+                            <i class="bi bi-people me-1"></i>{{ $s->sessionApplicants->count() }} candidates
+                        </div>
+                        <a href="{{ route('admission.sessions.show', $s) }}" class="btn btn-sm btn-outline-primary mt-2 w-100">
+                            <i class="bi bi-eye me-1"></i> View
+                        </a>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- Recent Interactions --}}
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-transparent border-0 fw-bold">

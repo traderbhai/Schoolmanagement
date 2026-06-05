@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog, SelectionSession, SessionApplicant};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -620,6 +620,64 @@ class DemoDataSeeder extends Seeder
                     );
                 }
             }
+        }
+
+        // ── P4: Selection Sessions ─────────────────────────────────────────────
+        $shortlisted = Applicant::where('program_id', $pgdm->id)->where('status', 'shortlisted')->get();
+        $selected    = Applicant::where('program_id', $pgdm->id)->where('status', 'selected')->get();
+
+        // WAT Session — scheduled, with 3 shortlisted applicants
+        $watSession = SelectionSession::firstOrCreate(
+            ['session_name' => 'WAT Round 1 — Morning Batch', 'selection_process_step_id' => $wat->id],
+            [
+                'program_id'  => $pgdm->id,
+                'session_name' => 'WAT Round 1 — Morning Batch',
+                'scheduled_date' => Carbon::now()->addDays(7)->toDateString(),
+                'start_time'  => '09:00:00',
+                'end_time'    => '10:30:00',
+                'venue'       => 'Seminar Hall A',
+                'max_candidates' => 20,
+                'instructions' => 'Candidates must bring their own pen. Essay topic will be revealed 5 minutes before start.',
+                'status'      => 'scheduled',
+                'created_by'  => $admHead->id,
+            ]
+        );
+
+        foreach ($shortlisted->take(3) as $applicant) {
+            SessionApplicant::firstOrCreate([
+                'selection_session_id' => $watSession->id,
+                'applicant_id'         => $applicant->id,
+            ], ['assigned_at' => now(), 'attendance_status' => 'pending']);
+        }
+
+        // GD Session — completed, 2 applicants with attendance recorded
+        $gdSession = SelectionSession::firstOrCreate(
+            ['session_name' => 'GD Round 1 — Batch A', 'selection_process_step_id' => $gd->id],
+            [
+                'program_id'  => $pgdm->id,
+                'session_name' => 'GD Round 1 — Batch A',
+                'scheduled_date' => Carbon::now()->subDays(5)->toDateString(),
+                'start_time'  => '11:00:00',
+                'end_time'    => '13:00:00',
+                'venue'       => 'Conference Room 2',
+                'max_candidates' => 10,
+                'instructions' => 'Groups of 8-10 candidates. 15-minute topic discussion with 2 evaluators.',
+                'status'      => 'completed',
+                'conducted_by' => $officer->id,
+                'created_by'  => $admHead->id,
+            ]
+        );
+
+        $gdApplicants = $shortlisted->merge($selected)->take(2);
+        foreach ($gdApplicants as $i => $applicant) {
+            SessionApplicant::firstOrCreate([
+                'selection_session_id' => $gdSession->id,
+                'applicant_id'         => $applicant->id,
+            ], [
+                'assigned_at'       => Carbon::now()->subDays(6),
+                'attendance_status' => $i === 0 ? 'present' : 'present',
+                'panel_number'      => 1,
+            ]);
         }
 
         $this->command->info('Demo data seeded successfully!');

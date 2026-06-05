@@ -96,6 +96,20 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- ADMISSION CRM --}}
+        <div class="section-label">Admission CRM</div>
+        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
+            <i class="bi bi-speedometer2"></i> CRM Dashboard
+        </a>
+        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
+            <i class="bi bi-person-lines-fill"></i> Applicants CRM
+        </a>
+        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
+            <i class="bi bi-calendar-event"></i> Sessions
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
@@ -199,6 +213,11 @@
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
         <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applications</a>
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Admission CRM</div>
+        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
+        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants CRM</a>
+        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif"><i class="bi bi-calendar-event"></i> Sessions</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
