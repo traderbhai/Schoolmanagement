@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, RoleProgramAssignment};
 use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
@@ -13,7 +13,8 @@ class DemoDataSeeder extends Seeder
     public function run()
     {
         // Ensure roles exist
-        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head'] as $role) {
+        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head',
+                  'dean_academics', 'program_chair', 'exam_cell', 'hod', 'accounts_officer'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
 
@@ -892,6 +893,45 @@ class DemoDataSeeder extends Seeder
             }
         }
 
+        // ── P9: Departmental Role Users ─────────────────────────────────────────
+        $admin = User::where('email', 'admin@demo.edu')->first();
+
+        $deanUser = User::firstOrCreate(['email' => 'dean@college.com'], [
+            'name' => 'Dr. Meena Iyer', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $deanUser->syncRoles(['dean_academics']);
+
+        $chairUser = User::firstOrCreate(['email' => 'chair@college.com'], [
+            'name' => 'Prof. Anil Gupta', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $chairUser->syncRoles(['program_chair']);
+
+        $examUser = User::firstOrCreate(['email' => 'exam@college.com'], [
+            'name' => 'Ritu Verma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $examUser->syncRoles(['exam_cell']);
+
+        $hodUser = User::firstOrCreate(['email' => 'hod@college.com'], [
+            'name' => 'Dr. Suresh Nair', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $hodUser->syncRoles(['hod']);
+
+        $accountsUser = User::firstOrCreate(['email' => 'accounts@college.com'], [
+            'name' => 'Pradeep Sharma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
+        ]);
+        $accountsUser->syncRoles(['accounts_officer']);
+
+        // RoleProgramAssignment records for program_chair and hod → PGDM
+        $assignById = $admin?->id ?? 1;
+        RoleProgramAssignment::firstOrCreate(
+            ['user_id' => $chairUser->id, 'role_name' => 'program_chair', 'program_id' => $pgdm->id],
+            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
+        );
+        RoleProgramAssignment::firstOrCreate(
+            ['user_id' => $hodUser->id, 'role_name' => 'hod', 'program_id' => $pgdm->id],
+            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
+        );
+
         $this->command->info('Demo data seeded successfully!');
         $this->command->info('  Admin: admin@demo.edu / password123');
         $this->command->info('  Teacher: anjali@demo.edu / password123');
@@ -899,5 +939,10 @@ class DemoDataSeeder extends Seeder
         $this->command->info('  Applicants: priya.sharma@applicant.demo / password123 (and 4 more)');
         $this->command->info('  Admission Officer: officer@college.com / password');
         $this->command->info('  Admission Head: head@college.com / password');
+        $this->command->info('  Dean of Academics: dean@college.com / password');
+        $this->command->info('  Program Chair: chair@college.com / password');
+        $this->command->info('  Exam Cell: exam@college.com / password');
+        $this->command->info('  HoD: hod@college.com / password');
+        $this->command->info('  Accounts Officer: accounts@college.com / password');
     }
 }

@@ -188,6 +188,14 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- ACCESS CONTROL --}}
+        <div class="section-label">Access Control</div>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
+            <i class="bi bi-shield-lock"></i> Role Assignments
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
@@ -266,6 +274,9 @@
         <div class="section-label">Placement</div>
         <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Access Control</div>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif"><i class="bi bi-shield-lock"></i> Role Assignments</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
