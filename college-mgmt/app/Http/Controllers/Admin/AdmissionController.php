@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admission;
+use App\Models\ActivityLog;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\Student;
@@ -161,6 +162,8 @@ class AdmissionController extends Controller
             $student->load('user');
             \App\Jobs\SendWelcomeEmail::dispatch($student);
         }
+
+        ActivityLog::record('created', "Admission converted to student: {$user->name}", $student);
 
         return redirect()->route('admin.students.show', $student)->with('success', 'Student account created successfully.');
     }

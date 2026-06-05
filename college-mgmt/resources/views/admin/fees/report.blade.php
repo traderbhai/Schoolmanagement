@@ -65,6 +65,7 @@
             <div class="col-12 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Apply Filters</button>
                 <a href="{{ route('admin.fees.report') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                <a href="{{ route('admin.fees.export') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Export CSV</a>
             </div>
         </form>
     </div>

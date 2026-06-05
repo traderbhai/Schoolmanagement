@@ -11,7 +11,10 @@
 @section('content')
 
 <div class="card mb-4">
-    <div class="card-header fw-semibold">Generate Report</div>
+    <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+        <span>Generate Report</span>
+        <a href="{{ route('admin.attendance.export') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Export CSV</a>
+    </div>
     <div class="card-body">
         <form class="row g-3 align-items-end" method="GET">
             <div class="col-md-4">

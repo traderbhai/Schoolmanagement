@@ -11,7 +11,12 @@
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div></div>
-    <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back to Students</a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.students.report', $student) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Full Report PDF
+        </a>
+        <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back to Students</a>
+    </div>
 </div>
 
 <div class="row g-3">

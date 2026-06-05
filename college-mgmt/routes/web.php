@@ -95,10 +95,27 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('faculty/workload', [Admin\FacultyReportController::class, 'workload'])->name('faculty.workload');
 
     // Placement
+    Route::get('placements/export', [Admin\PlacementDriveController::class, 'exportPlacements'])->name('placements.export');
     Route::resource('companies', Admin\CompanyController::class);
     Route::resource('placement-drives', Admin\PlacementDriveController::class);
     Route::post('placement-drives/{drive}/apply', [Admin\PlacementDriveController::class, 'apply'])->name('placement-drives.apply');
     Route::patch('placements/{placement}/status', [Admin\PlacementDriveController::class, 'updateApplication'])->name('placements.update-status');
+
+    // Export routes
+    Route::get('students/export', [Admin\StudentController::class, 'export'])->name('students.export');
+    Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
+    Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
+
+    // Settings
+    Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
+    Route::get('settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
+    Route::post('settings/branding', [Admin\SettingsController::class, 'update'])->name('settings.update');
+
+    // Activity Log
+    Route::get('activity-log', [Admin\ActivityLogController::class, 'index'])->name('activity-log');
+
+    // Consolidated Student Report PDF
+    Route::get('students/{student}/report', [Admin\ReportController::class, 'consolidatedReport'])->name('students.report');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

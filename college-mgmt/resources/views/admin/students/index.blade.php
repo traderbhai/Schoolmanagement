@@ -14,9 +14,12 @@
         <h5 class="mb-0 fw-bold">Students</h5>
         <div class="text-muted" style="font-size:.82rem">Manage student records and enrollments</div>
     </div>
-    <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
-        <i class="bi bi-person-plus me-1"></i>Add Student
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.students.export') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Export CSV</a>
+        <a href="{{ route('admin.students.create') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1"></i>Add Student
+        </a>
+    </div>
 </div>
 
 {{-- Filter Bar --}}

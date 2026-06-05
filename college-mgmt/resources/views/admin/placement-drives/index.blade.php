@@ -13,9 +13,12 @@
         <h5 class="mb-0 fw-bold">Placement Drives</h5>
         <div class="text-muted" style="font-size:.82rem">Manage job drives and student applications</div>
     </div>
-    <a href="{{ route('admin.placement-drives.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Add Drive
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.placements.export') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Export CSV</a>
+        <a href="{{ route('admin.placement-drives.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Drive
+        </a>
+    </div>
 </div>
 
 {{-- KPI Cards --}}

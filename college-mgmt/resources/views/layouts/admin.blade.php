@@ -141,8 +141,11 @@
 
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
-        <a href="#" class="nav-link @if(request()->routeIs('admin.settings.*')) active @endif">
+        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
             <i class="bi bi-gear"></i> Settings
+        </a>
+        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif">
+            <i class="bi bi-clock-history"></i> Activity Log
         </a>
     </div>
 </div>
@@ -202,7 +205,8 @@
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
-        <a href="#" class="nav-link @if(request()->routeIs('admin.settings.*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
+        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
+        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
     </div>
 </div>
 

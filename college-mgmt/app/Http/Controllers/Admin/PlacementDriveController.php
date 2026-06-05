@@ -127,6 +127,37 @@ class PlacementDriveController extends Controller
         return redirect()->route('admin.placement-drives.show', $drive)->with('success', 'Student added to drive.');
     }
 
+    public function exportPlacements()
+    {
+        $placements = Placement::with('student.user', 'student.course', 'drive.company')
+            ->get();
+
+        $filename = 'placements_' . now()->format('Ymd_His') . '.csv';
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename=\"{$filename}\""];
+
+        $callback = function () use ($placements) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Student','Enrollment','Course','Company','Drive','Role','Package','Status','Offer Letter','Joining Date']);
+            foreach ($placements as $p) {
+                fputcsv($file, [
+                    $p->student->user->name ?? '',
+                    $p->student->enrollment_number ?? '',
+                    $p->student->course->name ?? '',
+                    $p->drive->company->name ?? '',
+                    $p->drive->title ?? '',
+                    $p->drive->job_role ?? '',
+                    $p->offered_package ?? $p->drive->package ?? '',
+                    $p->application_status,
+                    $p->offer_letter_number ?? '',
+                    $p->joining_date?->format('d/m/Y') ?? '',
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function updateApplication(Request $request, Placement $placement)
     {
         $request->validate([
