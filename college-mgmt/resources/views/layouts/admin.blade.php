@@ -78,6 +78,9 @@
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif">
             <i class="bi bi-person-plus-fill"></i> Admissions
         </a>
+        <a href="{{ route('admin.parents.index') }}" class="nav-link @if(request()->routeIs('admin.parents.*')) active @endif">
+            <i class="bi bi-people-fill"></i> Parents
+        </a>
 
         <div class="sidebar-divider"></div>
 

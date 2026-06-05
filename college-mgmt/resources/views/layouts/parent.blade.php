@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'EduManage — Student')</title>
+    <title>@yield('title', 'EduManage — Parent')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -13,49 +13,32 @@
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
-    <a class="sidebar-brand" href="{{ route('student.dashboard') }}">
-        <span class="brand-icon"><i class="bi bi-mortarboard-fill"></i></span>
+    <a class="sidebar-brand" href="{{ route('parent.dashboard') }}">
+        <span class="brand-icon"><i class="bi bi-house-heart-fill"></i></span>
         <span>
             <div class="brand-text">EduManage</div>
-            <div class="brand-sub">Student Portal</div>
+            <div class="brand-sub">Parent Portal</div>
         </span>
     </a>
 
     <div class="mt-2 pb-4 flex-grow-1">
         <div class="section-label">Main</div>
-        <a href="{{ route('student.dashboard') }}" class="nav-link @if(request()->routeIs('student.dashboard')) active @endif">
+        <a href="{{ route('parent.dashboard') }}" class="nav-link @if(request()->routeIs('parent.dashboard')) active @endif">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
 
         <div class="sidebar-divider"></div>
 
-        <div class="section-label">Academics</div>
-        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif">
-            <i class="bi bi-check2-square"></i> My Attendance
-        </a>
-        <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif">
-            <i class="bi bi-award"></i> My Results
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Finance</div>
-        <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif">
-            <i class="bi bi-cash-coin"></i> Fee Status
+        <div class="section-label">Children</div>
+        <a href="{{ route('parent.children') }}" class="nav-link @if(request()->routeIs('parent.children*')) active @endif">
+            <i class="bi bi-people"></i> My Children
         </a>
 
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Communication</div>
-        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
+        <a href="{{ route('parent.notices') }}" class="nav-link @if(request()->routeIs('parent.notices')) active @endif">
             <i class="bi bi-megaphone"></i> Notices
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Account</div>
-        <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
-            <i class="bi bi-person-circle"></i> My Profile
         </a>
     </div>
 </div>
@@ -64,30 +47,23 @@
 <div class="offcanvas offcanvas-start sidebar-mobile" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="width:270px">
     <div class="offcanvas-header py-0" style="height:var(--topbar-height);background:rgba(0,0,0,.25);">
         <div class="d-flex align-items-center gap-2">
-            <span style="width:30px;height:30px;background:var(--clr-primary);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.95rem;"><i class="bi bi-mortarboard-fill"></i></span>
+            <span style="width:30px;height:30px;background:var(--clr-primary);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.95rem;"><i class="bi bi-house-heart-fill"></i></span>
             <div>
                 <div style="color:#f8fafc;font-weight:700;font-size:.9rem;line-height:1.2;" id="mobileSidebarLabel">EduManage</div>
-                <div style="color:rgba(255,255,255,.45);font-size:.65rem;">Student Portal</div>
+                <div style="color:rgba(255,255,255,.45);font-size:.65rem;">Parent Portal</div>
             </div>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
         <div class="section-label">Main</div>
-        <a href="{{ route('student.dashboard') }}" class="nav-link @if(request()->routeIs('student.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="{{ route('parent.dashboard') }}" class="nav-link @if(request()->routeIs('parent.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
         <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif"><i class="bi bi-check2-square"></i> My Attendance</a>
-        <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif"><i class="bi bi-award"></i> My Results</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Finance</div>
-        <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
+        <div class="section-label">Children</div>
+        <a href="{{ route('parent.children') }}" class="nav-link @if(request()->routeIs('parent.children*')) active @endif"><i class="bi bi-people"></i> My Children</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Communication</div>
-        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Account</div>
-        <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
+        <a href="{{ route('parent.notices') }}" class="nav-link @if(request()->routeIs('parent.notices')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
     </div>
 </div>
 
@@ -117,18 +93,8 @@
         </div>
 
         <div class="topbar-right">
-            <div class="topbar-search d-none d-md-flex">
-                <i class="bi bi-search search-icon"></i>
-                <input type="search" placeholder="Search..." aria-label="Search">
-            </div>
-
             <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-
-            <button class="notif-btn" aria-label="Notifications" title="Notifications">
-                <i class="bi bi-bell"></i>
-                <span class="notif-badge"></span>
             </button>
 
             <div class="dropdown">
@@ -142,8 +108,6 @@
                             <div style="font-size:.75rem;color:var(--clr-text-muted);">{{ auth()->user()->email }}</div>
                         </div>
                     </li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item" href="{{ route('student.profile') }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}">
@@ -161,34 +125,15 @@
     {{-- PAGE BODY --}}
     <div class="page-body">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
+            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
-        @endif
-        @if(session('info'))
-            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
-                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
-        @endif
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
-                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
-        @endif
-        @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
@@ -197,9 +142,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-// ── Auto-dismiss success/info alerts ──────────────────────
 (function () {
     setTimeout(function () {
         document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
@@ -229,7 +172,6 @@
     }
 })();
 </script>
-
 @stack('scripts')
 </body>
 </html>

@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Student;
 use App\Http\Controllers\Teacher;
+use App\Http\Controllers\Parent as ParentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -11,6 +12,7 @@ Route::get('/', function () {
         $user = auth()->user();
         if ($user->hasRole('admin'))   return redirect()->route('admin.dashboard');
         if ($user->hasRole('teacher')) return redirect()->route('teacher.dashboard');
+        if ($user->hasRole('parent'))  return redirect()->route('parent.dashboard');
         return redirect()->route('student.dashboard');
     }
     return view('welcome');
@@ -21,6 +23,7 @@ Route::get('/dashboard', function () {
     $user = auth()->user();
     if ($user?->hasRole('admin'))   return redirect()->route('admin.dashboard');
     if ($user?->hasRole('teacher')) return redirect()->route('teacher.dashboard');
+    if ($user?->hasRole('parent'))  return redirect()->route('parent.dashboard');
     return redirect()->route('student.dashboard');
 })->middleware(['auth'])->name('dashboard');
 
@@ -38,6 +41,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('students',      Admin\StudentController::class);
     Route::resource('timetable-slots', Admin\TimetableSlotController::class);
     Route::resource('notices',       Admin\NoticeController::class);
+    Route::resource('parents',       Admin\ParentController::class);
 
     // Timetable
     Route::resource('timetable', Admin\TimetableController::class);
@@ -106,10 +110,22 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('fees',       [Student\FeeController::class, 'index'])->name('fees');
     Route::get('profile',    [Student\ProfileController::class, 'index'])->name('profile');
     Route::patch('profile',  [Student\ProfileController::class, 'update'])->name('profile.update');
+    Route::get('notices',    [Student\NoticeController::class, 'index'])->name('notices');
+    Route::get('notices/{notice}', [Student\NoticeController::class, 'show'])->name('notices.show');
 
     // PDF self-download
     Route::get('reports/grade-card/{semester}', [Student\ReportController::class, 'gradeCard'])->name('reports.grade-card');
     Route::get('reports/fee-receipt/{payment}', [Student\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
+});
+
+// ── Parent routes ────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:parent|admin'])->prefix('parent')->name('parent.')->group(function () {
+    Route::get('dashboard', [ParentController\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('children',  [ParentController\DashboardController::class, 'children'])->name('children');
+    Route::get('children/{student}/attendance', [ParentController\DashboardController::class, 'attendance'])->name('children.attendance');
+    Route::get('children/{student}/results',    [ParentController\DashboardController::class, 'results'])->name('children.results');
+    Route::get('children/{student}/fees',       [ParentController\DashboardController::class, 'fees'])->name('children.fees');
+    Route::get('notices', [ParentController\DashboardController::class, 'notices'])->name('notices');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────
