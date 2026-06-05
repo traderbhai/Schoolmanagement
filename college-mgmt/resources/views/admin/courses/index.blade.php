@@ -1,35 +1,72 @@
 @extends('layouts.admin')
-@section('title','Courses')
-@section('page-title','Courses')
+@section('title', 'Courses')
+@section('page-title', 'Courses')
 @section('content')
-<div class="d-flex justify-content-end mb-3">
-    <a href="{{ route('admin.courses.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Course</a>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h5 class="mb-0 fw-bold">Courses</h5>
+        <div class="text-muted" style="font-size:.82rem">Manage academic programmes</div>
+    </div>
+    <a href="{{ route('admin.courses.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Add Course
+    </a>
 </div>
+
 <div class="card">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead><tr><th>#</th><th>Name</th><th>Code</th><th>Department</th><th>Duration</th><th>Semesters</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Duration</th>
+                    <th>Total Students</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
             <tbody>
-            @foreach($courses as $c)
+            @forelse($courses as $c)
             <tr>
-                <td>{{ $loop->iteration }}</td>
+                <td><span class="badge bg-primary">{{ $c->code }}</span></td>
                 <td class="fw-semibold">{{ $c->name }}</td>
-                <td><span class="badge bg-secondary">{{ $c->code }}</span></td>
                 <td>{{ $c->department->name }}</td>
-                <td>{{ $c->duration_years }} yr</td>
-                <td>{{ $c->total_semesters }}</td>
+                <td>{{ $c->duration_years }} yr / {{ $c->total_semesters }} sem</td>
                 <td>{{ $c->students_count }}</td>
-                <td><span class="badge {{ $c->is_active ? 'bg-success' : 'bg-danger' }}">{{ $c->is_active ? 'Active' : 'Inactive' }}</span></td>
                 <td>
-                    <a href="{{ route('admin.courses.show', $c) }}" class="btn btn-sm btn-outline-info">View</a>
-                    <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                    <form method="POST" action="{{ route('admin.courses.destroy', $c) }}" class="d-inline" onsubmit="return confirm('Delete?')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">Del</button></form>
+                    <span class="badge {{ $c->is_active ? 'badge-active' : 'badge-danger' }}">{{ $c->is_active ? 'Active' : 'Inactive' }}</span>
+                </td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="{{ route('admin.courses.show', $c) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal"
+                            data-action="{{ route('admin.courses.destroy', $c) }}"
+                            data-name="{{ $c->name }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state py-5">
+                        <div class="empty-icon"><i class="bi bi-journal-bookmark"></i></div>
+                        <div class="mt-2 fw-semibold">No courses found</div>
+                        <a href="{{ route('admin.courses.create') }}" class="btn btn-primary btn-sm mt-3">Add Course</a>
+                    </div>
+                </td>
+            </tr>
+            @endforelse
             </tbody>
         </table>
     </div>
-    @if($courses->hasPages())<div class="card-footer">{{ $courses->links() }}</div>@endif
+    @if($courses->hasPages())
+    <div class="card-footer">{{ $courses->links() }}</div>
+    @endif
 </div>
 @endsection
