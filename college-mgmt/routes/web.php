@@ -12,6 +12,7 @@ use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
+use App\Http\Controllers\Departmental;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Routes ──────────────────────────────────────────────
@@ -306,6 +307,42 @@ Route::middleware(['auth', 'role:parent|admin'])->prefix('parent')->name('parent
     Route::get('children/{student}/results',    [ParentController\DashboardController::class, 'results'])->name('children.results');
     Route::get('children/{student}/fees',       [ParentController\DashboardController::class, 'fees'])->name('children.fees');
     Route::get('notices', [ParentController\DashboardController::class, 'notices'])->name('notices');
+});
+
+// ── Dean Academics ──────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:dean_academics|admin'])->prefix('dean')->name('dean.')->group(function () {
+    Route::get('dashboard',  [Departmental\DeanController::class, 'dashboard'])->name('dashboard');
+    Route::get('programs',   [Departmental\DeanController::class, 'programs'])->name('programs');
+    Route::get('students',   [Departmental\DeanController::class, 'students'])->name('students');
+    Route::get('academics',  [Departmental\DeanController::class, 'academics'])->name('academics');
+    Route::get('attendance', [Departmental\DeanController::class, 'attendance'])->name('attendance');
+});
+
+// ── Program Chair / HOD ──────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->prefix('program-chair')->name('chair.')->group(function () {
+    Route::get('dashboard',  [Departmental\ProgramChairController::class, 'dashboard'])->name('dashboard');
+    Route::get('students',   [Departmental\ProgramChairController::class, 'students'])->name('students');
+    Route::get('curriculum', [Departmental\ProgramChairController::class, 'curriculum'])->name('curriculum');
+    Route::get('timetable',  [Departmental\ProgramChairController::class, 'timetable'])->name('timetable');
+    Route::get('exams',      [Departmental\ProgramChairController::class, 'exams'])->name('exams');
+});
+
+// ── Exam Cell ────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam-cell')->name('exam-cell.')->group(function () {
+    Route::get('dashboard',                          [Departmental\ExamCellController::class, 'dashboard'])->name('dashboard');
+    Route::get('exams',                              [Departmental\ExamCellController::class, 'exams'])->name('exams');
+    Route::get('results',                            [Departmental\ExamCellController::class, 'results'])->name('results');
+    Route::get('results/{exam}/grade-sheet',         [Departmental\ExamCellController::class, 'gradeSheet'])->name('grade-sheet');
+    Route::post('results/{exam}/publish',            [Departmental\ExamCellController::class, 'publishResults'])->name('publish');
+});
+
+// ── Accounts ─────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->name('accounts.')->group(function () {
+    Route::get('dashboard',          [Departmental\AccountsController::class, 'dashboard'])->name('dashboard');
+    Route::get('fee-collections',    [Departmental\AccountsController::class, 'feeCollections'])->name('fee-collections');
+    Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');
+    Route::get('admission-payments', [Departmental\AccountsController::class, 'admissionPayments'])->name('admission-payments');
+    Route::get('reports',            [Departmental\AccountsController::class, 'reports'])->name('reports');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

@@ -32,11 +32,11 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
         if ($user->hasRole('admin'))             return redirect()->route('admin.dashboard');
-        if ($user->hasRole('dean_academics'))    return redirect()->route('admin.dashboard');
-        if ($user->hasRole('program_chair'))     return redirect()->route('admin.dashboard');
-        if ($user->hasRole('exam_cell'))         return redirect()->route('admin.dashboard');
-        if ($user->hasRole('hod'))               return redirect()->route('admin.dashboard');
-        if ($user->hasRole('accounts_officer'))  return redirect()->route('admin.dashboard');
+        if ($user->hasRole('dean_academics'))    return redirect()->route('dean.dashboard');
+        if ($user->hasRole('program_chair'))     return redirect()->route('chair.dashboard');
+        if ($user->hasRole('hod'))               return redirect()->route('chair.dashboard');
+        if ($user->hasRole('exam_cell'))         return redirect()->route('exam-cell.dashboard');
+        if ($user->hasRole('accounts_officer'))  return redirect()->route('accounts.dashboard');
         if ($user->hasRole('admission_head'))    return redirect()->route('admission.dashboard');
         if ($user->hasRole('admission_officer')) return redirect()->route('admission.dashboard');
         if ($user->hasRole('teacher'))           return redirect()->route('teacher.dashboard');

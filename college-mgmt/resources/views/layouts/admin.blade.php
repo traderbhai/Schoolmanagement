@@ -196,6 +196,31 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- DEPARTMENTAL PORTALS --}}
+        <div class="section-label">Departmental Portals</div>
+        @hasrole('dean_academics|admin')
+        <a href="{{ route('dean.dashboard') }}" class="nav-link @if(request()->routeIs('dean.*')) active @endif">
+            <i class="bi bi-mortarboard-fill"></i> Dean Academics
+        </a>
+        @endhasrole
+        @hasrole('program_chair|hod|dean_academics|admin')
+        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
+            <i class="bi bi-diagram-3"></i> Program Chair
+        </a>
+        @endhasrole
+        @hasrole('exam_cell|dean_academics|admin')
+        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.*')) active @endif">
+            <i class="bi bi-file-earmark-check"></i> Exam Cell
+        </a>
+        @endhasrole
+        @hasrole('accounts_officer|admin')
+        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.*')) active @endif">
+            <i class="bi bi-cash-stack"></i> Accounts
+        </a>
+        @endhasrole
+
+        <div class="sidebar-divider"></div>
+
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
