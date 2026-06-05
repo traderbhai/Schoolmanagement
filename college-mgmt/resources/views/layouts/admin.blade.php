@@ -107,6 +107,13 @@
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
             <i class="bi bi-calendar-event"></i> Sessions
         </a>
+        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif">
+            <i class="bi bi-folder-check"></i> Document Queue
+            @php $docsPending = \App\Models\ApplicantDocument::where('status','pending')->count(); @endphp
+            @if($docsPending > 0)
+                <span class="badge bg-warning text-dark ms-1">{{ $docsPending }}</span>
+            @endif
+        </a>
         @php $firstProgram = \App\Models\Program::where('is_active',true)->first(); @endphp
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">

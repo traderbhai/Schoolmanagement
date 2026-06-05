@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
+use App\Models\ApplicantDocument;
 use App\Models\CounsellingLog;
 use App\Models\SelectionSession;
 use Carbon\Carbon;
@@ -21,6 +22,7 @@ class DashboardController extends Controller
             'selected'      => Applicant::where('status', 'selected')->count(),
             'rejected'      => Applicant::where('status', 'rejected')->count(),
             'submitted_today' => Applicant::whereDate('applied_at', today())->count(),
+            'docs_pending'    => ApplicantDocument::where('status', 'pending')->count(),
         ];
 
         // Pipeline funnel data (status order)

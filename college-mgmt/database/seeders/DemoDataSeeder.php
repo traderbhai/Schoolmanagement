@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -559,6 +559,47 @@ class DemoDataSeeder extends Seeder
                 'reviewed_at'     => $data['reviewed_at'] ?? null,
                 'reviewed_by'     => isset($data['reviewed_at']) ? $admin->id : null,
             ]);
+        }
+
+        // ── Sample Document Uploads ─────────────────────────────────────────────
+        $docApplicants = Applicant::whereIn('status', ['submitted', 'shortlisted', 'selected'])
+            ->with('program')
+            ->get();
+
+        foreach ($docApplicants as $app) {
+            $requiredDocs = RequiredDocument::where('program_id', $app->program_id)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
+
+            foreach ($requiredDocs as $idx => $rdoc) {
+                // Skip some optional docs to keep data realistic
+                if (! $rdoc->is_mandatory && $idx % 2 === 0) continue;
+
+                $slug = \Illuminate\Support\Str::slug($rdoc->name);
+                $ext  = str_contains($rdoc->accepted_formats ?? 'pdf', 'pdf') ? 'pdf' : 'jpg';
+                $filePath = "applicant-documents/{$app->id}/{$slug}_v1_" . (1700000000 + $app->id * 100 + $idx) . ".{$ext}";
+
+                // Determine status: first 3 docs verified for selected/shortlisted, rest pending
+                $status = 'pending';
+                if (in_array($app->status, ['selected', 'shortlisted']) && $idx < 3) {
+                    $status = 'verified';
+                }
+
+                ApplicantDocument::firstOrCreate(
+                    ['applicant_id' => $app->id, 'required_document_id' => $rdoc->id],
+                    [
+                        'file_path'     => $filePath,
+                        'original_name' => $slug . '.' . $ext,
+                        'file_size_kb'  => rand(80, 800),
+                        'status'        => $status,
+                        'verified_by'   => $status === 'verified' ? $admin->id : null,
+                        'verified_at'   => $status === 'verified' ? Carbon::now()->subDays(rand(1, 5)) : null,
+                        'uploaded_at'   => Carbon::now()->subDays(rand(6, 15)),
+                        'version'       => 1,
+                    ]
+                );
+            }
         }
 
         // ── Counselling Logs for sample applicants ─────────────────────────────

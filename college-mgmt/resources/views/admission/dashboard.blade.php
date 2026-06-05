@@ -70,6 +70,17 @@
             </div>
         </div>
     </div>
+    <div class="col-6 col-md-4 col-lg-2">
+        <a href="{{ route('admission.documents.queue') }}" class="text-decoration-none">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <div class="fs-1 fw-bold text-warning">{{ $kpis['docs_pending'] }}</div>
+                    <div class="small text-muted">Docs Pending</div>
+                    <div class="badge bg-warning text-dark mt-1 small">Verify Now</div>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
 
 <div class="row g-4 mb-4">

@@ -8,6 +8,16 @@ class RequiredDocument extends Model
     protected $casts = ['is_mandatory' => 'boolean', 'is_active' => 'boolean'];
     public function program() { return $this->belongsTo(Program::class); }
 
+    public function getAcceptedFormatsArrayAttribute(): array
+    {
+        return array_filter(array_map('trim', explode(',', $this->accepted_formats ?? 'pdf,jpg,png')));
+    }
+
+    public function getAcceptedFormatsForInputAttribute(): string
+    {
+        return implode(',', array_map(fn($f) => '.' . $f, $this->accepted_formats_array));
+    }
+
     public static function defaults(): array
     {
         return [

@@ -25,8 +25,8 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     // Static route BEFORE parameterized
     Route::post('application/submit', [ApplicantApplication::class, 'submit'])->name('application.submit');
     Route::post('application/{section}', [ApplicantApplication::class, 'saveSection'])->name('application.section');
-    Route::get('documents', [ApplicantDocument::class, 'index'])->name('documents');
-    Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'upload'])->name('documents.upload');
+    Route::get('documents', [ApplicantDocument::class, 'index'])->name('documents.index');
+    Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicantDocument::class, 'destroy'])->name('documents.destroy');
     Route::get('status', [ApplicantStatus::class, 'index'])->name('status');
 });
@@ -189,7 +189,13 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
-    Route::post('documents/{document}/verify', [Admission\ApplicantCrmController::class, 'verifyDocument'])->name('documents.verify');
+    // Document Verification Queue (static routes BEFORE {document} parameterized)
+    Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
+    Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])->name('documents.bulk-verify');
+    Route::post('documents/{document}/verify', [Admission\DocumentVerificationController::class, 'verify'])->name('documents.verify');
+    Route::post('documents/{document}/reject', [Admission\DocumentVerificationController::class, 'reject'])->name('documents.reject');
+    Route::get('documents/{document}/download', [Admission\DocumentVerificationController::class, 'downloadDocument'])->name('documents.download');
+    Route::get('documents/{document}/preview', [Admission\DocumentVerificationController::class, 'previewDocument'])->name('documents.preview');
 
     // Selection Sessions (static routes before parameterized)
     Route::get('sessions', [Admission\SelectionSessionController::class, 'index'])->name('sessions.index');

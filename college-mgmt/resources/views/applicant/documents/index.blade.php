@@ -10,14 +10,68 @@
             <h4 class="fw-bold mb-1">Required Documents</h4>
             <p class="text-muted small mb-0">Upload all required documents for {{ $applicant->program->name }}</p>
         </div>
-        <span class="badge bg-primary fs-6">{{ $uploaded->count() }}/{{ $requiredDocs->count() }} Uploaded</span>
+        <div class="text-end">
+            @php
+                $totalRequired = $requiredDocs->count();
+                $uploadedCount = $uploaded->count();
+            @endphp
+            <span class="badge bg-primary fs-6 me-2">{{ $uploadedCount }}/{{ $totalRequired }} Uploaded</span>
+            @if($verifiedCount > 0)
+                <span class="badge bg-success fs-6">{{ $verifiedCount }} Verified</span>
+            @endif
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if($locked)
+        <div class="alert alert-warning">
+            <i class="bi bi-lock me-2"></i>Document uploads are locked because your application status is <strong>{{ ucfirst($applicant->status) }}</strong>.
+        </div>
+    @endif
+
+    {{-- Summary bar --}}
+    <div class="alert alert-light border mb-4 py-2">
+        <div class="row g-2 text-center">
+            <div class="col-4">
+                <div class="fw-bold text-primary">{{ $totalRequired }}</div>
+                <div class="small text-muted">Total Required</div>
+            </div>
+            <div class="col-4">
+                <div class="fw-bold text-info">{{ $uploadedCount }}</div>
+                <div class="small text-muted">Uploaded</div>
+            </div>
+            <div class="col-4">
+                <div class="fw-bold text-success">{{ $verifiedCount }}</div>
+                <div class="small text-muted">Verified</div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-3">
         @foreach($requiredDocs as $doc)
         @php $uploadedDoc = $uploaded->get($doc->id); @endphp
         <div class="col-md-6">
-            <div class="card h-100 {{ $uploadedDoc ? ($uploadedDoc->status === 'verified' ? 'border-success' : ($uploadedDoc->status === 'rejected' ? 'border-danger' : 'border-info')) : '' }}">
+            <div class="card h-100 {{ $uploadedDoc ? ($uploadedDoc->status === 'verified' ? 'border-success' : ($uploadedDoc->status === 'rejected' ? 'border-danger' : 'border-warning')) : 'border-secondary' }}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
@@ -33,19 +87,13 @@
                             <span class="text-muted small">
                                 <i class="bi bi-file-earmark me-1"></i>{{ $doc->accepted_formats ?? 'pdf,jpg,png' }}
                                 @if($doc->max_size_kb)
-                                    &bull; Max {{ $doc->max_size_kb }}KB
+                                    &bull; Max {{ $doc->max_size_kb >= 1024 ? number_format($doc->max_size_kb/1024,1).' MB' : $doc->max_size_kb.' KB' }}
                                 @endif
                             </span>
                         </div>
                         <div>
                             @if($uploadedDoc)
-                                @if($uploadedDoc->status === 'verified')
-                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Verified</span>
-                                @elseif($uploadedDoc->status === 'rejected')
-                                    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>
-                                @else
-                                    <span class="badge bg-info text-dark"><i class="bi bi-clock me-1"></i>Pending</span>
-                                @endif
+                                {!! $uploadedDoc->status_badge !!}
                             @else
                                 <span class="badge bg-secondary">Not Uploaded</span>
                             @endif
@@ -54,31 +102,62 @@
 
                     @if($uploadedDoc && $uploadedDoc->status === 'rejected' && $uploadedDoc->rejection_reason)
                         <div class="alert alert-danger py-2 small mb-2">
-                            <i class="bi bi-exclamation-triangle me-1"></i>{{ $uploadedDoc->rejection_reason }}
+                            <i class="bi bi-exclamation-triangle me-1"></i><strong>Rejected:</strong> {{ $uploadedDoc->rejection_reason }}
+                            <br><span class="text-muted">Please re-upload the correct document.</span>
                         </div>
                     @endif
 
                     @if($uploadedDoc)
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <i class="bi bi-file-earmark-check text-success"></i>
-                            <span class="small text-muted">{{ $uploadedDoc->original_name }} ({{ $uploadedDoc->file_size_kb }}KB)</span>
+                            <i class="bi {{ $uploadedDoc->file_icon }} text-secondary"></i>
+                            <span class="small text-muted">
+                                {{ $uploadedDoc->original_name }}
+                                ({{ $uploadedDoc->formatted_file_size }})
+                                @if($uploadedDoc->uploaded_at)
+                                    &bull; {{ $uploadedDoc->uploaded_at->diffForHumans() }}
+                                @endif
+                                @if($uploadedDoc->version > 1)
+                                    &bull; v{{ $uploadedDoc->version }}
+                                @endif
+                            </span>
                         </div>
                     @endif
 
-                    @if($uploadedDoc?->status !== 'verified')
-                    <form method="POST" action="{{ route('applicant.documents.upload', $doc) }}" enctype="multipart/form-data" class="mt-2">
+                    @if(! $locked && $uploadedDoc?->status !== 'verified')
+                    <form method="POST" action="{{ route('applicant.documents.store', $doc) }}" enctype="multipart/form-data" class="mt-2 doc-upload-form">
                         @csrf
-                        <div class="input-group input-group-sm">
-                            <input type="file" name="document" class="form-control form-control-sm"
-                                   accept="{{ implode(',', array_map(fn($f) => '.'.$f, array_filter(array_map('trim', explode(',', $doc->accepted_formats ?? 'pdf,jpg,png'))))) }}">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-upload me-1"></i>Upload
-                            </button>
+                        <div class="mb-2">
+                            <div class="upload-area border rounded p-3 text-center position-relative"
+                                 style="cursor:pointer; background:#f8f9fa;">
+                                <i class="bi bi-cloud-upload fs-4 text-primary"></i>
+                                <p class="mb-1 small text-muted">
+                                    @if($uploadedDoc && $uploadedDoc->status === 'rejected')
+                                        Click to re-upload
+                                    @else
+                                        Click to browse or drag &amp; drop
+                                    @endif
+                                </p>
+                                <p class="mb-0 text-muted" style="font-size:0.75rem;">
+                                    {{ $doc->accepted_formats_for_input }} &bull;
+                                    Max {{ $doc->max_size_kb >= 1024 ? number_format($doc->max_size_kb/1024,1).' MB' : $doc->max_size_kb.' KB' }}
+                                </p>
+                                <input type="file" name="document" class="position-absolute top-0 start-0 w-100 h-100 opacity-0"
+                                       accept="{{ $doc->accepted_formats_for_input }}"
+                                       style="cursor:pointer;"
+                                       onchange="showFileName(this)">
+                            </div>
+                            <div class="selected-file-name small text-muted mt-1 d-none">
+                                <i class="bi bi-file-earmark me-1"></i><span></span>
+                            </div>
                         </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-upload me-1"></i>
+                            {{ $uploadedDoc ? 'Re-upload' : 'Upload' }}
+                        </button>
                     </form>
 
-                    @if($uploadedDoc && $uploadedDoc->status !== 'verified')
-                    <form method="POST" action="{{ route('applicant.documents.destroy', $uploadedDoc) }}" class="mt-1">
+                    @if($uploadedDoc && $uploadedDoc->status === 'pending')
+                    <form method="POST" action="{{ route('applicant.documents.destroy', $uploadedDoc) }}" class="mt-2">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-link btn-sm text-danger p-0"
                                 onclick="return confirm('Remove this document?')">
@@ -94,4 +173,20 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+function showFileName(input) {
+    const container = input.closest('.doc-upload-form');
+    const display   = container.querySelector('.selected-file-name');
+    const span      = display.querySelector('span');
+    if (input.files && input.files[0]) {
+        span.textContent = input.files[0].name;
+        display.classList.remove('d-none');
+    } else {
+        display.classList.add('d-none');
+    }
+}
+</script>
+@endpush
 @endsection
