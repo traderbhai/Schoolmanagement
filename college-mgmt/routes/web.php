@@ -35,6 +35,12 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('fees', [ApplicantPayment::class, 'index'])->name('fees.index');
     Route::get('fees/payment/{payment}', [ApplicantPayment::class, 'show'])->name('fees.show');
     Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
+    // Offer Letters
+    Route::get('offer-letters', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'index'])->name('offer-letters.index');
+    Route::get('offer-letters/{offerLetter}', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'show'])->name('offer-letters.show');
+    Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
+    Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
+    Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
 });
 
 Route::get('/', function () {
@@ -234,6 +240,15 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('merit-list/{program}/export', [Admission\MeritListController::class, 'exportMeritList'])->name('merit-list.export');
     Route::post('merit-list/{program}/bulk-decide', [Admission\MeritListController::class, 'bulkDecide'])->name('merit-list.bulk-decide');
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
+
+    // Offer Letters (static routes before {offerLetter} parameter)
+    Route::get('offer-letters/{program}', [Admission\OfferLetterController::class, 'index'])->name('offer-letters.index');
+    Route::post('offer-letters/{program}/generate', [Admission\OfferLetterController::class, 'generate'])->name('offer-letters.generate');
+    Route::post('offer-letters/{program}/bulk-generate', [Admission\OfferLetterController::class, 'bulkGenerate'])->name('offer-letters.bulk-generate');
+    Route::get('offer-letters/view/{offerLetter}', [Admission\OfferLetterController::class, 'show'])->name('offer-letters.show');
+    Route::get('offer-letters/export/{offerLetter}', [Admission\OfferLetterController::class, 'exportPdf'])->name('offer-letters.export');
+    Route::post('offer-letters/{offerLetter}/accept', [Admission\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
+    Route::post('offer-letters/{offerLetter}/decline', [Admission\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
 
     // Payment Verification (static routes before parameterized)
     Route::get('payments/queue', [Admission\PaymentVerificationController::class, 'pendingQueue'])->name('payments.queue');
