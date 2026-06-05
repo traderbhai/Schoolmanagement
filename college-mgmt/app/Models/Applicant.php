@@ -54,6 +54,7 @@ class Applicant extends Model
     public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }
     public function payments()            { return $this->hasMany(AdmissionPayment::class); }
     public function enrollmentConfirmation() { return $this->hasOne(EnrollmentConfirmation::class); }
+    public function offerLetters()        { return $this->hasMany(OfferLetter::class); }
 
     public function isEnrolled(): bool
     {
