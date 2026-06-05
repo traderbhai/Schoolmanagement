@@ -1,6 +1,11 @@
 @extends('layouts.admin')
 @section('title', 'Exams')
 @section('page-title', 'Exams & Schedule')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Exams</li>
+@endsection
+
 @section('content')
 
 <div class="d-flex align-items-center justify-content-between mb-4">

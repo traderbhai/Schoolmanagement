@@ -18,4 +18,5 @@ class Student extends Model
     public function attendances() { return $this->hasMany(Attendance::class); }
     public function feePayments() { return $this->hasMany(FeePayment::class); }
     public function examResults() { return $this->hasMany(ExamResult::class); }
+    public function parents() { return $this->belongsToMany(ParentProfile::class, 'parent_student', 'student_id', 'parent_id'); }
 }

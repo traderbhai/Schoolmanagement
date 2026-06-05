@@ -18,15 +18,14 @@
                 <i class="bi bi-palette2"></i> Institute Branding
             </div>
             <div class="card-body p-4">
-                <form method="POST" action="#" enctype="multipart/form-data">
+                <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data">
                     @csrf
-                    @method('PUT')
 
                     {{-- Institute name --}}
                     <div class="mb-4">
                         <label for="institute_name" class="form-label">Institute Name</label>
                         <input type="text" class="form-control" id="institute_name" name="institute_name"
-                               value="{{ old('institute_name', config('app.name', '')) }}"
+                               value="{{ old('institute_name', $settings['institute_name'] ?? '') }}"
                                placeholder="e.g. City College of Engineering">
                         <div class="form-text">Full official name of the institute.</div>
                     </div>
@@ -35,7 +34,7 @@
                     <div class="mb-4">
                         <label for="short_name" class="form-label">Short Name / Abbreviation</label>
                         <input type="text" class="form-control" id="short_name" name="short_name"
-                               value="{{ old('short_name') }}"
+                               value="{{ old('short_name', $settings['short_name'] ?? '') }}"
                                placeholder="e.g. CCE" maxlength="10">
                         <div class="form-text">Used in compact UI areas (sidebar brand, PDF headers).</div>
                     </div>
@@ -46,7 +45,7 @@
                             <label for="primary_color" class="form-label">Primary Color</label>
                             <div class="d-flex align-items-center gap-3">
                                 <input type="color" class="form-control form-control-color" id="primary_color"
-                                       name="primary_color" value="#4f46e5" style="width:56px;height:40px;padding:2px;border-radius:var(--radius-sm);">
+                                       name="primary_color" value="{{ old('primary_color', $settings['primary_color'] ?? '#4f46e5') }}" style="width:56px;height:40px;padding:2px;border-radius:var(--radius-sm);">
                                 <span class="form-text mb-0" id="colorHexLabel" style="font-family:monospace;font-size:.82rem;">#4f46e5</span>
                             </div>
                             <div class="form-text">Used for active nav, buttons, and accents.</div>
@@ -69,7 +68,7 @@
                     <div class="mb-4">
                         <label for="address" class="form-label">Address</label>
                         <textarea class="form-control" id="address" name="address" rows="3"
-                                  placeholder="123 College Road, City, State — 400001">{{ old('address') }}</textarea>
+                                  placeholder="123 College Road, City, State — 400001">{{ old('address', $settings['address'] ?? '') }}</textarea>
                     </div>
 
                     <div class="row g-4 mb-4">
@@ -79,8 +78,8 @@
                                 <span class="input-group-text" style="background:var(--clr-body-bg);border-color:var(--clr-border);color:var(--clr-text-muted);font-size:.85rem;">
                                     <i class="bi bi-telephone"></i>
                                 </span>
-                                <input type="tel" class="form-control" id="contact_phone" name="contact_phone"
-                                       value="{{ old('contact_phone') }}" placeholder="+91 98765 43210">
+                                <input type="tel" class="form-control" id="contact_phone" name="phone"
+                                       value="{{ old('phone', $settings['phone'] ?? '') }}" placeholder="+91 98765 43210">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -89,8 +88,8 @@
                                 <span class="input-group-text" style="background:var(--clr-body-bg);border-color:var(--clr-border);color:var(--clr-text-muted);font-size:.85rem;">
                                     <i class="bi bi-envelope"></i>
                                 </span>
-                                <input type="email" class="form-control" id="contact_email" name="contact_email"
-                                       value="{{ old('contact_email') }}" placeholder="admin@college.edu">
+                                <input type="email" class="form-control" id="contact_email" name="email"
+                                       value="{{ old('email', $settings['email'] ?? '') }}" placeholder="admin@college.edu">
                             </div>
                         </div>
                     </div>

@@ -46,6 +46,22 @@
 
         <div class="sidebar-divider"></div>
 
+        <div class="section-label">Communication</div>
+        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
+            <i class="bi bi-megaphone"></i> Notices
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="section-label">Career</div>
+        <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif">
+            <i class="bi bi-briefcase"></i> Placements
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
@@ -75,6 +91,13 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Communication</div>
+        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Career</div>
+        <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
@@ -151,7 +174,7 @@
     {{-- PAGE BODY --}}
     <div class="page-body">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert" aria-live="polite">
+            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
@@ -159,6 +182,18 @@
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
+                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
+                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
@@ -177,6 +212,16 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+// ── Auto-dismiss success/info alerts ──────────────────────
+(function () {
+    setTimeout(function () {
+        document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+        });
+    }, 4000);
+})();
+
 (function () {
     var saved = localStorage.getItem('edumTheme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);

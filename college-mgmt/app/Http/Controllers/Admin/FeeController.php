@@ -2,20 +2,58 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendFeeReceiptEmail;
-use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear};
+use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear, ActivityLog};
 use Illuminate\Http\Request;
 
 class FeeController extends Controller
 {
-    public function index() {
-        $structures = FeeStructure::with(['course','academicYear'])->paginate(20);
-        return view('admin.fees.index', compact('structures'));
+    public function index(Request $request) {
+        $courses = Course::where('is_active', true)->orderBy('name')->get();
+        $currentYear = AcademicYear::where('is_current', true)->first();
+
+        $structuresQuery = FeeStructure::with(['course', 'academicYear'])
+            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
+            ->orderBy('course_id')->orderBy('fee_type');
+
+        $feeStructures = $structuresQuery->paginate(20)->withQueryString();
+
+        // KPI totals (all structures for current year)
+        $allStructures = FeeStructure::when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))->get();
+        $totalDue = $allStructures->sum('amount');
+
+        $totalCollected = FeePayment::where('status', 'paid')->sum('amount_paid');
+        $totalPending = max(0, $totalDue - $totalCollected);
+        $collectionRate = $totalDue > 0 ? round(($totalCollected / $totalDue) * 100, 1) : 0;
+
+        $recentPayments = FeePayment::with(['student.user', 'feeStructure'])
+            ->latest('payment_date')
+            ->limit(10)
+            ->get();
+
+        // Overdue students: students with fee structures but balance > 0
+        $overdueStudents = Student::where('status', 'active')
+            ->whereHas('course.feeStructures', fn($q) => $q->when($currentYear, fn($q2) => $q2->where('academic_year_id', $currentYear->id)))
+            ->get()
+            ->filter(function ($student) use ($currentYear) {
+                $due = FeeStructure::where('course_id', $student->course_id)
+                    ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
+                    ->sum('amount');
+                $paid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
+                return $paid < $due;
+            })->count();
+
+        return view('admin.fees.index', compact(
+            'feeStructures', 'courses', 'totalDue', 'totalCollected',
+            'totalPending', 'collectionRate', 'recentPayments', 'overdueStudents'
+        ));
     }
+
     public function create() {
         $courses = Course::where('is_active',true)->get();
         $years = AcademicYear::all();
         return view('admin.fees.create', compact('courses','years'));
     }
+
     public function store(Request $request) {
         $data = $request->validate([
             'course_id'        => 'required|exists:courses,id',
@@ -28,15 +66,18 @@ class FeeController extends Controller
         FeeStructure::create($data);
         return redirect()->route('admin.fees.index')->with('success', 'Fee structure created.');
     }
+
     public function show(FeeStructure $fee) {
         $fee->load(['course','academicYear','payments.student.user']);
         return view('admin.fees.show', compact('fee'));
     }
+
     public function edit(FeeStructure $fee) {
         $courses = Course::where('is_active',true)->get();
         $years = AcademicYear::all();
         return view('admin.fees.edit', compact('fee','courses','years'));
     }
+
     public function update(Request $request, FeeStructure $fee) {
         $data = $request->validate([
             'course_id'        => 'required|exists:courses,id',
@@ -48,15 +89,31 @@ class FeeController extends Controller
         $fee->update($data);
         return redirect()->route('admin.fees.index')->with('success', 'Updated.');
     }
+
     public function destroy(FeeStructure $fee) {
         $fee->delete();
         return redirect()->route('admin.fees.index')->with('success', 'Deleted.');
     }
 
     public function collectPayment(Request $request) {
-        $students = Student::with('user')->where('status','active')->get();
+        $students = Student::with(['user', 'course'])->where('status','active')->get();
         $structures = FeeStructure::with(['course','academicYear'])->get();
-        return view('admin.fees.collect', compact('students','structures'));
+
+        $selectedStudent = null;
+        $balanceDue = 0;
+        if ($request->student_id) {
+            $selectedStudent = Student::with(['user','course'])->find($request->student_id);
+            if ($selectedStudent) {
+                $currentYear = AcademicYear::where('is_current', true)->first();
+                $due = FeeStructure::where('course_id', $selectedStudent->course_id)
+                    ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
+                    ->sum('amount');
+                $paid = FeePayment::where('student_id', $selectedStudent->id)->where('status','paid')->sum('amount_paid');
+                $balanceDue = max(0, $due - $paid);
+            }
+        }
+
+        return view('admin.fees.collect', compact('students', 'structures', 'selectedStudent', 'balanceDue'));
     }
 
     public function storePayment(Request $request) {
@@ -65,13 +122,82 @@ class FeeController extends Controller
             'fee_structure_id' => 'required|exists:fee_structures,id',
             'amount_paid'      => 'required|numeric|min:0',
             'payment_date'     => 'required|date',
-            'payment_method'   => 'required|in:cash,online,cheque,dd',
+            'payment_method'   => 'required|in:cash,cheque,online,neft,rtgs,upi',
             'transaction_id'   => 'nullable|string',
             'remarks'          => 'nullable|string',
         ]);
         $data['receipt_number'] = 'RCP-' . strtoupper(uniqid());
+        $data['status'] = 'paid';
         $payment = FeePayment::create($data);
+        $student = Student::with('user')->find($data['student_id']);
+        ActivityLog::record('created', "Fee payment ₹{$payment->amount_paid} for " . ($student->user->name ?? ''), $payment);
         SendFeeReceiptEmail::dispatch($payment);
-        return redirect()->route('admin.fees.index')->with('success', 'Payment recorded. Receipt: ' . $data['receipt_number']);
+        return redirect()->route('admin.fees.receipt', $payment)->with('success', 'Payment recorded successfully.');
+    }
+
+    public function receipt(FeePayment $payment) {
+        $payment->load(['student.user', 'student.course', 'feeStructure.course', 'feeStructure.academicYear']);
+        return view('admin.fees.receipt', compact('payment'));
+    }
+
+    public function report(Request $request) {
+        $courses = Course::where('is_active', true)->orderBy('name')->get();
+        $academicYears = AcademicYear::orderByDesc('name')->get();
+
+        $query = FeePayment::with(['student.user', 'student.course', 'feeStructure.course'])
+            ->when($request->course_id, fn($q) => $q->whereHas('student', fn($q2) => $q2->where('course_id', $request->course_id)))
+            ->when($request->academic_year_id, fn($q) => $q->whereHas('feeStructure', fn($q2) => $q2->where('academic_year_id', $request->academic_year_id)))
+            ->when($request->status && $request->status !== 'all', fn($q) => $q->where('status', $request->status))
+            ->when($request->date_from, fn($q) => $q->whereDate('payment_date', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->whereDate('payment_date', '<=', $request->date_to))
+            ->when($request->student_name, fn($q) => $q->whereHas('student.user', fn($q2) => $q2->where('name', 'like', '%'.$request->student_name.'%')))
+            ->latest('payment_date');
+
+        $allPayments = $query->get();
+        $totalAmount = $allPayments->sum('amount_paid');
+        $paidCount = $allPayments->where('status', 'paid')->count();
+        $pendingCount = $allPayments->where('status', 'pending')->count();
+
+        $payments = $query->paginate(20)->withQueryString();
+
+        return view('admin.fees.report', compact(
+            'payments', 'courses', 'academicYears',
+            'totalAmount', 'paidCount', 'pendingCount'
+        ));
+    }
+
+    public function export(Request $r)
+    {
+        $payments = FeePayment::with('student.user', 'student.course', 'feeStructure')
+            ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
+            ->when($r->status, fn($q) => $q->where('status', $r->status))
+            ->when($r->from, fn($q) => $q->whereDate('payment_date', '>=', $r->from))
+            ->when($r->to, fn($q) => $q->whereDate('payment_date', '<=', $r->to))
+            ->orderBy('payment_date', 'desc')
+            ->get();
+
+        $filename = 'fee_payments_' . now()->format('Ymd_His') . '.csv';
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename=\"{$filename}\""];
+
+        $callback = function () use ($payments) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Receipt No','Student','Enrollment','Course','Fee Type','Amount Paid','Payment Date','Method','Status']);
+            foreach ($payments as $p) {
+                fputcsv($file, [
+                    $p->receipt_number,
+                    $p->student->user->name ?? '',
+                    $p->student->enrollment_number ?? '',
+                    $p->student->course->name ?? '',
+                    $p->feeStructure->fee_type ?? '',
+                    $p->amount_paid,
+                    $p->payment_date?->format('d/m/Y') ?? '',
+                    $p->payment_method,
+                    $p->status,
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -75,11 +75,23 @@
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif">
             <i class="bi bi-people"></i> Students
         </a>
+        <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif">
+            <i class="bi bi-person-plus-fill"></i> Admissions
+        </a>
+        <a href="{{ route('admin.parents.index') }}" class="nav-link @if(request()->routeIs('admin.parents.*')) active @endif">
+            <i class="bi bi-people-fill"></i> Parents
+        </a>
 
         <div class="sidebar-divider"></div>
 
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
+        <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave Mgmt
+        </a>
+        <a href="{{ route('admin.faculty.workload') }}" class="nav-link @if(request()->routeIs('admin.faculty.*')) active @endif">
+            <i class="bi bi-bar-chart"></i> Faculty Report
+        </a>
         <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif">
             <i class="bi bi-check2-square"></i> Attendance
         </a>
@@ -97,8 +109,11 @@
 
         {{-- FINANCE --}}
         <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif">
+        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index') || request()->routeIs('admin.fees.show') || request()->routeIs('admin.fees.create') || request()->routeIs('admin.fees.edit') || request()->routeIs('admin.fees.collect') || request()->routeIs('admin.fees.receipt')) active @endif">
             <i class="bi bi-cash-coin"></i> Fees
+        </a>
+        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif">
+            <i class="bi bi-graph-up"></i> Fee Report
         </a>
 
         <div class="sidebar-divider"></div>
@@ -111,10 +126,26 @@
 
         <div class="sidebar-divider"></div>
 
+        <div class="sidebar-divider"></div>
+
+        {{-- PLACEMENT --}}
+        <div class="section-label">Placement</div>
+        <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif">
+            <i class="bi bi-building"></i> Companies
+        </a>
+        <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif">
+            <i class="bi bi-briefcase"></i> Drives
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
-        <a href="#" class="nav-link @if(request()->routeIs('admin.settings.*')) active @endif">
+        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
             <i class="bi bi-gear"></i> Settings
+        </a>
+        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif">
+            <i class="bi bi-clock-history"></i> Activity Log
         </a>
     </div>
 </div>
@@ -151,21 +182,31 @@
         <div class="section-label">People</div>
         <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif"><i class="bi bi-person-badge"></i> Teachers</a>
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
+        <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
+        <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
+        <a href="{{ route('admin.faculty.workload') }}" class="nav-link @if(request()->routeIs('admin.faculty.*')) active @endif"><i class="bi bi-bar-chart"></i> Faculty Report</a>
         <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
         <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams &amp; Results</a>
         <a href="{{ route('admin.enrollments.index') }}" class="nav-link @if(request()->routeIs('admin.enrollments.*')) active @endif"><i class="bi bi-person-check"></i> Enrollments</a>
         <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif"><i class="bi bi-award"></i> Grade Reports</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.*')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
+        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index') || request()->routeIs('admin.fees.show') || request()->routeIs('admin.fees.create') || request()->routeIs('admin.fees.edit') || request()->routeIs('admin.fees.collect') || request()->routeIs('admin.fees.receipt')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
+        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif"><i class="bi bi-graph-up"></i> Fee Report</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Communication</div>
         <a href="{{ route('admin.notices.index') }}" class="nav-link @if(request()->routeIs('admin.notices.*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
         <div class="sidebar-divider"></div>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Placement</div>
+        <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
+        <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
-        <a href="#" class="nav-link @if(request()->routeIs('admin.settings.*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
+        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
+        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
     </div>
 </div>
 
@@ -245,7 +286,7 @@
     {{-- PAGE BODY --}}
     <div class="page-body">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert" aria-live="polite">
+            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
@@ -253,6 +294,18 @@
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
+                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
+                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
@@ -319,6 +372,16 @@
         if (!icon) return;
         icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
     }
+})();
+
+// ── Auto-dismiss success/info alerts ──────────────────────
+(function () {
+    setTimeout(function () {
+        document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+        });
+    }, 4000);
 })();
 
 // ── Delete modal ───────────────────────────────────────────

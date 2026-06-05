@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableEntry, TimetableSlot};
+use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, ExamResult};
 use App\Services\TimetableService;
 
 class DashboardController extends Controller
@@ -23,6 +23,34 @@ class DashboardController extends Controller
             $todayClasses = array_filter($grid[$todayDay]);
         }
 
-        return view('student.dashboard', compact('student','currentSemester','notices','slots','grid','todayClasses'));
+        // Attendance overall
+        $totalAttendance   = Attendance::where('student_id', $student->id)->count();
+        $presentAttendance = Attendance::where('student_id', $student->id)->whereIn('status', ['present','late'])->count();
+        $attendanceOverall = $totalAttendance > 0 ? round(($presentAttendance / $totalAttendance) * 100) : null;
+
+        // SGPA — compute from marks_obtained / total_marks * 10 for current semester
+        $sgpa = null;
+        if ($currentSemester) {
+            $results = ExamResult::with('exam')
+                ->whereHas('exam', fn($q) => $q->where('semester_id', $currentSemester->id))
+                ->where('student_id', $student->id)
+                ->where('is_absent', false)
+                ->get();
+            if ($results->count() > 0) {
+                $totalGp = $results->sum(fn($r) => $r->exam->total_marks > 0
+                    ? ($r->marks_obtained / $r->exam->total_marks) * 10 : 0);
+                $sgpa = round($totalGp / $results->count(), 2);
+            }
+        }
+
+        // Fee balance due
+        $feeDue = FeeStructure::where('course_id', $student->course_id)->sum('amount');
+        $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
+        $balanceDue = max(0, $feeDue - $feePaid);
+
+        return view('student.dashboard', compact(
+            'student', 'currentSemester', 'notices', 'slots', 'grid', 'todayClasses',
+            'attendanceOverall', 'sgpa', 'balanceDue'
+        ));
     }
 }

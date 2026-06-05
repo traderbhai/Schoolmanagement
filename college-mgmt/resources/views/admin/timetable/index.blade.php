@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title', 'Timetable')
 @section('page-title', 'Weekly Timetable')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Weekly Timetable</li>
+@endsection
+
 @section('content')
 
 <div class="card mb-3">

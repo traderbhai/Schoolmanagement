@@ -14,7 +14,8 @@ class FeeController extends Controller
         $currentYear = AcademicYear::where('is_current', true)->first();
 
         // Fee structures applicable to this student's course
-        $feeStructures = FeeStructure::where('course_id', $student->course_id)
+        $feeStructures = FeeStructure::with('course')
+            ->where('course_id', $student->course_id)
             ->where('academic_year_id', optional($currentYear)->id)
             ->get();
 
@@ -29,6 +30,19 @@ class FeeController extends Controller
         $totalPaid = $payments->where('status', 'paid')->sum('amount_paid');
         $balance   = max(0, $totalDue - $totalPaid);
 
-        return view('student.fees', compact('feeStructures', 'payments', 'totalDue', 'totalPaid', 'balance', 'currentYear'));
+        // Group payments by fee_type
+        $paymentsByType = $payments->groupBy(fn($p) => $p->feeStructure->fee_type ?? 'Other');
+
+        // First unpaid fee structure amount
+        $unpaidStructures = $feeStructures->filter(function ($fs) use ($payments) {
+            $paid = $payments->where('fee_structure_id', $fs->id)->where('status', 'paid')->sum('amount_paid');
+            return $paid < $fs->amount;
+        });
+        $nextDueAmount = $unpaidStructures->first()?->amount ?? 0;
+
+        return view('student.fees', compact(
+            'feeStructures', 'payments', 'totalDue', 'totalPaid', 'balance',
+            'currentYear', 'paymentsByType', 'nextDueAmount'
+        ));
     }
 }

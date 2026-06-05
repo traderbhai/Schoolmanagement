@@ -3,7 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendWelcomeEmail;
-use App\Models\{Student, User, Department, Course};
+use App\Models\{Student, User, Department, Course, ActivityLog};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -63,6 +63,7 @@ class StudentController extends Controller
 
         $student->load('user');
         SendWelcomeEmail::dispatch($student);
+        ActivityLog::record('created', "Student {$student->user->name} registered", $student);
 
         return redirect()->route('admin.students.index')->with('success', 'Student registered successfully.');
     }
@@ -101,7 +102,46 @@ class StudentController extends Controller
 
     public function destroy(Student $student)
     {
+        $name = $student->user->name;
+        ActivityLog::record('deleted', "Student deleted: {$name}", $student);
         $student->user->delete();
         return redirect()->route('admin.students.index')->with('success', 'Student deleted.');
+    }
+
+    public function export(Request $r)
+    {
+        $students = Student::with('user', 'course', 'department')
+            ->when($r->course_id, fn($q) => $q->where('course_id', $r->course_id))
+            ->when($r->status, fn($q) => $q->where('status', $r->status))
+            ->get();
+
+        $filename = 'students_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($students) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['#','Name','Email','Enrollment No','Roll No','Course','Department','Semester','Status','Admission Date']);
+            foreach ($students as $i => $s) {
+                fputcsv($file, [
+                    $i + 1,
+                    $s->user->name,
+                    $s->user->email,
+                    $s->enrollment_number,
+                    $s->roll_number,
+                    $s->course->name ?? '',
+                    $s->department->name ?? '',
+                    $s->current_semester,
+                    $s->status,
+                    $s->admission_date?->format('d/m/Y') ?? '',
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

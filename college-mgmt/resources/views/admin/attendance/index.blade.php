@@ -1,99 +1,108 @@
 @extends('layouts.admin')
-@section('title','Attendance')
-@section('page-title','Attendance Management')
+@section('title', 'Attendance')
+@section('page-title', 'Attendance Management')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Attendance</li>
+@endsection
+
 @section('content')
 
 <div class="row g-3 mb-4">
-    {{-- Mark Attendance Card --}}
+    {{-- Mark Attendance --}}
     <div class="col-12">
         <div class="card">
+            <div class="card-header">
+                <span class="fw-semibold"><i class="bi bi-check2-square me-2 text-primary"></i>Mark Attendance</span>
+            </div>
             <div class="card-body">
-                <h6 class="fw-bold mb-3"><i class="bi bi-check2-square me-2 text-primary"></i>Mark Attendance</h6>
-                <p class="text-muted small">Select a semester, course and date, then load available class periods for that day.</p>
+                <p class="text-muted" style="font-size:.84rem">Select a semester, course and date, then load available class periods for that day.</p>
 
-                {{-- Row 1: Semester / Course / Date --}}
-                <div class="row g-2 mb-2">
+                <div class="row g-3 mb-3">
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Semester</label>
+                        <label class="form-label">Semester</label>
                         <select id="sem-select" class="form-select form-select-sm">
-                            <option value="">-- Select Semester --</option>
+                            <option value="">— Select Semester —</option>
                             @foreach($semesters as $s)
                                 <option value="{{ $s->id }}">{{ $s->name }}@if($s->academicYear) ({{ $s->academicYear->year }})@endif</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Course</label>
+                        <label class="form-label">Course</label>
                         <select id="course-select" class="form-select form-select-sm">
-                            <option value="">-- Select Course --</option>
+                            <option value="">— Select Course —</option>
                             @foreach($courses as $c)
                                 <option value="{{ $c->id }}">{{ $c->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Date</label>
+                        <label class="form-label">Date</label>
                         <input type="date" id="date-input" class="form-control form-control-sm" value="{{ date('Y-m-d') }}">
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <button id="load-btn" class="btn btn-primary btn-sm w-100">
                             <span id="load-spinner" class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
-                            Load Classes
+                            <i class="bi bi-search me-1"></i>Load Classes
                         </button>
                     </div>
                 </div>
 
-                {{-- Row 2: Class Period (hidden until loaded) --}}
-                <div id="entry-row" class="row g-2 d-none">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Class Period</label>
+                <div id="entry-row" class="row g-3 d-none">
+                    <div class="col-md-5">
+                        <label class="form-label">Class Period</label>
                         <select id="entry-select" class="form-select form-select-sm">
-                            <option value="">-- Select Class --</option>
+                            <option value="">— Select Class —</option>
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button id="go-btn" class="btn btn-success btn-sm w-100">Mark Attendance</button>
+                        <button id="go-btn" class="btn btn-success btn-sm w-100">
+                            <i class="bi bi-check2-square me-1"></i>Mark Attendance
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Attendance Report Card --}}
+    {{-- Attendance Report --}}
     <div class="col-12">
         <div class="card">
+            <div class="card-header">
+                <span class="fw-semibold"><i class="bi bi-bar-chart me-2 text-success"></i>Attendance Report</span>
+            </div>
             <div class="card-body">
-                <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2 text-success"></i>Attendance Report</h6>
-                <p class="text-muted small">View attendance percentage report for a student across all subjects in a semester.</p>
-                <div class="row g-2">
+                <p class="text-muted" style="font-size:.84rem">View attendance percentage for a student across all subjects in a semester.</p>
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Student</label>
+                        <label class="form-label">Student</label>
                         <select id="report-student" class="form-select form-select-sm">
-                            <option value="">-- Select Student --</option>
+                            <option value="">— Select Student —</option>
                             @foreach($students as $st)
                                 <option value="{{ $st->id }}">{{ $st->user->name ?? 'Student #'.$st->id }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Semester</label>
+                        <label class="form-label">Semester</label>
                         <select id="report-semester" class="form-select form-select-sm">
-                            <option value="">-- Select Semester --</option>
+                            <option value="">— Select Semester —</option>
                             @foreach($semesters as $s)
                                 <option value="{{ $s->id }}">{{ $s->name }}@if($s->academicYear) ({{ $s->academicYear->year }})@endif</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
-                        <button id="report-btn" class="btn btn-success btn-sm w-100">View Report</button>
+                        <button id="report-btn" class="btn btn-success btn-sm w-100">
+                            <i class="bi bi-bar-chart me-1"></i>View Report
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-@endsection
 
 @push('scripts')
 <script>
@@ -123,7 +132,7 @@ loadBtn.addEventListener('click', async () => {
         const res     = await fetch(`{{ route('admin.attendance.entries') }}?semester_id=${semId}&course_id=${courseId}&date=${date}`);
         const entries = await res.json();
 
-        entrySelect.innerHTML = '<option value="">-- Select Class --</option>';
+        entrySelect.innerHTML = '<option value="">— Select Class —</option>';
 
         if (entries.length === 0) {
             entrySelect.innerHTML = '<option value="">No classes scheduled on this day</option>';
@@ -153,7 +162,6 @@ goBtn.addEventListener('click', () => {
     window.location.href = `{{ route('admin.attendance.mark') }}?timetable_entry_id=${entryId}&date=${date}`;
 });
 
-// Report button
 document.getElementById('report-btn').addEventListener('click', () => {
     const studentId  = document.getElementById('report-student').value;
     const semesterId = document.getElementById('report-semester').value;
@@ -162,3 +170,4 @@ document.getElementById('report-btn').addEventListener('click', () => {
 });
 </script>
 @endpush
+@endsection

@@ -70,6 +70,15 @@
     </div>
 </div>
 
+{{-- How to Pay Info Box --}}
+<div class="alert alert-info d-flex gap-2 align-items-start mb-4" role="alert">
+    <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+        <strong>How to Pay Your Fees</strong><br>
+        Contact the accounts office or admin portal for fee payment. Mention your enrollment number and a receipt will be issued immediately. Online payment options (NEFT, UPI, RTGS) are also accepted — share the transaction reference with the accounts team.
+    </div>
+</div>
+
 {{-- Fee Structures Table --}}
 <div class="card mb-4" style="box-shadow:var(--shadow-sm)">
     <div class="card-header d-flex align-items-center gap-2">
@@ -154,8 +163,14 @@
                 </thead>
                 <tbody>
                     @foreach($payments as $payment)
-                    <tr>
-                        <td class="font-monospace small fw-semibold">{{ $payment->receipt_number ?: '—' }}</td>
+                    <tr style="{{ $payment->status === 'paid' ? 'background:#f0fdf4' : ($payment->status === 'pending' ? 'background:#fffbeb' : '') }}">
+                        <td>
+                            @if($payment->receipt_number)
+                                <span class="font-monospace fw-bold" style="font-size:.82rem;color:#059669">{{ $payment->receipt_number }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
                         <td class="text-muted small">
                             {{ $payment->feeStructure ? ucwords(str_replace('_', ' ', $payment->feeStructure->fee_type)) : '—' }}
                         </td>

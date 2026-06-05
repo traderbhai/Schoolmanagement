@@ -66,6 +66,64 @@
     </div>
 </div>
 
+{{-- A2) Extra KPI Row: Attendance, Fees --}}
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card kpi-cyan">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="kpi-label">Today's Attendance</div>
+                    <div class="kpi-value mt-1">{{ $todayAttendanceRate }}%</div>
+                    <div class="kpi-trend mt-2"><i class="bi bi-check2-square me-1"></i> present today</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card kpi-green">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="kpi-label">Fee Collected</div>
+                    <div class="kpi-value mt-1">₹{{ number_format($totalFeeCollected) }}</div>
+                    <div class="kpi-trend mt-2"><i class="bi bi-arrow-up-short"></i> of ₹{{ number_format($totalFeeDue) }} due</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+            </div>
+            <div class="mt-2">
+                <div class="progress" style="height:4px;border-radius:2px;background:rgba(255,255,255,.3)">
+                    <div class="progress-bar bg-white" style="width:{{ $feeCollectionRate }}%"></div>
+                </div>
+                <div class="text-xs mt-1 opacity-85">{{ $feeCollectionRate }}% collection rate</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card kpi-amber">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="kpi-label">Active Notices</div>
+                    <div class="kpi-value mt-1">{{ $pendingNotices }}</div>
+                    <div class="kpi-trend mt-2"><i class="bi bi-megaphone me-1"></i> published</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-megaphone-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card kpi-purple">
+            <div class="d-flex align-items-start justify-content-between">
+                <div>
+                    <div class="kpi-label">Upcoming Exams</div>
+                    <div class="kpi-value mt-1">{{ $upcomingExams->count() }}</div>
+                    <div class="kpi-trend mt-2"><i class="bi bi-calendar-event me-1"></i> next 14 days</div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- B) Today's Snapshot --}}
 <div class="card mb-4">
     <div class="card-body py-3">
@@ -90,7 +148,7 @@
                 <i class="bi bi-megaphone text-warning fs-5"></i>
                 <div>
                     <div class="text-xs text-muted">Notices Published</div>
-                    <div class="fw-600 text-sm">{{ $recentNotices->count() }} active</div>
+                    <div class="fw-600 text-sm">{{ $pendingNotices }} active</div>
                 </div>
             </div>
             <div class="vr d-none d-md-block" style="height:36px"></div>
@@ -201,7 +259,93 @@
                             </div>
                         </a>
                     </div>
+                    <div class="col-sm-6">
+                        <a href="{{ route('admin.admissions.create') }}" class="card text-decoration-none quick-action-card">
+                            <div class="card-body d-flex align-items-center gap-3 py-3">
+                                <div class="kpi-icon kpi-cyan"><i class="bi bi-person-plus-fill"></i></div>
+                                <div>
+                                    <div class="fw-600 text-sm">Admission Enquiry</div>
+                                    <div class="text-xs text-muted">Add a new applicant</div>
+                                </div>
+                                <i class="bi bi-arrow-right ms-auto text-muted"></i>
+                            </div>
+                        </a>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- E1) Recent Students + Upcoming Exams --}}
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-600 text-sm"><i class="bi bi-person-plus me-2 text-primary"></i>Recent Enrolments</span>
+                <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Enrol No.</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @forelse($recentStudents as $rs)
+                    <tr>
+                        <td>
+                            <div class="fw-semibold text-sm">{{ $rs->user->name }}</div>
+                            <div class="text-muted" style="font-size:.75rem">{{ $rs->user->email }}</div>
+                        </td>
+                        <td class="text-sm">{{ $rs->enrollment_number }}</td>
+                        <td><span class="badge badge-{{ $rs->status === 'active' ? 'active' : 'pending' }}">{{ ucfirst($rs->status) }}</span></td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty-state py-3">
+                                <div class="empty-icon"><i class="bi bi-people"></i></div>
+                                <div class="text-muted text-sm mt-1">No students enrolled yet.</div>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-600 text-sm"><i class="bi bi-calendar-event me-2 text-danger"></i>Upcoming Exams</span>
+                <a href="{{ route('admin.exams.index') }}" class="btn btn-sm btn-outline-secondary">All</a>
+            </div>
+            <div class="list-group list-group-flush">
+                @forelse($upcomingExams as $exam)
+                <div class="list-group-item py-2 px-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold text-sm">{{ $exam->name }}</div>
+                            <div class="text-muted" style="font-size:.75rem">{{ $exam->subject->name ?? '—' }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="badge bg-danger bg-opacity-10 text-danger">{{ $exam->exam_date->format('d M') }}</div>
+                        </div>
+                    </div>
+                </div>
+                @empty
+                <div class="list-group-item">
+                    <div class="empty-state py-3">
+                        <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+                        <div class="text-muted text-sm mt-1">No exams in the next 14 days.</div>
+                    </div>
+                </div>
+                @endforelse
             </div>
         </div>
     </div>

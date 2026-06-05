@@ -4,8 +4,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Notice extends Model
 {
-    protected $fillable = ['user_id', 'title', 'content', 'audience', 'publish_date', 'expiry_date', 'is_published'];
-    protected $casts = ['publish_date' => 'date', 'expiry_date' => 'date', 'is_published' => 'boolean'];
+    protected $fillable = ['user_id', 'title', 'content', 'audience', 'priority', 'publish_date', 'expiry_date', 'published_at', 'expires_at', 'is_published'];
+    protected $casts = ['publish_date' => 'date', 'expiry_date' => 'date', 'published_at' => 'datetime', 'expires_at' => 'datetime', 'is_published' => 'boolean'];
 
     public function user() { return $this->belongsTo(User::class); }
 

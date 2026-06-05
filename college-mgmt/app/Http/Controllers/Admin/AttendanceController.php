@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Attendance, TimetableEntry, Student, Semester, Course};
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
@@ -82,5 +83,58 @@ class AttendanceController extends Controller
         $students = Student::with('user')->where('status','active')->get();
         $semesters = Semester::with('academicYear')->get();
         return view('admin.attendance.report', compact('report','students','semesters','request'));
+    }
+
+    public function export(Request $r)
+    {
+        $query = Attendance::with(['student.user', 'timetableEntry.subject'])
+            ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
+            ->when($r->semester_id, fn($q) => $q->whereHas('timetableEntry', fn($sq) => $sq->where('semester_id', $r->semester_id)))
+            ->when($r->date_from, fn($q) => $q->whereDate('date', '>=', $r->date_from))
+            ->when($r->date_to, fn($q) => $q->whereDate('date', '<=', $r->date_to))
+            ->orderBy('date', 'desc');
+
+        $records = $query->get();
+
+        $filename = 'attendance_' . now()->format('Ymd_His') . '.csv';
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => "attachment; filename=\"{$filename}\""];
+
+        $callback = function () use ($records) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Student Name','Enrollment No','Subject','Date','Status']);
+            foreach ($records as $a) {
+                fputcsv($file, [
+                    $a->student->user->name ?? '',
+                    $a->student->enrollment_number ?? '',
+                    $a->timetableEntry->subject->name ?? '',
+                    $a->date instanceof \Carbon\Carbon ? $a->date->format('d/m/Y') : $a->date,
+                    $a->status,
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function pdfReport(Request $r)
+    {
+        $report = null;
+        $student = null;
+        $semester = null;
+
+        if ($r->student_id && $r->semester_id) {
+            $student = Student::with('user', 'course', 'department')->findOrFail($r->student_id);
+            $semester = Semester::with('academicYear')->findOrFail($r->semester_id);
+
+            $report = Attendance::with(['timetableEntry.subject'])
+                ->where('student_id', $r->student_id)
+                ->whereHas('timetableEntry', fn($q) => $q->where('semester_id', $r->semester_id))
+                ->get()
+                ->groupBy('timetableEntry.subject.name');
+        }
+
+        $pdf = Pdf::loadView('admin.attendance.pdf-report', compact('report', 'student', 'semester', 'r'));
+        return $pdf->setPaper('a4')->stream('attendance-report.pdf');
     }
 }

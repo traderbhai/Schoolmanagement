@@ -39,6 +39,15 @@
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif">
             <i class="bi bi-people"></i> My Students
         </a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave
+        </a>
+
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Account</div>
+        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif">
+            <i class="bi bi-person-circle"></i> My Profile
+        </a>
     </div>
 </div>
 
@@ -62,6 +71,10 @@
         <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Mark Attendance</a>
         <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif"><i class="bi bi-pencil-square"></i> Enter Marks</a>
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif"><i class="bi bi-people"></i> My Students</a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Account</div>
+        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
     </div>
 </div>
 
@@ -135,7 +148,7 @@
     {{-- PAGE BODY --}}
     <div class="page-body">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert" aria-live="polite">
+            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
@@ -143,6 +156,18 @@
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
+                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
+                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
@@ -190,6 +215,16 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+// ── Auto-dismiss success/info alerts ──────────────────────
+(function () {
+    setTimeout(function () {
+        document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+        });
+    }, 4000);
+})();
+
 (function () {
     var saved = localStorage.getItem('edumTheme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);

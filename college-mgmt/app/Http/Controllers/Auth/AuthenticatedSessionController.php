@@ -28,9 +28,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        \App\Models\ActivityLog::record('login', 'User logged in');
+
         $user = $request->user();
         if ($user->hasRole('admin'))   return redirect()->route('admin.dashboard');
         if ($user->hasRole('teacher')) return redirect()->route('teacher.dashboard');
+        if ($user->hasRole('parent'))  return redirect()->route('parent.dashboard');
         return redirect()->route('student.dashboard');
     }
 
@@ -39,6 +42,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        \App\Models\ActivityLog::record('logout', 'User logged out');
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

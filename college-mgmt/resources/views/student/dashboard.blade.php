@@ -27,25 +27,18 @@
 </div>
 
 {{-- KPI Cards --}}
-@php
-    $totalClasses = 0; $totalPresent = 0;
-    // Compute attendance from notices/grid context if available, else show placeholder
-    $attendancePct = null;
-    $sgpa = null;
-    $feeBalance = null;
-@endphp
 <div class="row g-3 mb-4">
     {{-- Attendance KPI --}}
     <div class="col-md-4">
-        <div class="kpi-card {{ isset($attendancePct) && $attendancePct !== null ? ($attendancePct >= 75 ? 'kpi-green' : 'kpi-red') : 'kpi-green' }}">
+        <div class="kpi-card {{ $attendanceOverall !== null ? ($attendanceOverall >= 75 ? 'kpi-green' : 'kpi-red') : 'kpi-green' }}">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="kpi-label">Attendance</div>
                     <div class="kpi-value">
-                        @if($attendancePct !== null)
-                            {{ $attendancePct }}%
+                        @if($attendanceOverall !== null)
+                            {{ $attendanceOverall }}%
                         @else
-                            <span style="font-size:1.2rem">View Details</span>
+                            <span style="font-size:1.2rem">—</span>
                         @endif
                     </div>
                     <div class="kpi-trend">
@@ -68,7 +61,7 @@
                         @if($sgpa !== null)
                             {{ number_format($sgpa, 2) }}
                         @else
-                            <span style="font-size:1.2rem">View Results</span>
+                            <span style="font-size:1.2rem">—</span>
                         @endif
                     </div>
                     <div class="kpi-trend">
@@ -83,17 +76,11 @@
 
     {{-- Fee Balance KPI --}}
     <div class="col-md-4">
-        <div class="kpi-card {{ isset($feeBalance) && $feeBalance > 0 ? 'kpi-amber' : 'kpi-green' }}">
+        <div class="kpi-card {{ $balanceDue > 0 ? 'kpi-amber' : 'kpi-green' }}">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="kpi-label">Fee Balance</div>
-                    <div class="kpi-value">
-                        @if($feeBalance !== null)
-                            ₹{{ number_format($feeBalance) }}
-                        @else
-                            <span style="font-size:1.2rem">View Fees</span>
-                        @endif
-                    </div>
+                    <div class="kpi-label">Fee Balance Due</div>
+                    <div class="kpi-value">₹{{ number_format($balanceDue) }}</div>
                     <div class="kpi-trend">
                         <i class="bi bi-receipt me-1"></i>
                         <a href="{{ route('student.fees') }}" class="text-white opacity-75 text-decoration-none" style="font-size:.78rem">See fee details</a>
