@@ -110,6 +110,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
     Route::get('settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
     Route::post('settings/branding', [Admin\SettingsController::class, 'update'])->name('settings.update');
+    Route::get('api-docs', [Admin\SettingsController::class, 'apiDocs'])->name('api-docs');
+
+    // Global Search
+    Route::get('search', [Admin\SearchController::class, 'index'])->name('search');
 
     // Activity Log
     Route::get('activity-log', [Admin\ActivityLogController::class, 'index'])->name('activity-log');

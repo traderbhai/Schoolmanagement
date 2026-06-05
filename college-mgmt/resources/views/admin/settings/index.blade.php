@@ -48,4 +48,18 @@
         </div>
     </div>
 </div>
+<div class="row g-4 mt-0">
+    <div class="col-md-4">
+        <div class="card h-100 border-0" style="box-shadow:var(--shadow-sm)">
+            <div class="card-body text-center p-4">
+                <div class="mb-3" style="width:60px;height:60px;background:#eff6ff;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:1.8rem;color:#2563eb">
+                    <i class="bi bi-braces"></i>
+                </div>
+                <h6 class="fw-bold mb-1">REST API</h6>
+                <p class="text-muted small mb-3">API reference, endpoints and authentication guide</p>
+                <a href="{{ route('admin.api-docs') }}" class="btn btn-outline-primary btn-sm">View API Docs</a>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

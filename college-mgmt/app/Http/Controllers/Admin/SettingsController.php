@@ -44,6 +44,11 @@ class SettingsController extends Controller
         return back()->with('success', 'Settings saved successfully.');
     }
 
+    public function apiDocs()
+    {
+        return view('admin.settings.api-docs');
+    }
+
     private function loadSettings(): array
     {
         $path = storage_path('app/settings.json');

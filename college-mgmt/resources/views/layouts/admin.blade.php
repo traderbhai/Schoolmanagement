@@ -2,7 +2,8 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'EduManage — Admin')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -239,10 +240,10 @@
 
         <div class="topbar-right">
             {{-- Global search --}}
-            <div class="topbar-search d-none d-md-flex">
+            <form method="GET" action="{{ route('admin.search') }}" class="topbar-search d-none d-md-flex">
                 <i class="bi bi-search search-icon"></i>
-                <input type="search" placeholder="Search students, teachers..." aria-label="Global search">
-            </div>
+                <input type="search" name="q" placeholder="Search students, teachers..." value="{{ request('q') }}" aria-label="Global search">
+            </form>
 
             {{-- Dark mode toggle --}}
             <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
