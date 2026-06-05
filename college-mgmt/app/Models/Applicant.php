@@ -50,6 +50,8 @@ class Applicant extends Model
     public function reviewer()       { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function counsellingLogs(){ return $this->hasMany(CounsellingLog::class); }
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
+    public function scores()         { return $this->hasMany(ApplicantScore::class); }
+    public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }
 
     public function getStatusBadgeAttribute(): string
     {

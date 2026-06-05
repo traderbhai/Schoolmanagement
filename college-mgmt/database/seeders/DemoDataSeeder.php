@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog, SelectionSession, SessionApplicant};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -678,6 +678,111 @@ class DemoDataSeeder extends Seeder
                 'attendance_status' => $i === 0 ? 'present' : 'present',
                 'panel_number'      => 1,
             ]);
+        }
+
+        // ── P5: Scoring & Decision ─────────────────────────────────────────────
+        $gdApplicantsScored = $shortlisted->merge($selected)->take(2);
+        $gdStep = $gd; // SelectionProcessStep (gd)
+        $gdParams = $gdStep->scoringParameters()->orderBy('sort_order')->get();
+
+        foreach ($gdApplicantsScored as $idx => $applicant) {
+            $paramScores = [];
+            $totalScore = 0;
+            $maxPossible = 0;
+
+            foreach ($gdParams as $pi => $param) {
+                // Realistic score: first applicant scores higher
+                $baseScore = $idx === 0 ? $param->max_score * 0.88 : $param->max_score * 0.72;
+                $score = round($baseScore + ($pi % 2 === 0 ? 1 : -0.5), 1);
+                $score = min($score, $param->max_score);
+                $score = max($score, 0);
+                $paramScores[$param->id] = $score;
+                $totalScore += $score;
+                $maxPossible += $param->max_score;
+            }
+
+            $percentage = $maxPossible > 0 ? round(($totalScore / $maxPossible) * 100, 2) : 0;
+
+            ApplicantScore::firstOrCreate(
+                [
+                    'applicant_id'         => $applicant->id,
+                    'selection_session_id' => $gdSession->id,
+                ],
+                [
+                    'selection_process_step_id' => $gdSession->selection_process_step_id,
+                    'scored_by'                 => $admHead->id,
+                    'parameter_scores'          => $paramScores,
+                    'total_score'               => $totalScore,
+                    'max_possible_score'        => $maxPossible,
+                    'percentage'                => $percentage,
+                    'remarks'                   => $idx === 0 ? 'Very articulate. Strong communication skills.' : 'Good potential. Needs to work on confidence.',
+                    'is_final'                  => true,
+                ]
+            );
+        }
+
+        // Generate MeritListEntries for scored applicants
+        $allApplicants = Applicant::where('program_id', $pgdm->id)
+            ->whereIn('status', ['shortlisted', 'under_review', 'selected'])
+            ->with(['scores.step'])
+            ->get();
+
+        $ranked = [];
+        foreach ($allApplicants as $applicant) {
+            $stepScores = [];
+            $selectionWeightedTotal = 0;
+
+            foreach ($applicant->scores as $score) {
+                $step = $score->step;
+                if (!$step) continue;
+                $stepScores[$step->id] = [
+                    'total'      => $score->total_score,
+                    'percentage' => $score->percentage,
+                    'weightage'  => $step->weightage,
+                ];
+                $selectionWeightedTotal += $score->percentage * ($step->weightage / 100);
+            }
+
+            $academicData = $applicant->academic_data ?? [];
+            $academicScore = null;
+            if (!empty($academicData['graduation_percentage'])) {
+                $academicScore = min((float) $academicData['graduation_percentage'], 100);
+            } elseif (!empty($academicData['cgpa'])) {
+                $academicScore = min((float) $academicData['cgpa'] * 10, 100);
+            }
+
+            $compositeScore = ($selectionWeightedTotal * 0.8) + (($academicScore ?? 0) * 0.2);
+
+            $ranked[] = [
+                'applicant'            => $applicant,
+                'total_weighted_score' => round($selectionWeightedTotal, 2),
+                'step_scores'          => $stepScores,
+                'academic_score'       => $academicScore,
+                'composite_score'      => round($compositeScore, 2),
+            ];
+        }
+
+        usort($ranked, fn($a, $b) => $b['composite_score'] <=> $a['composite_score']);
+
+        foreach ($ranked as $rank => $data) {
+            MeritListEntry::firstOrCreate(
+                [
+                    'program_id'   => $pgdm->id,
+                    'applicant_id' => $data['applicant']->id,
+                ],
+                [
+                    'batch_id'             => $data['applicant']->batch_id,
+                    'rank'                 => $rank + 1,
+                    'total_weighted_score' => $data['total_weighted_score'],
+                    'step_scores'          => $data['step_scores'],
+                    'academic_score'       => $data['academic_score'],
+                    'composite_score'      => $data['composite_score'],
+                    'merit_list_version'   => 1,
+                    'decision'             => $rank === 0 ? 'selected' : 'pending',
+                    'decided_by'           => $rank === 0 ? $admHead->id : null,
+                    'decided_at'           => $rank === 0 ? now() : null,
+                ]
+            );
         }
 
         $this->command->info('Demo data seeded successfully!');

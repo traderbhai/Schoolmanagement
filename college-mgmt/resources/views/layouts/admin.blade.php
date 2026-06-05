@@ -107,6 +107,12 @@
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
             <i class="bi bi-calendar-event"></i> Sessions
         </a>
+        @php $firstProgram = \App\Models\Program::where('is_active',true)->first(); @endphp
+        @if($firstProgram)
+        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
+            <i class="bi bi-list-ol"></i> Merit List
+        </a>
+        @endif
 
         <div class="sidebar-divider"></div>
 
@@ -218,6 +224,9 @@
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants CRM</a>
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif"><i class="bi bi-calendar-event"></i> Sessions</a>
+        @if($firstProgram)
+        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
+        @endif
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>

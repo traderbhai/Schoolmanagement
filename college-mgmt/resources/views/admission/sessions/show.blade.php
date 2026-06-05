@@ -47,6 +47,11 @@
                         <i class="bi bi-clipboard-check me-1"></i> Mark Attendance
                     </button>
                 @endif
+                @if(in_array($session->status, ['ongoing','completed']))
+                    <a href="{{ route('admission.sessions.scores', $session) }}" class="btn btn-info btn-sm text-white">
+                        <i class="bi bi-clipboard2-data me-1"></i> Score Sheet
+                    </a>
+                @endif
                 @if($session->status !== 'completed' && (auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin')))
                     <form method="POST" action="{{ route('admission.sessions.complete', $session) }}" class="d-inline" onsubmit="return confirm('Mark session as completed?')">
                         @csrf
