@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title','Academic Year')
 @section('page-title','Academic Year Details')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.academic-years.index') }}">Academic Years</a></li>
+    <li class="breadcrumb-item active">View Academic Year</li>
+@endsection
+
 @section('content')
 <div class="row g-3">
     <div class="col-md-4">

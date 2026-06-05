@@ -1,6 +1,11 @@
 @extends('layouts.admin')
 @section('title', 'Time Slots')
 @section('page-title', 'Time Slots')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Time Slots</li>
+@endsection
+
 @section('content')
 
 <div class="d-flex align-items-center justify-content-between mb-4">

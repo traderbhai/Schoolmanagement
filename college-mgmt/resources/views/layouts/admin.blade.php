@@ -245,7 +245,7 @@
     {{-- PAGE BODY --}}
     <div class="page-body">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert" aria-live="polite">
+            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
@@ -253,6 +253,18 @@
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
+                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+            </div>
+        @endif
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
+                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
@@ -319,6 +331,16 @@
         if (!icon) return;
         icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
     }
+})();
+
+// ── Auto-dismiss success/info alerts ──────────────────────
+(function () {
+    setTimeout(function () {
+        document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+        });
+    }, 4000);
 })();
 
 // ── Delete modal ───────────────────────────────────────────

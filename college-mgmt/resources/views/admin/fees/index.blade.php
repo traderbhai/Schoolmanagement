@@ -1,6 +1,11 @@
 @extends('layouts.admin')
 @section('title', 'Fee Management')
 @section('page-title', 'Fee Management')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Fee Management</li>
+@endsection
+
 @section('content')
 
 <div class="d-flex align-items-center justify-content-between mb-4">

@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title', 'Teacher Profile')
 @section('page-title', 'Teacher Profile')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.teachers.index') }}">Teachers</a></li>
+    <li class="breadcrumb-item active">View Teacher</li>
+@endsection
+
 @section('content')
 
 <div class="d-flex align-items-center justify-content-between mb-4">

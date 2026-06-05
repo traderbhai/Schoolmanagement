@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title', 'Add Time Slot')
 @section('page-title', 'Add Time Slot')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.timetable-slots.index') }}">Time Slots</a></li>
+    <li class="breadcrumb-item active">Add Time Slot</li>
+@endsection
+
 @section('content')
 
 <div class="card" style="max-width:520px">

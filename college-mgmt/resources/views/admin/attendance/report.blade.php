@@ -1,6 +1,13 @@
 @extends('layouts.admin')
 @section('title', 'Attendance Report')
 @section('page-title', 'Attendance Report')
+
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.attendance.index') }}">Attendance</a></li>
+    <li class="breadcrumb-item active">Report</li>
+@endsection
+
 @section('content')
 
 <div class="card mb-4">

@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title', 'Add Fee Structure')
 @section('page-title', 'Add Fee Structure')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.fees.index') }}">Fee Management</a></li>
+    <li class="breadcrumb-item active">Add Fee Management</li>
+@endsection
+
 @section('content')
 
 <div class="card" style="max-width:640px">

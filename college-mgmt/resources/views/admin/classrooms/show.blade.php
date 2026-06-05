@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title','Classroom Details')
 @section('page-title','Classroom Details')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.classrooms.index') }}">Classrooms</a></li>
+    <li class="breadcrumb-item active">View Classroom</li>
+@endsection
+
 @section('content')
 <div class="row g-3">
     <div class="col-md-4">

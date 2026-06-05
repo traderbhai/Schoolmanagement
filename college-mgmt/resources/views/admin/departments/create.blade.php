@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 @section('title', 'Add Department')
 @section('page-title', 'Add Department')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.departments.index') }}">Departments</a></li>
+    <li class="breadcrumb-item active">Add Department</li>
+@endsection
+
 @section('content')
 
 <div class="card" style="max-width:620px">

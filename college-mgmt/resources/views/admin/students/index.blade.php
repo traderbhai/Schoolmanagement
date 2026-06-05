@@ -1,6 +1,11 @@
 @extends('layouts.admin')
 @section('title', 'Students')
 @section('page-title', 'Students')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Students</li>
+@endsection
+
 @section('content')
 
 {{-- Page Header --}}
