@@ -14,15 +14,21 @@ class Applicant extends Model
         'user_id', 'program_id', 'batch_id', 'application_number', 'status',
         'personal_data', 'academic_data', 'family_data', 'additional_data',
         'applied_at', 'reviewed_at', 'reviewed_by', 'notes',
+        'category', 'category_certificate_verified', 'pwd_percentage',
+        'domicile_state', 'is_state_quota', 'entrance_exam_type',
+        'entrance_exam_score', 'entrance_exam_roll_number', 'entrance_exam_year',
     ];
 
     protected $casts = [
-        'personal_data'   => 'array',
-        'academic_data'   => 'array',
-        'family_data'     => 'array',
-        'additional_data' => 'array',
-        'applied_at'      => 'datetime',
-        'reviewed_at'     => 'datetime',
+        'personal_data'                  => 'array',
+        'academic_data'                  => 'array',
+        'family_data'                    => 'array',
+        'additional_data'                => 'array',
+        'applied_at'                     => 'datetime',
+        'reviewed_at'                    => 'datetime',
+        'category_certificate_verified'  => 'boolean',
+        'is_state_quota'                 => 'boolean',
+        'entrance_exam_year'             => 'integer',
     ];
 
     protected static function boot()
@@ -103,6 +109,37 @@ class Applicant extends Model
             'rejected'     => 'Rejected',
             'withdrawn'    => 'Withdrawn',
             default        => ucfirst($this->status),
+        };
+    }
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return match($this->category) {
+            'general'          => 'General',
+            'obc'              => 'OBC',
+            'obc_nc'           => 'OBC (Non-Creamy Layer)',
+            'sc'               => 'SC',
+            'st'               => 'ST',
+            'ews'              => 'EWS',
+            'pwd'              => 'PWD',
+            'nri'              => 'NRI',
+            'management_quota' => 'Management Quota',
+            default            => ucfirst($this->category ?? 'general'),
+        };
+    }
+
+    public function getEntranceExamLabelAttribute(): string
+    {
+        return match($this->entrance_exam_type) {
+            'cat'   => 'CAT',
+            'mat'   => 'MAT',
+            'xat'   => 'XAT',
+            'cmat'  => 'CMAT',
+            'atma'  => 'ATMA',
+            'gmat'  => 'GMAT',
+            'other' => 'Other',
+            'none'  => 'None',
+            default => '—',
         };
     }
 

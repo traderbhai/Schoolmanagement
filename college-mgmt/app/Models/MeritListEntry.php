@@ -10,6 +10,7 @@ class MeritListEntry extends Model
         'program_id', 'batch_id', 'applicant_id', 'rank',
         'total_weighted_score', 'step_scores', 'academic_score', 'composite_score',
         'merit_list_version', 'decision', 'decided_by', 'decided_at', 'notes',
+        'category', 'category_rank', 'quota_type', 'is_supernumerary',
     ];
 
     protected $casts = [

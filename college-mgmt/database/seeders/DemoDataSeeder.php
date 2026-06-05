@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, RoleProgramAssignment};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, RoleProgramAssignment, ProgramSeatMatrix};
 use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
@@ -424,6 +424,22 @@ class DemoDataSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // A2: Seat Matrix for PGDM
+        ProgramSeatMatrix::firstOrCreate(['program_id' => $pgdm->id, 'batch_id' => null], [
+            'general_seats'          => 60,
+            'obc_seats'              => 16,
+            'obc_nc_seats'           => 11,
+            'sc_seats'               => 15,
+            'st_seats'               => 7,
+            'ews_seats'              => 12,
+            'pwd_seats'              => 3,
+            'nri_seats'              => 6,
+            'management_quota_seats' => 12,
+            'total_seats'            => 139,
+            'state_quota_percentage' => 0,
+            'is_active'              => true,
+        ]);
+
         // 16. Admission enquiries
         $admissionData = [
             ['applicant_name' => 'Karan Malhotra', 'email' => 'karan.m@gmail.com', 'phone' => '9876543210', 'status' => 'applied'],
@@ -494,8 +510,14 @@ class DemoDataSeeder extends Seeder
                 'email'  => 'priya.sharma@applicant.demo',
                 'status' => 'submitted',
                 'applied_at' => Carbon::now()->subDays(10),
-                'personal_data' => ['father_name' => 'Ramesh Sharma', 'mother_name' => 'Sunita Sharma', 'date_of_birth' => '1999-03-15', 'gender' => 'Female', 'category' => 'General', 'phone' => '9876543210', 'address' => '12 MG Road, Mumbai', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'pincode' => '400001'],
-                'academic_data' => ['graduation_college' => 'Mumbai University', 'graduation_degree' => 'B.Com', 'graduation_percentage' => '78.5', 'graduation_year' => '2022', 'work_experience' => '12', 'entrance_exam' => 'CAT', 'entrance_score' => '85.2'],
+                'category' => 'general',
+                'entrance_exam_type' => 'cat',
+                'entrance_exam_score' => 85.2,
+                'entrance_exam_roll_number' => 'CAT2024001',
+                'entrance_exam_year' => 2024,
+                'domicile_state' => 'Maharashtra',
+                'personal_data' => ['father_name' => 'Ramesh Sharma', 'mother_name' => 'Sunita Sharma', 'date_of_birth' => '1999-03-15', 'gender' => 'Female', 'category' => 'General', 'phone' => '9876543210', 'address' => '12 MG Road, Mumbai', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'pincode' => '400001', 'entrance_exam_type' => 'CAT', 'entrance_exam_score' => '85.2'],
+                'academic_data' => ['graduation_college' => 'Mumbai University', 'graduation_degree' => 'B.Com', 'graduation_percentage' => '78.5', 'graduation_year' => '2022', 'work_experience' => '12'],
                 'family_data'   => ['father_occupation' => 'Business', 'father_income' => '8 LPA', 'mother_occupation' => 'Homemaker'],
                 'additional_data' => ['how_did_you_hear' => 'Google', 'why_this_program' => 'I want to build leadership skills and accelerate my career in business management.'],
             ],
@@ -504,8 +526,14 @@ class DemoDataSeeder extends Seeder
                 'email'  => 'rahul.verma@applicant.demo',
                 'status' => 'submitted',
                 'applied_at' => Carbon::now()->subDays(7),
-                'personal_data' => ['father_name' => 'Suresh Verma', 'mother_name' => 'Kavita Verma', 'date_of_birth' => '1998-07-22', 'gender' => 'Male', 'category' => 'OBC', 'phone' => '9812345678', 'address' => '45 Civil Lines, Delhi', 'city' => 'Delhi', 'state' => 'Delhi', 'pincode' => '110001'],
-                'academic_data' => ['graduation_college' => 'Delhi University', 'graduation_degree' => 'B.Tech', 'graduation_percentage' => '72.0', 'graduation_year' => '2021', 'work_experience' => '24', 'entrance_exam' => 'XAT', 'entrance_score' => '78.4'],
+                'category' => 'obc',
+                'entrance_exam_type' => 'xat',
+                'entrance_exam_score' => 78.4,
+                'entrance_exam_roll_number' => 'XAT2024022',
+                'entrance_exam_year' => 2024,
+                'domicile_state' => 'Delhi',
+                'personal_data' => ['father_name' => 'Suresh Verma', 'mother_name' => 'Kavita Verma', 'date_of_birth' => '1998-07-22', 'gender' => 'Male', 'category' => 'OBC', 'phone' => '9812345678', 'address' => '45 Civil Lines, Delhi', 'city' => 'Delhi', 'state' => 'Delhi', 'pincode' => '110001', 'entrance_exam_type' => 'XAT', 'entrance_exam_score' => '78.4'],
+                'academic_data' => ['graduation_college' => 'Delhi University', 'graduation_degree' => 'B.Tech', 'graduation_percentage' => '72.0', 'graduation_year' => '2021', 'work_experience' => '24'],
                 'family_data'   => ['father_occupation' => 'Government Employee', 'father_income' => '6 LPA', 'mother_occupation' => 'Teacher'],
                 'additional_data' => ['how_did_you_hear' => 'Friend/Family', 'why_this_program' => 'Looking to transition from engineering to management and this program has excellent placement record.'],
             ],
@@ -515,8 +543,15 @@ class DemoDataSeeder extends Seeder
                 'status' => 'shortlisted',
                 'applied_at' => Carbon::now()->subDays(20),
                 'reviewed_at' => Carbon::now()->subDays(5),
-                'personal_data' => ['father_name' => 'Kiran Patel', 'mother_name' => 'Meena Patel', 'date_of_birth' => '1999-11-08', 'gender' => 'Female', 'category' => 'General', 'phone' => '9898765432', 'address' => '78 Satellite Road, Ahmedabad', 'city' => 'Ahmedabad', 'state' => 'Gujarat', 'pincode' => '380001'],
-                'academic_data' => ['graduation_college' => 'Gujarat University', 'graduation_degree' => 'BBA', 'graduation_percentage' => '82.3', 'graduation_year' => '2022', 'work_experience' => '18', 'entrance_exam' => 'CAT', 'entrance_score' => '92.1'],
+                'category' => 'sc',
+                'entrance_exam_type' => 'cat',
+                'entrance_exam_score' => 92.1,
+                'entrance_exam_roll_number' => 'CAT2024089',
+                'entrance_exam_year' => 2024,
+                'domicile_state' => 'Gujarat',
+                'category_certificate_verified' => true,
+                'personal_data' => ['father_name' => 'Kiran Patel', 'mother_name' => 'Meena Patel', 'date_of_birth' => '1999-11-08', 'gender' => 'Female', 'category' => 'SC', 'phone' => '9898765432', 'address' => '78 Satellite Road, Ahmedabad', 'city' => 'Ahmedabad', 'state' => 'Gujarat', 'pincode' => '380001', 'entrance_exam_type' => 'CAT', 'entrance_exam_score' => '92.1'],
+                'academic_data' => ['graduation_college' => 'Gujarat University', 'graduation_degree' => 'BBA', 'graduation_percentage' => '82.3', 'graduation_year' => '2022', 'work_experience' => '18'],
                 'family_data'   => ['father_occupation' => 'Doctor', 'father_income' => '15 LPA', 'mother_occupation' => 'Professor'],
                 'additional_data' => ['how_did_you_hear' => 'Social Media', 'extracurricular' => 'National level debate champion, NSS volunteer', 'why_this_program' => 'Strong brand value and industry partnerships align perfectly with my career goals in marketing.'],
             ],
@@ -524,7 +559,8 @@ class DemoDataSeeder extends Seeder
                 'name'   => 'Arjun Singh',
                 'email'  => 'arjun.singh2@applicant.demo',
                 'status' => 'draft',
-                'personal_data' => ['father_name' => 'Gurpreet Singh', 'date_of_birth' => '2000-01-14', 'gender' => 'Male', 'phone' => '9765432109'],
+                'category' => 'ews',
+                'personal_data' => ['father_name' => 'Gurpreet Singh', 'date_of_birth' => '2000-01-14', 'gender' => 'Male', 'phone' => '9765432109', 'category' => 'EWS'],
                 'academic_data' => null,
                 'family_data'   => null,
                 'additional_data' => null,
@@ -535,8 +571,14 @@ class DemoDataSeeder extends Seeder
                 'status' => 'selected',
                 'applied_at' => Carbon::now()->subDays(30),
                 'reviewed_at' => Carbon::now()->subDays(3),
-                'personal_data' => ['father_name' => 'Venkat Rao', 'mother_name' => 'Lakshmi Rao', 'date_of_birth' => '1998-05-25', 'gender' => 'Female', 'category' => 'General', 'phone' => '9654321098', 'address' => '23 Anna Salai, Chennai', 'city' => 'Chennai', 'state' => 'Tamil Nadu', 'pincode' => '600002'],
-                'academic_data' => ['graduation_college' => 'Madras University', 'graduation_degree' => 'B.Sc Statistics', 'graduation_percentage' => '88.0', 'graduation_year' => '2021', 'work_experience' => '30', 'entrance_exam' => 'CAT', 'entrance_score' => '96.5'],
+                'category' => 'general',
+                'entrance_exam_type' => 'cat',
+                'entrance_exam_score' => 96.5,
+                'entrance_exam_roll_number' => 'CAT2024199',
+                'entrance_exam_year' => 2024,
+                'domicile_state' => 'Tamil Nadu',
+                'personal_data' => ['father_name' => 'Venkat Rao', 'mother_name' => 'Lakshmi Rao', 'date_of_birth' => '1998-05-25', 'gender' => 'Female', 'category' => 'General', 'phone' => '9654321098', 'address' => '23 Anna Salai, Chennai', 'city' => 'Chennai', 'state' => 'Tamil Nadu', 'pincode' => '600002', 'entrance_exam_type' => 'CAT', 'entrance_exam_score' => '96.5'],
+                'academic_data' => ['graduation_college' => 'Madras University', 'graduation_degree' => 'B.Sc Statistics', 'graduation_percentage' => '88.0', 'graduation_year' => '2021', 'work_experience' => '30'],
                 'family_data'   => ['father_occupation' => 'Engineer', 'father_income' => '12 LPA', 'mother_occupation' => 'Accountant'],
                 'additional_data' => ['how_did_you_hear' => 'Education Fair', 'achievements' => 'University Gold Medalist, Published research paper', 'why_this_program' => 'This institute has produced industry leaders and I aspire to follow that path in analytics.'],
             ],
@@ -551,15 +593,22 @@ class DemoDataSeeder extends Seeder
             $user->assignRole('applicant');
 
             Applicant::firstOrCreate(['user_id' => $user->id], [
-                'program_id'      => $pgdm->id,
-                'status'          => $data['status'],
-                'personal_data'   => $data['personal_data'],
-                'academic_data'   => $data['academic_data'] ?? null,
-                'family_data'     => $data['family_data'] ?? null,
-                'additional_data' => $data['additional_data'] ?? null,
-                'applied_at'      => $data['applied_at'] ?? null,
-                'reviewed_at'     => $data['reviewed_at'] ?? null,
-                'reviewed_by'     => isset($data['reviewed_at']) ? $admin->id : null,
+                'program_id'                    => $pgdm->id,
+                'status'                        => $data['status'],
+                'personal_data'                 => $data['personal_data'],
+                'academic_data'                 => $data['academic_data'] ?? null,
+                'family_data'                   => $data['family_data'] ?? null,
+                'additional_data'               => $data['additional_data'] ?? null,
+                'applied_at'                    => $data['applied_at'] ?? null,
+                'reviewed_at'                   => $data['reviewed_at'] ?? null,
+                'reviewed_by'                   => isset($data['reviewed_at']) ? $admin->id : null,
+                'category'                      => $data['category'] ?? 'general',
+                'entrance_exam_type'            => $data['entrance_exam_type'] ?? null,
+                'entrance_exam_score'           => $data['entrance_exam_score'] ?? null,
+                'entrance_exam_roll_number'     => $data['entrance_exam_roll_number'] ?? null,
+                'entrance_exam_year'            => $data['entrance_exam_year'] ?? null,
+                'domicile_state'                => $data['domicile_state'] ?? null,
+                'category_certificate_verified' => $data['category_certificate_verified'] ?? false,
             ]);
         }
 
@@ -794,10 +843,18 @@ class DemoDataSeeder extends Seeder
                 $academicScore = min((float) $academicData['cgpa'] * 10, 100);
             }
 
-            $compositeScore = ($selectionWeightedTotal * 0.8) + (($academicScore ?? 0) * 0.2);
+            $entranceScore = $applicant->entrance_exam_score;
+
+            // Weights: selection 50%, academic 20%, entrance 30%
+            $compositeScore = ($selectionWeightedTotal * 0.5)
+                + (($academicScore ?? 0) * 0.2)
+                + (($entranceScore ?? 0) * 0.3 / 100);
+
+            $stepScores['_weights'] = ['selection_weight' => 50, 'academic_weight' => 20, 'entrance_exam_weight' => 30];
 
             $ranked[] = [
                 'applicant'            => $applicant,
+                'category'             => $applicant->category ?? 'general',
                 'total_weighted_score' => round($selectionWeightedTotal, 2),
                 'step_scores'          => $stepScores,
                 'academic_score'       => $academicScore,
@@ -807,7 +864,24 @@ class DemoDataSeeder extends Seeder
 
         usort($ranked, fn($a, $b) => $b['composite_score'] <=> $a['composite_score']);
 
+        // Compute category ranks
+        $categoryGroups = [];
+        foreach ($ranked as $item) {
+            $categoryGroups[$item['category']][] = $item['applicant']->id;
+        }
+        $categoryRanks = [];
+        foreach ($categoryGroups as $cat => $ids) {
+            foreach ($ids as $i => $id) {
+                $categoryRanks[$id] = $i + 1;
+            }
+        }
+
         foreach ($ranked as $rank => $data) {
+            $cat = $data['category'];
+            $appId = $data['applicant']->id;
+            $catRank = $categoryRanks[$appId] ?? 1;
+            $quotaType = in_array($cat, ['nri']) ? 'nri' : (in_array($cat, ['management_quota']) ? 'management' : ($cat === 'pwd' ? 'pwd' : ($cat !== 'general' ? 'category' : 'open')));
+
             MeritListEntry::firstOrCreate(
                 [
                     'program_id'   => $pgdm->id,
@@ -824,6 +898,10 @@ class DemoDataSeeder extends Seeder
                     'decision'             => $rank === 0 ? 'selected' : 'pending',
                     'decided_by'           => $rank === 0 ? $admHead->id : null,
                     'decided_at'           => $rank === 0 ? now() : null,
+                    'category'             => $cat,
+                    'category_rank'        => $catRank,
+                    'quota_type'           => $quotaType,
+                    'is_supernumerary'     => in_array($cat, ['nri', 'pwd']),
                 ]
             );
         }

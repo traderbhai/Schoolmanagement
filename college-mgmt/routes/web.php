@@ -195,6 +195,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     // Consolidated Student Report PDF
     Route::get('students/{student}/report', [Admin\ReportController::class, 'consolidatedReport'])->name('students.report');
 
+    // A2: Seat Matrix
+    Route::get('programs/{program}/seat-matrix', [Admin\SeatMatrixController::class, 'index'])->name('seat-matrix.index');
+    Route::get('programs/{program}/seat-matrix/create', [Admin\SeatMatrixController::class, 'create'])->name('seat-matrix.create');
+    Route::post('programs/{program}/seat-matrix', [Admin\SeatMatrixController::class, 'store'])->name('seat-matrix.store');
+    Route::get('seat-matrix/{matrix}/edit', [Admin\SeatMatrixController::class, 'edit'])->name('seat-matrix.edit');
+    Route::put('seat-matrix/{matrix}', [Admin\SeatMatrixController::class, 'update'])->name('seat-matrix.update');
+    Route::delete('seat-matrix/{matrix}', [Admin\SeatMatrixController::class, 'destroy'])->name('seat-matrix.destroy');
+
     // P9: Role Assignments (Access Control)
     Route::get('role-assignments', [Admin\RoleAssignmentController::class, 'index'])->name('role-assignments.index');
     Route::get('role-assignments/create', [Admin\RoleAssignmentController::class, 'create'])->name('role-assignments.create');
@@ -211,6 +219,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
+    Route::post('applicants/{applicant}/verify-category', [Admission\ApplicantCrmController::class, 'verifyCategory'])->name('applicants.verify-category');
     // Document Verification Queue (static routes BEFORE {document} parameterized)
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
     Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])->name('documents.bulk-verify');
@@ -244,6 +253,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('merit-list/{program}/export', [Admission\MeritListController::class, 'exportMeritList'])->name('merit-list.export');
     Route::post('merit-list/{program}/bulk-decide', [Admission\MeritListController::class, 'bulkDecide'])->name('merit-list.bulk-decide');
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
+    Route::get('merit-list/{program}/category-report', [Admission\MeritListController::class, 'categoryWiseReport'])->name('merit-list.category-report');
 
     // Payment Verification (static routes before parameterized)
     Route::get('payments/queue', [Admission\PaymentVerificationController::class, 'pendingQueue'])->name('payments.queue');

@@ -56,6 +56,9 @@ class ApplicantCrmController extends Controller
         if ($request->date_to) {
             $query->whereDate('applied_at', '<=', $request->date_to);
         }
+        if ($request->category) {
+            $query->where('category', $request->category);
+        }
 
         $applicants = $query->latest()->paginate(20)->withQueryString();
         $programs = Program::where('is_active', true)->orderBy('name')->get();
@@ -191,5 +194,18 @@ class ApplicantCrmController extends Controller
         ]);
 
         return back()->with('success', 'Note added.');
+    }
+
+    public function verifyCategory(Request $request, Applicant $applicant)
+    {
+        $applicant->update(['category_certificate_verified' => true]);
+
+        AdmissionTeamNote::create([
+            'applicant_id' => $applicant->id,
+            'user_id'      => Auth::id(),
+            'note'         => 'Category certificate verified (' . $applicant->category_label . ') by ' . Auth::user()->name,
+        ]);
+
+        return back()->with('success', 'Category certificate verified.');
     }
 }

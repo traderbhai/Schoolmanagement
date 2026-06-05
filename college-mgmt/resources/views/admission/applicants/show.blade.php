@@ -13,6 +13,26 @@
             {{ $applicant->program->name ?? 'N/A' }}
             @if($applicant->batch) &middot; {{ $applicant->batch->name }} @endif
         </div>
+        <div class="mt-1 d-flex gap-2 flex-wrap align-items-center">
+            <span class="badge bg-light text-dark border">{{ $applicant->category_label }}</span>
+            @if($applicant->category_certificate_verified)
+                <span class="badge bg-success"><i class="bi bi-patch-check me-1"></i>Certificate Verified</span>
+            @elseif(in_array($applicant->category, ['obc','obc_nc','sc','st','ews','pwd']))
+                @if((auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin')))
+                <form method="POST" action="{{ route('admission.applicants.verify-category', $applicant) }}" class="d-inline">
+                    @csrf
+                    <button class="btn btn-sm btn-outline-warning py-0 px-2">
+                        <i class="bi bi-patch-check me-1"></i>Verify Certificate
+                    </button>
+                </form>
+                @else
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Certificate Pending</span>
+                @endif
+            @endif
+            @if($applicant->entrance_exam_type && $applicant->entrance_exam_type !== 'none')
+                <span class="badge bg-secondary">{{ $applicant->entrance_exam_label }}: {{ $applicant->entrance_exam_score }}</span>
+            @endif
+        </div>
     </div>
     <div class="d-flex align-items-center gap-2">
         <span class="{{ $applicant->status_badge }} fs-6">{{ $applicant->status_label }}</span>

@@ -14,6 +14,9 @@
                 <h3 class="fw-bold mb-1"><i class="bi bi-list-ol me-2"></i>{{ $program->name }} — Merit List</h3>
             </div>
             <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ route('admission.merit-list.category-report', $program) }}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-bar-chart me-1"></i>Category Report
+                </a>
                 <a href="{{ route('admission.merit-list.export', array_merge(['program' => $program->id], request()->only('batch_id'))) }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-file-pdf me-1"></i>Export PDF
                 </a>
@@ -37,7 +40,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-sm-3">
+        <div class="col-sm-2">
             <label class="form-label small">Decision</label>
             <select name="decision" class="form-select form-select-sm">
                 <option value="">All</option>
@@ -45,6 +48,17 @@
                 <option value="selected" @selected($decision == 'selected')>Selected</option>
                 <option value="waitlisted" @selected($decision == 'waitlisted')>Waitlisted</option>
                 <option value="rejected" @selected($decision == 'rejected')>Rejected</option>
+            </select>
+        </div>
+        <div class="col-sm-2">
+            <label class="form-label small">Quota</label>
+            <select name="quota_type" class="form-select form-select-sm">
+                <option value="">All Quotas</option>
+                <option value="open" @selected(request('quota_type') == 'open')>Open</option>
+                <option value="category" @selected(request('quota_type') == 'category')>Category</option>
+                <option value="pwd" @selected(request('quota_type') == 'pwd')>PWD</option>
+                <option value="nri" @selected(request('quota_type') == 'nri')>NRI</option>
+                <option value="management" @selected(request('quota_type') == 'management')>Management</option>
             </select>
         </div>
         <div class="col-sm-2">
@@ -78,6 +92,34 @@
 </div>
 @endif
 
+{{-- Seat Matrix Summary --}}
+@if(isset($seatMatrix) && $seatMatrix)
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3-gap me-2"></i>Seat Matrix — Category Fill Status</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-2 text-center">
+            @foreach(['general' => 'General','obc' => 'OBC','obc_nc' => 'OBC-NC','sc' => 'SC','st' => 'ST','ews' => 'EWS','pwd' => 'PWD*','nri' => 'NRI*','management_quota' => 'Mgmt'] as $cat => $lbl)
+            @php $col = $cat . '_seats'; $seats = $seatMatrix->$col; @endphp
+            <div class="col-6 col-sm-4 col-md-2">
+                <div class="border rounded p-2">
+                    <div class="fw-bold text-primary">{{ $seats }}</div>
+                    <small class="text-muted">{{ $lbl }}</small>
+                </div>
+            </div>
+            @endforeach
+            <div class="col-6 col-sm-4 col-md-2">
+                <div class="border rounded p-2 bg-light">
+                    <div class="fw-bold">{{ $seatMatrix->total_seats }}</div>
+                    <small class="text-muted">Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- Merit List Table --}}
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
@@ -88,6 +130,9 @@
                         <th>Rank</th>
                         <th>Name</th>
                         <th>Application #</th>
+                        <th>Category</th>
+                        <th class="text-center">Cat. Rank</th>
+                        <th class="text-center">Quota</th>
                         @foreach($steps as $step)
                         <th class="text-center small">{{ $step->name ?? $step->typeLabel }}</th>
                         @endforeach
@@ -109,6 +154,26 @@
                             </a>
                         </td>
                         <td class="small text-muted">{{ $entry->applicant->application_number }}</td>
+                        <td class="small">
+                            @if($entry->applicant->category)
+                                <span class="badge bg-light text-dark border">{{ $entry->applicant->category_label }}</span>
+                            @else —
+                            @endif
+                        </td>
+                        <td class="text-center small">
+                            @if($entry->category_rank) #{{ $entry->category_rank }} @else — @endif
+                        </td>
+                        <td class="text-center small">
+                            @php $quoteBadge = match($entry->quota_type) {
+                                'open' => 'bg-primary', 'category' => 'bg-info text-dark',
+                                'pwd' => 'bg-warning text-dark', 'nri' => 'bg-purple text-white',
+                                'management' => 'bg-secondary', default => 'bg-light text-dark'
+                            }; @endphp
+                            @if($entry->quota_type)
+                                <span class="badge {{ $quoteBadge }}">{{ ucfirst($entry->quota_type) }}</span>
+                                @if($entry->is_supernumerary) <i class="bi bi-asterisk text-muted" title="Supernumerary"></i> @endif
+                            @else — @endif
+                        </td>
                         @foreach($steps as $stepId => $step)
                         <td class="text-center small">
                             @php $ss = ($entry->step_scores ?? [])[$stepId] ?? null; @endphp

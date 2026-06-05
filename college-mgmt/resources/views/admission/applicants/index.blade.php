@@ -38,6 +38,14 @@
                 </select>
             </div>
             <div class="col-md-2">
+                <select name="category" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    @foreach(['general' => 'General','obc' => 'OBC','obc_nc' => 'OBC-NC','sc' => 'SC','st' => 'ST','ews' => 'EWS','pwd' => 'PWD','nri' => 'NRI','management_quota' => 'Mgmt Quota'] as $val => $lbl)
+                        <option value="{{ $val }}" @selected(request('category') == $val)>{{ $lbl }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
                 <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" placeholder="From">
             </div>
             <div class="col-md-2">
@@ -74,6 +82,8 @@
                         <th>Name / Email</th>
                         <th>App #</th>
                         <th>Program</th>
+                        <th>Category</th>
+                        <th>Entrance Exam</th>
                         <th>Status</th>
                         <th>Applied At</th>
                         <th>Last Interaction</th>
@@ -91,6 +101,22 @@
                         </td>
                         <td class="font-monospace small">{{ $applicant->application_number }}</td>
                         <td class="small">{{ $applicant->program->abbreviation ?? 'N/A' }}</td>
+                        <td class="small">
+                            <span class="badge bg-light text-dark border">{{ $applicant->category_label }}</span>
+                            @if($applicant->category_certificate_verified)
+                                <i class="bi bi-patch-check-fill text-success ms-1" title="Certificate Verified"></i>
+                            @endif
+                        </td>
+                        <td class="small">
+                            @if($applicant->entrance_exam_type && $applicant->entrance_exam_type !== 'none')
+                                <span class="badge bg-secondary">{{ $applicant->entrance_exam_label }}</span>
+                                @if($applicant->entrance_exam_score)
+                                    <span class="text-muted ms-1">{{ $applicant->entrance_exam_score }}</span>
+                                @endif
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
                         <td><span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span></td>
                         <td class="small">{{ $applicant->applied_at ? $applicant->applied_at->format('d M Y') : '—' }}</td>
                         <td class="small">
@@ -115,7 +141,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="9" class="text-center text-muted py-4">No applicants found.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted py-4">No applicants found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
