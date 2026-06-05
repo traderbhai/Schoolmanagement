@@ -52,7 +52,13 @@ class Applicant extends Model
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }
     public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }
-    public function payments()      { return $this->hasMany(AdmissionPayment::class); }
+    public function payments()            { return $this->hasMany(AdmissionPayment::class); }
+    public function enrollmentConfirmation() { return $this->hasOne(EnrollmentConfirmation::class); }
+
+    public function isEnrolled(): bool
+    {
+        return $this->enrollmentConfirmation()->where('status', 'completed')->exists();
+    }
 
     public function getTotalPaidAttribute(): float
     {

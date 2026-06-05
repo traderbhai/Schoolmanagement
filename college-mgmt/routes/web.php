@@ -235,6 +235,13 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('payments/{payment}/verify', [Admission\PaymentVerificationController::class, 'verify'])->name('payments.verify');
     Route::post('payments/{payment}/reject', [Admission\PaymentVerificationController::class, 'reject'])->name('payments.reject');
     Route::get('payments/{payment}/proof', [Admission\PaymentVerificationController::class, 'downloadProof'])->name('payments.proof');
+
+    // Enrollment Confirmation (static routes BEFORE {applicant} parameterized)
+    Route::get('enrollment', [Admission\EnrollmentController::class, 'index'])->name('enrollment.index');
+    Route::get('enrollment/confirmation/{confirmation}', [Admission\EnrollmentController::class, 'show'])->name('enrollment.show');
+    Route::get('enrollment/confirmation/{confirmation}/letter', [Admission\EnrollmentController::class, 'printLetter'])->name('enrollment.letter');
+    Route::get('enrollment/{applicant}/create', [Admission\EnrollmentController::class, 'create'])->name('enrollment.create');
+    Route::post('enrollment/{applicant}', [Admission\EnrollmentController::class, 'store'])->name('enrollment.store');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

@@ -3,7 +3,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation};
+use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -873,6 +874,21 @@ class DemoDataSeeder extends Seeder
                         'submitted_by'         => $shortlistedApplicant->user_id,
                     ]
                 );
+            }
+        }
+
+        // Enrollment Confirmation for selected applicant
+        $selectedApplicant = Applicant::where('program_id', $pgdm->id)->where('status', 'selected')->first();
+        if ($selectedApplicant && !EnrollmentConfirmation::where('applicant_id', $selectedApplicant->id)->exists()) {
+            try {
+                $service = new EnrollmentService();
+                $service->enroll($selectedApplicant, [
+                    'roll_number' => 'PGDM-24-001',
+                    'term_id'     => $terms[0]->id ?? null,
+                    'notes'       => 'Enrolled via demo seeder.',
+                ], $admHead->id);
+            } catch (\Throwable $e) {
+                $this->command->warn('Enrollment seeder skipped: ' . $e->getMessage());
             }
         }
 

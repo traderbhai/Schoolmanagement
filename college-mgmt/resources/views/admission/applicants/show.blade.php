@@ -27,6 +27,24 @@
             <button type="submit" class="btn btn-sm btn-primary">Update</button>
         </form>
         @endif
+        {{-- Enrollment Actions --}}
+        @if($applicant->status === 'selected')
+            @if($applicant->isEnrolled())
+                @php $enrollment = $applicant->enrollmentConfirmation; @endphp
+                <a href="{{ route('admission.enrollment.show', $enrollment) }}" class="btn btn-sm btn-success">
+                    <i class="bi bi-person-check me-1"></i> View Enrollment
+                </a>
+                @if($enrollment->student)
+                <a href="{{ route('admin.students.show', $enrollment->student) }}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-person me-1"></i> Student Profile
+                </a>
+                @endif
+            @else
+                <a href="{{ route('admission.enrollment.create', $applicant) }}" class="btn btn-sm btn-warning">
+                    <i class="bi bi-person-plus me-1"></i> Proceed to Enrollment
+                </a>
+            @endif
+        @endif
     </div>
 </div>
 
