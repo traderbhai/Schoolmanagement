@@ -6,6 +6,7 @@ use App\Http\Controllers\Student;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\Parent as ParentController;
 use App\Http\Controllers\ApplyController;
+use App\Http\Controllers\Admission;
 use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
 use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
@@ -177,6 +178,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     // Consolidated Student Report PDF
     Route::get('students/{student}/report', [Admin\ReportController::class, 'consolidatedReport'])->name('students.report');
+});
+
+// ── Admission Team routes ───────────────────────────────────────────────────
+Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->prefix('admission')->name('admission.')->group(function () {
+    Route::get('dashboard', [Admission\DashboardController::class, 'index'])->name('dashboard');
+    Route::post('applicants/bulk-action', [Admission\ApplicantCrmController::class, 'bulkAction'])->name('applicants.bulk-action');
+    Route::get('applicants', [Admission\ApplicantCrmController::class, 'index'])->name('applicants.index');
+    Route::get('applicants/{applicant}', [Admission\ApplicantCrmController::class, 'show'])->name('applicants.show');
+    Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
+    Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
+    Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
+    Route::post('documents/{document}/verify', [Admission\ApplicantCrmController::class, 'verifyDocument'])->name('documents.verify');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

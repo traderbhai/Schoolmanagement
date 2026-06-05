@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, CounsellingLog};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -12,9 +12,24 @@ class DemoDataSeeder extends Seeder
     public function run()
     {
         // Ensure roles exist
-        foreach (['admin', 'teacher', 'student', 'parent'] as $role) {
+        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
+
+        // Admission team users
+        $officer = User::firstOrCreate(['email' => 'officer@college.com'], [
+            'name' => 'Sunita Sharma',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+        $officer->assignRole('admission_officer');
+
+        $admHead = User::firstOrCreate(['email' => 'head@college.com'], [
+            'name' => 'Rajesh Kumar',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+        $admHead->assignRole('admission_head');
 
         // Admin user
         $admin = User::firstOrCreate(['email' => 'admin@demo.edu'], [
@@ -546,10 +561,73 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
+        // ── Counselling Logs for sample applicants ─────────────────────────────
+        $officerUser = User::where('email', 'officer@college.com')->first();
+        if ($officerUser) {
+            $applicants = Applicant::all();
+            $logData = [
+                [
+                    'interaction_type' => 'call',
+                    'outcome' => 'interested',
+                    'notes' => 'Spoke with the applicant. Very interested in the PGDM program. Asked about scholarship options.',
+                    'next_followup_date' => Carbon::now()->addDays(3)->toDateString(),
+                    'duration_minutes' => 15,
+                    'created_at' => Carbon::now()->subDays(8),
+                ],
+                [
+                    'interaction_type' => 'email',
+                    'outcome' => 'callback',
+                    'notes' => 'Sent program brochure and fee structure. Applicant requested a callback to discuss further.',
+                    'next_followup_date' => Carbon::now()->addDays(1)->toDateString(),
+                    'duration_minutes' => null,
+                    'created_at' => Carbon::now()->subDays(5),
+                ],
+                [
+                    'interaction_type' => 'whatsapp',
+                    'outcome' => 'follow_up',
+                    'notes' => 'Shared testimonials and placement report. Applicant said they will confirm after discussing with parents.',
+                    'next_followup_date' => Carbon::now()->addDays(5)->toDateString(),
+                    'duration_minutes' => null,
+                    'created_at' => Carbon::now()->subDays(2),
+                ],
+                [
+                    'interaction_type' => 'walk_in',
+                    'outcome' => 'interested',
+                    'notes' => 'Applicant visited campus. Gave campus tour. Very positive about facilities.',
+                    'next_followup_date' => null,
+                    'duration_minutes' => 45,
+                    'created_at' => Carbon::now()->subDays(6),
+                ],
+            ];
+
+            foreach ($applicants as $i => $applicant) {
+                $logsForApplicant = array_slice($logData, 0, ($i % 3) + 2);
+                foreach ($logsForApplicant as $log) {
+                    CounsellingLog::firstOrCreate(
+                        [
+                            'applicant_id' => $applicant->id,
+                            'logged_by' => $officerUser->id,
+                            'notes' => $log['notes'],
+                        ],
+                        [
+                            'interaction_type' => $log['interaction_type'],
+                            'outcome' => $log['outcome'],
+                            'next_followup_date' => $log['next_followup_date'],
+                            'duration_minutes' => $log['duration_minutes'],
+                            'created_at' => $log['created_at'],
+                            'updated_at' => $log['created_at'],
+                        ]
+                    );
+                }
+            }
+        }
+
         $this->command->info('Demo data seeded successfully!');
         $this->command->info('  Admin: admin@demo.edu / password123');
         $this->command->info('  Teacher: anjali@demo.edu / password123');
         $this->command->info('  Student: arjun.k@demo.edu / password123');
         $this->command->info('  Applicants: priya.sharma@applicant.demo / password123 (and 4 more)');
+        $this->command->info('  Admission Officer: officer@college.com / password');
+        $this->command->info('  Admission Head: head@college.com / password');
     }
 }

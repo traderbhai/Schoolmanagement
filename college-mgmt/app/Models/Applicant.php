@@ -43,11 +43,13 @@ class Applicant extends Model
         return 'APP-' . $year . '-' . str_pad($max + 1, 5, '0', STR_PAD_LEFT);
     }
 
-    public function user()       { return $this->belongsTo(User::class); }
-    public function program()    { return $this->belongsTo(Program::class); }
-    public function batch()      { return $this->belongsTo(Batch::class); }
-    public function documents()  { return $this->hasMany(ApplicantDocument::class); }
-    public function reviewer()   { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function user()           { return $this->belongsTo(User::class); }
+    public function program()        { return $this->belongsTo(Program::class); }
+    public function batch()          { return $this->belongsTo(Batch::class); }
+    public function documents()      { return $this->hasMany(ApplicantDocument::class); }
+    public function reviewer()       { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function counsellingLogs(){ return $this->hasMany(CounsellingLog::class); }
+    public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
 
     public function getStatusBadgeAttribute(): string
     {
