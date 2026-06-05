@@ -21,7 +21,7 @@ class SubjectFactory extends Factory
             'program_id'    => \App\Models\Program::factory(),
             'department_id' => \App\Models\Department::factory(),
             'name'          => $this->faker->word . ' ' . $this->faker->word,
-            'code'          => strtoupper($this->faker->lexify('SUB###')),
+            'code'          => 'SUB' . strtoupper($this->faker->unique()->lexify('###')),
             'description'   => $this->faker->sentence,
             'credits'       => $this->faker->numberBetween(1, 4),
             'type'          => 'theory',

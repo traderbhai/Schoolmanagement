@@ -7,12 +7,14 @@ use App\Http\Controllers\Teacher;
 use App\Http\Controllers\Parent as ParentController;
 use App\Http\Controllers\ApplyController;
 use App\Http\Controllers\Admission;
+use App\Http\Controllers\Academic;
 use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
 use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Routes ──────────────────────────────────────────────
@@ -41,6 +43,14 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
+
+    // B4: Notifications
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('notifications/{notification}/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
 });
 
 Route::get('/', function () {
@@ -196,6 +206,29 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('role-assignments/create', [Admin\RoleAssignmentController::class, 'create'])->name('role-assignments.create');
     Route::post('role-assignments', [Admin\RoleAssignmentController::class, 'store'])->name('role-assignments.store');
     Route::delete('role-assignments/{assignment}', [Admin\RoleAssignmentController::class, 'destroy'])->name('role-assignments.destroy');
+});
+
+// ── Academic routes ─────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|admin'])->prefix('academic')->name('academic.')->group(function () {
+    // B2: Term Promotions
+    Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
+    Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
+    Route::get('term-promotions/{termPromotion}', [Academic\TermPromotionController::class, 'show'])->name('term-promotions.show');
+    Route::post('term-promotions/{termPromotion}/approve', [Academic\TermPromotionController::class, 'approve'])->name('term-promotions.approve');
+    Route::post('term-promotions/{termPromotion}/reject', [Academic\TermPromotionController::class, 'reject'])->name('term-promotions.reject');
+    Route::post('term-promotions/bulk-approve', [Academic\TermPromotionController::class, 'bulkApprove'])->name('term-promotions.bulk-approve');
+
+    // B3: Scholarships
+    Route::resource('scholarships', Academic\ScholarshipController::class);
+
+    // B3: Fee Demands
+    Route::resource('fee-demands', Academic\FeeDemandController::class);
+    Route::post('fee-demands/{feeDemand}/mark-paid', [Academic\FeeDemandController::class, 'markAsPaid'])->name('fee-demands.mark-paid');
+    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
+
+    // B5: Academic Calendar
+    Route::resource('academic-calendars', Academic\AcademicCalendarController::class);
+    Route::get('academic-calendars-events', [Academic\AcademicCalendarController::class, 'getEvents'])->name('academic-calendars.events');
 });
 
 // ── Admission Team routes ───────────────────────────────────────────────────

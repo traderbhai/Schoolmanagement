@@ -21,6 +21,8 @@ class StudentFactory extends Factory
             'user_id'        => \App\Models\User::factory(),
             'program_id'     => \App\Models\Program::factory(),
             'batch_id'       => \App\Models\Batch::factory(),
+            'department_id'  => \App\Models\Department::factory(),
+            'course_id'      => \App\Models\Course::factory(),
             'enrollment_number' => $this->faker->unique()->numerify('ENR#####'),
             'roll_number'    => $this->faker->numerify('ROLL###'),
             'date_of_birth'  => $this->faker->dateTimeBetween('-25 years', '-18 years'),
