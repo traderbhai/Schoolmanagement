@@ -5,14 +5,39 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Student;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\Parent as ParentController;
+use App\Http\Controllers\ApplyController;
+use App\Http\Controllers\Admission;
+use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
+use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
+use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
+use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use Illuminate\Support\Facades\Route;
+
+// ── Public Application Routes ──────────────────────────────────────────────
+Route::get('/apply', [ApplyController::class, 'index'])->name('apply');
+Route::get('/apply/{program}', [ApplyController::class, 'show'])->name('apply.program');
+Route::post('/apply/{program}', [ApplyController::class, 'register'])->name('apply.program.register');
+
+// ── Applicant Routes ───────────────────────────────────────────────────────
+Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applicant|admin'])->group(function () {
+    Route::get('dashboard', [ApplicantDashboard::class, 'index'])->name('dashboard');
+    Route::get('application', [ApplicantApplication::class, 'show'])->name('application.show');
+    // Static route BEFORE parameterized
+    Route::post('application/submit', [ApplicantApplication::class, 'submit'])->name('application.submit');
+    Route::post('application/{section}', [ApplicantApplication::class, 'saveSection'])->name('application.section');
+    Route::get('documents', [ApplicantDocument::class, 'index'])->name('documents');
+    Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'upload'])->name('documents.upload');
+    Route::delete('documents/{document}', [ApplicantDocument::class, 'destroy'])->name('documents.destroy');
+    Route::get('status', [ApplicantStatus::class, 'index'])->name('status');
+});
 
 Route::get('/', function () {
     if (auth()->check()) {
         $user = auth()->user();
-        if ($user->hasRole('admin'))   return redirect()->route('admin.dashboard');
-        if ($user->hasRole('teacher')) return redirect()->route('teacher.dashboard');
-        if ($user->hasRole('parent'))  return redirect()->route('parent.dashboard');
+        if ($user->hasRole('admin'))     return redirect()->route('admin.dashboard');
+        if ($user->hasRole('teacher'))   return redirect()->route('teacher.dashboard');
+        if ($user->hasRole('parent'))    return redirect()->route('parent.dashboard');
+        if ($user->hasRole('applicant')) return redirect()->route('applicant.dashboard');
         return redirect()->route('student.dashboard');
     }
     return view('welcome');
@@ -21,9 +46,10 @@ Route::get('/', function () {
 // Compatibility alias so Breeze tests and legacy redirects still work
 Route::get('/dashboard', function () {
     $user = auth()->user();
-    if ($user?->hasRole('admin'))   return redirect()->route('admin.dashboard');
-    if ($user?->hasRole('teacher')) return redirect()->route('teacher.dashboard');
-    if ($user?->hasRole('parent'))  return redirect()->route('parent.dashboard');
+    if ($user?->hasRole('admin'))     return redirect()->route('admin.dashboard');
+    if ($user?->hasRole('teacher'))   return redirect()->route('teacher.dashboard');
+    if ($user?->hasRole('parent'))    return redirect()->route('parent.dashboard');
+    if ($user?->hasRole('applicant')) return redirect()->route('applicant.dashboard');
     return redirect()->route('student.dashboard');
 })->middleware(['auth'])->name('dashboard');
 
@@ -33,6 +59,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::resource('departments',   Admin\DepartmentController::class);
     Route::resource('courses',       Admin\CourseController::class);
+
+    // Academic Structure — Programs, Batches, Terms, Specializations
+    Route::resource('programs', Admin\ProgramController::class);
+    Route::resource('batches', Admin\BatchController::class);
+    Route::post('terms', [Admin\TermController::class, 'store'])->name('terms.store');
+    Route::put('terms/{term}', [Admin\TermController::class, 'update'])->name('terms.update');
+    Route::delete('terms/{term}', [Admin\TermController::class, 'destroy'])->name('terms.destroy');
+    Route::patch('terms/{term}/set-current', [Admin\TermController::class, 'setCurrent'])->name('terms.set-current');
+    Route::resource('programs.specializations', Admin\SpecializationController::class)->shallow()->only(['store', 'destroy']);
     Route::resource('subjects',      Admin\SubjectController::class);
     Route::resource('classrooms',    Admin\ClassroomController::class);
     Route::resource('academic-years', Admin\AcademicYearController::class);
@@ -66,6 +101,29 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     // Results / Grade Report
     Route::get('results', [Admin\ResultController::class, 'index'])->name('results.index');
+
+    // Admission Configuration (per-program setup)
+    Route::get('admission-config/{program}', [Admin\AdmissionConfigController::class, 'index'])->name('admin.admission-config.index');
+    Route::get('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'editFormConfig'])->name('admin.admission-config.form');
+    Route::post('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'updateFormConfig'])->name('admin.admission-config.form.update');
+    Route::post('admission-config/{program}/documents', [Admin\AdmissionConfigController::class, 'storeDocument'])->name('admin.admission-config.documents.store');
+    Route::put('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'updateDocument'])->name('admin.admission-config.documents.update');
+    Route::delete('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'destroyDocument'])->name('admin.admission-config.documents.destroy');
+    Route::post('admission-config/{program}/documents/seed-defaults', [Admin\AdmissionConfigController::class, 'seedDefaultDocuments'])->name('admin.admission-config.documents.seed');
+    Route::post('admission-config/{program}/steps', [Admin\AdmissionConfigController::class, 'storeStep'])->name('admin.admission-config.steps.store');
+    Route::put('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'updateStep'])->name('admin.admission-config.steps.update');
+    Route::delete('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'destroyStep'])->name('admin.admission-config.steps.destroy');
+    Route::post('admission-config/steps/{step}/parameters', [Admin\AdmissionConfigController::class, 'storeParameter'])->name('admin.admission-config.parameters.store');
+    Route::delete('admission-config/parameters/{parameter}', [Admin\AdmissionConfigController::class, 'destroyParameter'])->name('admin.admission-config.parameters.destroy');
+    Route::post('admission-config/{program}/fee-installments', [Admin\AdmissionConfigController::class, 'storeFeeInstallment'])->name('admin.admission-config.fee.store');
+    Route::put('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'updateFeeInstallment'])->name('admin.admission-config.fee.update');
+    Route::delete('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'destroyFeeInstallment'])->name('admin.admission-config.fee.destroy');
+
+    // Applicants (P2 portal)
+    Route::get('applicants', [Admin\ApplicantController::class, 'index'])->name('applicants.index');
+    Route::post('applicants', [Admin\ApplicantController::class, 'store'])->name('applicants.store');
+    Route::get('applicants/{applicant}', [Admin\ApplicantController::class, 'show'])->name('applicants.show');
+    Route::post('applicants/{applicant}/notes', [Admin\ApplicantController::class, 'saveNotes'])->name('applicants.notes');
 
     // Admissions
     Route::resource('admissions', Admin\AdmissionController::class);
@@ -110,12 +168,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
     Route::get('settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
     Route::post('settings/branding', [Admin\SettingsController::class, 'update'])->name('settings.update');
+    Route::get('api-docs', [Admin\SettingsController::class, 'apiDocs'])->name('api-docs');
+
+    // Global Search
+    Route::get('search', [Admin\SearchController::class, 'index'])->name('search');
 
     // Activity Log
     Route::get('activity-log', [Admin\ActivityLogController::class, 'index'])->name('activity-log');
 
     // Consolidated Student Report PDF
     Route::get('students/{student}/report', [Admin\ReportController::class, 'consolidatedReport'])->name('students.report');
+});
+
+// ── Admission Team routes ───────────────────────────────────────────────────
+Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->prefix('admission')->name('admission.')->group(function () {
+    Route::get('dashboard', [Admission\DashboardController::class, 'index'])->name('dashboard');
+    Route::post('applicants/bulk-action', [Admission\ApplicantCrmController::class, 'bulkAction'])->name('applicants.bulk-action');
+    Route::get('applicants', [Admission\ApplicantCrmController::class, 'index'])->name('applicants.index');
+    Route::get('applicants/{applicant}', [Admission\ApplicantCrmController::class, 'show'])->name('applicants.show');
+    Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
+    Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
+    Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
+    Route::post('documents/{document}/verify', [Admission\ApplicantCrmController::class, 'verifyDocument'])->name('documents.verify');
+
+    // Selection Sessions (static routes before parameterized)
+    Route::get('sessions', [Admission\SelectionSessionController::class, 'index'])->name('sessions.index');
+    Route::get('sessions/create', [Admission\SelectionSessionController::class, 'create'])->name('sessions.create');
+    Route::post('sessions', [Admission\SelectionSessionController::class, 'store'])->name('sessions.store');
+    Route::post('sessions/{session}/assign', [Admission\SelectionSessionController::class, 'assignApplicants'])->name('sessions.assign');
+    Route::post('sessions/{session}/attendance', [Admission\SelectionSessionController::class, 'markAttendance'])->name('sessions.attendance');
+    Route::post('sessions/{session}/complete', [Admission\SelectionSessionController::class, 'completeSession'])->name('sessions.complete');
+    Route::delete('sessions/{session}/applicants/{applicant}', [Admission\SelectionSessionController::class, 'removeApplicant'])->name('sessions.remove-applicant');
+    Route::get('sessions/{session}', [Admission\SelectionSessionController::class, 'show'])->name('sessions.show');
+    Route::get('sessions/{session}/edit', [Admission\SelectionSessionController::class, 'edit'])->name('sessions.edit');
+    Route::put('sessions/{session}', [Admission\SelectionSessionController::class, 'update'])->name('sessions.update');
+    Route::delete('sessions/{session}', [Admission\SelectionSessionController::class, 'destroy'])->name('sessions.destroy');
+
+    // Scoring
+    Route::get('sessions/{session}/scores', [Admission\ScoringController::class, 'sessionScoreSheet'])->name('sessions.scores');
+    Route::post('sessions/{session}/scores', [Admission\ScoringController::class, 'saveScores'])->name('sessions.scores.save');
+    Route::get('applicants/{applicant}/scorecard', [Admission\ScoringController::class, 'applicantScorecard'])->name('applicants.scorecard');
+
+    // Merit List (static routes before {entry} parameter)
+    Route::get('merit-list/{program}', [Admission\MeritListController::class, 'index'])->name('merit-list.index');
+    Route::post('merit-list/{program}/generate', [Admission\MeritListController::class, 'generate'])->name('merit-list.generate');
+    Route::get('merit-list/{program}/show', [Admission\MeritListController::class, 'show'])->name('merit-list.show');
+    Route::get('merit-list/{program}/export', [Admission\MeritListController::class, 'exportMeritList'])->name('merit-list.export');
+    Route::post('merit-list/{program}/bulk-decide', [Admission\MeritListController::class, 'bulkDecide'])->name('merit-list.bulk-decide');
+    Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

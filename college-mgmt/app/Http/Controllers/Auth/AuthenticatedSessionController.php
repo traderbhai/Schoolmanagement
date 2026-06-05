@@ -31,9 +31,12 @@ class AuthenticatedSessionController extends Controller
         \App\Models\ActivityLog::record('login', 'User logged in');
 
         $user = $request->user();
-        if ($user->hasRole('admin'))   return redirect()->route('admin.dashboard');
-        if ($user->hasRole('teacher')) return redirect()->route('teacher.dashboard');
-        if ($user->hasRole('parent'))  return redirect()->route('parent.dashboard');
+        if ($user->hasRole('admin'))             return redirect()->route('admin.dashboard');
+        if ($user->hasRole('admission_head'))    return redirect()->route('admission.dashboard');
+        if ($user->hasRole('admission_officer')) return redirect()->route('admission.dashboard');
+        if ($user->hasRole('teacher'))           return redirect()->route('teacher.dashboard');
+        if ($user->hasRole('parent'))            return redirect()->route('parent.dashboard');
+        if ($user->hasRole('applicant'))         return redirect()->route('applicant.dashboard');
         return redirect()->route('student.dashboard');
     }
 

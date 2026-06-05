@@ -4,9 +4,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subject extends Model
 {
-    protected $fillable = ['department_id', 'name', 'code', 'description', 'credits', 'type', 'hours_per_week', 'is_active'];
+    protected $fillable = ['department_id', 'program_id', 'term_number', 'name', 'code', 'description', 'credits', 'type', 'hours_per_week', 'is_active'];
 
     public function department() { return $this->belongsTo(Department::class); }
+    public function program() { return $this->belongsTo(Program::class); }
     public function timetableEntries() { return $this->hasMany(TimetableEntry::class); }
     public function enrollments() { return $this->hasMany(Enrollment::class); }
     public function exams() { return $this->hasMany(Exam::class); }

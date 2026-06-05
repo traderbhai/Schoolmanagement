@@ -2,7 +2,8 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'EduManage — Admin')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -41,14 +42,22 @@
         <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif">
             <i class="bi bi-building"></i> Departments
         </a>
-        <a href="{{ route('admin.courses.index') }}" class="nav-link @if(request()->routeIs('admin.courses.*')) active @endif">
-            <i class="bi bi-journal-bookmark"></i> Courses
-        </a>
         <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif">
             <i class="bi bi-book"></i> Subjects
         </a>
         <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif">
             <i class="bi bi-door-open"></i> Classrooms
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- ACADEMIC STRUCTURE --}}
+        <div class="section-label">Academic Structure</div>
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif">
+            <i class="bi bi-mortarboard"></i> Programs
+        </a>
+        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif">
+            <i class="bi bi-collection"></i> Batches
         </a>
 
         <div class="sidebar-divider"></div>
@@ -75,12 +84,35 @@
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif">
             <i class="bi bi-people"></i> Students
         </a>
+        <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif">
+            <i class="bi bi-person-lines-fill"></i> Applications
+        </a>
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif">
             <i class="bi bi-person-plus-fill"></i> Admissions
         </a>
         <a href="{{ route('admin.parents.index') }}" class="nav-link @if(request()->routeIs('admin.parents.*')) active @endif">
             <i class="bi bi-people-fill"></i> Parents
         </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- ADMISSION CRM --}}
+        <div class="section-label">Admission CRM</div>
+        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
+            <i class="bi bi-speedometer2"></i> CRM Dashboard
+        </a>
+        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
+            <i class="bi bi-person-lines-fill"></i> Applicants CRM
+        </a>
+        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
+            <i class="bi bi-calendar-event"></i> Sessions
+        </a>
+        @php $firstProgram = \App\Models\Program::where('is_active',true)->first(); @endphp
+        @if($firstProgram)
+        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
+            <i class="bi bi-list-ol"></i> Merit List
+        </a>
+        @endif
 
         <div class="sidebar-divider"></div>
 
@@ -170,9 +202,12 @@
         <a href="{{ route('admin.academic-years.index') }}" class="nav-link @if(request()->routeIs('admin.academic-years.*')) active @endif"><i class="bi bi-calendar3"></i> Academic Years</a>
         <a href="{{ route('admin.semesters.index') }}" class="nav-link @if(request()->routeIs('admin.semesters.*')) active @endif"><i class="bi bi-calendar-range"></i> Semesters</a>
         <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif"><i class="bi bi-building"></i> Departments</a>
-        <a href="{{ route('admin.courses.index') }}" class="nav-link @if(request()->routeIs('admin.courses.*')) active @endif"><i class="bi bi-journal-bookmark"></i> Courses</a>
         <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif"><i class="bi bi-book"></i> Subjects</a>
         <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif"><i class="bi bi-door-open"></i> Classrooms</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Academic Structure</div>
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
+        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif"><i class="bi bi-collection"></i> Batches</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Timetable</div>
         <a href="{{ route('admin.timetable-slots.index') }}" class="nav-link @if(request()->routeIs('admin.timetable-slots.*')) active @endif"><i class="bi bi-clock"></i> Time Slots</a>
@@ -182,7 +217,16 @@
         <div class="section-label">People</div>
         <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif"><i class="bi bi-person-badge"></i> Teachers</a>
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
+        <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applications</a>
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Admission CRM</div>
+        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
+        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants CRM</a>
+        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif"><i class="bi bi-calendar-event"></i> Sessions</a>
+        @if($firstProgram)
+        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
+        @endif
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
@@ -239,10 +283,10 @@
 
         <div class="topbar-right">
             {{-- Global search --}}
-            <div class="topbar-search d-none d-md-flex">
+            <form method="GET" action="{{ route('admin.search') }}" class="topbar-search d-none d-md-flex">
                 <i class="bi bi-search search-icon"></i>
-                <input type="search" placeholder="Search students, teachers..." aria-label="Global search">
-            </div>
+                <input type="search" name="q" placeholder="Search students, teachers..." value="{{ request('q') }}" aria-label="Global search">
+            </form>
 
             {{-- Dark mode toggle --}}
             <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
