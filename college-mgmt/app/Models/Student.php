@@ -5,15 +5,19 @@ use Illuminate\Database\Eloquent\Model;
 class Student extends Model
 {
     protected $fillable = [
-        'user_id', 'department_id', 'course_id', 'enrollment_number', 'roll_number',
-        'date_of_birth', 'gender', 'phone', 'address', 'guardian_name', 'guardian_phone',
-        'admission_date', 'current_semester', 'status', 'photo',
+        'user_id', 'department_id', 'course_id', 'program_id', 'batch_id', 'specialization_id',
+        'enrollment_number', 'roll_number', 'date_of_birth', 'gender', 'phone', 'address',
+        'guardian_name', 'guardian_phone', 'admission_date', 'current_semester', 'current_term',
+        'status', 'photo',
     ];
     protected $casts = ['date_of_birth' => 'date', 'admission_date' => 'date'];
 
     public function user() { return $this->belongsTo(User::class); }
     public function department() { return $this->belongsTo(Department::class); }
     public function course() { return $this->belongsTo(Course::class); }
+    public function program() { return $this->belongsTo(Program::class); }
+    public function batch() { return $this->belongsTo(Batch::class); }
+    public function specialization() { return $this->belongsTo(Specialization::class); }
     public function enrollments() { return $this->hasMany(Enrollment::class); }
     public function attendances() { return $this->hasMany(Attendance::class); }
     public function feePayments() { return $this->hasMany(FeePayment::class); }

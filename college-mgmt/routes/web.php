@@ -33,6 +33,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::resource('departments',   Admin\DepartmentController::class);
     Route::resource('courses',       Admin\CourseController::class);
+
+    // Academic Structure — Programs, Batches, Terms, Specializations
+    Route::resource('programs', Admin\ProgramController::class);
+    Route::resource('batches', Admin\BatchController::class);
+    Route::post('terms', [Admin\TermController::class, 'store'])->name('terms.store');
+    Route::put('terms/{term}', [Admin\TermController::class, 'update'])->name('terms.update');
+    Route::delete('terms/{term}', [Admin\TermController::class, 'destroy'])->name('terms.destroy');
+    Route::patch('terms/{term}/set-current', [Admin\TermController::class, 'setCurrent'])->name('terms.set-current');
+    Route::resource('programs.specializations', Admin\SpecializationController::class)->shallow()->only(['store', 'destroy']);
     Route::resource('subjects',      Admin\SubjectController::class);
     Route::resource('classrooms',    Admin\ClassroomController::class);
     Route::resource('academic-years', Admin\AcademicYearController::class);

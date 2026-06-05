@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -44,8 +44,8 @@ class DemoDataSeeder extends Seeder
             $depts[] = Department::firstOrCreate(['code' => $d['code']], $d);
         }
 
-        // 3. Courses (2)
-        $pgdm = Course::firstOrCreate(['code' => 'PGDM'], [
+        // 3. Courses (2) — legacy, kept for backward compat
+        $pgdmCourse = Course::firstOrCreate(['code' => 'PGDM'], [
             'name' => 'Post Graduate Diploma in Management',
             'department_id' => $depts[0]->id,
             'duration_years' => 2,
@@ -53,7 +53,7 @@ class DemoDataSeeder extends Seeder
             'description' => 'AICTE approved PGDM program',
             'is_active' => true,
         ]);
-        $pgdmFin = Course::firstOrCreate(['code' => 'PGDM-FIN'], [
+        $pgdmFinCourse = Course::firstOrCreate(['code' => 'PGDM-FIN'], [
             'name' => 'PGDM Finance',
             'department_id' => $depts[1]->id,
             'duration_years' => 2,
@@ -62,7 +62,31 @@ class DemoDataSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // 4. Semesters
+        // 3b. Programs (new academic structure)
+        $pgdm = Program::firstOrCreate(['code' => 'PGDM'], [
+            'name' => 'Post Graduate Diploma in Management',
+            'department_id' => $depts[0]->id,
+            'abbreviation' => 'PGDM',
+            'system_type' => 'semester',
+            'duration_years' => 2,
+            'total_terms' => 4,
+            'description' => 'AICTE approved PGDM program',
+            'default_intake_capacity' => 60,
+            'is_active' => true,
+        ]);
+        $pgdmFin = Program::firstOrCreate(['code' => 'PGDM-FIN'], [
+            'name' => 'PGDM Finance',
+            'department_id' => $depts[1]->id,
+            'abbreviation' => 'PGDM-F',
+            'system_type' => 'semester',
+            'duration_years' => 2,
+            'total_terms' => 4,
+            'description' => 'Finance specialization',
+            'default_intake_capacity' => 60,
+            'is_active' => true,
+        ]);
+
+        // 4. Semesters (legacy)
         $sems = [];
         foreach ([
             ['name' => 'Semester I (2024-25)', 'number' => 1, 'academic_year_id' => $ay2->id, 'start_date' => '2024-07-01', 'end_date' => '2024-11-30', 'is_current' => false],
@@ -72,6 +96,36 @@ class DemoDataSeeder extends Seeder
         }
         $currentSem = $sems[1];
         $sem1 = $sems[0];
+
+        // 4b. Batches + Terms (new structure)
+        $pgdmBatch = Batch::firstOrCreate(['code' => 'PGDM-24'], [
+            'program_id' => $pgdm->id,
+            'academic_year_id' => $ay2->id,
+            'name' => 'PGDM Batch 2024-26',
+            'start_date' => '2024-07-01',
+            'end_date' => '2026-06-30',
+            'intake_capacity' => 60,
+            'status' => 'active',
+        ]);
+        $termLabels = ['Semester I', 'Semester II', 'Semester III', 'Semester IV'];
+        $termDates  = [
+            ['2024-07-01','2024-11-30',false],
+            ['2025-01-01','2025-05-31',true],
+            ['2025-07-01','2025-11-30',false],
+            ['2026-01-01','2026-05-31',false],
+        ];
+        $terms = [];
+        foreach ($termLabels as $i => $label) {
+            $terms[] = Term::firstOrCreate(['batch_id' => $pgdmBatch->id, 'term_number' => $i + 1], [
+                'program_id'  => $pgdm->id,
+                'name'        => $label,
+                'start_date'  => $termDates[$i][0],
+                'end_date'    => $termDates[$i][1],
+                'is_current'  => $termDates[$i][2],
+                'sort_order'  => $i + 1,
+            ]);
+        }
+        $currentTerm = $terms[1]; // Semester II
 
         // 5. Subjects (8 subjects)
         $subjects = [];
@@ -164,13 +218,16 @@ class DemoDataSeeder extends Seeder
                 'name' => $name, 'password' => Hash::make('password123'), 'email_verified_at' => now()
             ]);
             $user->assignRole('student');
-            $course = $i < 10 ? $pgdm : $pgdmFin;
+            $prog = $i < 10 ? $pgdm : $pgdmFin;
             $student = Student::firstOrCreate(['enrollment_number' => $enroll], [
                 'user_id' => $user->id,
-                'department_id' => $course->department_id,
-                'course_id' => $course->id,
+                'department_id' => $prog->department_id,
+                'course_id' => $i < 10 ? $pgdmCourse->id : $pgdmFinCourse->id,
+                'program_id' => $prog->id,
+                'batch_id' => $pgdmBatch->id,
                 'roll_number' => 'R' . str_pad($i + 1, 3, '0', STR_PAD_LEFT),
                 'current_semester' => 2,
+                'current_term' => 2,
                 'status' => 'active',
                 'admission_date' => '2024-06-15',
                 'gender' => $i % 2 === 0 ? 'male' : 'female',
@@ -187,13 +244,13 @@ class DemoDataSeeder extends Seeder
                     'student_id' => $student->id,
                     'subject_id' => $subject->id,
                     'semester_id' => $currentSem->id,
-                ], ['status' => 'active']);
+                ], ['status' => 'active', 'term_id' => $currentTerm->id]);
             }
         }
 
         // 11. Timetable Entries (Mon-Fri schedule for PGDM)
         $nonBreakSlots = $slots->where('is_break', false)->values();
-        if (TimetableEntry::where('course_id', $pgdm->id)->count() === 0 && $nonBreakSlots->count() >= 4) {
+        if (TimetableEntry::where('program_id', $pgdm->id)->count() === 0 && $nonBreakSlots->count() >= 4) {
             $schedule = [
                 // [day, slot_index, subject_index, teacher_index, room_index]
                 [1, 0, 0, 0, 0], [1, 1, 1, 2, 0], [1, 2, 2, 1, 1], [1, 3, 3, 1, 1],
@@ -207,12 +264,14 @@ class DemoDataSeeder extends Seeder
                 TimetableEntry::firstOrCreate([
                     'day_of_week' => $day,
                     'timetable_slot_id' => $nonBreakSlots[$slotIdx]->id,
-                    'course_id' => $pgdm->id,
+                    'course_id' => $pgdmCourse->id,
                     'subject_id' => $subjects[$subIdx]->id,
                 ], [
                     'teacher_id' => $teachers[$tchIdx]->id,
                     'classroom_id' => $rooms[$roomIdx]->id,
                     'semester_id' => $currentSem->id,
+                    'program_id' => $pgdm->id,
+                    'term_id' => $currentTerm->id,
                     'is_active' => true,
                 ]);
             }
@@ -228,10 +287,10 @@ class DemoDataSeeder extends Seeder
         $feeStructures = [];
         foreach ($feeTypes as $ft) {
             $feeStructures[] = FeeStructure::firstOrCreate([
-                'course_id' => $pgdm->id,
+                'course_id' => $pgdmCourse->id,
                 'fee_type' => $ft['fee_type'],
                 'semester_number' => $ft['semester_number'],
-            ], array_merge($ft, ['course_id' => $pgdm->id, 'academic_year_id' => $ay2->id]));
+            ], array_merge($ft, ['course_id' => $pgdmCourse->id, 'program_id' => $pgdm->id, 'academic_year_id' => $ay2->id]));
         }
 
         // 13. Fee Payments (8 of 12 students have paid tuition)
@@ -254,11 +313,12 @@ class DemoDataSeeder extends Seeder
                 'subject_id' => $subject->id,
             ], [
                 'semester_id' => $sem1->id,
-                'type' => 'external',
+                'program_id' => $pgdm->id,
+                'term_id' => $terms[0]->id,
+                'type' => 'final',
                 'total_marks' => 100,
                 'passing_marks' => 40,
                 'exam_date' => '2024-11-20',
-                'course_id' => $pgdm->id,
             ]);
 
             // Results for first 10 PGDM students
@@ -300,7 +360,8 @@ class DemoDataSeeder extends Seeder
         ];
         foreach ($admissionData as $a) {
             \App\Models\Admission::firstOrCreate(['email' => $a['email']], array_merge($a, [
-                'course_id' => $pgdm->id,
+                'course_id' => $pgdmCourse->id,
+                'program_id' => $pgdm->id,
                 'application_date' => Carbon::now()->subDays(rand(5, 30)),
                 'last_qualification' => 'B.Com',
                 'last_percentage' => rand(60, 85),

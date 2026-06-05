@@ -42,14 +42,22 @@
         <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif">
             <i class="bi bi-building"></i> Departments
         </a>
-        <a href="{{ route('admin.courses.index') }}" class="nav-link @if(request()->routeIs('admin.courses.*')) active @endif">
-            <i class="bi bi-journal-bookmark"></i> Courses
-        </a>
         <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif">
             <i class="bi bi-book"></i> Subjects
         </a>
         <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif">
             <i class="bi bi-door-open"></i> Classrooms
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- ACADEMIC STRUCTURE --}}
+        <div class="section-label">Academic Structure</div>
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*')) active @endif">
+            <i class="bi bi-mortarboard"></i> Programs
+        </a>
+        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif">
+            <i class="bi bi-collection"></i> Batches
         </a>
 
         <div class="sidebar-divider"></div>
@@ -171,9 +179,12 @@
         <a href="{{ route('admin.academic-years.index') }}" class="nav-link @if(request()->routeIs('admin.academic-years.*')) active @endif"><i class="bi bi-calendar3"></i> Academic Years</a>
         <a href="{{ route('admin.semesters.index') }}" class="nav-link @if(request()->routeIs('admin.semesters.*')) active @endif"><i class="bi bi-calendar-range"></i> Semesters</a>
         <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif"><i class="bi bi-building"></i> Departments</a>
-        <a href="{{ route('admin.courses.index') }}" class="nav-link @if(request()->routeIs('admin.courses.*')) active @endif"><i class="bi bi-journal-bookmark"></i> Courses</a>
         <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif"><i class="bi bi-book"></i> Subjects</a>
         <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif"><i class="bi bi-door-open"></i> Classrooms</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Academic Structure</div>
+        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
+        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif"><i class="bi bi-collection"></i> Batches</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Timetable</div>
         <a href="{{ route('admin.timetable-slots.index') }}" class="nav-link @if(request()->routeIs('admin.timetable-slots.*')) active @endif"><i class="bi bi-clock"></i> Time Slots</a>
