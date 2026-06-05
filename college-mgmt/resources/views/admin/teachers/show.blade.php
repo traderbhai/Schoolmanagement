@@ -65,6 +65,11 @@
                             <i class="bi bi-book me-1"></i>Subjects Teaching
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-4" data-bs-toggle="tab" href="#tab-leaves">
+                            <i class="bi bi-calendar-x me-1"></i>Leave History
+                        </a>
+                    </li>
                 </ul>
             </div>
             <div class="tab-content">
@@ -109,6 +114,40 @@
                             @empty
                             <tr><td colspan="4">
                                 <div class="empty-state py-4"><div class="empty-icon"><i class="bi bi-book"></i></div><div class="text-muted">No subjects assigned.</div></div>
+                            </td></tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+                {{-- Leave History Tab --}}
+                <div class="tab-pane fade" id="tab-leaves">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light"><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Applied</th></tr></thead>
+                            <tbody>
+                            @forelse($teacher->leaveApplications()->latest()->take(10)->get() as $leave)
+                            <tr>
+                                <td>{{ ucfirst($leave->leave_type) }}</td>
+                                <td style="font-size:.84rem">{{ $leave->from_date->format('d M Y') }}</td>
+                                <td style="font-size:.84rem">{{ $leave->to_date->format('d M Y') }}</td>
+                                <td>{{ $leave->days }}</td>
+                                <td>
+                                    @if($leave->status === 'pending')
+                                        <span class="badge badge-pending">Pending</span>
+                                    @elseif($leave->status === 'approved')
+                                        <span class="badge badge-active">Approved</span>
+                                    @else
+                                        <span class="badge badge-danger">Rejected</span>
+                                    @endif
+                                </td>
+                                <td style="font-size:.84rem">{{ $leave->created_at->format('d M Y') }}</td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="6">
+                                <div class="empty-state py-4"><div class="empty-icon"><i class="bi bi-calendar-x"></i></div><div class="text-muted">No leave history.</div></div>
                             </td></tr>
                             @endforelse
                             </tbody>

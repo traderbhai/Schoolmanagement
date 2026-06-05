@@ -1,0 +1,77 @@
+@extends('layouts.teacher')
+@section('title', 'My Leave Applications')
+@section('page-title', 'My Leave Applications')
+@section('breadcrumb')
+    <li class="breadcrumb-item"><a href="{{ route('teacher.dashboard') }}">Dashboard</a></li>
+    <li class="breadcrumb-item active">Leave</li>
+@endsection
+
+@section('content')
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div></div>
+    <a href="{{ route('teacher.leaves.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Apply for Leave</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Leave Type</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                    <th>Applied</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($leaves as $leave)
+            <tr>
+                <td class="fw-semibold">{{ ucfirst($leave->leave_type) }}</td>
+                <td>{{ $leave->from_date->format('d M Y') }}</td>
+                <td>{{ $leave->to_date->format('d M Y') }}</td>
+                <td>{{ $leave->days }}</td>
+                <td>
+                    @if($leave->status === 'pending')
+                        <span class="badge badge-pending">Pending</span>
+                    @elseif($leave->status === 'approved')
+                        <span class="badge badge-active">Approved</span>
+                    @else
+                        <span class="badge badge-danger">Rejected</span>
+                    @endif
+                </td>
+                <td style="font-size:.83rem">{{ $leave->admin_remarks ? Str::limit($leave->admin_remarks, 50) : '–' }}</td>
+                <td style="font-size:.83rem">{{ $leave->created_at->format('d M Y') }}</td>
+                <td>
+                    @if($leave->status === 'pending')
+                    <button class="btn btn-sm btn-outline-danger"
+                        data-confirm-delete="true"
+                        data-action="{{ route('teacher.leaves.destroy', $leave) }}"
+                        data-name="this leave application">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    @endif
+                </td>
+            </tr>
+            @empty
+            <tr><td colspan="8">
+                <div class="empty-state py-4">
+                    <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+                    <div class="text-muted">No leave applications yet.</div>
+                    <a href="{{ route('teacher.leaves.create') }}" class="btn btn-sm btn-primary mt-2">Apply for Leave</a>
+                </div>
+            </td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+    @if($leaves->hasPages())
+    <div class="card-footer">{{ $leaves->links() }}</div>
+    @endif
+</div>
+
+@endsection

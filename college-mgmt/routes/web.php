@@ -84,6 +84,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('reports/fee-receipt/{payment}',           [Admin\ReportController::class, 'feeReceipt'])->name('reports.fee-receipt');
     Route::get('reports/timetable/{semester}',            [Admin\ReportController::class, 'timetable'])->name('reports.timetable');
 
+    // Leave Management
+    Route::get('leaves', [Admin\LeaveController::class, 'index'])->name('leaves.index');
+    Route::get('leaves/{leave}', [Admin\LeaveController::class, 'show'])->name('leaves.show');
+    Route::patch('leaves/{leave}/approve', [Admin\LeaveController::class, 'approve'])->name('leaves.approve');
+    Route::patch('leaves/{leave}/reject', [Admin\LeaveController::class, 'reject'])->name('leaves.reject');
+    Route::delete('leaves/{leave}', [Admin\LeaveController::class, 'destroy'])->name('leaves.destroy');
+
+    // Faculty Reports
+    Route::get('faculty/workload', [Admin\FacultyReportController::class, 'workload'])->name('faculty.workload');
+
     // Placement
     Route::resource('companies', Admin\CompanyController::class);
     Route::resource('placement-drives', Admin\PlacementDriveController::class);
@@ -106,6 +116,16 @@ Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|ad
 
     // Students
     Route::get('students', [Teacher\StudentController::class, 'index'])->name('students.index');
+
+    // Leave
+    Route::get('leaves', [Teacher\LeaveController::class, 'index'])->name('leaves.index');
+    Route::get('leaves/create', [Teacher\LeaveController::class, 'create'])->name('leaves.create');
+    Route::post('leaves', [Teacher\LeaveController::class, 'store'])->name('leaves.store');
+    Route::delete('leaves/{leave}', [Teacher\LeaveController::class, 'destroy'])->name('leaves.destroy');
+
+    // Profile
+    Route::get('profile', [Teacher\ProfileController::class, 'show'])->name('profile');
+    Route::put('profile', [Teacher\ProfileController::class, 'update'])->name('profile.update');
 });
 
 // ── Student routes ──────────────────────────────────────────────────────────

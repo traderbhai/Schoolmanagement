@@ -86,6 +86,12 @@
 
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
+        <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave Mgmt
+        </a>
+        <a href="{{ route('admin.faculty.workload') }}" class="nav-link @if(request()->routeIs('admin.faculty.*')) active @endif">
+            <i class="bi bi-bar-chart"></i> Faculty Report
+        </a>
         <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif">
             <i class="bi bi-check2-square"></i> Attendance
         </a>
@@ -176,6 +182,8 @@
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
+        <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
+        <a href="{{ route('admin.faculty.workload') }}" class="nav-link @if(request()->routeIs('admin.faculty.*')) active @endif"><i class="bi bi-bar-chart"></i> Faculty Report</a>
         <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
         <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams &amp; Results</a>
         <a href="{{ route('admin.enrollments.index') }}" class="nav-link @if(request()->routeIs('admin.enrollments.*')) active @endif"><i class="bi bi-person-check"></i> Enrollments</a>

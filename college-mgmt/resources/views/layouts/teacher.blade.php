@@ -39,6 +39,15 @@
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif">
             <i class="bi bi-people"></i> My Students
         </a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave
+        </a>
+
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Account</div>
+        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif">
+            <i class="bi bi-person-circle"></i> My Profile
+        </a>
     </div>
 </div>
 
@@ -62,6 +71,10 @@
         <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Mark Attendance</a>
         <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif"><i class="bi bi-pencil-square"></i> Enter Marks</a>
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif"><i class="bi bi-people"></i> My Students</a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Account</div>
+        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
     </div>
 </div>
 
