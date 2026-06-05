@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Mail\EnrollmentConfirmed;
 use App\Models\{Applicant, Student, User, EnrollmentConfirmation, ActivityLog};
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\{DB, Hash};
 
 class EnrollmentService
@@ -104,6 +106,13 @@ class EnrollmentService
 
             // 7. Activity log
             ActivityLog::record('enrollment', "Enrolled applicant {$applicant->application_number} as student {$enrollmentNumber}", $confirmation);
+
+            // 8. Send enrollment confirmation email
+            $confirmation->load(['student.user', 'student.program', 'student.batch']);
+            NotificationService::send(EnrollmentConfirmed::class, $user, [
+                'enrollment' => $confirmation,
+                'loginUrl'   => url('/login'),
+            ]);
 
             return $confirmation;
         });

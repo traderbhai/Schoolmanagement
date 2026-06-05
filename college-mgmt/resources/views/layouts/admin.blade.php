@@ -516,6 +516,11 @@
         @hasrole('cmc|admin')<a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.*')) active @endif"><i class="bi bi-briefcase-fill"></i> CMC</a>@endhasrole
         @hasrole('director|admin')<a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.*')) active @endif"><i class="bi bi-bank"></i> Director</a>@endhasrole
         <div class="sidebar-divider"></div>
+        <div class="section-label">Communications</div>
+        <a href="{{ route('admin.bulk-mail.index') }}" class="nav-link @if(request()->routeIs('admin.bulk-mail.*')) active @endif"><i class="bi bi-envelope-paper"></i> Bulk Mail</a>
+        <a href="{{ route('admin.email-logs.index') }}" class="nav-link @if(request()->routeIs('admin.email-logs.*')) active @endif"><i class="bi bi-journal-text"></i> Email Logs</a>
+
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         @hasrole('admin|dean_academics|director')
         <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>

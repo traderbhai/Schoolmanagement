@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ApplicationRejected;
+use App\Mail\ApplicationSelected;
+use App\Mail\ApplicationShortlisted;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\AdmissionTeamNote;
 use App\Models\CounsellingLog;
 use App\Models\Program;
 use App\Models\Batch;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

@@ -49,7 +49,8 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
-
+    Route::get('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 // ── Notifications (all authenticated users) ────────────────────────────────
@@ -208,6 +209,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('students/export', [Admin\StudentController::class, 'export'])->name('students.export');
     Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
     Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
+
+    // Bulk Mail
+    Route::get('bulk-mail', [Admin\BulkMailController::class, 'index'])->name('bulk-mail.index');
+    Route::get('bulk-mail/count', [Admin\BulkMailController::class, 'previewCount'])->name('bulk-mail.count');
+    Route::post('bulk-mail/send', [Admin\BulkMailController::class, 'send'])->name('bulk-mail.send');
+
+    // Email Logs
+    Route::get('email-logs', [Admin\EmailLogController::class, 'index'])->name('email-logs.index');
 
     // Settings
     Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
@@ -555,6 +564,10 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::post('grievances', [Student\GrievanceController::class, 'store'])->name('grievances.store');
     Route::get('grievances', [Student\GrievanceController::class, 'index'])->name('grievances.index');
     Route::get('grievances/{grievance}', [Student\GrievanceController::class, 'show'])->name('grievances.show');
+
+    // Notification Preferences
+    Route::get('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

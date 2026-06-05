@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Applicant;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ApplicationReceived;
+use App\Mail\NewApplicationAlert;
 use App\Models\AdmissionFormConfig;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ApplicationController extends Controller
@@ -104,6 +108,15 @@ class ApplicationController extends Controller
             'status'     => 'submitted',
             'applied_at' => now(),
         ]);
+
+        // Send notifications
+        $applicant->load(['user', 'program']);
+        if ($applicant->user) {
+            NotificationService::send(ApplicationReceived::class, $applicant->user, ['applicant' => $applicant]);
+        }
+        // Alert admission team
+        $admissionTeam = User::role(['admission_officer', 'admission_head'])->get();
+        NotificationService::sendBulk(NewApplicationAlert::class, $admissionTeam, ['applicant' => $applicant]);
 
         return redirect()->route('applicant.status')
             ->with('success', 'Application submitted successfully!');
