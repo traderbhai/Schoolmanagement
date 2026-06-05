@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant};
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
 
@@ -468,9 +468,88 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
+        // ── Sample Applicants ──────────────────────────────────────────────────
+        Role::firstOrCreate(['name' => 'applicant']);
+
+        $applicantData = [
+            [
+                'name'   => 'Priya Sharma',
+                'email'  => 'priya.sharma@applicant.demo',
+                'status' => 'submitted',
+                'applied_at' => Carbon::now()->subDays(10),
+                'personal_data' => ['father_name' => 'Ramesh Sharma', 'mother_name' => 'Sunita Sharma', 'date_of_birth' => '1999-03-15', 'gender' => 'Female', 'category' => 'General', 'phone' => '9876543210', 'address' => '12 MG Road, Mumbai', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'pincode' => '400001'],
+                'academic_data' => ['graduation_college' => 'Mumbai University', 'graduation_degree' => 'B.Com', 'graduation_percentage' => '78.5', 'graduation_year' => '2022', 'work_experience' => '12', 'entrance_exam' => 'CAT', 'entrance_score' => '85.2'],
+                'family_data'   => ['father_occupation' => 'Business', 'father_income' => '8 LPA', 'mother_occupation' => 'Homemaker'],
+                'additional_data' => ['how_did_you_hear' => 'Google', 'why_this_program' => 'I want to build leadership skills and accelerate my career in business management.'],
+            ],
+            [
+                'name'   => 'Rahul Verma',
+                'email'  => 'rahul.verma@applicant.demo',
+                'status' => 'submitted',
+                'applied_at' => Carbon::now()->subDays(7),
+                'personal_data' => ['father_name' => 'Suresh Verma', 'mother_name' => 'Kavita Verma', 'date_of_birth' => '1998-07-22', 'gender' => 'Male', 'category' => 'OBC', 'phone' => '9812345678', 'address' => '45 Civil Lines, Delhi', 'city' => 'Delhi', 'state' => 'Delhi', 'pincode' => '110001'],
+                'academic_data' => ['graduation_college' => 'Delhi University', 'graduation_degree' => 'B.Tech', 'graduation_percentage' => '72.0', 'graduation_year' => '2021', 'work_experience' => '24', 'entrance_exam' => 'XAT', 'entrance_score' => '78.4'],
+                'family_data'   => ['father_occupation' => 'Government Employee', 'father_income' => '6 LPA', 'mother_occupation' => 'Teacher'],
+                'additional_data' => ['how_did_you_hear' => 'Friend/Family', 'why_this_program' => 'Looking to transition from engineering to management and this program has excellent placement record.'],
+            ],
+            [
+                'name'   => 'Sneha Patel',
+                'email'  => 'sneha.patel@applicant.demo',
+                'status' => 'shortlisted',
+                'applied_at' => Carbon::now()->subDays(20),
+                'reviewed_at' => Carbon::now()->subDays(5),
+                'personal_data' => ['father_name' => 'Kiran Patel', 'mother_name' => 'Meena Patel', 'date_of_birth' => '1999-11-08', 'gender' => 'Female', 'category' => 'General', 'phone' => '9898765432', 'address' => '78 Satellite Road, Ahmedabad', 'city' => 'Ahmedabad', 'state' => 'Gujarat', 'pincode' => '380001'],
+                'academic_data' => ['graduation_college' => 'Gujarat University', 'graduation_degree' => 'BBA', 'graduation_percentage' => '82.3', 'graduation_year' => '2022', 'work_experience' => '18', 'entrance_exam' => 'CAT', 'entrance_score' => '92.1'],
+                'family_data'   => ['father_occupation' => 'Doctor', 'father_income' => '15 LPA', 'mother_occupation' => 'Professor'],
+                'additional_data' => ['how_did_you_hear' => 'Social Media', 'extracurricular' => 'National level debate champion, NSS volunteer', 'why_this_program' => 'Strong brand value and industry partnerships align perfectly with my career goals in marketing.'],
+            ],
+            [
+                'name'   => 'Arjun Singh',
+                'email'  => 'arjun.singh2@applicant.demo',
+                'status' => 'draft',
+                'personal_data' => ['father_name' => 'Gurpreet Singh', 'date_of_birth' => '2000-01-14', 'gender' => 'Male', 'phone' => '9765432109'],
+                'academic_data' => null,
+                'family_data'   => null,
+                'additional_data' => null,
+            ],
+            [
+                'name'   => 'Meenakshi Rao',
+                'email'  => 'meenakshi.rao@applicant.demo',
+                'status' => 'selected',
+                'applied_at' => Carbon::now()->subDays(30),
+                'reviewed_at' => Carbon::now()->subDays(3),
+                'personal_data' => ['father_name' => 'Venkat Rao', 'mother_name' => 'Lakshmi Rao', 'date_of_birth' => '1998-05-25', 'gender' => 'Female', 'category' => 'General', 'phone' => '9654321098', 'address' => '23 Anna Salai, Chennai', 'city' => 'Chennai', 'state' => 'Tamil Nadu', 'pincode' => '600002'],
+                'academic_data' => ['graduation_college' => 'Madras University', 'graduation_degree' => 'B.Sc Statistics', 'graduation_percentage' => '88.0', 'graduation_year' => '2021', 'work_experience' => '30', 'entrance_exam' => 'CAT', 'entrance_score' => '96.5'],
+                'family_data'   => ['father_occupation' => 'Engineer', 'father_income' => '12 LPA', 'mother_occupation' => 'Accountant'],
+                'additional_data' => ['how_did_you_hear' => 'Education Fair', 'achievements' => 'University Gold Medalist, Published research paper', 'why_this_program' => 'This institute has produced industry leaders and I aspire to follow that path in analytics.'],
+            ],
+        ];
+
+        foreach ($applicantData as $data) {
+            $user = User::firstOrCreate(['email' => $data['email']], [
+                'name'     => $data['name'],
+                'password' => Hash::make('password123'),
+                'email_verified_at' => now(),
+            ]);
+            $user->assignRole('applicant');
+
+            Applicant::firstOrCreate(['user_id' => $user->id], [
+                'program_id'      => $pgdm->id,
+                'status'          => $data['status'],
+                'personal_data'   => $data['personal_data'],
+                'academic_data'   => $data['academic_data'] ?? null,
+                'family_data'     => $data['family_data'] ?? null,
+                'additional_data' => $data['additional_data'] ?? null,
+                'applied_at'      => $data['applied_at'] ?? null,
+                'reviewed_at'     => $data['reviewed_at'] ?? null,
+                'reviewed_by'     => isset($data['reviewed_at']) ? $admin->id : null,
+            ]);
+        }
+
         $this->command->info('Demo data seeded successfully!');
         $this->command->info('  Admin: admin@demo.edu / password123');
         $this->command->info('  Teacher: anjali@demo.edu / password123');
         $this->command->info('  Student: arjun.k@demo.edu / password123');
+        $this->command->info('  Applicants: priya.sharma@applicant.demo / password123 (and 4 more)');
     }
 }

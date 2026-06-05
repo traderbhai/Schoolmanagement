@@ -18,9 +18,10 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles, HasApiTokens;
 
-    public function student() { return $this->hasOne(Student::class); }
-    public function teacher() { return $this->hasOne(Teacher::class); }
-    public function notices() { return $this->hasMany(Notice::class); }
+    public function student()   { return $this->hasOne(Student::class); }
+    public function teacher()   { return $this->hasOne(Teacher::class); }
+    public function notices()   { return $this->hasMany(Notice::class); }
+    public function applicant() { return $this->hasOne(Applicant::class); }
 
     /**
      * Get the attributes that should be cast.
