@@ -217,6 +217,16 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::delete('application-windows/{window}', [Admission\ApplicationWindowController::class, 'destroy'])->name('application-windows.destroy');
     Route::patch('application-windows/{window}/toggle', [Admission\ApplicationWindowController::class, 'toggleActive'])->name('application-windows.toggle');
 
+    // Leads/Enquiries (static routes before {lead} parameterized)
+    Route::get('leads', [Admission\LeadController::class, 'index'])->name('leads.index');
+    Route::post('leads', [Admission\LeadController::class, 'store'])->name('leads.store');
+    Route::get('leads/{lead}', [Admission\LeadController::class, 'show'])->name('leads.show');
+    Route::post('leads/{lead}/contact', [Admission\LeadController::class, 'contactLead'])->name('leads.contact');
+    Route::post('leads/{lead}/interested', [Admission\LeadController::class, 'markInterested'])->name('leads.interested');
+    Route::post('leads/{lead}/not-interested', [Admission\LeadController::class, 'markNotInterested'])->name('leads.not-interested');
+    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
+    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+
     // Document Verification Queue (static routes BEFORE {document} parameterized)
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
     Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])->name('documents.bulk-verify');
