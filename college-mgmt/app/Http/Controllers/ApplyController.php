@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApplicationWindow;
 use App\Models\Program;
 use App\Models\Applicant;
 use App\Models\User;
@@ -16,16 +17,44 @@ class ApplyController extends Controller
     public function index()
     {
         $programs = Program::where('is_active', true)->get();
-        return view('apply.index', compact('programs'));
+        $applicationWindows = ApplicationWindow::where('is_active', true)
+            ->with(['program', 'batch'])
+            ->orderBy('opens_at')
+            ->get();
+
+        return view('apply.index', compact('programs', 'applicationWindows'));
     }
 
     public function show(Program $program)
     {
-        return view('apply.register', compact('program'));
+        $window = ApplicationWindow::where('program_id', $program->id)
+            ->where('is_active', true)
+            ->where('closes_at', '>', now())
+            ->first();
+
+        if (!$window) {
+            return redirect()->route('apply')->with('error', 'Applications for this program are currently closed.');
+        }
+
+        return view('apply.register', compact('program', 'window'));
     }
 
     public function register(Request $request, Program $program)
     {
+        $window = ApplicationWindow::where('program_id', $program->id)
+            ->where('is_active', true)
+            ->where('opens_at', '<=', now())
+            ->where('closes_at', '>', now())
+            ->first();
+
+        if (!$window) {
+            return redirect()->route('apply')->with('error', 'Applications for this program are not currently open.');
+        }
+
+        if ($window->isAtCapacity()) {
+            return redirect()->route('apply')->with('error', 'This program has reached its application capacity.');
+        }
+
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
@@ -33,7 +62,7 @@ class ApplyController extends Controller
             'password' => 'required|min:8|confirmed',
         ]);
 
-        DB::transaction(function () use ($validated, $program, &$applicant) {
+        DB::transaction(function () use ($validated, $program, $window, &$applicant) {
             $user = User::create([
                 'name'     => $validated['name'],
                 'email'    => $validated['email'],
@@ -50,6 +79,8 @@ class ApplyController extends Controller
                 'status'     => 'draft',
                 'personal_data' => ['phone' => $validated['phone']],
             ]);
+
+            $window->increment('current_applications');
         });
 
         Auth::login(User::where('email', $validated['email'])->first());

@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Exam extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'semester_id', 'program_id', 'term_id', 'subject_id', 'name', 'type', 'exam_date',
         'start_time', 'end_time', 'total_marks', 'passing_marks', 'classroom_id',

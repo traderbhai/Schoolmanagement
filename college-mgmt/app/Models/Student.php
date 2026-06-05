@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Student extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'user_id', 'department_id', 'course_id', 'program_id', 'batch_id', 'specialization_id',
         'enrollment_number', 'roll_number', 'date_of_birth', 'gender', 'phone', 'address',

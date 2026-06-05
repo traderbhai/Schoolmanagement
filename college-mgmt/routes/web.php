@@ -7,12 +7,14 @@ use App\Http\Controllers\Teacher;
 use App\Http\Controllers\Parent as ParentController;
 use App\Http\Controllers\ApplyController;
 use App\Http\Controllers\Admission;
+use App\Http\Controllers\Academic;
 use App\Http\Controllers\Applicant\DashboardController as ApplicantDashboard;
 use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication;
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Routes ──────────────────────────────────────────────
@@ -41,6 +43,14 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
+
+    // B4: Notifications
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
+    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('notifications/{notification}/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
 });
 
 Route::get('/', function () {
@@ -198,6 +208,29 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::delete('role-assignments/{assignment}', [Admin\RoleAssignmentController::class, 'destroy'])->name('role-assignments.destroy');
 });
 
+// ── Academic routes ─────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|admin'])->prefix('academic')->name('academic.')->group(function () {
+    // B2: Term Promotions
+    Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
+    Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
+    Route::get('term-promotions/{termPromotion}', [Academic\TermPromotionController::class, 'show'])->name('term-promotions.show');
+    Route::post('term-promotions/{termPromotion}/approve', [Academic\TermPromotionController::class, 'approve'])->name('term-promotions.approve');
+    Route::post('term-promotions/{termPromotion}/reject', [Academic\TermPromotionController::class, 'reject'])->name('term-promotions.reject');
+    Route::post('term-promotions/bulk-approve', [Academic\TermPromotionController::class, 'bulkApprove'])->name('term-promotions.bulk-approve');
+
+    // B3: Scholarships
+    Route::resource('scholarships', Academic\ScholarshipController::class);
+
+    // B3: Fee Demands
+    Route::resource('fee-demands', Academic\FeeDemandController::class);
+    Route::post('fee-demands/{feeDemand}/mark-paid', [Academic\FeeDemandController::class, 'markAsPaid'])->name('fee-demands.mark-paid');
+    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
+
+    // B5: Academic Calendar
+    Route::resource('academic-calendars', Academic\AcademicCalendarController::class);
+    Route::get('academic-calendars-events', [Academic\AcademicCalendarController::class, 'getEvents'])->name('academic-calendars.events');
+});
+
 // ── Admission Team routes ───────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->prefix('admission')->name('admission.')->group(function () {
     Route::get('dashboard', [Admission\DashboardController::class, 'index'])->name('dashboard');
@@ -207,6 +240,26 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
+
+    // Application Windows (static routes before {window} parameterized)
+    Route::get('application-windows/{program}', [Admission\ApplicationWindowController::class, 'index'])->name('application-windows.index');
+    Route::get('application-windows/{program}/create', [Admission\ApplicationWindowController::class, 'create'])->name('application-windows.create');
+    Route::post('application-windows/{program}', [Admission\ApplicationWindowController::class, 'store'])->name('application-windows.store');
+    Route::get('application-windows/edit/{window}', [Admission\ApplicationWindowController::class, 'edit'])->name('application-windows.edit');
+    Route::put('application-windows/{window}', [Admission\ApplicationWindowController::class, 'update'])->name('application-windows.update');
+    Route::delete('application-windows/{window}', [Admission\ApplicationWindowController::class, 'destroy'])->name('application-windows.destroy');
+    Route::patch('application-windows/{window}/toggle', [Admission\ApplicationWindowController::class, 'toggleActive'])->name('application-windows.toggle');
+
+    // Leads/Enquiries (static routes before {lead} parameterized)
+    Route::get('leads', [Admission\LeadController::class, 'index'])->name('leads.index');
+    Route::post('leads', [Admission\LeadController::class, 'store'])->name('leads.store');
+    Route::get('leads/{lead}', [Admission\LeadController::class, 'show'])->name('leads.show');
+    Route::post('leads/{lead}/contact', [Admission\LeadController::class, 'contactLead'])->name('leads.contact');
+    Route::post('leads/{lead}/interested', [Admission\LeadController::class, 'markInterested'])->name('leads.interested');
+    Route::post('leads/{lead}/not-interested', [Admission\LeadController::class, 'markNotInterested'])->name('leads.not-interested');
+    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
+    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+
     // Document Verification Queue (static routes BEFORE {document} parameterized)
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
     Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])->name('documents.bulk-verify');
