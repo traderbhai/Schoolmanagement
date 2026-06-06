@@ -160,6 +160,38 @@ Known 404 (not bugs — test URL wrong):
 
 ---
 
+## Phase 1: Role & Permission Hierarchy — COMPLETE (2026-06-06)
+
+**Status:** Days 1-10 done. All acceptance criteria met.
+
+### Role Hierarchy (highest → lowest)
+admin (6) → dean_academics (5) → admission_head (4) → program_chair/hod/admission_officer (3) → accounts_officer/exam_cell/cmc (2) → teacher/faculty (1) → student (0)
+
+Higher roles inherit feature access of all lower roles via `RoleHierarchyService`.
+
+### Key Files Added
+- `app/Services/RoleHierarchyService.php` — hierarchy + inheritance logic
+- `app/Http/Middleware/ProgramScope.php` — per-program route enforcement
+- `app/Http/Middleware/FeatureAccess.php` — feature-code access check (inheritance-aware)
+- `app/Providers/AppServiceProvider.php` — @canAccess blade directive
+- `database/seeders/RoleFeatureAccessSeeder.php` — 25+ feature codes seeded per role
+- `tests/Unit/RoleHierarchyTest.php` — hierarchy logic unit tests
+- `tests/Feature/RoleFeatureAccessSeederTest.php` — seeder integration tests
+
+### 25+ Feature Codes
+exam.enter_marks, exam.view_results, exam.approve_results, exam.schedule_exam, exam.manage_malpractice,
+admission.view_applicants, admission.approve_offers, admission.process_docs, admission.shortlist,
+enrollment.enroll_student, enrollment.view_enrolled,
+approval.dean_sign_off, approval.chair_sign_off,
+curriculum.view, curriculum.edit,
+attendance.mark, attendance.view_report,
+fee.view_demands, fee.collect_payment, fee.reconcile,
+placement.view_drives, placement.create_drive, placement.manage_drive,
+report.view_institutional, report.view_program,
+user.manage_roles, audit.view_log
+
+---
+
 ## Key File Locations
 
 ```
