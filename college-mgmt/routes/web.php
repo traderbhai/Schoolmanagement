@@ -16,6 +16,7 @@ use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StatusTrackerController;
+use App\Http\Controllers\ApprovalController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Status Tracker ─────────────────────────────────────
@@ -98,7 +99,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 // ── Admin routes ────────────────────────────────────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer|cmc|director'])->group(function () {
     Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('departments',   Admin\DepartmentController::class);
@@ -581,6 +582,14 @@ Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->
     Route::get('export-admission-payments', [Departmental\AccountsController::class, 'exportAdmissionPayments'])->name('export-admission-payments');
     Route::get('export-outstanding', [Departmental\AccountsController::class, 'exportOutstanding'])->name('export-outstanding');
     Route::get('fee-demands/{feeDemand}/demand-letter', [Departmental\AccountsController::class, 'demandLetter'])->name('fee-demands.demand-letter');
+});
+
+// ── Shared Approval Inbox (all roles) ────────────────────────────────────────
+Route::middleware('auth')->prefix('approvals')->name('approvals.')->group(function () {
+    Route::get('inbox', [ApprovalController::class, 'inbox'])->name('inbox');
+    Route::get('{approval}/chain', [ApprovalController::class, 'chain'])->name('chain');
+    Route::post('{approval}/approve', [ApprovalController::class, 'approve'])->name('approve');
+    Route::post('{approval}/reject', [ApprovalController::class, 'reject'])->name('reject');
 });
 
 // ── CMC / Placement ──────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ class DemoDataSeeder extends Seeder
     {
         // Ensure roles exist
         foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head',
-                  'dean_academics', 'program_chair', 'exam_cell', 'hod', 'accounts_officer'] as $role) {
+                  'dean_academics', 'program_chair', 'exam_cell', 'hod', 'accounts_officer', 'cmc', 'director'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
 
@@ -932,6 +932,23 @@ class DemoDataSeeder extends Seeder
             ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
         );
 
+        // ── CMC user ──────────────────────────────────────────────────────────
+        $cmcUser = User::firstOrCreate(
+            ['email' => 'cmc@college.com'],
+            ['name' => 'CMC Officer', 'password' => Hash::make('password')]
+        );
+        $cmcUser->syncRoles(['cmc']);
+
+        // ── Director user ─────────────────────────────────────────────────────
+        $directorUser = User::firstOrCreate(
+            ['email' => 'director@college.com'],
+            ['name' => 'Institute Director', 'password' => Hash::make('password')]
+        );
+        $directorUser->syncRoles(['director']);
+
+        // ── Feature Access Matrix ─────────────────────────────────────────────
+        $this->seedFeatureAccessMatrix();
+
         $this->command->info('Demo data seeded successfully!');
         $this->command->info('  Admin: admin@demo.edu / password123');
         $this->command->info('  Teacher: anjali@demo.edu / password123');
@@ -944,5 +961,89 @@ class DemoDataSeeder extends Seeder
         $this->command->info('  Exam Cell: exam@college.com / password');
         $this->command->info('  HoD: hod@college.com / password');
         $this->command->info('  Accounts Officer: accounts@college.com / password');
+        $this->command->info('  CMC Officer: cmc@college.com / password');
+        $this->command->info('  Director: director@college.com / password');
+    }
+
+    private function seedFeatureAccessMatrix(): void
+    {
+        $matrix = [
+            // [role_name, feature_code, access_level]
+            // Exam features
+            ['dean_academics',  'exam.enter_marks',       'approve'],
+            ['dean_academics',  'exam.publish_results',   'approve'],
+            ['dean_academics',  'exam.create_admit_card', 'approve'],
+            ['program_chair',   'exam.enter_marks',       'edit'],
+            ['program_chair',   'exam.publish_results',   'edit'],
+            ['program_chair',   'exam.create_admit_card', 'create'],
+            ['exam_cell',       'exam.enter_marks',       'delete'],
+            ['exam_cell',       'exam.publish_results',   'delete'],
+            ['exam_cell',       'exam.create_admit_card', 'delete'],
+            ['hod',             'exam.enter_marks',       'view'],
+            ['hod',             'exam.publish_results',   'view'],
+            ['teacher',         'exam.enter_marks',       'create'],
+            ['teacher',         'exam.create_admit_card', 'view'],
+
+            // Admission features
+            ['dean_academics',  'admission.approve_offers',    'approve'],
+            ['dean_academics',  'admission.verify_documents',  'approve'],
+            ['dean_academics',  'admission.manage_leads',      'edit'],
+            ['program_chair',   'admission.approve_offers',    'edit'],
+            ['program_chair',   'admission.verify_documents',  'edit'],
+            ['hod',             'admission.verify_documents',  'view'],
+
+            // Approval features
+            ['dean_academics',  'approval.dean_sign_off',     'approve'],
+            ['program_chair',   'approval.chair_sign_off',    'approve'],
+            ['hod',             'approval.hod_approve_leave', 'approve'],
+            ['hod',             'approval.chair_sign_off',    'view'],
+
+            // Program features
+            ['dean_academics',  'program.edit_curriculum',   'approve'],
+            ['dean_academics',  'program.manage_subjects',   'approve'],
+            ['dean_academics',  'program.view_analytics',    'approve'],
+            ['program_chair',   'program.edit_curriculum',   'edit'],
+            ['program_chair',   'program.manage_subjects',   'edit'],
+            ['program_chair',   'program.view_analytics',    'edit'],
+            ['hod',             'program.manage_subjects',   'view'],
+            ['hod',             'program.view_analytics',    'view'],
+            ['director',        'program.view_analytics',    'view'],
+
+            // Faculty features
+            ['teacher',         'faculty.mark_attendance',    'delete'],
+            ['teacher',         'faculty.manage_assignments', 'delete'],
+            ['teacher',         'faculty.view_own_courses',   'delete'],
+            ['hod',             'faculty.mark_attendance',    'view'],
+            ['hod',             'faculty.view_own_courses',   'view'],
+            ['program_chair',   'faculty.view_own_courses',   'view'],
+
+            // Placement features
+            ['cmc',             'placement.create_drive',      'delete'],
+            ['cmc',             'placement.manage_internships','delete'],
+            ['cmc',             'placement.view_placements',   'delete'],
+            ['dean_academics',  'placement.view_placements',   'view'],
+            ['director',        'placement.view_placements',   'view'],
+            ['program_chair',   'placement.view_placements',   'view'],
+
+            // Finance features
+            ['accounts_officer','finance.create_fee_demand',  'delete'],
+            ['accounts_officer','finance.verify_payments',    'delete'],
+            ['accounts_officer','finance.reconcile_accounts', 'delete'],
+            ['dean_academics',  'finance.verify_payments',    'view'],
+            ['director',        'finance.verify_payments',    'view'],
+            ['director',        'finance.reconcile_accounts', 'view'],
+        ];
+
+        foreach ($matrix as [$roleName, $featureCode, $accessLevel]) {
+            $role = Role::where('name', $roleName)->first();
+            if (!$role) continue;
+
+            \App\Models\RoleFeatureAccess::updateOrCreate(
+                ['role_id' => $role->id, 'feature_code' => $featureCode],
+                ['access_level' => $accessLevel]
+            );
+        }
+
+        $this->command->info('Feature access matrix seeded (' . count($matrix) . ' entries).');
     }
 }

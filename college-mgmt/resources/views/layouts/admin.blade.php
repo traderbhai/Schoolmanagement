@@ -251,11 +251,44 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- APPROVALS --}}
+        <div class="section-label">Approvals</div>
+        <a href="{{ route('approvals.inbox') }}" class="nav-link @if(request()->routeIs('approvals.*')) active @endif">
+            <i class="bi bi-check2-circle"></i> My Approvals
+            @php
+                $pendingCount = \App\Models\ApprovalWorkflow::whereIn('approver_role', auth()->user()->getRoleNames()->toArray())->where('status','pending')->count();
+            @endphp
+            @if($pendingCount > 0)
+            <span class="badge bg-warning text-dark ms-1">{{ $pendingCount }}</span>
+            @endif
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         {{-- ACCESS CONTROL --}}
         <div class="section-label">Access Control</div>
-        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
-            <i class="bi bi-shield-lock"></i> Role Assignments
+        @hasrole('admin')
+        <a href="{{ route('admin.roles.hierarchy') }}" class="nav-link @if(request()->routeIs('admin.roles.hierarchy')) active @endif">
+            <i class="bi bi-diagram-3"></i> Role Hierarchy
         </a>
+        <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif">
+            <i class="bi bi-key"></i> Permissions
+        </a>
+        <a href="{{ route('admin.roles.feature-access.index') }}" class="nav-link @if(request()->routeIs('admin.roles.feature-access.*')) active @endif">
+            <i class="bi bi-grid-3x3"></i> Feature Matrix
+        </a>
+        @endhasrole
+        <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif">
+            <i class="bi bi-person-badge"></i> Role Assignments
+        </a>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
+            <i class="bi bi-shield-lock"></i> Legacy Assignments
+        </a>
+        @hasrole('admin')
+        <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif">
+            <i class="bi bi-journal-text"></i> Audit Log
+        </a>
+        @endhasrole
 
         <div class="sidebar-divider"></div>
 
@@ -268,7 +301,12 @@
         @endhasrole
         @hasrole('program_chair|hod|dean_academics|admin')
         <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
-            <i class="bi bi-diagram-3"></i> Program Chair
+            <i class="bi bi-diagram-3-fill"></i> Program Chair
+        </a>
+        @endhasrole
+        @hasrole('hod|admin')
+        <a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.*')) active @endif">
+            <i class="bi bi-building-fill"></i> Head of Dept
         </a>
         @endhasrole
         @hasrole('exam_cell|dean_academics|admin')
@@ -282,7 +320,17 @@
         </a>
         <a class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}"
            href="{{ route('accounts.reconciliation') }}">
-            <i class="bi bi-arrow-left-right me-2"></i>Reconciliation
+            <i class="bi bi-arrow-left-right"></i> Reconciliation
+        </a>
+        @endhasrole
+        @hasrole('cmc|admin')
+        <a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.*')) active @endif">
+            <i class="bi bi-briefcase-fill"></i> Placement / CMC
+        </a>
+        @endhasrole
+        @hasrole('director|admin')
+        <a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.*')) active @endif">
+            <i class="bi bi-bank"></i> Director
         </a>
         @endhasrole
 
@@ -389,8 +437,25 @@
         <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
         <div class="sidebar-divider"></div>
+        <div class="section-label">Approvals</div>
+        <a href="{{ route('approvals.inbox') }}" class="nav-link @if(request()->routeIs('approvals.*')) active @endif"><i class="bi bi-check2-circle"></i> My Approvals</a>
+        <div class="sidebar-divider"></div>
         <div class="section-label">Access Control</div>
-        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif"><i class="bi bi-shield-lock"></i> Role Assignments</a>
+        @hasrole('admin')
+        <a href="{{ route('admin.roles.hierarchy') }}" class="nav-link @if(request()->routeIs('admin.roles.hierarchy')) active @endif"><i class="bi bi-diagram-3"></i> Role Hierarchy</a>
+        <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif"><i class="bi bi-key"></i> Permissions</a>
+        <a href="{{ route('admin.roles.feature-access.index') }}" class="nav-link @if(request()->routeIs('admin.roles.feature-access.*')) active @endif"><i class="bi bi-grid-3x3"></i> Feature Matrix</a>
+        @endhasrole
+        <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif"><i class="bi bi-person-badge"></i> Role Assignments</a>
+        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif"><i class="bi bi-shield-lock"></i> Legacy Assignments</a>
+        @hasrole('admin')
+        <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif"><i class="bi bi-journal-text"></i> Audit Log</a>
+        @endhasrole
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Portals</div>
+        @hasrole('hod|admin')<a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.*')) active @endif"><i class="bi bi-building-fill"></i> HOD</a>@endhasrole
+        @hasrole('cmc|admin')<a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.*')) active @endif"><i class="bi bi-briefcase-fill"></i> CMC</a>@endhasrole
+        @hasrole('director|admin')<a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.*')) active @endif"><i class="bi bi-bank"></i> Director</a>@endhasrole
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
