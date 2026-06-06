@@ -172,3 +172,36 @@ resources/views/layouts/student.blade.php         — student layout
 database/seeders/DemoDataSeeder.php               — all demo data
 GUIDE.md                                          — full user & developer guide
 ```
+
+---
+
+## Academic Phase Implementation Plan
+
+**Status:** Plan created (2026-06-06), awaiting Phase 1 approval
+
+**Timeline:** 6-9 months, 8 phases, ~1,200-1,500 person-days
+
+**Detailed Roadmaps:** (in /college-mgmt/ root)
+- `PHASED_IMPLEMENTATION_ROADMAP.md` — Technical blueprint (all features, models, routes)
+- `IMPLEMENTATION_SUMMARY.md` — Executive summary for stakeholders
+- `IMPLEMENTATION_PATTERNS.md` — Code examples & patterns
+- `QUICK_REFERENCE.md` — One-page cheat sheet
+
+**8 Phases:**
+
+| Phase | Theme | Duration | Key Deliverables |
+|-------|-------|----------|---|
+| 1 | Role & Permission Hierarchy | 2w | Role scoping, permission matrix, audit logging |
+| 2 | Role-Specific Dashboards | 2w | 9 dashboards (Dean, Chair, PMC, Exam, HOD, Faculty, CMC, Director, Owner) |
+| 3 | Approval Workflows | 2w | Multi-step chains, escalation, SLA tracking |
+| 4 | Offer & Enrollment | 2w | Bulk offers, enrollment numbers, portal updates |
+| 5 | Academic Lifecycle | 3w | Exams, grades, GPA, promotion, transcripts |
+| 6 | Fee Management | 2w | Demands, payments, reconciliation, scholarships |
+| 7 | Placement & Career | 2w | Drives, internships, alumni, placement stats |
+| 8 | Reporting & Analytics | 2w | AICTE compliance, institutional KPIs, director dashboards |
+
+**New Models (~30):** UserRole, RolePermissionMatrix, CurriculumChange, StudentGrievance, FacultyWorkload, StudentMentorship, PlacementDrive (extended), AlumniProfile, + more
+
+**Key Roles Impacted:** Dean, Program Chair, PMC, Exam Cell, HOD, Faculty, CMC/Placement, Director, Owner
+
+**Next Step:** Phase 1 approval → start role & permission hierarchy implementation

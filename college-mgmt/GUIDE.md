@@ -908,7 +908,166 @@ OfferLetter belongsTo Applicant, Program, Batch
 
 ---
 
-## 16. Technical Notes for Developers
+## 17. Academic Phase Implementation Roadmap
+
+**Status:** Complete and ready for Phase 1 approval (2026-06-06)
+
+**Duration:** 6-9 months | **Team:** 5-6 people | **Effort:** ~1,200-1,500 person-days
+
+### Overview
+
+After successfully implementing the **Admission Phase** (leads → application → selection → enrollment), the system enters the **Academic Phase**: curriculum delivery, teaching, exams, grading, placement, and alumni tracking.
+
+This involves 9 distinct roles with complex interdependencies:
+
+1. **Dean of Academic Affairs** — Curriculum approval, policy enforcement, grievance management
+2. **Program Chair** — Program-specific leadership, cohort analytics, placements
+3. **PMC** — Timetable planning, resource allocation, calendar management
+4. **Exam Cell** — Exam scheduling, result management, transcripts, malpractice tracking
+5. **HOD** — Department leadership, faculty management, leave approval, budget
+6. **Faculties / Teachers** — Teaching, marking, attendance, mentoring
+7. **Placement / CMC** — Placement drives, internships, alumni tracking, career services
+8. **Institute Director** — Strategic oversight, KPI monitoring, compliance
+9. **Institute Owner** — Ownership, governance, long-term vision
+
+### 8 Phases (Detailed Roadmaps Available)
+
+See `/college-mgmt/` root for:
+- **`PHASED_IMPLEMENTATION_ROADMAP.md`** (78 KB) — Complete technical blueprint
+- **`IMPLEMENTATION_SUMMARY.md`** (24 KB) — Stakeholder overview
+- **`IMPLEMENTATION_PATTERNS.md`** (41 KB) — Code patterns & examples
+- **`QUICK_REFERENCE.md`** (10 KB) — One-page cheat sheet
+
+| Phase | Theme | Duration | Prerequisites | Roles |
+|-------|-------|----------|---|---|
+| **1** | Role & Permission Hierarchy | 2 weeks | None | All 9 |
+| **2** | Role-Specific Dashboards | 2 weeks | Phase 1 | All 9 |
+| **3** | Approval Workflows & Escalation | 2 weeks | 1, 2 | Dean, Chair, HOD |
+| **4** | Offer & Enrollment | 2 weeks | 1-3 | Admission, Dean, Chair |
+| **5** | Academic Lifecycle | 3 weeks | 1-4 | Dean, Faculty, Exam Cell |
+| **6** | Fee Management | 2 weeks | 1, 4, 5 | Accounts, Admission |
+| **7** | Placement & Career Services | 2 weeks | 1, 4 | Placement, Students |
+| **8** | Reporting & Analytics | 2 weeks | 1-7 | Director, Dean |
+
+**Total: 17-18 weeks core development + testing/customization = 6-9 months**
+
+### Phase Highlights
+
+**Phase 1: Role & Permission Hierarchy**
+- Define 9 roles with specific scopes (program-level, department-level, institution-level)
+- Permission matrix: who can do what actions on which data
+- Program scoping: a Program Chair can only see their program, not others
+- Audit logging: track all actions for compliance
+- Models: UserRole, RolePermissionMatrix, AuditLog
+
+**Phase 2: Role-Specific Dashboards**
+- 9 custom landing pages (one per role) with KPIs, quick actions, alerts
+- Dean: program health scorecard, faculty summary, grievance queue
+- Program Chair: cohort progress, placement rate, curriculum status
+- PMC: timetable conflicts, room utilization, exam logistics
+- Exam Cell: result entry completion, anomalies detected, case management
+- HOD: faculty directory, workload analysis, leave pending
+- Faculty: my courses, attendance %, assignments to grade, exam schedule
+- CMC: active drives, placements achieved, applications pending
+- Director: institution KPIs, program metrics, compliance status
+- Owner: financial snapshot, strategic initiatives, board governance
+
+**Phase 3: Approval Workflows**
+- Multi-step approval chains (Curriculum → Dean → Program Chair → implement)
+- Escalation paths (Dean can escalate to Director if needed)
+- SLA tracking (approvals must happen within N days)
+- Models: CurriculumChange, ApprovalWorkflowStep, ApprovalNote, ApprovalSLA
+
+**Phase 4: Offer & Enrollment**
+- Bulk offer letter generation from merit list
+- Approval chain: Admission Head → Dean → Program Chair
+- Enrollment confirmation → auto-create Student record with enrollment number
+- Integration with applicant portal (accept/decline offer)
+- Models: None new (extend existing OfferLetter, Enrollment)
+
+**Phase 5: Academic Lifecycle**
+- Subject registration: students select electives within credit limits
+- Attendance tracking: daily roll calls, monitor thresholds, export sheets
+- Exam result entry: marks, grades, GPA/CGPA calculation
+- Transcript generation: per-student, archival-ready PDFs
+- Term promotion: students eligible for next term?
+- Models: SubjectEnrollment, ExamAnomalyLog, AcademicTranscript
+
+**Phase 6: Fee Management**
+- Fee structures per program/term, with components
+- Semester fee demands: auto-generate per batch/term
+- Payment verification: Accounts officer reconciles payments
+- Scholarship disbursements: deduct awarded scholarships from demands
+- Outstanding tracking: which students owe how much
+- Models: FeeInstallment (extend), FeeDemand (extend), ApplicantScholarship (extend)
+
+**Phase 7: Placement & Career Services**
+- Placement drives: company invites, interview scheduling, offer tracking
+- Student eligibility: GPA cutoff, semester requirements enforced
+- Internship coordination: placement during studies, supervisor feedback
+- Alumni database: post-graduation employment, salary, feedback
+- Placement statistics: placement %, average salary, top employers
+- Models: PlacementDrive (extend), Internship, AlumniProfile, EmployerFeedback
+
+**Phase 8: Reporting & Analytics**
+- Admission funnel: leads → applications → placements (with conversion %)
+- Academic analytics: pass rates, GPA trends, cohort retention, gender diversity
+- Financial dashboard: fees collected vs. outstanding, scholarship spend
+- AICTE compliance: curriculum coverage, faculty credentials, lab equipment
+- Director dashboard: institution KPIs, program comparisons, trend analysis
+- Models: InstitutionalKPI (pre-computed), StrategicGoal, ComplianceCheckpoint
+
+### Database Impact
+
+**New Models (10+):**
+- UserRole, RolePermissionMatrix, RoleFeatureAccess
+- CurriculumChange, StudentGrievance, FacultyWorkload
+- StudentMentorship, PrePlacementTraining, StudentTrainingEnrollment
+- Internship, AlumniProfile, EmployerFeedback
+- and more...
+
+**Enhanced Models (20+):**
+- User (program scoping)
+- Student (GPA fields, attendance %)
+- ExamResult (grade, grade_point fields)
+- Teacher (qualifications, certifications, performance rating)
+- all Approval models with escalation, SLA fields
+
+### Success Criteria
+
+- **System uptime:** 99.5%
+- **Page load time:** < 2 seconds (95th percentile)
+- **User adoption:** > 90% within 3 months of phase completion
+- **Data accuracy:** 100% fee reconciliation, 100% grade accuracy
+- **AICTE compliance:** 100% report accuracy
+- **Support quality:** < 2 tickets per 100 active users/month
+
+### Critical Success Factors
+
+1. **Phase 1 rigor** — Get role definitions exactly right (saves 4+ weeks later)
+2. **Real payment gateway** — Integrate Razorpay/PayU in Phase 4 (not mocked)
+3. **Query optimization** — Profile database in Phase 5 (before Phase 8 reporting)
+4. **Reliable email/SMS** — Use SendGrid/Twilio with async queues
+5. **User testing** — Gather feedback from 2-3 real users per role per phase
+6. **Documentation** — Keep CLAUDE.md and GUIDE.md updated throughout (this file is source of truth)
+
+### Parallelization Opportunities
+
+- Phase 2 (dashboards) can start immediately after Phase 1 (roles) is done
+- Phases 3 & 5 can run in parallel if workflow engine is shared
+- Phase 7 (Placement) can start after Phase 4 (Enrollment) is live
+- Phase 8 (Analytics) builds on all prior phases (sequential by necessity)
+
+### Next Steps
+
+1. **Review** the detailed roadmaps (15-min read for summary, 1-2 hours for full roadmaps)
+2. **Confirm** priorities and phase sequence (are these phases the right order for your institution?)
+3. **Allocate team** (which 5-6 people will work on this)
+4. **Set sprint calendar** (when do you want Phase 1 done?)
+5. **Approve Phase 1 kickoff** (role definitions, permission matrix)
+6. **Commit to live testing** (after Phase 4, run 1 real admission → enrollment cycle with real users)
+
+This is a comprehensive, production-grade implementation plan. The 4 roadmap documents provide everything needed for sprint planning, coding, testing, and stakeholder communication.
 
 ### Stack & Architecture
 
