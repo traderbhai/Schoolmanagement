@@ -19,7 +19,7 @@ class DepartmentFactory extends Factory
     {
         return [
             'name'       => $this->faker->word . ' Department',
-            'code'       => strtoupper($this->faker->lexify('???')),
+            'code'       => strtoupper(substr(md5(uniqid('', true)), 0, 6)),
             'description' => $this->faker->text,
             'head_name'  => $this->faker->name,
             'is_active'  => true,

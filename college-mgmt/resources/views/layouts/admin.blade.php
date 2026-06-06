@@ -349,10 +349,10 @@
             </button>
 
             {{-- Notification bell --}}
-            <button class="notif-btn" aria-label="Notifications" title="Notifications">
+            <a href="{{ route('notifications.index') }}" class="notif-btn" aria-label="Notifications" title="Notifications" id="notifBell">
                 <i class="bi bi-bell"></i>
-                <span class="notif-badge"></span>
-            </button>
+                <span class="notif-badge" id="notifBadge" style="display:none"></span>
+            </a>
 
             {{-- User avatar dropdown --}}
             <div class="dropdown">
@@ -510,6 +510,21 @@
         var bsModal = new bootstrap.Modal(deleteModal);
         bsModal.show();
     });
+})();
+
+// ── Notification bell unread count ─────────────────────────
+(function () {
+    var badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                badge.style.display = '';
+            }
+        })
+        .catch(function () {});
 })();
 </script>
 

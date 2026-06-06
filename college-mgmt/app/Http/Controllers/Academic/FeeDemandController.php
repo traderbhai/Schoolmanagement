@@ -7,6 +7,7 @@ use App\Models\FeeDemand;
 use App\Models\Student;
 use App\Models\Term;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FeeDemandController extends Controller
 {

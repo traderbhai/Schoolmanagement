@@ -212,7 +212,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 });
 
 // ── Academic routes ─────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|admin'])->prefix('academic')->name('academic.')->group(function () {
+Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|accounts_officer|admin'])->prefix('academic')->name('academic.')->group(function () {
     // B2: Term Promotions
     Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
     Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');

@@ -29,4 +29,18 @@ class Student extends Model
     public function scholarships() { return $this->hasMany(Scholarship::class); }
     public function termPromotions() { return $this->hasMany(TermPromotion::class); }
     public function feeDemands() { return $this->hasMany(FeeDemand::class); }
+
+    public function calculateCGPA(): float
+    {
+        $avg = $this->examResults()->avg('marks_obtained');
+        return round($avg ?? 0, 2);
+    }
+
+    public function calculateAttendancePercentage(): float
+    {
+        $total = $this->attendances()->count();
+        if ($total === 0) return 0.0;
+        $present = $this->attendances()->where('status', 'present')->count();
+        return round(($present / $total) * 100, 2);
+    }
 }
