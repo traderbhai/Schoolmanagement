@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Academic;
 
 use App\Http\Controllers\Controller;
+use App\Models\Term;
 use App\Models\TermPromotion;
 use App\Models\Student;
 use Illuminate\Http\Request;
@@ -23,29 +24,59 @@ class TermPromotionController extends Controller
 
     public function generate(Request $request)
     {
-        $termId = $request->get('term_id');
-        $cgpaThreshold = $request->get('cgpa_threshold', 2.0);
+        $request->validate([
+            'term_id'              => 'required|exists:terms,id',
+            'cgpa_threshold'       => 'nullable|numeric|min:0|max:10',
+            'attendance_threshold' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        $termId              = $request->term_id;
+        $cgpaThreshold       = $request->get('cgpa_threshold', 2.0);
         $attendanceThreshold = $request->get('attendance_threshold', 75);
+
+        $currentTerm = Term::findOrFail($termId);
+
+        // Find the next term in the same batch (next term_number)
+        $nextTerm = Term::where('batch_id', $currentTerm->batch_id)
+            ->where('term_number', '>', $currentTerm->term_number)
+            ->orderBy('term_number')
+            ->first();
+
+        if (!$nextTerm) {
+            return back()->with('error', 'No next term found for this batch. This may be the final term.');
+        }
 
         $students = Student::where('current_term_id', $termId)->get();
         $count = 0;
 
         foreach ($students as $student) {
+            // Skip if already generated for this student + term
+            $exists = TermPromotion::where('student_id', $student->id)
+                ->where('current_term_id', $termId)->exists();
+            if ($exists) continue;
+
+            $cgpa       = $student->calculateCGPA();
+            $attendance = $student->calculateAttendancePercentage();
+
             TermPromotion::create([
-                'student_id'              => $student->id,
-                'current_term_id'         => $termId,
-                'promoted_to_term_id'     => (int)$termId + 1,
-                'cgpa'                    => 0,
-                'attendance_percentage'   => 0,
-                'meets_academic_criteria' => false,
-                'meets_attendance_criteria' => false,
-                'status'                  => 'pending',
+                'student_id'                => $student->id,
+                'current_term_id'           => $termId,
+                'promoted_to_term_id'       => $nextTerm->id,
+                'cgpa'                      => $cgpa,
+                'attendance_percentage'     => $attendance,
+                'meets_academic_criteria'   => $cgpa >= $cgpaThreshold,
+                'meets_attendance_criteria' => $attendance >= $attendanceThreshold,
+                'status'                    => 'pending',
             ]);
             $count++;
         }
 
+        if ($count === 0) {
+            return back()->with('error', 'No new promotions generated. Records may already exist for all students in this term.');
+        }
+
         return redirect()->route('academic.term-promotions.index')
-            ->with('success', "$count promotions generated successfully");
+            ->with('success', "{$count} promotion records generated for term '{$currentTerm->name}' → '{$nextTerm->name}'.");
     }
 
     public function approve(TermPromotion $termPromotion)

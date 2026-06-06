@@ -36,6 +36,14 @@
         <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif">
             <i class="bi bi-award"></i> My Results
         </a>
+        <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
+           href="{{ route('student.subjects.index') }}">
+            <i class="bi bi-journal-text me-2"></i>Subject Registration
+        </a>
+        <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
+           href="{{ route('student.timetable') }}">
+            <i class="bi bi-calendar3 me-2"></i>My Timetable
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -88,6 +96,10 @@
         <div class="section-label">Academics</div>
         <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif"><i class="bi bi-check2-square"></i> My Attendance</a>
         <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif"><i class="bi bi-award"></i> My Results</a>
+        <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
+           href="{{ route('student.subjects.index') }}"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
+        <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
+           href="{{ route('student.timetable') }}"><i class="bi bi-calendar3 me-2"></i>My Timetable</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>

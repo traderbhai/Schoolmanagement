@@ -422,6 +422,9 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::delete('scholarships/{scholarship}', [Admission\ApplicantScholarshipController::class, 'destroy'])->name('scholarships.destroy');
     Route::post('scholarships/{scholarship}/disburse', [Admission\ApplicantScholarshipController::class, 'disburse'])->name('scholarships.disburse');
     Route::get('scholarship-disbursements', [Admission\ApplicantScholarshipController::class, 'disbursementQueue'])->name('scholarship-disbursements.index');
+
+    // P8-3: Analytics PDF Export
+    Route::get('reports/export-pdf', [Admission\ReportingController::class, 'exportPdf'])->name('reports.export-pdf');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
@@ -470,6 +473,13 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('placements/my-applications', [Student\PlacementController::class, 'myApplications'])->name('placements.applications');
     Route::get('placements', [Student\PlacementController::class, 'index'])->name('placements');
     Route::post('placements/{drive}/apply', [Student\PlacementController::class, 'apply'])->name('placements.apply');
+
+    // P9-2: Subject Registration
+    Route::get('subjects', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'index'])->name('subjects.index');
+    Route::post('subjects', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'store'])->name('subjects.store');
+    Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
+    // P9-3: Timetable
+    Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

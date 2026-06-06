@@ -252,6 +252,160 @@
         </div>
     </div>
 
+    {{-- Year-over-Year Comparison --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-bar-chart-steps me-2"></i>Year-over-Year Comparison</h5>
+            <a href="{{ route('admission.reports.export-pdf') }}" class="btn btn-sm btn-outline-danger" target="_blank">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF Report
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Year</th>
+                            <th class="text-center">Applications</th>
+                            <th class="text-center">Enrolled</th>
+                            <th class="text-center">Conversion Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($yoyData as $yoy)
+                        <tr>
+                            <td class="fw-semibold">{{ $yoy['year'] }}</td>
+                            <td class="text-center">{{ number_format($yoy['applicants']) }}</td>
+                            <td class="text-center text-success fw-semibold">{{ number_format($yoy['enrolled']) }}</td>
+                            <td class="text-center">
+                                @php $pct = $yoy['applicants'] > 0 ? round($yoy['enrolled'] / $yoy['applicants'] * 100, 1) : 0; @endphp
+                                <span class="badge bg-{{ $pct >= 50 ? 'success' : ($pct >= 25 ? 'warning' : 'danger') }}">{{ $pct }}%</span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- AICTE Category Compliance --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-shield-check me-2"></i>AICTE Category Compliance</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Seat fill vs AICTE mandate for reservation categories. Total intake: {{ $totalIntake ?? '—' }} seats.</p>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-center">Mandate %</th>
+                            <th class="text-center">Mandate Seats</th>
+                            <th class="text-center">Filled</th>
+                            <th>Fill Progress</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($categoryCompliance as $row)
+                        <tr>
+                            <td class="fw-semibold">{{ $row['category'] }}</td>
+                            <td class="text-center">{{ $row['mandate_pct'] }}%</td>
+                            <td class="text-center">{{ $row['mandate_seats'] }}</td>
+                            <td class="text-center fw-semibold">{{ $row['filled'] }}</td>
+                            <td style="min-width:140px">
+                                <div class="progress" style="height:10px">
+                                    <div class="progress-bar bg-{{ $row['compliant'] ? 'success' : 'warning' }}"
+                                         style="width:{{ min(100, $row['fill_pct']) }}%"></div>
+                                </div>
+                                <div class="small text-muted mt-1">{{ $row['fill_pct'] }}%</div>
+                            </td>
+                            <td class="text-center">
+                                @if($row['compliant'])
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Compliant</span>
+                                @else
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Below Target</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {{-- Counsellor Performance --}}
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-person-badge me-2"></i>Counsellor Performance</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if($counsellorStats->isEmpty())
+                        <p class="text-muted p-3 mb-0">No leads assigned yet.</p>
+                    @else
+                    <table class="table table-sm mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Counsellor</th>
+                                <th class="text-center">Leads</th>
+                                <th class="text-center">Converted</th>
+                                <th class="text-center">Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($counsellorStats as $c)
+                            <tr>
+                                <td class="fw-semibold">{{ $c['name'] }}</td>
+                                <td class="text-center">{{ $c['total_leads'] }}</td>
+                                <td class="text-center text-success fw-semibold">{{ $c['converted'] }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-{{ $c['conversion_pct'] >= 50 ? 'success' : ($c['conversion_pct'] >= 25 ? 'warning' : 'secondary') }}">
+                                        {{ $c['conversion_pct'] }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- Geographic Distribution --}}
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-geo-alt me-2"></i>Geographic Distribution</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if($geoStats->isEmpty())
+                        <p class="text-muted p-3 mb-0">No geographic data available yet.</p>
+                    @else
+                    <table class="table table-sm mb-0">
+                        <thead class="bg-light">
+                            <tr><th>State / City</th><th class="text-center">Applicants</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach($geoStats as $place => $count)
+                            <tr>
+                                <td>{{ $place }}</td>
+                                <td class="text-center fw-semibold">{{ $count }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Footer: Last Updated ─────────────────────────────────────────────── --}}
     <div class="text-end text-muted" style="font-size:12px">
         <i class="bi bi-clock me-1"></i>Last updated: {{ now()->format('d M Y H:i') }}
