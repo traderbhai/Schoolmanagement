@@ -30,6 +30,11 @@
     <div class="col-sm-2"><input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}"></div>
     <div class="col-auto"><button class="btn btn-sm btn-primary">Filter</button></div>
     <div class="col-auto"><a href="{{ route('accounts.fee-collections') }}" class="btn btn-sm btn-outline-secondary">Clear</a></div>
+    <div class="col-auto">
+        <a href="{{ route('accounts.export-fee-collections', request()->query()) }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-download me-1"></i>Export CSV
+        </a>
+    </div>
 </form>
 
 <div class="card border-0 shadow-sm">

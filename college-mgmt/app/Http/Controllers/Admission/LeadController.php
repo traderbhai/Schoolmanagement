@@ -156,4 +156,91 @@ class LeadController extends Controller
 
         return back()->with('success', 'Lead captured successfully!');
     }
+
+    public function convert(Request $request, Lead $lead)
+    {
+        if ($lead->isConverted()) {
+            return back()->with('error', 'Lead has already been converted.');
+        }
+
+        $validated = $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+        ]);
+
+        // Reuse existing user or create new one
+        $user = \App\Models\User::firstOrCreate(
+            ['email' => $lead->email],
+            [
+                'name'     => $lead->name,
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+            ]
+        );
+
+        if (!$user->hasRole('applicant')) {
+            $user->assignRole('applicant');
+        }
+
+        $applicant = \App\Models\Applicant::create([
+            'user_id'    => $user->id,
+            'program_id' => $validated['program_id'],
+            'batch_id'   => $validated['batch_id'] ?? null,
+            'status'     => 'draft',
+            'notes'      => "Converted from Lead #{$lead->id} ({$lead->source_label})",
+        ]);
+
+        $lead->convertToApplicant($applicant);
+
+        return redirect()
+            ->route('admission.applicants.show', $applicant)
+            ->with('success', "Lead converted to applicant successfully. Application #{$applicant->application_number}");
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $query = Lead::with(['program', 'assignedTo', 'convertedApplicant']);
+
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+        if ($request->source) {
+            $query->where('source', $request->source);
+        }
+        if ($request->program_id) {
+            $query->where('program_id', $request->program_id);
+        }
+
+        $leads = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'leads-export-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($leads) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Name', 'Email', 'Phone', 'Program', 'Source', 'Status',
+                'Assigned To', 'Last Contacted', 'Notes', 'Created At', 'Converted At']);
+            foreach ($leads as $lead) {
+                fputcsv($handle, [
+                    $lead->name,
+                    $lead->email,
+                    $lead->phone ?? '',
+                    $lead->program->name ?? '',
+                    $lead->source_label ?? $lead->source,
+                    $lead->status,
+                    $lead->assignedTo->name ?? '',
+                    $lead->last_contacted_at?->format('Y-m-d H:i') ?? '',
+                    $lead->notes ?? '',
+                    $lead->created_at->format('Y-m-d H:i'),
+                    $lead->converted_at?->format('Y-m-d H:i') ?? '',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

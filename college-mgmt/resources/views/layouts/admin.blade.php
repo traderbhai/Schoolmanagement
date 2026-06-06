@@ -126,10 +126,73 @@
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
             <i class="bi bi-list-ol"></i> Merit List
         </a>
+        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif">
+            <i class="bi bi-envelope-open"></i> Offer Letters
+        </a>
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
             <i class="bi bi-person-check-fill"></i> Enrollments
         </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- LEADS & CRM --}}
+        <div class="section-label">Leads & Pipeline</div>
+        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index') || request()->routeIs('admission.leads.show')) active @endif">
+            <i class="bi bi-funnel"></i> All Leads
+            @php $newLeads = \App\Models\Lead::where('status','new')->count(); @endphp
+            @if($newLeads > 0)<span class="badge bg-info text-dark ms-1">{{ $newLeads }}</span>@endif
+        </a>
+        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif">
+            <i class="bi bi-upload"></i> Import Leads
+        </a>
+        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif">
+            <i class="bi bi-calendar3"></i> Follow-up Calendar
+        </a>
+        <a href="{{ route('admission.leads.analytics') }}" class="nav-link @if(request()->routeIs('admission.leads.analytics')) active @endif">
+            <i class="bi bi-graph-up-arrow"></i> Lead Analytics
+        </a>
+        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif">
+            <i class="bi bi-bar-chart-line"></i> Admission Reports
+        </a>
+        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif">
+            <i class="bi bi-megaphone"></i> Bulk Communication
+        </a>
+        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif">
+            <i class="bi bi-arrow-counterclockwise"></i> Refunds
+        </a>
+
+        {{-- PROGRAM TOOLS --}}
+        @if($firstProgram)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Program Tools</div>
+        <a href="{{ route('admission.seat-matrices.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.seat-matrices.*')) active @endif">
+            <i class="bi bi-grid-3x3"></i> Seat Matrix
+        </a>
+        <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif">
+            <i class="bi bi-diagram-3"></i> Selection Process
+        </a>
+        <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif">
+            <i class="bi bi-credit-card"></i> Fee Installments
+        </a>
+        @endif
+
+        <div class="sidebar-divider"></div>
+
+        {{-- SCHOLARSHIPS --}}
+        <div class="section-label">Scholarships</div>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('admission.scholarship-schemes.*') ? 'active' : '' }}"
+               href="{{ route('admission.scholarship-schemes.index') }}">
+                <i class="bi bi-award me-2"></i>Scholarship Schemes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}"
+               href="{{ route('admission.scholarship-disbursements.index') }}">
+                <i class="bi bi-send me-2"></i>Disbursements
+            </a>
+        </li>
 
         <div class="sidebar-divider"></div>
 
@@ -214,8 +277,12 @@
         </a>
         @endhasrole
         @hasrole('accounts_officer|admin')
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.*')) active @endif">
+        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif">
             <i class="bi bi-cash-stack"></i> Accounts
+        </a>
+        <a class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}"
+           href="{{ route('accounts.reconciliation') }}">
+            <i class="bi bi-arrow-left-right me-2"></i>Reconciliation
         </a>
         @endhasrole
 
@@ -277,8 +344,30 @@
         <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.*')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
+        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif"><i class="bi bi-envelope-open"></i> Offer Letters</a>
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Leads & Pipeline</div>
+        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>
+        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif"><i class="bi bi-upload"></i> Import Leads</a>
+        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
+        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
+        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
+        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
+        @if($firstProgram)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Program Tools</div>
+        <a href="{{ route('admission.seat-matrices.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.seat-matrices.*')) active @endif"><i class="bi bi-grid-3x3"></i> Seat Matrix</a>
+        <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif"><i class="bi bi-diagram-3"></i> Selection Process</a>
+        <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif"><i class="bi bi-credit-card"></i> Fee Installments</a>
+        @endif
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Scholarships</div>
+        <a class="nav-link {{ request()->routeIs('admission.scholarship-schemes.*') ? 'active' : '' }}"
+           href="{{ route('admission.scholarship-schemes.index') }}"><i class="bi bi-award me-2"></i>Scholarship Schemes</a>
+        <a class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}"
+           href="{{ route('admission.scholarship-disbursements.index') }}"><i class="bi bi-send me-2"></i>Disbursements</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>
@@ -349,10 +438,10 @@
             </button>
 
             {{-- Notification bell --}}
-            <button class="notif-btn" aria-label="Notifications" title="Notifications">
+            <a href="{{ route('notifications.index') }}" class="notif-btn" aria-label="Notifications" title="Notifications" id="notifBell">
                 <i class="bi bi-bell"></i>
-                <span class="notif-badge"></span>
-            </button>
+                <span class="notif-badge" id="notifBadge" style="display:none"></span>
+            </a>
 
             {{-- User avatar dropdown --}}
             <div class="dropdown">
@@ -510,6 +599,21 @@
         var bsModal = new bootstrap.Modal(deleteModal);
         bsModal.show();
     });
+})();
+
+// ── Notification bell unread count ─────────────────────────
+(function () {
+    var badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                badge.style.display = '';
+            }
+        })
+        .catch(function () {});
 })();
 </script>
 

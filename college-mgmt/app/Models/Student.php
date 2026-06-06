@@ -10,7 +10,7 @@ class Student extends Model
         'user_id', 'department_id', 'course_id', 'program_id', 'batch_id', 'specialization_id',
         'enrollment_number', 'roll_number', 'date_of_birth', 'gender', 'phone', 'address',
         'guardian_name', 'guardian_phone', 'admission_date', 'current_semester', 'current_term',
-        'status', 'photo',
+        'current_term_id', 'status', 'photo',
     ];
     protected $casts = ['date_of_birth' => 'date', 'admission_date' => 'date'];
 
@@ -25,4 +25,22 @@ class Student extends Model
     public function feePayments() { return $this->hasMany(FeePayment::class); }
     public function examResults() { return $this->hasMany(ExamResult::class); }
     public function parents() { return $this->belongsToMany(ParentProfile::class, 'parent_student', 'student_id', 'parent_id'); }
+    public function currentTerm() { return $this->belongsTo(Term::class, 'current_term_id'); }
+    public function scholarships() { return $this->hasMany(Scholarship::class); }
+    public function termPromotions() { return $this->hasMany(TermPromotion::class); }
+    public function feeDemands() { return $this->hasMany(FeeDemand::class); }
+
+    public function calculateCGPA(): float
+    {
+        $avg = $this->examResults()->avg('marks_obtained');
+        return round($avg ?? 0, 2);
+    }
+
+    public function calculateAttendancePercentage(): float
+    {
+        $total = $this->attendances()->count();
+        if ($total === 0) return 0.0;
+        $present = $this->attendances()->where('status', 'present')->count();
+        return round(($present / $total) * 100, 2);
+    }
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Student, Teacher, Exam, ExamResult, Attendance, Batch, Term};
+use App\Models\{Program, Student, Teacher, Exam, ExamResult, Attendance, Batch, Term, ApprovalWorkflow, Applicant, OfferLetter};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -89,8 +89,8 @@ class DeanController extends Controller
         $topPerformers = Student::with(['user', 'program'])
             ->where('status', 'active')
             ->withCount('examResults')
-            ->having('exam_results_count', '>', 0)
             ->get()
+            ->filter(fn($s) => $s->exam_results_count > 0)
             ->map(function ($s) {
                 $s->avg_marks = $s->examResults()->avg('marks_obtained') ?? 0;
                 return $s;
@@ -137,5 +137,89 @@ class DeanController extends Controller
         });
 
         return view('departmental.dean.attendance', compact('programs'));
+    }
+
+    public function approvals(Request $request)
+    {
+        $query = ApprovalWorkflow::where('approver_role', 'dean_academics')
+            ->where('status', 'pending')
+            ->with(['approvable', 'approver'])
+            ->latest();
+
+        if ($request->filled('program_id')) {
+            $query->whereHasMorph('approvable', [Applicant::class], function ($q) use ($request) {
+                $q->where('program_id', $request->program_id);
+            });
+        }
+
+        $approvals = $query->paginate(20)->withQueryString();
+
+        $approvals->getCollection()->each(function ($approval) {
+            if ($approval->approvable instanceof Applicant) {
+                $approval->approvable->load(['user', 'program', 'batch']);
+            }
+        });
+
+        $programs = Program::where('is_active', true)->get();
+        $approved_count = ApprovalWorkflow::where('approver_role', 'dean_academics')
+            ->where('status', 'approved')->count();
+
+        return view('departmental.dean.approvals.index', compact('approvals', 'programs', 'approved_count'));
+    }
+
+    public function approve(Request $request, ApprovalWorkflow $approval)
+    {
+        $request->validate([
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        $approval->update([
+            'status'      => 'approved',
+            'approver_id' => auth()->id(),
+            'remarks'     => $request->remarks,
+            'approved_at' => now(),
+        ]);
+
+        // If this is an Applicant, auto-generate OfferLetter
+        if ($approval->approvable_type === Applicant::class) {
+            $applicant = $approval->approvable;
+            if (!$applicant->offerLetter) {
+                OfferLetter::create([
+                    'applicant_id' => $applicant->id,
+                    'program_id'   => $applicant->program_id,
+                    'batch_id'     => $applicant->batch_id,
+                    'status'       => 'issued',
+                    'issued_at'    => now(),
+                    'issued_by'    => auth()->id(),
+                    'acceptance_deadline' => now()->addDays(14)->toDateString(),
+                ]);
+            }
+
+            // Create next approval chain for Program Chair
+            ApprovalWorkflow::create([
+                'approvable_type' => Applicant::class,
+                'approvable_id'   => $applicant->id,
+                'approver_role'   => 'program_chair',
+                'status'          => 'pending',
+            ]);
+        }
+
+        return back()->with('success', 'Approval granted and offer letter generated.');
+    }
+
+    public function reject(Request $request, ApprovalWorkflow $approval)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        $approval->update([
+            'status'      => 'rejected',
+            'approver_id' => auth()->id(),
+            'remarks'     => $request->rejection_reason,
+            'approved_at' => now(),
+        ]);
+
+        return back()->with('error', 'Approval rejected.');
     }
 }

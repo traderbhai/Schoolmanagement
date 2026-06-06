@@ -292,6 +292,191 @@
     </div>
 </div>
 
+{{-- Scholarship Awards --}}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-award me-2"></i>Scholarship Awards</h5>
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#awardScholarshipForm">
+                <i class="bi bi-plus-lg me-1"></i>Award Scholarship
+            </button>
+        </div>
+    </div>
+
+    {{-- Award form (collapsible) --}}
+    <div class="collapse" id="awardScholarshipForm">
+        <div class="card-body border-bottom bg-light">
+            <form action="{{ route('admission.applicants.scholarships.store', $applicant) }}" method="POST">
+                @csrf
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="scheme_id" class="form-label fw-semibold">Scholarship Scheme <span class="text-danger">*</span></label>
+                        <select name="scheme_id" id="scheme_id" class="form-select @error('scheme_id') is-invalid @enderror"
+                                onchange="prefillAmount(this)" required>
+                            <option value="">— Select Scheme —</option>
+                            @foreach(\App\Models\ScholarshipScheme::where('is_active', true)
+                                ->where(function($q) use ($applicant) {
+                                    $q->whereNull('program_id')->orWhere('program_id', $applicant->program_id);
+                                })->orderBy('name')->get() as $scheme)
+                                <option value="{{ $scheme->id }}"
+                                        data-max="{{ $scheme->max_amount }}"
+                                        data-seats="{{ $scheme->seatsRemaining() }}">
+                                    {{ $scheme->name }}
+                                    ({{ $scheme->type_label }})
+                                    — Max ₹{{ number_format($scheme->max_amount, 0) }}
+                                    @if($scheme->available_seats) — {{ $scheme->seatsRemaining() }} seats left @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('scheme_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-3">
+                        <label for="awarded_amount" class="form-label fw-semibold">Award Amount (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" name="awarded_amount" id="awarded_amount"
+                                   class="form-control @error('awarded_amount') is-invalid @enderror"
+                                   min="0" step="100" required>
+                        </div>
+                        @error('awarded_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label for="notes" class="form-label fw-semibold">Notes</label>
+                        <input type="text" name="notes" id="notes"
+                               class="form-control @error('notes') is-invalid @enderror"
+                               placeholder="Optional notes…">
+                        @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-award me-1"></i>Award Scholarship
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Existing awards list --}}
+    <div class="card-body">
+        @php $awardsList = $applicant->scholarships()->with('scheme', 'awardedBy')->latest()->get(); @endphp
+
+        @if($awardsList->isEmpty())
+            <p class="text-muted mb-0 small">No scholarships awarded yet.</p>
+        @else
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Scheme</th>
+                            <th class="text-end">Amount (₹)</th>
+                            <th>Status</th>
+                            <th>Awarded By</th>
+                            <th>Awarded On</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($awardsList as $award)
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ $award->scheme->name }}</div>
+                                <div class="small text-muted font-monospace">{{ $award->scheme->scheme_code }}</div>
+                            </td>
+                            <td class="text-end fw-bold text-success">₹{{ number_format($award->awarded_amount, 2) }}</td>
+                            <td><span class="{{ $award->status_badge }}">{{ ucfirst($award->status) }}</span></td>
+                            <td class="small">{{ $award->awardedBy->name ?? '—' }}</td>
+                            <td class="small text-muted">{{ $award->awarded_at?->format('d M Y') }}</td>
+                            <td>
+                                @if($award->status === 'awarded')
+                                <form action="{{ route('admission.scholarships.destroy', $award) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Cancel this scholarship award?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+</div>
+
+<!-- P5-5: Approval Timeline Card -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-check-circle me-2"></i>Approval Workflow</h5>
+    </div>
+    <div class="card-body">
+        @php
+            $approvals = $applicant->approvalWorkflows()->orderBy('created_at')->get();
+            $roles = ['hod' => 'HOD Approval', 'dean_academics' => 'Dean Clearance', 'program_chair' => 'Program Chair Sign-off'];
+        @endphp
+
+        @if($approvals->isEmpty())
+            <p class="text-muted mb-0">No approval workflow initiated yet.</p>
+        @else
+            <div class="timeline">
+                @foreach($approvals as $index => $approval)
+                    <div class="timeline-item mb-4 pb-4 @if(!$loop->last) border-bottom @endif">
+                        <div class="d-flex gap-3">
+                            <div class="timeline-marker">
+                                @if($approval->status === 'approved')
+                                    <span class="badge bg-success rounded-circle p-2">
+                                        <i class="bi bi-check-lg"></i>
+                                    </span>
+                                @elseif($approval->status === 'rejected')
+                                    <span class="badge bg-danger rounded-circle p-2">
+                                        <i class="bi bi-x-lg"></i>
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning rounded-circle p-2">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ $roles[$approval->approver_role] ?? ucfirst($approval->approver_role) }}</h6>
+                                <p class="text-muted small mb-2">
+                                    Status: <span class="{{ $approval->status_badge }}">{{ $approval->status_label }}</span>
+                                </p>
+                                @if($approval->approver)
+                                    <p class="text-muted small mb-2">
+                                        Approver: <strong>{{ $approval->approver->name }}</strong>
+                                    </p>
+                                @endif
+                                @if($approval->approved_at)
+                                    <p class="text-muted small mb-2">
+                                        {{ ucfirst($approval->status) }} on: <strong>{{ $approval->approved_at->format('d M Y, h:i A') }}</strong>
+                                    </p>
+                                @endif
+                                @if($approval->remarks)
+                                    <div class="alert alert-light small mb-0 mt-2">
+                                        <strong>Remarks:</strong> {{ $approval->remarks }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <style>
+                .timeline { list-style: none; padding: 0; }
+                .timeline-item { position: relative; }
+                .timeline-marker { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; }
+                .timeline-content { padding-top: 4px; }
+            </style>
+        @endif
+    </div>
+</div>
+
 @push('scripts')
 <script>
 // Wire up reject modal from show page

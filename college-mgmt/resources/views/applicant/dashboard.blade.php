@@ -58,6 +58,71 @@
         </div>
     </div>
 
+    {{-- Registration Fee CTA --}}
+    @if(!$applicant->hasRegistrationFeePaid() && in_array($applicant->status, ['draft', 'submitted']))
+    <div class="alert alert-warning d-flex align-items-start gap-3 mb-4">
+        <i class="bi bi-exclamation-triangle-fill fs-4 mt-1"></i>
+        <div>
+            <div class="fw-semibold">Registration Fee Required</div>
+            <div class="small mt-1">Your application cannot be submitted until the registration fee is paid.</div>
+            <a href="{{ route('admission.applicants.registration-fee.show', $applicant) }}" class="btn btn-warning btn-sm mt-2">
+                <i class="bi bi-credit-card me-1"></i> Pay Registration Fee
+            </a>
+        </div>
+    </div>
+    @endif
+
+    {{-- Submission Checklist --}}
+    @php
+        $totalRequired  = \App\Models\RequiredDocument::where('program_id', $applicant->program_id)->count();
+        $uploadedCount  = $applicant->documents->count();
+        $verifiedCount  = $applicant->documents->where('status', 'verified')->count();
+    @endphp
+    <div class="card mb-4">
+        <div class="card-header fw-semibold"><i class="bi bi-check2-all me-2"></i>Submission Checklist</div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                @php
+                    $formComplete = $completedSections >= 4;
+                    $feePaid = $applicant->hasRegistrationFeePaid();
+                    $docsUploaded = $uploadedCount >= $totalRequired && $totalRequired > 0;
+                    $submitted = !in_array($applicant->status, ['draft']);
+                @endphp
+                <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                    <i class="bi bi-{{ $feePaid ? 'check-circle-fill text-success' : 'circle text-warning' }} fs-5"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold small">Registration Fee</div>
+                        <div class="text-muted smaller">{{ $feePaid ? 'Paid on ' . $applicant->registration_fee_paid_at->format('d M Y') : 'Not yet paid' }}</div>
+                    </div>
+                    @if(!$feePaid)<a href="{{ route('admission.applicants.registration-fee.show', $applicant) }}" class="btn btn-xs btn-outline-warning btn-sm">Pay Now</a>@endif
+                </li>
+                <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                    <i class="bi bi-{{ $formComplete ? 'check-circle-fill text-success' : 'circle text-secondary' }} fs-5"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold small">Application Form</div>
+                        <div class="text-muted smaller">{{ $completedSections }}/4 sections completed</div>
+                    </div>
+                    @if(!$formComplete && $applicant->status === 'draft')<a href="{{ route('applicant.application.show') }}" class="btn btn-xs btn-outline-primary btn-sm">Complete</a>@endif
+                </li>
+                <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                    <i class="bi bi-{{ $docsUploaded ? 'check-circle-fill text-success' : ($totalRequired > 0 ? 'circle text-secondary' : 'dash-circle text-muted') }} fs-5"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold small">Documents</div>
+                        <div class="text-muted smaller">{{ $uploadedCount }}/{{ $totalRequired }} uploaded @if($verifiedCount > 0)({{ $verifiedCount }} verified)@endif</div>
+                    </div>
+                    @if(!$docsUploaded && $applicant->status === 'draft')<a href="{{ route('applicant.documents.index') }}" class="btn btn-xs btn-outline-primary btn-sm">Upload</a>@endif
+                </li>
+                <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                    <i class="bi bi-{{ $submitted ? 'check-circle-fill text-success' : 'circle text-secondary' }} fs-5"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold small">Application Submitted</div>
+                        <div class="text-muted smaller">{{ $submitted ? 'Submitted — status: ' . ucfirst(str_replace('_',' ',$applicant->status)) : 'Not yet submitted' }}</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
     {{-- What's Next --}}
     <div class="row g-4">
         <div class="col-md-8">

@@ -15,7 +15,12 @@ use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StatusTrackerController;
 use Illuminate\Support\Facades\Route;
+
+// ── Public Application Status Tracker ─────────────────────────────────────
+Route::get('/track', [StatusTrackerController::class, 'index'])->name('public.status-tracker.index');
+Route::post('/track', [StatusTrackerController::class, 'track'])->name('public.status-tracker.track');
 
 // ── Public Application Routes ──────────────────────────────────────────────
 Route::get('/apply', [ApplyController::class, 'index'])->name('apply');
@@ -44,13 +49,16 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
 
-    // B4: Notifications
-    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
-    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
-    Route::post('notifications/{notification}/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
+});
+
+// ── Notifications (all authenticated users) ────────────────────────────────
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+    Route::get('/{notification}', [NotificationController::class, 'show'])->name('show');
+    Route::post('/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('mark-read');
+    Route::post('/{notification}/delete', [NotificationController::class, 'delete'])->name('delete');
 });
 
 Route::get('/', function () {
@@ -209,7 +217,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 });
 
 // ── Academic routes ─────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|admin'])->prefix('academic')->name('academic.')->group(function () {
+Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|accounts_officer|admin'])->prefix('academic')->name('academic.')->group(function () {
     // B2: Term Promotions
     Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
     Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
@@ -253,12 +261,20 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     // Leads/Enquiries (static routes before {lead} parameterized)
     Route::get('leads', [Admission\LeadController::class, 'index'])->name('leads.index');
     Route::post('leads', [Admission\LeadController::class, 'store'])->name('leads.store');
+    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
+    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+    Route::get('leads/import', [Admission\LeadImportController::class, 'showImportForm'])->name('leads.import');
+    Route::post('leads/import', [Admission\LeadImportController::class, 'import'])->name('leads.import.post');
+    Route::get('leads/export-csv', [Admission\LeadController::class, 'exportCsv'])->name('leads.export-csv');
+    Route::get('leads/follow-ups/calendar', [Admission\LeadFollowUpController::class, 'calendar'])->name('leads.follow-ups.calendar');
+    Route::patch('leads/follow-ups/{followUp}/complete', [Admission\LeadFollowUpController::class, 'complete'])->name('leads.follow-ups.complete');
     Route::get('leads/{lead}', [Admission\LeadController::class, 'show'])->name('leads.show');
     Route::post('leads/{lead}/contact', [Admission\LeadController::class, 'contactLead'])->name('leads.contact');
     Route::post('leads/{lead}/interested', [Admission\LeadController::class, 'markInterested'])->name('leads.interested');
     Route::post('leads/{lead}/not-interested', [Admission\LeadController::class, 'markNotInterested'])->name('leads.not-interested');
-    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
-    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+    Route::post('leads/{lead}/convert', [Admission\LeadController::class, 'convert'])->name('leads.convert');
+    Route::post('leads/{lead}/assign', [Admission\LeadFollowUpController::class, 'assign'])->name('leads.assign');
+    Route::post('leads/{lead}/follow-ups', [Admission\LeadFollowUpController::class, 'store'])->name('leads.follow-ups.store');
 
     // Document Verification Queue (static routes BEFORE {document} parameterized)
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
@@ -317,6 +333,96 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('enrollment/confirmation/{confirmation}/letter', [Admission\EnrollmentController::class, 'printLetter'])->name('enrollment.letter');
     Route::get('enrollment/{applicant}/create', [Admission\EnrollmentController::class, 'create'])->name('enrollment.create');
     Route::post('enrollment/{applicant}', [Admission\EnrollmentController::class, 'store'])->name('enrollment.store');
+
+    // Fee Installments (static routes before parameterized)
+    Route::get('fee-installments/{program}', [Admission\FeeInstallmentController::class, 'index'])->name('fee-installments.index');
+    Route::get('fee-installments/{program}/create', [Admission\FeeInstallmentController::class, 'create'])->name('fee-installments.create');
+    Route::post('fee-installments/{program}', [Admission\FeeInstallmentController::class, 'store'])->name('fee-installments.store');
+    Route::get('fee-installments/{program}/duplicate', [Admission\FeeInstallmentController::class, 'duplicateForm'])->name('fee-installments.duplicate-form');
+    Route::post('fee-installments/{program}/duplicate', [Admission\FeeInstallmentController::class, 'duplicate'])->name('fee-installments.duplicate');
+    Route::get('fee-installments/edit/{feeInstallment}', [Admission\FeeInstallmentController::class, 'edit'])->name('fee-installments.edit');
+    Route::put('fee-installments/{feeInstallment}', [Admission\FeeInstallmentController::class, 'update'])->name('fee-installments.update');
+    Route::delete('fee-installments/{feeInstallment}', [Admission\FeeInstallmentController::class, 'destroy'])->name('fee-installments.destroy');
+
+    // Selection Process Steps & Scoring Parameters
+    Route::get('selection-process/{program}/steps', [Admission\SelectionProcessController::class, 'steps'])->name('selection-process.steps');
+    Route::get('selection-process/{program}/steps/create', [Admission\SelectionProcessController::class, 'createStep'])->name('selection-process.steps.create');
+    Route::post('selection-process/{program}/steps', [Admission\SelectionProcessController::class, 'storeStep'])->name('selection-process.steps.store');
+    Route::get('selection-process/steps/{step}/edit', [Admission\SelectionProcessController::class, 'editStep'])->name('selection-process.steps.edit');
+    Route::put('selection-process/steps/{step}', [Admission\SelectionProcessController::class, 'updateStep'])->name('selection-process.steps.update');
+    Route::delete('selection-process/steps/{step}', [Admission\SelectionProcessController::class, 'destroyStep'])->name('selection-process.steps.destroy');
+    Route::get('selection-process/steps/{step}/parameters', [Admission\SelectionProcessController::class, 'parameters'])->name('selection-process.parameters');
+    Route::get('selection-process/steps/{step}/parameters/create', [Admission\SelectionProcessController::class, 'createParameter'])->name('selection-process.parameters.create');
+    Route::post('selection-process/steps/{step}/parameters', [Admission\SelectionProcessController::class, 'storeParameter'])->name('selection-process.parameters.store');
+    Route::get('selection-process/parameters/{parameter}/edit', [Admission\SelectionProcessController::class, 'editParameter'])->name('selection-process.parameters.edit');
+    Route::put('selection-process/parameters/{parameter}', [Admission\SelectionProcessController::class, 'updateParameter'])->name('selection-process.parameters.update');
+    Route::delete('selection-process/parameters/{parameter}', [Admission\SelectionProcessController::class, 'destroyParameter'])->name('selection-process.parameters.destroy');
+
+    // Seat Matrix
+    Route::get('seat-matrices/{program}', [Admission\SeatMatrixController::class, 'index'])->name('seat-matrices.index');
+    Route::get('seat-matrices/{program}/create', [Admission\SeatMatrixController::class, 'create'])->name('seat-matrices.create');
+    Route::post('seat-matrices/{program}', [Admission\SeatMatrixController::class, 'store'])->name('seat-matrices.store');
+    Route::get('seat-matrices/{seatMatrix}/edit', [Admission\SeatMatrixController::class, 'edit'])->name('seat-matrices.edit');
+    Route::put('seat-matrices/{seatMatrix}', [Admission\SeatMatrixController::class, 'update'])->name('seat-matrices.update');
+
+    // P1-1 and P1-2 lead routes moved to static-before-parameterized section above
+
+    // P1-3: Applicant Category & Entrance Exam
+    Route::get('applicants/{applicant}/category', [Admission\ApplicantCategoryController::class, 'edit'])->name('applicants.category.edit');
+    Route::put('applicants/{applicant}/category', [Admission\ApplicantCategoryController::class, 'update'])->name('applicants.category.update');
+
+    // P1-4: Registration Fee Payment Gate
+    Route::get('applicants/{applicant}/registration-fee', [Admission\RegistrationFeeController::class, 'show'])->name('applicants.registration-fee.show');
+    Route::post('applicants/{applicant}/registration-fee', [Admission\RegistrationFeeController::class, 'store'])->name('applicants.registration-fee.store');
+
+    // P1-5: Call Letter PDF
+    Route::get('applicants/{applicant}/call-letter', [Admission\CallLetterController::class, 'generate'])->name('applicants.call-letter');
+
+    // P2-A: Fee Receipt PDF + Printable Application PDF
+    Route::get('payments/{payment}/receipt', [Admission\FeeReceiptController::class, 'receipt'])->name('payments.receipt');
+    Route::get('applicants/{applicant}/application-pdf', [Admission\ApplicationPdfController::class, 'generate'])->name('applicants.application-pdf');
+
+    // P3-1: Admission Reporting Dashboard
+    Route::get('reports', [Admission\ReportingController::class, 'index'])->name('reports.index');
+
+    // P3-2: Session Call Letter Dispatch
+    Route::post('sessions/{session}/dispatch-call-letters', [Admission\SelectionSessionController::class, 'dispatchCallLetters'])->name('sessions.dispatch-call-letters');
+
+    // P3-3: Waitlist Management
+    Route::get('waitlist/{program}', [Admission\WaitlistController::class, 'index'])->name('waitlist.index');
+    Route::post('waitlist/{entry}/promote', [Admission\WaitlistController::class, 'promote'])->name('waitlist.promote');
+
+    // P3-4: Bulk Communication
+    Route::get('bulk-communication', [Admission\BulkCommunicationController::class, 'index'])->name('bulk-communication.index');
+    Route::post('bulk-communication/send', [Admission\BulkCommunicationController::class, 'send'])->name('bulk-communication.send');
+
+    // P2-B: Refund Management
+    Route::get('refunds', [Admission\RefundController::class, 'index'])->name('refunds.index');
+    Route::get('refunds/{applicant}/create', [Admission\RefundController::class, 'create'])->name('refunds.create');
+    Route::post('refunds/{applicant}', [Admission\RefundController::class, 'store'])->name('refunds.store');
+    Route::get('refunds/{refund}/show', [Admission\RefundController::class, 'show'])->name('refunds.show');
+    Route::patch('refunds/{refund}/approve', [Admission\RefundController::class, 'approve'])->name('refunds.approve');
+    Route::patch('refunds/{refund}/reject', [Admission\RefundController::class, 'reject'])->name('refunds.reject');
+    Route::patch('refunds/{refund}/process', [Admission\RefundController::class, 'process'])->name('refunds.process');
+
+    // P4-3: CSV Exports (applicants static route moved here; leads/export-csv is also before {lead} wildcard in its section)
+    Route::get('applicants/export-csv', [Admission\ApplicantCrmController::class, 'exportCsv'])->name('applicants.export-csv');
+    Route::get('merit-list/{program}/export-csv', [Admission\MeritListController::class, 'exportCsv'])->name('merit-list.export-csv');
+
+    // P6: Scholarship Management
+    Route::get('scholarship-schemes', [Admission\ScholarshipSchemeController::class, 'index'])->name('scholarship-schemes.index');
+    Route::get('scholarship-schemes/create', [Admission\ScholarshipSchemeController::class, 'create'])->name('scholarship-schemes.create');
+    Route::post('scholarship-schemes', [Admission\ScholarshipSchemeController::class, 'store'])->name('scholarship-schemes.store');
+    Route::get('scholarship-schemes/{scholarshipScheme}/edit', [Admission\ScholarshipSchemeController::class, 'edit'])->name('scholarship-schemes.edit');
+    Route::put('scholarship-schemes/{scholarshipScheme}', [Admission\ScholarshipSchemeController::class, 'update'])->name('scholarship-schemes.update');
+    Route::post('scholarship-schemes/{scholarshipScheme}/toggle', [Admission\ScholarshipSchemeController::class, 'toggle'])->name('scholarship-schemes.toggle');
+    Route::post('applicants/{applicant}/scholarships', [Admission\ApplicantScholarshipController::class, 'store'])->name('applicants.scholarships.store');
+    Route::delete('scholarships/{scholarship}', [Admission\ApplicantScholarshipController::class, 'destroy'])->name('scholarships.destroy');
+    Route::post('scholarships/{scholarship}/disburse', [Admission\ApplicantScholarshipController::class, 'disburse'])->name('scholarships.disburse');
+    Route::get('scholarship-disbursements', [Admission\ApplicantScholarshipController::class, 'disbursementQueue'])->name('scholarship-disbursements.index');
+
+    // P8-3: Analytics PDF Export
+    Route::get('reports/export-pdf', [Admission\ReportingController::class, 'exportPdf'])->name('reports.export-pdf');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
@@ -365,6 +471,13 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('placements/my-applications', [Student\PlacementController::class, 'myApplications'])->name('placements.applications');
     Route::get('placements', [Student\PlacementController::class, 'index'])->name('placements');
     Route::post('placements/{drive}/apply', [Student\PlacementController::class, 'apply'])->name('placements.apply');
+
+    // P9-2: Subject Registration
+    Route::get('subjects', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'index'])->name('subjects.index');
+    Route::post('subjects', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'store'])->name('subjects.store');
+    Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
+    // P9-3: Timetable
+    Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
@@ -384,6 +497,10 @@ Route::middleware(['auth', 'role:dean_academics|admin'])->prefix('dean')->name('
     Route::get('students',   [Departmental\DeanController::class, 'students'])->name('students');
     Route::get('academics',  [Departmental\DeanController::class, 'academics'])->name('academics');
     Route::get('attendance', [Departmental\DeanController::class, 'attendance'])->name('attendance');
+    // P5-5: Approval Workflow Routes for Dean
+    Route::get('approvals', [Departmental\DeanController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\DeanController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\DeanController::class, 'reject'])->name('reject');
 });
 
 // ── Program Chair / HOD ──────────────────────────────────────────────────────
@@ -393,6 +510,18 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('curriculum', [Departmental\ProgramChairController::class, 'curriculum'])->name('curriculum');
     Route::get('timetable',  [Departmental\ProgramChairController::class, 'timetable'])->name('timetable');
     Route::get('exams',      [Departmental\ProgramChairController::class, 'exams'])->name('exams');
+    // P5-5: Approval Workflow Routes for Program Chair
+    Route::get('approvals', [Departmental\ProgramChairController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\ProgramChairController::class, 'reject'])->name('reject');
+});
+
+// ── HOD (Head of Department) ─────────────────────────────────────────────────
+Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+    // P5-5: Approval Workflow Routes for HOD
+    Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\HodController::class, 'reject'])->name('reject');
 });
 
 // ── Exam Cell ────────────────────────────────────────────────────────────────
@@ -411,6 +540,11 @@ Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->
     Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');
     Route::get('admission-payments', [Departmental\AccountsController::class, 'admissionPayments'])->name('admission-payments');
     Route::get('reports',            [Departmental\AccountsController::class, 'reports'])->name('reports');
+    Route::get('reconciliation', [Departmental\AccountsController::class, 'reconciliation'])->name('reconciliation');
+    Route::get('export-fee-collections', [Departmental\AccountsController::class, 'exportFeeCollections'])->name('export-fee-collections');
+    Route::get('export-admission-payments', [Departmental\AccountsController::class, 'exportAdmissionPayments'])->name('export-admission-payments');
+    Route::get('export-outstanding', [Departmental\AccountsController::class, 'exportOutstanding'])->name('export-outstanding');
+    Route::get('fee-demands/{feeDemand}/demand-letter', [Departmental\AccountsController::class, 'demandLetter'])->name('fee-demands.demand-letter');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

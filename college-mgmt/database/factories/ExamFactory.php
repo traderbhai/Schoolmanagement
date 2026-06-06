@@ -19,6 +19,7 @@ class ExamFactory extends Factory
     {
         return [
             'term_id'        => \App\Models\Term::factory(),
+            'semester_id'    => \App\Models\Semester::factory(),
             'program_id'     => \App\Models\Program::factory(),
             'subject_id'     => \App\Models\Subject::factory(),
             'name'           => $this->faker->word . ' Exam',
