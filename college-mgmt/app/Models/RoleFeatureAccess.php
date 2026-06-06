@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Permission\Models\Role;
 
 class RoleFeatureAccess extends Model
 {
@@ -15,7 +16,6 @@ class RoleFeatureAccess extends Model
         'access_level',
     ];
 
-    // Access levels: view, create, edit, approve, delete
     public const ACCESS_LEVELS = ['view', 'create', 'edit', 'approve', 'delete'];
 
     public function role(): BelongsTo

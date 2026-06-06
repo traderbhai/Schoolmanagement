@@ -3,66 +3,54 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
+use Spatie\Permission\Models\Role;
 use App\Models\RoleFeatureAccess;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class RoleFeatureAccessController extends Controller
 {
-    // Define all features used in the system
-    private const FEATURES = [
-        'exam' => [
-            'exam.enter_marks' => 'Enter exam marks',
-            'exam.publish_results' => 'Publish exam results',
-            'exam.create_admit_card' => 'Create admit cards',
-        ],
-        'admission' => [
-            'admission.approve_offers' => 'Approve offer letters',
-            'admission.verify_documents' => 'Verify applicant documents',
-            'admission.manage_leads' => 'Manage leads and enquiries',
-        ],
-        'approval' => [
-            'approval.dean_sign_off' => 'Dean approval sign-off',
-            'approval.chair_sign_off' => 'Program chair approval',
-            'approval.hod_approve_leave' => 'HOD approve leave requests',
-        ],
-        'program' => [
-            'program.edit_curriculum' => 'Edit program curriculum',
-            'program.manage_subjects' => 'Manage subjects',
-            'program.view_analytics' => 'View program analytics',
-        ],
-        'faculty' => [
-            'faculty.mark_attendance' => 'Mark student attendance',
-            'faculty.manage_assignments' => 'Manage assignments',
-            'faculty.view_own_courses' => 'View own courses',
-        ],
-        'placement' => [
-            'placement.create_drive' => 'Create placement drives',
-            'placement.manage_internships' => 'Manage internships',
-            'placement.view_placements' => 'View placement statistics',
-        ],
-        'finance' => [
-            'finance.create_fee_demand' => 'Create fee demands',
-            'finance.verify_payments' => 'Verify fee payments',
-            'finance.reconcile_accounts' => 'Reconcile accounts',
-        ],
-    ];
+    public static function getFeatures(): array
+    {
+        return [
+            ['code' => 'exam.enter_marks',       'label' => 'Enter exam marks',         'category' => 'Exam'],
+            ['code' => 'exam.publish_results',    'label' => 'Publish exam results',     'category' => 'Exam'],
+            ['code' => 'exam.create_admit_card',  'label' => 'Create admit cards',       'category' => 'Exam'],
+            ['code' => 'admission.approve_offers',    'label' => 'Approve offer letters',     'category' => 'Admission'],
+            ['code' => 'admission.verify_documents',  'label' => 'Verify applicant documents','category' => 'Admission'],
+            ['code' => 'admission.manage_leads',      'label' => 'Manage leads & enquiries',  'category' => 'Admission'],
+            ['code' => 'approval.dean_sign_off',      'label' => 'Dean approval sign-off',    'category' => 'Approvals'],
+            ['code' => 'approval.chair_sign_off',     'label' => 'Program chair approval',    'category' => 'Approvals'],
+            ['code' => 'approval.hod_approve_leave',  'label' => 'HOD approve leave',         'category' => 'Approvals'],
+            ['code' => 'program.edit_curriculum',     'label' => 'Edit program curriculum',   'category' => 'Program'],
+            ['code' => 'program.manage_subjects',     'label' => 'Manage subjects',            'category' => 'Program'],
+            ['code' => 'program.view_analytics',      'label' => 'View program analytics',    'category' => 'Program'],
+            ['code' => 'faculty.mark_attendance',     'label' => 'Mark student attendance',   'category' => 'Faculty'],
+            ['code' => 'faculty.manage_assignments',  'label' => 'Manage assignments',         'category' => 'Faculty'],
+            ['code' => 'faculty.view_own_courses',    'label' => 'View own courses',           'category' => 'Faculty'],
+            ['code' => 'placement.create_drive',      'label' => 'Create placement drives',   'category' => 'Placement'],
+            ['code' => 'placement.manage_internships','label' => 'Manage internships',         'category' => 'Placement'],
+            ['code' => 'placement.view_placements',   'label' => 'View placement statistics', 'category' => 'Placement'],
+            ['code' => 'finance.create_fee_demand',   'label' => 'Create fee demands',         'category' => 'Finance'],
+            ['code' => 'finance.verify_payments',     'label' => 'Verify fee payments',        'category' => 'Finance'],
+            ['code' => 'finance.reconcile_accounts',  'label' => 'Reconcile accounts',         'category' => 'Finance'],
+        ];
+    }
 
     public function index()
     {
         $roles = Role::orderBy('name')->get();
-        $features = self::FEATURES;
+        $features = self::getFeatures();
 
+        // Build access matrix: [role_id][feature_code] => access_level
         $accessMatrix = [];
+        $allAccess = RoleFeatureAccess::whereIn('role_id', $roles->pluck('id'))->get();
+
         foreach ($roles as $role) {
             $accessMatrix[$role->id] = [];
-            foreach (array_keys(collect($features)->flatten(1)) as $featureCode) {
-                $access = RoleFeatureAccess::where('role_id', $role->id)
-                    ->where('feature_code', $featureCode)
-                    ->first();
-                $accessMatrix[$role->id][$featureCode] = $access?->access_level ?? 'none';
-            }
+        }
+        foreach ($allAccess as $record) {
+            $accessMatrix[$record->role_id][$record->feature_code] = $record->access_level;
         }
 
         return view('admin.roles.feature-access.index', compact('roles', 'features', 'accessMatrix'));
@@ -70,31 +58,30 @@ class RoleFeatureAccessController extends Controller
 
     public function edit(Role $role)
     {
-        $features = self::FEATURES;
-        $roleAccess = RoleFeatureAccess::where('role_id', $role->id)
+        $features = self::getFeatures();
+        $currentAccess = RoleFeatureAccess::where('role_id', $role->id)
             ->get()
-            ->keyBy('feature_code');
+            ->pluck('access_level', 'feature_code')
+            ->toArray();
 
-        return view('admin.roles.feature-access.edit', compact('role', 'features', 'roleAccess'));
+        return view('admin.roles.feature-access.edit', compact('role', 'features', 'currentAccess'));
     }
 
     public function update(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'access_matrix' => 'array',
-            'access_matrix.*' => 'in:none,view,create,edit,approve,delete',
+            'access'   => 'array',
+            'access.*' => 'in:,view,create,edit,approve,delete',
         ]);
 
-        $matrix = $validated['access_matrix'] ?? [];
+        $matrix = $validated['access'] ?? [];
 
-        // Remove all existing access for this role
         RoleFeatureAccess::where('role_id', $role->id)->delete();
 
-        // Add new access
         foreach ($matrix as $featureCode => $accessLevel) {
-            if ($accessLevel !== 'none') {
+            if ($accessLevel !== '') {
                 RoleFeatureAccess::create([
-                    'role_id' => $role->id,
+                    'role_id'      => $role->id,
                     'feature_code' => $featureCode,
                     'access_level' => $accessLevel,
                 ]);
@@ -102,16 +89,11 @@ class RoleFeatureAccessController extends Controller
         }
 
         AuditLog::logPermissionChanged(auth()->user(), $role, [
-            'feature_access_updated' => true,
-            'features_count' => count(array_filter($matrix, fn($v) => $v !== 'none')),
+            'summary'         => 'Feature access updated',
+            'features_active' => count(array_filter($matrix, fn($v) => $v !== '')),
         ]);
 
-        return redirect('admin/roles/feature-access')
+        return redirect()->route('admin.roles.feature-access.index')
             ->with('success', 'Feature access updated for ' . $role->name);
-    }
-
-    public static function getFeatures()
-    {
-        return self::FEATURES;
     }
 }
