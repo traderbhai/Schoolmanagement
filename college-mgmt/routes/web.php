@@ -352,6 +352,27 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('seat-matrices/{program}', [Admission\SeatMatrixController::class, 'store'])->name('seat-matrices.store');
     Route::get('seat-matrices/{seatMatrix}/edit', [Admission\SeatMatrixController::class, 'edit'])->name('seat-matrices.edit');
     Route::put('seat-matrices/{seatMatrix}', [Admission\SeatMatrixController::class, 'update'])->name('seat-matrices.update');
+
+    // P1-1: Lead Bulk Import
+    Route::get('leads/import', [Admission\LeadImportController::class, 'showImportForm'])->name('leads.import');
+    Route::post('leads/import', [Admission\LeadImportController::class, 'import'])->name('leads.import.post');
+
+    // P1-2: Lead Assignment & Follow-ups
+    Route::post('leads/{lead}/assign', [Admission\LeadFollowUpController::class, 'assign'])->name('leads.assign');
+    Route::get('leads/follow-ups/calendar', [Admission\LeadFollowUpController::class, 'calendar'])->name('leads.follow-ups.calendar');
+    Route::post('leads/{lead}/follow-ups', [Admission\LeadFollowUpController::class, 'store'])->name('leads.follow-ups.store');
+    Route::patch('leads/follow-ups/{followUp}/complete', [Admission\LeadFollowUpController::class, 'complete'])->name('leads.follow-ups.complete');
+
+    // P1-3: Applicant Category & Entrance Exam
+    Route::get('applicants/{applicant}/category', [Admission\ApplicantCategoryController::class, 'edit'])->name('applicants.category.edit');
+    Route::put('applicants/{applicant}/category', [Admission\ApplicantCategoryController::class, 'update'])->name('applicants.category.update');
+
+    // P1-4: Registration Fee Payment Gate
+    Route::get('applicants/{applicant}/registration-fee', [Admission\RegistrationFeeController::class, 'show'])->name('applicants.registration-fee.show');
+    Route::post('applicants/{applicant}/registration-fee', [Admission\RegistrationFeeController::class, 'store'])->name('applicants.registration-fee.store');
+
+    // P1-5: Call Letter PDF
+    Route::get('applicants/{applicant}/call-letter', [Admission\CallLetterController::class, 'generate'])->name('applicants.call-letter');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

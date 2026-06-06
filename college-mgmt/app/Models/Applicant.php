@@ -14,15 +14,25 @@ class Applicant extends Model
         'user_id', 'program_id', 'batch_id', 'application_number', 'status',
         'personal_data', 'academic_data', 'family_data', 'additional_data',
         'applied_at', 'reviewed_at', 'reviewed_by', 'notes',
+        'category', 'sub_category', 'is_pwd', 'pwd_certificate_number',
+        'entrance_exam_name', 'entrance_exam_roll_number', 'entrance_exam_score',
+        'entrance_exam_rank', 'entrance_exam_date',
+        'registration_fee_amount', 'registration_fee_paid_at', 'registration_fee_receipt',
     ];
 
     protected $casts = [
-        'personal_data'   => 'array',
-        'academic_data'   => 'array',
-        'family_data'     => 'array',
-        'additional_data' => 'array',
-        'applied_at'      => 'datetime',
-        'reviewed_at'     => 'datetime',
+        'personal_data'            => 'array',
+        'academic_data'            => 'array',
+        'family_data'              => 'array',
+        'additional_data'          => 'array',
+        'applied_at'               => 'datetime',
+        'reviewed_at'              => 'datetime',
+        'is_pwd'                   => 'boolean',
+        'entrance_exam_score'      => 'float',
+        'entrance_exam_rank'       => 'integer',
+        'entrance_exam_date'       => 'date',
+        'registration_fee_paid_at' => 'datetime',
+        'registration_fee_amount'  => 'float',
     ];
 
     protected static function boot()
@@ -64,6 +74,26 @@ class Applicant extends Model
     public function getTotalPaidAttribute(): float
     {
         return (float) $this->payments()->where('status', 'verified')->sum('amount_paid');
+    }
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return match($this->category) {
+            'general' => 'General',
+            'obc'     => 'OBC',
+            'obc_ncl' => 'OBC (Non-Creamy Layer)',
+            'sc'      => 'SC',
+            'st'      => 'ST',
+            'ews'     => 'EWS',
+            'pwd'     => 'PwD',
+            'nri'     => 'NRI',
+            default   => 'Not specified',
+        };
+    }
+
+    public function hasRegistrationFeePaid(): bool
+    {
+        return $this->registration_fee_paid_at !== null;
     }
 
     public function getOutstandingAmountAttribute(): float

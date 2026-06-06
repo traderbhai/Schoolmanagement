@@ -12,15 +12,19 @@ class Lead extends Model
     protected $fillable = [
         'name', 'email', 'phone', 'program_id', 'source', 'status',
         'notes', 'last_contacted_at', 'converted_applicant_id', 'converted_at',
+        'assigned_to', 'assigned_at',
     ];
 
     protected $casts = [
         'last_contacted_at' => 'datetime',
         'converted_at'      => 'datetime',
+        'assigned_at'       => 'datetime',
     ];
 
     public function program()              { return $this->belongsTo(Program::class); }
     public function convertedApplicant()  { return $this->belongsTo(Applicant::class, 'converted_applicant_id'); }
+    public function assignedTo()          { return $this->belongsTo(\App\Models\User::class, 'assigned_to'); }
+    public function followUps()           { return $this->hasMany(\App\Models\LeadFollowUp::class); }
 
     public function isConverted(): bool   { return $this->status === 'converted'; }
     public function isContacted(): bool   { return in_array($this->status, ['contacted', 'interested', 'converted']); }

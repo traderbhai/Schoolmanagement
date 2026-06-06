@@ -121,6 +121,78 @@
                 </div>
             </div>
             @endif
+
+            {{-- Assignment Card --}}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <strong>Assigned Counsellor</strong>
+                </div>
+                <div class="card-body">
+                    @if($lead->assignedTo)
+                        <p class="mb-2"><i class="bi bi-person-circle me-2"></i><strong>{{ $lead->assignedTo->name }}</strong></p>
+                        <p class="text-muted small mb-3">Assigned {{ $lead->assigned_at?->diffForHumans() ?? '' }}</p>
+                    @else
+                        <p class="text-muted mb-3">Not assigned to any counsellor yet.</p>
+                    @endif
+                    @if(!$lead->isConverted())
+                    <form action="{{ route('admission.leads.assign', $lead) }}" method="POST" class="d-flex gap-2">
+                        @csrf
+                        <select name="assigned_to" class="form-select form-select-sm" style="width:auto" required>
+                            <option value="">Select Counsellor…</option>
+                            @foreach(\App\Models\User::role('admission_officer')->orderBy('name')->get() as $u)
+                                <option value="{{ $u->id }}" {{ $lead->assigned_to == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Assign</button>
+                    </form>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Follow-ups Card --}}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <strong>Follow-ups</strong>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleFollowUpModal">
+                        <i class="bi bi-plus"></i> Schedule
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if($lead->followUps->isEmpty())
+                        <p class="text-muted p-3 mb-0">No follow-ups scheduled yet.</p>
+                    @else
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light"><tr>
+                            <th>Date/Time</th><th>Type</th><th>Notes</th><th>Status</th><th></th>
+                        </tr></thead>
+                        <tbody>
+                        @foreach($lead->followUps->sortBy('scheduled_at') as $fu)
+                            <tr class="{{ $fu->isCompleted() ? 'text-muted' : '' }}">
+                                <td class="{{ $fu->isCompleted() ? 'text-decoration-line-through' : '' }}">{{ $fu->scheduled_at->format('d M Y H:i') }}</td>
+                                <td><span class="{{ $fu->type_badge }}">{{ $fu->type_label }}</span></td>
+                                <td>{{ Str::limit($fu->notes, 50) }}</td>
+                                <td>
+                                    @if($fu->isCompleted())
+                                        <span class="badge bg-success">Done</span>
+                                    @else
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!$fu->isCompleted())
+                                    <form action="{{ route('admission.leads.follow-ups.complete', $fu) }}" method="POST">
+                                        @csrf @method('PATCH')
+                                        <button class="btn btn-link btn-sm p-0 text-success">&#10003; Done</button>
+                                    </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 </div>
