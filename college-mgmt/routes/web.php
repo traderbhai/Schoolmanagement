@@ -373,6 +373,19 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
 
     // P1-5: Call Letter PDF
     Route::get('applicants/{applicant}/call-letter', [Admission\CallLetterController::class, 'generate'])->name('applicants.call-letter');
+
+    // P2-A: Fee Receipt PDF + Printable Application PDF
+    Route::get('payments/{payment}/receipt', [Admission\FeeReceiptController::class, 'receipt'])->name('payments.receipt');
+    Route::get('applicants/{applicant}/application-pdf', [Admission\ApplicationPdfController::class, 'generate'])->name('applicants.application-pdf');
+
+    // P2-B: Refund Management
+    Route::get('refunds', [Admission\RefundController::class, 'index'])->name('refunds.index');
+    Route::get('refunds/{applicant}/create', [Admission\RefundController::class, 'create'])->name('refunds.create');
+    Route::post('refunds/{applicant}', [Admission\RefundController::class, 'store'])->name('refunds.store');
+    Route::get('refunds/{refund}/show', [Admission\RefundController::class, 'show'])->name('refunds.show');
+    Route::patch('refunds/{refund}/approve', [Admission\RefundController::class, 'approve'])->name('refunds.approve');
+    Route::patch('refunds/{refund}/reject', [Admission\RefundController::class, 'reject'])->name('refunds.reject');
+    Route::patch('refunds/{refund}/process', [Admission\RefundController::class, 'process'])->name('refunds.process');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────
