@@ -119,8 +119,9 @@ class FeeDemandTest extends TestCase
         $feeDemand = FeeDemand::factory()->create([
             'total_amount' => 100000,
             'scholarship_deduction' => 20000,
+            'final_amount' => 80000,
         ]);
 
-        $this->assertEquals(80000, $feeDemand->final_amount);
+        $this->assertEquals('80000.00', $feeDemand->fresh()->final_amount);
     }
 }

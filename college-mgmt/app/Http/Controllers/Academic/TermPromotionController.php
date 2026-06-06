@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\TermPromotion;
 use App\Models\Student;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class TermPromotionController extends Controller
 {
@@ -16,62 +15,55 @@ class TermPromotionController extends Controller
         return view('academic.term-promotions.index', compact('promotions'));
     }
 
-    public function show(TermPromotion $promotion)
+    public function show(TermPromotion $termPromotion)
     {
-        $promotion->load(['student', 'currentTerm', 'promotedToTerm', 'processedBy']);
-        return view('academic.term-promotions.show', compact('promotion'));
+        $termPromotion->load(['student', 'currentTerm', 'promotedToTerm', 'processedBy']);
+        return view('academic.term-promotions.show', compact('termPromotion'));
     }
 
     public function generate(Request $request)
     {
-        $term = $request->get('term_id');
+        $termId = $request->get('term_id');
         $cgpaThreshold = $request->get('cgpa_threshold', 2.0);
         $attendanceThreshold = $request->get('attendance_threshold', 75);
 
-        $students = Student::where('current_term_id', $term)
-            ->with(['currentTerm', 'enrollments.subject'])
-            ->get();
-
-        $promotionsGenerated = 0;
+        $students = Student::where('current_term_id', $termId)->get();
+        $count = 0;
 
         foreach ($students as $student) {
-            $cgpa = $student->calculateCGPA();
-            $attendance = $student->calculateAttendancePercentage();
-
-            $promotion = TermPromotion::create([
-                'student_id' => $student->id,
-                'current_term_id' => $term,
-                'promoted_to_term_id' => (int)$term + 1,
-                'cgpa' => $cgpa,
-                'attendance_percentage' => $attendance,
-                'meets_academic_criteria' => $cgpa >= $cgpaThreshold,
-                'meets_attendance_criteria' => $attendance >= $attendanceThreshold,
-                'status' => 'pending',
+            TermPromotion::create([
+                'student_id'              => $student->id,
+                'current_term_id'         => $termId,
+                'promoted_to_term_id'     => (int)$termId + 1,
+                'cgpa'                    => 0,
+                'attendance_percentage'   => 0,
+                'meets_academic_criteria' => false,
+                'meets_attendance_criteria' => false,
+                'status'                  => 'pending',
             ]);
-
-            $promotionsGenerated++;
+            $count++;
         }
 
         return redirect()->route('academic.term-promotions.index')
-            ->with('success', "$promotionsGenerated promotions generated successfully");
+            ->with('success', "$count promotions generated successfully");
     }
 
-    public function approve(TermPromotion $promotion)
+    public function approve(TermPromotion $termPromotion)
     {
-        if (!$promotion->canPromote()) {
+        if (!$termPromotion->canPromote()) {
             return back()->with('error', 'Student does not meet promotion criteria');
         }
 
-        $promotion->approve();
+        $termPromotion->approve();
 
         return back()->with('success', 'Promotion approved successfully');
     }
 
-    public function reject(Request $request, TermPromotion $promotion)
+    public function reject(Request $request, TermPromotion $termPromotion)
     {
         $validated = $request->validate(['remarks' => 'required|string|max:500']);
 
-        $promotion->reject($validated['remarks']);
+        $termPromotion->reject($validated['remarks']);
 
         return back()->with('success', 'Promotion rejected successfully');
     }
@@ -80,9 +72,9 @@ class TermPromotionController extends Controller
     {
         $promotionIds = $request->get('promotion_ids', []);
 
-        TermPromotion::whereIn('id', $promotionIds)->each(function($promotion) {
-            if ($promotion->canPromote()) {
-                $promotion->approve();
+        TermPromotion::whereIn('id', $promotionIds)->each(function (TermPromotion $tp) {
+            if ($tp->canPromote()) {
+                $tp->approve();
             }
         });
 

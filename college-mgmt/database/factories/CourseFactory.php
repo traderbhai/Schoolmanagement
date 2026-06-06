@@ -15,7 +15,7 @@ class CourseFactory extends Factory
         return [
             'department_id' => Department::factory(),
             'name' => $this->faker->words(3, true),
-            'code' => 'CRS' . strtoupper($this->faker->unique()->lexify('###')),
+            'code' => 'CRS' . strtoupper(substr(md5(uniqid()), 0, 6)),
             'description' => $this->faker->sentence,
             'duration_years' => $this->faker->numberBetween(1, 4),
             'total_semesters' => $this->faker->numberBetween(2, 8),

@@ -89,10 +89,11 @@ class ScholarshipTest extends TestCase
     public function test_active_scholarship_discount()
     {
         $scholarship = Scholarship::factory()->create([
-            'percentage' => 20,
-            'status' => 'active',
-            'valid_from' => now()->subDay(),
-            'valid_to' => now()->addDay(),
+            'percentage'   => 20,
+            'fixed_amount' => null,
+            'status'       => 'active',
+            'valid_from'   => now()->subDay(),
+            'valid_to'     => now()->addDay(),
         ]);
 
         $discount = $scholarship->getDiscountAmount(10000);

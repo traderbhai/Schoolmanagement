@@ -44,13 +44,16 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
 
-    // B4: Notifications
-    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
-    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-    Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-    Route::get('notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
-    Route::post('notifications/{notification}/delete', [NotificationController::class, 'delete'])->name('notifications.delete');
+});
+
+// ── Notifications (all authenticated users) ────────────────────────────────
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+    Route::get('/{notification}', [NotificationController::class, 'show'])->name('show');
+    Route::post('/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('mark-read');
+    Route::post('/{notification}/delete', [NotificationController::class, 'delete'])->name('delete');
 });
 
 Route::get('/', function () {
