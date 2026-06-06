@@ -159,7 +159,7 @@ class AccountsController extends Controller
         $payments = $query->latest('verified_at')->paginate(30)->withQueryString();
 
         // Summary stats
-        $summaryByProgram = AdmissionPayment::where('status', 'verified')
+        $summaryByProgram = AdmissionPayment::where('admission_payments.status', 'verified')
             ->join('applicants', 'admission_payments.applicant_id', '=', 'applicants.id')
             ->join('programs', 'applicants.program_id', '=', 'programs.id')
             ->select('programs.name as program_name', 'programs.id as program_id',

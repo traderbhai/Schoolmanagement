@@ -89,8 +89,8 @@ class DeanController extends Controller
         $topPerformers = Student::with(['user', 'program'])
             ->where('status', 'active')
             ->withCount('examResults')
-            ->having('exam_results_count', '>', 0)
             ->get()
+            ->filter(fn($s) => $s->exam_results_count > 0)
             ->map(function ($s) {
                 $s->avg_marks = $s->examResults()->avg('marks_obtained') ?? 0;
                 return $s;

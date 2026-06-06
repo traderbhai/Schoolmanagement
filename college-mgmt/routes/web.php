@@ -261,13 +261,20 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     // Leads/Enquiries (static routes before {lead} parameterized)
     Route::get('leads', [Admission\LeadController::class, 'index'])->name('leads.index');
     Route::post('leads', [Admission\LeadController::class, 'store'])->name('leads.store');
+    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
+    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+    Route::get('leads/import', [Admission\LeadImportController::class, 'showImportForm'])->name('leads.import');
+    Route::post('leads/import', [Admission\LeadImportController::class, 'import'])->name('leads.import.post');
+    Route::get('leads/export-csv', [Admission\LeadController::class, 'exportCsv'])->name('leads.export-csv');
+    Route::get('leads/follow-ups/calendar', [Admission\LeadFollowUpController::class, 'calendar'])->name('leads.follow-ups.calendar');
+    Route::patch('leads/follow-ups/{followUp}/complete', [Admission\LeadFollowUpController::class, 'complete'])->name('leads.follow-ups.complete');
     Route::get('leads/{lead}', [Admission\LeadController::class, 'show'])->name('leads.show');
     Route::post('leads/{lead}/contact', [Admission\LeadController::class, 'contactLead'])->name('leads.contact');
     Route::post('leads/{lead}/interested', [Admission\LeadController::class, 'markInterested'])->name('leads.interested');
     Route::post('leads/{lead}/not-interested', [Admission\LeadController::class, 'markNotInterested'])->name('leads.not-interested');
     Route::post('leads/{lead}/convert', [Admission\LeadController::class, 'convert'])->name('leads.convert');
-    Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
-    Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
+    Route::post('leads/{lead}/assign', [Admission\LeadFollowUpController::class, 'assign'])->name('leads.assign');
+    Route::post('leads/{lead}/follow-ups', [Admission\LeadFollowUpController::class, 'store'])->name('leads.follow-ups.store');
 
     // Document Verification Queue (static routes BEFORE {document} parameterized)
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])->name('documents.queue');
@@ -358,15 +365,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('seat-matrices/{seatMatrix}/edit', [Admission\SeatMatrixController::class, 'edit'])->name('seat-matrices.edit');
     Route::put('seat-matrices/{seatMatrix}', [Admission\SeatMatrixController::class, 'update'])->name('seat-matrices.update');
 
-    // P1-1: Lead Bulk Import
-    Route::get('leads/import', [Admission\LeadImportController::class, 'showImportForm'])->name('leads.import');
-    Route::post('leads/import', [Admission\LeadImportController::class, 'import'])->name('leads.import.post');
-
-    // P1-2: Lead Assignment & Follow-ups
-    Route::post('leads/{lead}/assign', [Admission\LeadFollowUpController::class, 'assign'])->name('leads.assign');
-    Route::get('leads/follow-ups/calendar', [Admission\LeadFollowUpController::class, 'calendar'])->name('leads.follow-ups.calendar');
-    Route::post('leads/{lead}/follow-ups', [Admission\LeadFollowUpController::class, 'store'])->name('leads.follow-ups.store');
-    Route::patch('leads/follow-ups/{followUp}/complete', [Admission\LeadFollowUpController::class, 'complete'])->name('leads.follow-ups.complete');
+    // P1-1 and P1-2 lead routes moved to static-before-parameterized section above
 
     // P1-3: Applicant Category & Entrance Exam
     Route::get('applicants/{applicant}/category', [Admission\ApplicantCategoryController::class, 'edit'])->name('applicants.category.edit');
@@ -406,8 +405,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::patch('refunds/{refund}/reject', [Admission\RefundController::class, 'reject'])->name('refunds.reject');
     Route::patch('refunds/{refund}/process', [Admission\RefundController::class, 'process'])->name('refunds.process');
 
-    // P4-3: CSV Exports
-    Route::get('leads/export-csv', [Admission\LeadController::class, 'exportCsv'])->name('leads.export-csv');
+    // P4-3: CSV Exports (applicants static route moved here; leads/export-csv is also before {lead} wildcard in its section)
     Route::get('applicants/export-csv', [Admission\ApplicantCrmController::class, 'exportCsv'])->name('applicants.export-csv');
     Route::get('merit-list/{program}/export-csv', [Admission\MeritListController::class, 'exportCsv'])->name('merit-list.export-csv');
 

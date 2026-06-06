@@ -9,7 +9,7 @@
             <h4 class="fw-bold mb-0">{{ $program->name }}</h4>
             <span class="text-muted small">Selection Steps & Scoring Configuration</span>
         </div>
-        <a href="{{ route('admission.selection-process.create-step', $program) }}" class="btn btn-primary btn-sm">
+        <a href="{{ route('admission.selection-process.steps.create', $program) }}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Add Step
         </a>
     </div>
@@ -40,7 +40,7 @@
             <div class="card-body text-center text-muted py-5">
                 <i class="bi bi-diagram-3 fs-1 d-block mb-2"></i>
                 <p>No selection steps configured yet.</p>
-                <a href="{{ route('admission.selection-process.create-step', $program) }}" class="btn btn-primary btn-sm">Add First Step</a>
+                <a href="{{ route('admission.selection-process.steps.create', $program) }}" class="btn btn-primary btn-sm">Add First Step</a>
             </div>
         </div>
     @else
@@ -55,8 +55,8 @@
                                 <span class="badge bg-secondary-subtle text-secondary">{{ $step->type_label }}</span>
                             </div>
                             <div class="d-flex gap-1">
-                                <a href="{{ route('admission.selection-process.edit-step', $step) }}" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="bi bi-pencil"></i></a>
-                                <form action="{{ route('admission.selection-process.destroy-step', $step) }}" method="POST" onsubmit="return confirm('Delete this step?')">
+                                <a href="{{ route('admission.selection-process.steps.edit', $step) }}" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="bi bi-pencil"></i></a>
+                                <form action="{{ route('admission.selection-process.steps.destroy', $step) }}" method="POST" onsubmit="return confirm('Delete this step?')">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger py-0 px-1"><i class="bi bi-trash"></i></button>
                                 </form>
