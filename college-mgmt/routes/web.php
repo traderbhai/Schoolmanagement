@@ -514,6 +514,9 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
     // P9-3: Timetable
     Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
+
+    // Phase 5: Official Academic Transcript
+    Route::get('transcript/download', [Student\TranscriptController::class, 'download'])->name('transcript.download');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

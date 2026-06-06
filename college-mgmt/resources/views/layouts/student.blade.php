@@ -44,6 +44,11 @@
            href="{{ route('student.timetable') }}">
             <i class="bi bi-calendar3 me-2"></i>My Timetable
         </a>
+        <a href="{{ route('student.transcript.download') }}"
+           class="nav-link"
+           title="Download official cumulative transcript">
+            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -100,6 +105,8 @@
            href="{{ route('student.subjects.index') }}"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
         <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
            href="{{ route('student.timetable') }}"><i class="bi bi-calendar3 me-2"></i>My Timetable</a>
+        <a href="{{ route('student.transcript.download') }}" class="nav-link">
+            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
