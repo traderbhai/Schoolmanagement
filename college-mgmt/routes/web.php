@@ -218,6 +218,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     // Global Search
     Route::get('search', [Admin\SearchController::class, 'index'])->name('search');
 
+    // Phase 8: Institution Analytics
+    Route::get('analytics', [Admin\AnalyticsController::class, 'index'])->name('analytics');
+
+    // Phase 5: Student Grievances (admin side)
+    Route::get('grievances', [Admin\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Admin\GrievanceController::class, 'show'])->name('grievances.show');
+    Route::patch('grievances/{grievance}', [Admin\GrievanceController::class, 'update'])->name('grievances.update');
+
     // Activity Log
     Route::get('activity-log', [Admin\ActivityLogController::class, 'index'])->name('activity-log');
 
@@ -517,6 +525,16 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
 
     // Phase 5: Official Academic Transcript
     Route::get('transcript/download', [Student\TranscriptController::class, 'download'])->name('transcript.download');
+
+    // Phase 5: Exam Admit Cards (static before wildcard)
+    Route::get('admit-cards', [\App\Http\Controllers\Student\AdmitCardController::class, 'index'])->name('admit-cards.index');
+    Route::get('admit-cards/{exam}/download', [\App\Http\Controllers\Student\AdmitCardController::class, 'download'])->name('admit-cards.download');
+
+    // Phase 5: Student Grievances (student side)
+    Route::get('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/create', [\App\Http\Controllers\Student\GrievanceController::class, 'create'])->name('grievances.create');
+    Route::post('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'store'])->name('grievances.store');
+    Route::get('grievances/{grievance}', [\App\Http\Controllers\Student\GrievanceController::class, 'show'])->name('grievances.show');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

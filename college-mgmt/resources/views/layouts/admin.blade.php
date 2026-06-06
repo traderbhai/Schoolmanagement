@@ -289,6 +289,13 @@
             <i class="bi bi-journal-text"></i> Audit Log
         </a>
         @endhasrole
+        <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif">
+            <i class="bi bi-shield-exclamation"></i> Grievances
+            @php $openGrievances = \App\Models\StudentGrievance::whereIn('status',['open'])->count(); @endphp
+            @if($openGrievances > 0)
+            <span class="badge bg-warning text-dark ms-1">{{ $openGrievances }}</span>
+            @endif
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -338,6 +345,11 @@
 
         {{-- SETTINGS --}}
         <div class="section-label">System</div>
+        @hasrole('admin|dean_academics|director')
+        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
+            <i class="bi bi-graph-up-arrow"></i> Analytics
+        </a>
+        @endhasrole
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
             <i class="bi bi-gear"></i> Settings
         </a>
@@ -451,6 +463,10 @@
         @hasrole('admin')
         <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif"><i class="bi bi-journal-text"></i> Audit Log</a>
         @endhasrole
+        <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif"><i class="bi bi-shield-exclamation"></i> Grievances
+            @php $openGrievances = \App\Models\StudentGrievance::whereIn('status',['open'])->count(); @endphp
+            @if($openGrievances > 0)<span class="badge bg-warning text-dark ms-1">{{ $openGrievances }}</span>@endif
+        </a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Portals</div>
         @hasrole('hod|admin')<a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.*')) active @endif"><i class="bi bi-building-fill"></i> HOD</a>@endhasrole
@@ -458,6 +474,9 @@
         @hasrole('director|admin')<a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.*')) active @endif"><i class="bi bi-bank"></i> Director</a>@endhasrole
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
+        @hasrole('admin|dean_academics|director')
+        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
+        @endhasrole
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
     </div>
