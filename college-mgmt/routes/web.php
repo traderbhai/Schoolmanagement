@@ -539,6 +539,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+    Route::get('dashboard', [Departmental\HodController::class, 'dashboard'])->name('dashboard');
     // P5-5: Approval Workflow Routes for HOD
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
