@@ -266,6 +266,11 @@
             <i class="bi bi-mortarboard-fill"></i> Dean Academics
         </a>
         @endhasrole
+        @hasrole('hod|admin')
+        <a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.*')) active @endif">
+            <i class="bi bi-building"></i> HOD
+        </a>
+        @endhasrole
         @hasrole('program_chair|hod|dean_academics|admin')
         <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
             <i class="bi bi-diagram-3"></i> Program Chair

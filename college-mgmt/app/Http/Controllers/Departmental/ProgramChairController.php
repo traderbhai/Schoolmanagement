@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Student, Subject, Exam, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix};
+use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix};
 use App\Helpers\AccessControl;
 use Illuminate\Http\Request;
 
@@ -24,22 +24,63 @@ class ProgramChairController extends Controller
     public function dashboard()
     {
         $programIds = $this->getAssignedProgramIds();
-
         $programs = Program::whereIn('id', $programIds)->with(['batches'])->get();
-        $activeStudents = Student::whereIn('program_id', $programIds)->where('status', 'active')->count();
 
-        $subjectsThisTerm = Subject::whereIn('program_id', $programIds)->where('is_active', true)->count();
-        $examCount = Exam::whereIn('program_id', $programIds)->whereYear('exam_date', now()->year)->count();
+        $activeStudents = Student::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->where('status', 'active')->count();
 
-        // avg marks
-        $avgMarks = 0;
-        $results = \App\Models\ExamResult::whereHas('exam', fn($q) => $q->whereIn('program_id', $programIds))->get();
-        if ($results->count()) {
-            $avgMarks = round($results->avg('marks_obtained'), 1);
-        }
+        $currentTerm = Term::latest('start_date')->first();
+        $subjectsThisTerm = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->when($currentTerm, fn($q) => $q->where('term_id', $currentTerm->id))
+            ->count();
+
+        $examCount = Exam::whereYear('exam_date', now()->year)
+            ->when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->count();
+
+        // Average marks
+        $avgMarks = ExamResult::whereHas('exam', fn($q) => $q->whereIn('program_id', $programIds))->avg('marks_obtained');
+        $avgMarks = $avgMarks ? round($avgMarks, 1) : '—';
+
+        // Pending approvals
+        $pendingApprovals = ApprovalWorkflow::where('approver_role', 'program_chair')
+            ->where('status', 'pending')->count();
+
+        // Attendance % for these programs
+        $attTotal = Attendance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))->count();
+        $attPresent = Attendance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))->where('status', 'present')->count();
+        $attendancePct = $attTotal > 0 ? round(($attPresent / $attTotal) * 100, 1) : 0;
+
+        // Recent exams
+        $recentExams = Exam::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->with('subject')
+            ->latest('exam_date')
+            ->take(6)
+            ->get()
+            ->map(function($exam) {
+                $results = ExamResult::where('exam_id', $exam->id)->get();
+                $exam->result_count = $results->count();
+                $exam->pass_count = $results->where('marks_obtained', '>=', ($exam->passing_marks ?? 40))->count();
+                return $exam;
+            });
+
+        // Subjects with attendance < 75%
+        $lowAttSubjects = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->with('program')
+            ->take(20)->get()
+            ->map(function($subject) {
+                $total = Attendance::where('subject_id', $subject->id)->count();
+                $present = Attendance::where('subject_id', $subject->id)->where('status', 'present')->count();
+                $subject->attendance_pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
+                return $subject;
+            })
+            ->filter(fn($s) => $s->attendance_pct !== null && $s->attendance_pct < 75)
+            ->sortBy('attendance_pct')
+            ->take(5);
 
         return view('departmental.program-chair.dashboard', compact(
-            'programs', 'activeStudents', 'subjectsThisTerm', 'examCount', 'avgMarks'
+            'activeStudents', 'subjectsThisTerm', 'examCount', 'avgMarks',
+            'pendingApprovals', 'attendancePct', 'recentExams', 'lowAttSubjects', 'programs'
         ));
     }
 

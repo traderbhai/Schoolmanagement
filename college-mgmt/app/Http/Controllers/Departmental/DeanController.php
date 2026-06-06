@@ -16,23 +16,65 @@ class DeanController extends Controller
         $totalFaculty    = Teacher::where('status', 'active')->count();
         $totalExams      = Exam::whereYear('exam_date', now()->year)->count();
 
-        // Attendance % for current period
-        $totalAtt  = Attendance::count();
+        // Attendance %
+        $totalAtt   = Attendance::count();
         $presentAtt = Attendance::where('status', 'present')->count();
         $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0;
 
+        // Pending approvals for dean
+        $pendingApprovals = ApprovalWorkflow::where('approver_role', 'dean_academics')
+            ->where('status', 'pending')->count();
+
+        // At-risk students: attendance < 75% (last 30 days)
+        $atRiskStudents = Student::where('status', 'active')
+            ->with(['user', 'program'])
+            ->get()
+            ->map(function($student) {
+                $total = Attendance::where('student_id', $student->id)
+                    ->where('date', '>=', now()->subDays(30))->count();
+                $present = Attendance::where('student_id', $student->id)
+                    ->where('date', '>=', now()->subDays(30))
+                    ->where('status', 'present')->count();
+                $pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
+                $student->attendance_pct = $pct;
+                return $student;
+            })
+            ->filter(fn($s) => $s->attendance_pct !== null && $s->attendance_pct < 75)
+            ->sortBy('attendance_pct')
+            ->take(8);
+
+        // Program health: pass rate per program
         $programs = Program::where('is_active', true)
             ->withCount(['students' => fn($q) => $q->where('status', 'active'), 'batches'])
-            ->get();
+            ->get()
+            ->map(function($prog) {
+                $results = ExamResult::whereHas('exam', fn($q) => $q->where('program_id', $prog->id))->get();
+                $total = $results->count();
+                $passed = 0;
+                if ($total > 0) {
+                    $passed = $results->filter(function($r) {
+                        $exam = \App\Models\Exam::find($r->exam_id);
+                        return $exam && $r->marks_obtained >= ($exam->passing_marks ?? 40);
+                    })->count();
+                }
+                $prog->pass_rate = $total > 0 ? round(($passed / $total) * 100, 1) : null;
+                $prog->faculty_count = Teacher::where('department_id', $prog->department_id)->where('status', 'active')->count();
+                return $prog;
+            });
 
+        // Recent results
         $recentResults = ExamResult::with(['exam.program', 'student.user'])
-            ->latest()
-            ->take(10)
-            ->get();
+            ->latest()->take(8)->get();
+
+        // Recent approvals
+        $recentApprovals = ApprovalWorkflow::where('approver_role', 'dean_academics')
+            ->with('approvable')
+            ->latest()->take(5)->get();
 
         return view('departmental.dean.dashboard', compact(
             'totalPrograms', 'totalStudents', 'totalFaculty',
-            'totalExams', 'attendancePct', 'programs', 'recentResults'
+            'totalExams', 'attendancePct', 'programs', 'recentResults',
+            'pendingApprovals', 'atRiskStudents', 'recentApprovals'
         ));
     }
 
