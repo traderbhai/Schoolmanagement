@@ -143,20 +143,23 @@ class DeanController extends Controller
     {
         $query = ApprovalWorkflow::where('approver_role', 'dean_academics')
             ->where('status', 'pending')
-            ->with(['approvable' => function ($q) {
-                if (in_array($q->getModel()->getMorphClass(), [Applicant::class])) {
-                    $q->with(['user', 'program', 'batch']);
-                }
-            }, 'approver'])
+            ->with(['approvable', 'approver'])
             ->latest();
 
         if ($request->filled('program_id')) {
-            $query->whereHas('approvable', function ($q) use ($request) {
+            $query->whereHasMorph('approvable', [Applicant::class], function ($q) use ($request) {
                 $q->where('program_id', $request->program_id);
             });
         }
 
         $approvals = $query->paginate(20)->withQueryString();
+
+        $approvals->getCollection()->each(function ($approval) {
+            if ($approval->approvable instanceof Applicant) {
+                $approval->approvable->load(['user', 'program', 'batch']);
+            }
+        });
+
         $programs = Program::where('is_active', true)->get();
         $approved_count = ApprovalWorkflow::where('approver_role', 'dean_academics')
             ->where('status', 'approved')->count();
@@ -185,8 +188,10 @@ class DeanController extends Controller
                     'applicant_id' => $applicant->id,
                     'program_id'   => $applicant->program_id,
                     'batch_id'     => $applicant->batch_id,
-                    'status'       => 'generated',
-                    'generated_at' => now(),
+                    'status'       => 'issued',
+                    'issued_at'    => now(),
+                    'issued_by'    => auth()->id(),
+                    'acceptance_deadline' => now()->addDays(14)->toDateString(),
                 ]);
             }
 

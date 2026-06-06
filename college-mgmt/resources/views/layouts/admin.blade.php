@@ -155,6 +155,12 @@
         <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif">
             <i class="bi bi-bar-chart-line"></i> Admission Reports
         </a>
+        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif">
+            <i class="bi bi-megaphone"></i> Bulk Communication
+        </a>
+        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif">
+            <i class="bi bi-arrow-counterclockwise"></i> Refunds
+        </a>
 
         {{-- PROGRAM TOOLS --}}
         @if($firstProgram)
@@ -347,6 +353,8 @@
         <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif"><i class="bi bi-upload"></i> Import Leads</a>
         <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
         <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
+        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
+        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
         @if($firstProgram)
         <div class="sidebar-divider"></div>
         <div class="section-label">Program Tools</div>
