@@ -195,4 +195,52 @@ class LeadController extends Controller
             ->route('admission.applicants.show', $applicant)
             ->with('success', "Lead converted to applicant successfully. Application #{$applicant->application_number}");
     }
+
+    public function exportCsv(Request $request)
+    {
+        $query = Lead::with(['program', 'assignedTo', 'convertedApplicant']);
+
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+        if ($request->source) {
+            $query->where('source', $request->source);
+        }
+        if ($request->program_id) {
+            $query->where('program_id', $request->program_id);
+        }
+
+        $leads = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'leads-export-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($leads) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Name', 'Email', 'Phone', 'Program', 'Source', 'Status',
+                'Assigned To', 'Last Contacted', 'Notes', 'Created At', 'Converted At']);
+            foreach ($leads as $lead) {
+                fputcsv($handle, [
+                    $lead->name,
+                    $lead->email,
+                    $lead->phone ?? '',
+                    $lead->program->name ?? '',
+                    $lead->source_label ?? $lead->source,
+                    $lead->status,
+                    $lead->assignedTo->name ?? '',
+                    $lead->last_contacted_at?->format('Y-m-d H:i') ?? '',
+                    $lead->notes ?? '',
+                    $lead->created_at->format('Y-m-d H:i'),
+                    $lead->converted_at?->format('Y-m-d H:i') ?? '',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

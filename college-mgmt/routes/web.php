@@ -15,7 +15,12 @@ use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StatusTrackerController;
 use Illuminate\Support\Facades\Route;
+
+// ── Public Application Status Tracker ─────────────────────────────────────
+Route::get('/track', [StatusTrackerController::class, 'index'])->name('public.status-tracker.index');
+Route::post('/track', [StatusTrackerController::class, 'track'])->name('public.status-tracker.track');
 
 // ── Public Application Routes ──────────────────────────────────────────────
 Route::get('/apply', [ApplyController::class, 'index'])->name('apply');
@@ -400,6 +405,11 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::patch('refunds/{refund}/approve', [Admission\RefundController::class, 'approve'])->name('refunds.approve');
     Route::patch('refunds/{refund}/reject', [Admission\RefundController::class, 'reject'])->name('refunds.reject');
     Route::patch('refunds/{refund}/process', [Admission\RefundController::class, 'process'])->name('refunds.process');
+
+    // P4-3: CSV Exports
+    Route::get('leads/export-csv', [Admission\LeadController::class, 'exportCsv'])->name('leads.export-csv');
+    Route::get('applicants/export-csv', [Admission\ApplicantCrmController::class, 'exportCsv'])->name('applicants.export-csv');
+    Route::get('merit-list/{program}/export-csv', [Admission\MeritListController::class, 'exportCsv'])->name('merit-list.export-csv');
 });
 
 // ── Teacher routes ──────────────────────────────────────────────────────────

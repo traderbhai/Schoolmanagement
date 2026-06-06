@@ -58,7 +58,20 @@ class ApplicantCrmController extends Controller
         $batches = Batch::orderBy('name')->get();
         $statuses = ['draft', 'submitted', 'under_review', 'shortlisted', 'selected', 'rejected', 'withdrawn'];
 
-        return view('admission.applicants.index', compact('applicants', 'programs', 'batches', 'statuses'));
+        // Compute completeness scores for displayed applicants
+        $completenessMap = [];
+        foreach ($applicants as $applicant) {
+            $score = 0;
+            foreach (['personal_data', 'academic_data', 'family_data', 'additional_data'] as $field) {
+                if (!empty($applicant->$field)) $score += 15;
+            }
+            if ($applicant->registration_fee_paid_at) $score += 20;
+            if ($applicant->documents()->exists()) $score += 10;
+            if ($applicant->status !== 'draft') $score += 10;
+            $completenessMap[$applicant->id] = min(100, $score);
+        }
+
+        return view('admission.applicants.index', compact('applicants', 'programs', 'batches', 'statuses', 'completenessMap'));
     }
 
     public function show(Applicant $applicant)
@@ -179,5 +192,63 @@ class ApplicantCrmController extends Controller
         ]);
 
         return back()->with('success', 'Note added.');
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $query = Applicant::with(['user', 'program', 'batch']);
+
+        if ($request->program_id) {
+            $query->where('program_id', $request->program_id);
+        }
+        if ($request->batch_id) {
+            $query->where('batch_id', $request->batch_id);
+        }
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+        if ($request->date_from) {
+            $query->whereDate('applied_at', '>=', $request->date_from);
+        }
+        if ($request->date_to) {
+            $query->whereDate('applied_at', '<=', $request->date_to);
+        }
+
+        $applicants = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'applicants-export-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($applicants) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Application No', 'Name', 'Email', 'Phone', 'Program', 'Batch',
+                'Status', 'Category', 'Entrance Exam', 'Score', 'Rank',
+                'Registration Fee Paid', 'Applied At', 'Created At']);
+            foreach ($applicants as $applicant) {
+                fputcsv($handle, [
+                    $applicant->application_number,
+                    $applicant->user->name ?? '',
+                    $applicant->user->email ?? '',
+                    $applicant->user->phone ?? '',
+                    $applicant->program->name ?? '',
+                    $applicant->batch->name ?? '',
+                    $applicant->status,
+                    $applicant->category_label ?? $applicant->category ?? '',
+                    $applicant->entrance_exam_name ?? '',
+                    $applicant->entrance_exam_score ?? '',
+                    $applicant->entrance_exam_rank ?? '',
+                    $applicant->registration_fee_paid_at ? 'Yes' : 'No',
+                    $applicant->applied_at?->format('Y-m-d H:i') ?? '',
+                    $applicant->created_at->format('Y-m-d H:i'),
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

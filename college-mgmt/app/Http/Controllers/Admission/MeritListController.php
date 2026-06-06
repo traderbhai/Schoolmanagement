@@ -245,4 +245,48 @@ class MeritListController extends Controller
 
         return $pdf->download('merit-list-' . $program->code . '.pdf');
     }
+
+    public function exportCsv(Program $program)
+    {
+        $batchId = request('batch_id');
+
+        $entries = MeritListEntry::where('program_id', $program->id)
+            ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
+            ->with(['applicant.user', 'batch', 'decidedBy'])
+            ->orderBy('rank')
+            ->get();
+
+        $filename = 'merit-list-' . $program->code . '-' . now()->format('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($entries) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Rank', 'Application No', 'Name', 'Email', 'Batch',
+                'Total Score', 'Academic Score', 'Composite Score', 'Decision',
+                'Decided By', 'Decided At', 'Notes']);
+            foreach ($entries as $entry) {
+                fputcsv($handle, [
+                    $entry->rank,
+                    $entry->applicant->application_number ?? '',
+                    $entry->applicant->user->name ?? '',
+                    $entry->applicant->user->email ?? '',
+                    $entry->batch->name ?? '',
+                    $entry->total_weighted_score,
+                    $entry->academic_score ?? '',
+                    $entry->composite_score ?? '',
+                    $entry->decision,
+                    $entry->decidedBy->name ?? '',
+                    $entry->decided_at?->format('Y-m-d H:i') ?? '',
+                    $entry->notes ?? '',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

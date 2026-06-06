@@ -6,7 +6,10 @@
         <div class="col-md-8">
             <h1>Leads & Enquiries</h1>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col-md-4 text-end d-flex justify-content-end gap-2">
+            <a href="{{ route('admission.leads.export-csv', request()->query()) }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+            </a>
             <a href="{{ route('admission.leads.analytics') }}" class="btn btn-info">Analytics</a>
         </div>
     </div>

@@ -46,6 +46,11 @@
             <div class="col-md-1">
                 <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i></button>
             </div>
+            <div class="col-auto">
+                <a href="{{ route('admission.applicants.export-csv', request()->query()) }}" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                </a>
+            </div>
         </form>
     </div>
 </div>
@@ -78,6 +83,7 @@
                         <th>Applied At</th>
                         <th>Last Interaction</th>
                         <th>Next Follow-up</th>
+                        <th>Complete</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -108,6 +114,16 @@
                                 —
                             @endif
                         </td>
+                        @php $pct = $completenessMap[$applicant->id] ?? 0; @endphp
+                        <td style="min-width:80px">
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="progress flex-grow-1" style="height:6px">
+                                    <div class="progress-bar {{ $pct >= 80 ? 'bg-success' : ($pct >= 50 ? 'bg-warning' : 'bg-danger') }}"
+                                         style="width:{{ $pct }}%"></div>
+                                </div>
+                                <span class="small text-muted" style="white-space:nowrap">{{ $pct }}%</span>
+                            </div>
+                        </td>
                         <td>
                             <a href="{{ route('admission.applicants.show', $applicant) }}" class="btn btn-sm btn-outline-primary py-0 px-2">
                                 <i class="bi bi-eye"></i> View
@@ -115,7 +131,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="9" class="text-center text-muted py-4">No applicants found.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted py-4">No applicants found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
