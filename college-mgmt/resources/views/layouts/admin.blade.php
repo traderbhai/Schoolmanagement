@@ -126,10 +126,47 @@
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
             <i class="bi bi-list-ol"></i> Merit List
         </a>
+        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif">
+            <i class="bi bi-envelope-open"></i> Offer Letters
+        </a>
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
             <i class="bi bi-person-check-fill"></i> Enrollments
         </a>
+
+        <div class="sidebar-divider"></div>
+
+        {{-- LEADS & CRM --}}
+        <div class="section-label">Leads & Pipeline</div>
+        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index') || request()->routeIs('admission.leads.show')) active @endif">
+            <i class="bi bi-funnel"></i> All Leads
+            @php $newLeads = \App\Models\Lead::where('status','new')->count(); @endphp
+            @if($newLeads > 0)<span class="badge bg-info text-dark ms-1">{{ $newLeads }}</span>@endif
+        </a>
+        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif">
+            <i class="bi bi-upload"></i> Import Leads
+        </a>
+        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif">
+            <i class="bi bi-calendar3"></i> Follow-up Calendar
+        </a>
+        <a href="{{ route('admission.leads.analytics') }}" class="nav-link @if(request()->routeIs('admission.leads.analytics')) active @endif">
+            <i class="bi bi-graph-up-arrow"></i> Lead Analytics
+        </a>
+
+        {{-- PROGRAM TOOLS --}}
+        @if($firstProgram)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Program Tools</div>
+        <a href="{{ route('admission.seat-matrices.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.seat-matrices.*')) active @endif">
+            <i class="bi bi-grid-3x3"></i> Seat Matrix
+        </a>
+        <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif">
+            <i class="bi bi-diagram-3"></i> Selection Process
+        </a>
+        <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif">
+            <i class="bi bi-credit-card"></i> Fee Installments
+        </a>
+        @endif
 
         <div class="sidebar-divider"></div>
 
@@ -277,8 +314,21 @@
         <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.*')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
+        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif"><i class="bi bi-envelope-open"></i> Offer Letters</a>
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Leads & Pipeline</div>
+        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>
+        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif"><i class="bi bi-upload"></i> Import Leads</a>
+        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
+        @if($firstProgram)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Program Tools</div>
+        <a href="{{ route('admission.seat-matrices.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.seat-matrices.*')) active @endif"><i class="bi bi-grid-3x3"></i> Seat Matrix</a>
+        <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif"><i class="bi bi-diagram-3"></i> Selection Process</a>
+        <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif"><i class="bi bi-credit-card"></i> Fee Installments</a>
+        @endif
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>

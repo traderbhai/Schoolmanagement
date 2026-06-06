@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Offer Letter #' . $offerLetter->offer_number)
+@section('page-title', 'Offer Letter Detail')
 
 @section('content')
 <div class="container-fluid py-4">
