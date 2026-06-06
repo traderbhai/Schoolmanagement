@@ -173,6 +173,23 @@
 
         <div class="sidebar-divider"></div>
 
+        {{-- SCHOLARSHIPS --}}
+        <div class="section-label">Scholarships</div>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('admission.scholarship-schemes.*') ? 'active' : '' }}"
+               href="{{ route('admission.scholarship-schemes.index') }}">
+                <i class="bi bi-award me-2"></i>Scholarship Schemes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}"
+               href="{{ route('admission.scholarship-disbursements.index') }}">
+                <i class="bi bi-send me-2"></i>Disbursements
+            </a>
+        </li>
+
+        <div class="sidebar-divider"></div>
+
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
@@ -333,6 +350,12 @@
         <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif"><i class="bi bi-diagram-3"></i> Selection Process</a>
         <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif"><i class="bi bi-credit-card"></i> Fee Installments</a>
         @endif
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Scholarships</div>
+        <a class="nav-link {{ request()->routeIs('admission.scholarship-schemes.*') ? 'active' : '' }}"
+           href="{{ route('admission.scholarship-schemes.index') }}"><i class="bi bi-award me-2"></i>Scholarship Schemes</a>
+        <a class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}"
+           href="{{ route('admission.scholarship-disbursements.index') }}"><i class="bi bi-send me-2"></i>Disbursements</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Mgmt</a>

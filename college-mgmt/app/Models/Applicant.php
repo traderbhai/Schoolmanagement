@@ -157,4 +157,9 @@ class Applicant extends Model
     {
         return $this->morphMany(ApprovalWorkflow::class, 'approvable');
     }
+
+    public function scholarships()
+    {
+        return $this->hasMany(\App\Models\ApplicantScholarship::class);
+    }
 }

@@ -292,6 +292,122 @@
     </div>
 </div>
 
+{{-- Scholarship Awards --}}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-semibold"><i class="bi bi-award me-2"></i>Scholarship Awards</h5>
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#awardScholarshipForm">
+                <i class="bi bi-plus-lg me-1"></i>Award Scholarship
+            </button>
+        </div>
+    </div>
+
+    {{-- Award form (collapsible) --}}
+    <div class="collapse" id="awardScholarshipForm">
+        <div class="card-body border-bottom bg-light">
+            <form action="{{ route('admission.applicants.scholarships.store', $applicant) }}" method="POST">
+                @csrf
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label for="scheme_id" class="form-label fw-semibold">Scholarship Scheme <span class="text-danger">*</span></label>
+                        <select name="scheme_id" id="scheme_id" class="form-select @error('scheme_id') is-invalid @enderror"
+                                onchange="prefillAmount(this)" required>
+                            <option value="">— Select Scheme —</option>
+                            @foreach(\App\Models\ScholarshipScheme::where('is_active', true)
+                                ->where(function($q) use ($applicant) {
+                                    $q->whereNull('program_id')->orWhere('program_id', $applicant->program_id);
+                                })->orderBy('name')->get() as $scheme)
+                                <option value="{{ $scheme->id }}"
+                                        data-max="{{ $scheme->max_amount }}"
+                                        data-seats="{{ $scheme->seatsRemaining() }}">
+                                    {{ $scheme->name }}
+                                    ({{ $scheme->type_label }})
+                                    — Max ₹{{ number_format($scheme->max_amount, 0) }}
+                                    @if($scheme->available_seats) — {{ $scheme->seatsRemaining() }} seats left @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('scheme_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-3">
+                        <label for="awarded_amount" class="form-label fw-semibold">Award Amount (₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" name="awarded_amount" id="awarded_amount"
+                                   class="form-control @error('awarded_amount') is-invalid @enderror"
+                                   min="0" step="100" required>
+                        </div>
+                        @error('awarded_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label for="notes" class="form-label fw-semibold">Notes</label>
+                        <input type="text" name="notes" id="notes"
+                               class="form-control @error('notes') is-invalid @enderror"
+                               placeholder="Optional notes…">
+                        @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-award me-1"></i>Award Scholarship
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Existing awards list --}}
+    <div class="card-body">
+        @php $awardsList = $applicant->scholarships()->with('scheme', 'awardedBy')->latest()->get(); @endphp
+
+        @if($awardsList->isEmpty())
+            <p class="text-muted mb-0 small">No scholarships awarded yet.</p>
+        @else
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Scheme</th>
+                            <th class="text-end">Amount (₹)</th>
+                            <th>Status</th>
+                            <th>Awarded By</th>
+                            <th>Awarded On</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($awardsList as $award)
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ $award->scheme->name }}</div>
+                                <div class="small text-muted font-monospace">{{ $award->scheme->scheme_code }}</div>
+                            </td>
+                            <td class="text-end fw-bold text-success">₹{{ number_format($award->awarded_amount, 2) }}</td>
+                            <td><span class="{{ $award->status_badge }}">{{ ucfirst($award->status) }}</span></td>
+                            <td class="small">{{ $award->awardedBy->name ?? '—' }}</td>
+                            <td class="small text-muted">{{ $award->awarded_at?->format('d M Y') }}</td>
+                            <td>
+                                @if($award->status === 'awarded')
+                                <form action="{{ route('admission.scholarships.destroy', $award) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Cancel this scholarship award?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+</div>
+
 <!-- P5-5: Approval Timeline Card -->
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white border-bottom py-3">
