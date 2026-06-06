@@ -477,6 +477,10 @@ Route::middleware(['auth', 'role:dean_academics|admin'])->prefix('dean')->name('
     Route::get('students',   [Departmental\DeanController::class, 'students'])->name('students');
     Route::get('academics',  [Departmental\DeanController::class, 'academics'])->name('academics');
     Route::get('attendance', [Departmental\DeanController::class, 'attendance'])->name('attendance');
+    // P5-5: Approval Workflow Routes for Dean
+    Route::get('approvals', [Departmental\DeanController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\DeanController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\DeanController::class, 'reject'])->name('reject');
 });
 
 // ── Program Chair / HOD ──────────────────────────────────────────────────────
@@ -486,6 +490,18 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('curriculum', [Departmental\ProgramChairController::class, 'curriculum'])->name('curriculum');
     Route::get('timetable',  [Departmental\ProgramChairController::class, 'timetable'])->name('timetable');
     Route::get('exams',      [Departmental\ProgramChairController::class, 'exams'])->name('exams');
+    // P5-5: Approval Workflow Routes for Program Chair
+    Route::get('approvals', [Departmental\ProgramChairController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\ProgramChairController::class, 'reject'])->name('reject');
+});
+
+// ── HOD (Head of Department) ─────────────────────────────────────────────────
+Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+    // P5-5: Approval Workflow Routes for HOD
+    Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
+    Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
+    Route::post('approvals/{approval}/reject', [Departmental\HodController::class, 'reject'])->name('reject');
 });
 
 // ── Exam Cell ────────────────────────────────────────────────────────────────

@@ -292,6 +292,75 @@
     </div>
 </div>
 
+<!-- P5-5: Approval Timeline Card -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-check-circle me-2"></i>Approval Workflow</h5>
+    </div>
+    <div class="card-body">
+        @php
+            $approvals = $applicant->approvalWorkflows()->orderBy('created_at')->get();
+            $roles = ['hod' => 'HOD Approval', 'dean_academics' => 'Dean Clearance', 'program_chair' => 'Program Chair Sign-off'];
+        @endphp
+
+        @if($approvals->isEmpty())
+            <p class="text-muted mb-0">No approval workflow initiated yet.</p>
+        @else
+            <div class="timeline">
+                @foreach($approvals as $index => $approval)
+                    <div class="timeline-item mb-4 pb-4 @if(!$loop->last) border-bottom @endif">
+                        <div class="d-flex gap-3">
+                            <div class="timeline-marker">
+                                @if($approval->status === 'approved')
+                                    <span class="badge bg-success rounded-circle p-2">
+                                        <i class="bi bi-check-lg"></i>
+                                    </span>
+                                @elseif($approval->status === 'rejected')
+                                    <span class="badge bg-danger rounded-circle p-2">
+                                        <i class="bi bi-x-lg"></i>
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning rounded-circle p-2">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ $roles[$approval->approver_role] ?? ucfirst($approval->approver_role) }}</h6>
+                                <p class="text-muted small mb-2">
+                                    Status: <span class="{{ $approval->status_badge }}">{{ $approval->status_label }}</span>
+                                </p>
+                                @if($approval->approver)
+                                    <p class="text-muted small mb-2">
+                                        Approver: <strong>{{ $approval->approver->name }}</strong>
+                                    </p>
+                                @endif
+                                @if($approval->approved_at)
+                                    <p class="text-muted small mb-2">
+                                        {{ ucfirst($approval->status) }} on: <strong>{{ $approval->approved_at->format('d M Y, h:i A') }}</strong>
+                                    </p>
+                                @endif
+                                @if($approval->remarks)
+                                    <div class="alert alert-light small mb-0 mt-2">
+                                        <strong>Remarks:</strong> {{ $approval->remarks }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <style>
+                .timeline { list-style: none; padding: 0; }
+                .timeline-item { position: relative; }
+                .timeline-marker { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; }
+                .timeline-content { padding-top: 4px; }
+            </style>
+        @endif
+    </div>
+</div>
+
 @push('scripts')
 <script>
 // Wire up reject modal from show page

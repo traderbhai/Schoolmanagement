@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Student, Subject, Exam, Batch, Term, RoleProgramAssignment, TimetableEntry};
+use App\Models\{Program, Student, Subject, Exam, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix};
 use App\Helpers\AccessControl;
 use Illuminate\Http\Request;
 
@@ -116,5 +116,65 @@ class ProgramChairController extends Controller
             ->get();
 
         return view('departmental.program-chair.exams', compact('upcoming', 'past'));
+    }
+
+    public function approvals(Request $request)
+    {
+        $query = ApprovalWorkflow::where('approver_role', 'program_chair')
+            ->where('status', 'pending')
+            ->with(['approvable' => function ($q) {
+                $q->with(['user', 'program', 'batch']);
+            }])
+            ->latest();
+
+        $approvals = $query->paginate(20)->withQueryString();
+
+        return view('departmental.program-chair.approvals.index', compact('approvals'));
+    }
+
+    public function approve(Request $request, ApprovalWorkflow $approval)
+    {
+        $request->validate([
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        // Check seat capacity before approving
+        $applicant = $approval->approvable;
+        $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
+
+        if ($seatMatrix) {
+            $filledSeats = Applicant::where('program_id', $applicant->program_id)
+                ->whereIn('status', ['offer_accepted', 'enrolled'])
+                ->count();
+
+            if ($filledSeats >= $seatMatrix->total_seats) {
+                return back()->with('error', 'Program capacity is full. Cannot approve additional applicants.');
+            }
+        }
+
+        $approval->update([
+            'status'      => 'approved',
+            'approver_id' => auth()->id(),
+            'remarks'     => $request->remarks,
+            'approved_at' => now(),
+        ]);
+
+        return back()->with('success', 'Approval granted. All approvals complete.');
+    }
+
+    public function reject(Request $request, ApprovalWorkflow $approval)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        $approval->update([
+            'status'      => 'rejected',
+            'approver_id' => auth()->id(),
+            'remarks'     => $request->rejection_reason,
+            'approved_at' => now(),
+        ]);
+
+        return back()->with('error', 'Approval rejected.');
     }
 }

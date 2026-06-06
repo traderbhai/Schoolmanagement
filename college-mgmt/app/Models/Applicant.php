@@ -65,6 +65,7 @@ class Applicant extends Model
     public function payments()            { return $this->hasMany(AdmissionPayment::class); }
     public function enrollmentConfirmation() { return $this->hasOne(EnrollmentConfirmation::class); }
     public function offerLetters()        { return $this->hasMany(OfferLetter::class); }
+    public function offerLetter()         { return $this->hasOne(OfferLetter::class); }
 
     public function isEnrolled(): bool
     {
@@ -150,5 +151,10 @@ class Applicant extends Model
             return $this->$col;
         }
         return [];
+    }
+
+    public function approvalWorkflows()
+    {
+        return $this->morphMany(ApprovalWorkflow::class, 'approvable');
     }
 }
