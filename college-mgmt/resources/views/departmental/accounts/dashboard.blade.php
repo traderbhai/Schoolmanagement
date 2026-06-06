@@ -41,6 +41,42 @@
     </div>
 </div>
 
+{{-- Admission-side stats row --}}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-success">₹{{ number_format($totalAdmissionCollected, 0) }}</div>
+            <div class="text-muted small">Admission Fees Collected</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-warning">{{ $pendingAdmissionVerification }}</div>
+            <div class="text-muted small">Pending Verification</div>
+            <div class="mt-1">
+                <a href="{{ route('accounts.admission-payments') }}" class="btn btn-sm btn-outline-warning">View Queue</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-info">{{ $pendingScholarshipDisbursements }}</div>
+            <div class="text-muted small">Scholarships to Disburse</div>
+            <div class="text-muted smaller">₹{{ number_format($pendingScholarshipAmount, 0) }}</div>
+            <div class="mt-1">
+                <a href="{{ route('admission.scholarship-disbursements.index') }}" class="btn btn-sm btn-outline-info">Disburse</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-danger">{{ $overdueDemandsCount }}</div>
+            <div class="text-muted small">Overdue Fee Demands</div>
+            <div class="text-muted smaller">₹{{ number_format($overdueDemandsAmount, 0) }}</div>
+        </div>
+    </div>
+</div>
+
 @if($totalBilled > 0)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">

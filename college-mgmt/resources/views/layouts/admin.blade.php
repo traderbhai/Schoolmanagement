@@ -271,8 +271,12 @@
         </a>
         @endhasrole
         @hasrole('accounts_officer|admin')
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.*')) active @endif">
+        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif">
             <i class="bi bi-cash-stack"></i> Accounts
+        </a>
+        <a class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}"
+           href="{{ route('accounts.reconciliation') }}">
+            <i class="bi bi-arrow-left-right me-2"></i>Reconciliation
         </a>
         @endhasrole
 

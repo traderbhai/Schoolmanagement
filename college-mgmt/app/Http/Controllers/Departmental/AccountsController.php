@@ -32,8 +32,23 @@ class AccountsController extends Controller
             return $p;
         });
 
+        // Admission-side totals
+        $totalAdmissionCollected = AdmissionPayment::where('status', 'verified')->sum('amount_paid');
+        $pendingAdmissionVerification = AdmissionPayment::where('status', 'pending')->count();
+
+        // Scholarship disbursements pending
+        $pendingScholarshipDisbursements = \App\Models\ApplicantScholarship::where('status', 'awarded')->count();
+        $pendingScholarshipAmount = \App\Models\ApplicantScholarship::where('status', 'awarded')->sum('awarded_amount');
+
+        // Overdue fee demands
+        $overdueDemandsCount = FeeDemand::where('status', 'overdue')->count();
+        $overdueDemandsAmount = FeeDemand::where('status', 'overdue')->sum('final_amount');
+
         return view('departmental.accounts.dashboard', compact(
-            'totalBilled', 'totalCollected', 'outstanding', 'overdue', 'recentPayments', 'programs'
+            'totalBilled', 'totalCollected', 'outstanding', 'overdue', 'recentPayments', 'programs',
+            'totalAdmissionCollected', 'pendingAdmissionVerification',
+            'pendingScholarshipDisbursements', 'pendingScholarshipAmount',
+            'overdueDemandsCount', 'overdueDemandsAmount'
         ));
     }
 

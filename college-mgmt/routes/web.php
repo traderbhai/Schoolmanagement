@@ -532,6 +532,11 @@ Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->
     Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');
     Route::get('admission-payments', [Departmental\AccountsController::class, 'admissionPayments'])->name('admission-payments');
     Route::get('reports',            [Departmental\AccountsController::class, 'reports'])->name('reports');
+    Route::get('reconciliation', [Departmental\AccountsController::class, 'reconciliation'])->name('reconciliation');
+    Route::get('export-fee-collections', [Departmental\AccountsController::class, 'exportFeeCollections'])->name('export-fee-collections');
+    Route::get('export-admission-payments', [Departmental\AccountsController::class, 'exportAdmissionPayments'])->name('export-admission-payments');
+    Route::get('export-outstanding', [Departmental\AccountsController::class, 'exportOutstanding'])->name('export-outstanding');
+    Route::get('fee-demands/{feeDemand}/demand-letter', [Departmental\AccountsController::class, 'demandLetter'])->name('fee-demands.demand-letter');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\MarkOverdueFeedemands;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -11,3 +12,4 @@ Artisan::command('inspire', function () {
 Schedule::command('admission:deadline-reminders')->dailyAt('08:00');
 Schedule::command('admission:followup-reminders')->dailyAt('08:30');
 Schedule::command('admission:close-expired-windows')->hourly();
+Schedule::command('accounts:mark-overdue-demands')->dailyAt('00:30');
