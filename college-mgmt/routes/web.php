@@ -214,6 +214,26 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('role-assignments/create', [Admin\RoleAssignmentController::class, 'create'])->name('role-assignments.create');
     Route::post('role-assignments', [Admin\RoleAssignmentController::class, 'store'])->name('role-assignments.store');
     Route::delete('role-assignments/{assignment}', [Admin\RoleAssignmentController::class, 'destroy'])->name('role-assignments.destroy');
+
+    // Phase 1: Role Hierarchy & Permissions
+    Route::get('roles/hierarchy', [Admin\RolePermissionController::class, 'hierarchy'])->name('roles.hierarchy');
+    Route::get('roles/{role}/permissions', [Admin\RolePermissionController::class, 'show'])->name('roles.permissions.show');
+    Route::put('roles/{role}/permissions', [Admin\RolePermissionController::class, 'update'])->name('roles.permissions.update');
+    Route::get('roles/feature-access/index', [Admin\RoleFeatureAccessController::class, 'index'])->name('roles.feature-access.index');
+    Route::get('roles/{role}/feature-access/edit', [Admin\RoleFeatureAccessController::class, 'edit'])->name('roles.feature-access.edit');
+    Route::put('roles/{role}/feature-access', [Admin\RoleFeatureAccessController::class, 'update'])->name('roles.feature-access.update');
+
+    // User Role Management
+    Route::get('users/roles', [Admin\UserRoleController::class, 'index'])->name('users.roles.index');
+    Route::get('users/roles/create', [Admin\UserRoleController::class, 'create'])->name('users.roles.create');
+    Route::post('users/roles', [Admin\UserRoleController::class, 'store'])->name('users.roles.store');
+    Route::delete('users/roles/{userRole}', [Admin\UserRoleController::class, 'destroy'])->name('users.roles.destroy');
+    Route::post('users/{user}/roles/expire-all', [Admin\UserRoleController::class, 'expireAll'])->name('users.roles.expire-all');
+
+    // Audit Log
+    Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
+    Route::get('audit-log/{log}', [Admin\AuditController::class, 'show'])->name('audit.show');
+    Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');
 });
 
 // ── Academic routes ─────────────────────────────────────────────────────────
