@@ -93,6 +93,9 @@ class ApplicantCrmController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        app(\App\Services\AdmissionNotificationService::class)
+            ->notifyApplicantStatusChanged($applicant->fresh(), $request->status);
+
         return back()->with('success', 'Applicant status updated to ' . ucfirst(str_replace('_', ' ', $request->status)));
     }
 

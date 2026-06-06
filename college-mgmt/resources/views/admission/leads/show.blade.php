@@ -1,149 +1,169 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Lead — ' . $lead->name)
+@section('page-title', 'Lead Details')
 
 @section('content')
-<div class="container py-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ $lead->name }}</h1>
-            <p class="text-muted">{{ $lead->email }}</p>
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ route('admission.leads.index') }}" class="text-muted small"><i class="bi bi-arrow-left"></i> All Leads</a>
+            <h2 class="fw-bold mb-0 mt-1">{{ $lead->name }}</h2>
+            <span class="{{ $lead->status_badge }}">{{ ucfirst(str_replace('_', ' ', $lead->status)) }}</span>
+            <span class="text-muted ms-2">{{ $lead->source_label }}</span>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ route('admission.leads.index') }}" class="btn btn-primary">Back to Leads</a>
+        <div class="d-flex gap-2">
+            @if(!$lead->isConverted())
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
+                    <i class="bi bi-person-plus me-1"></i> Convert to Applicant
+                </button>
+            @else
+                <a href="{{ route('admission.applicants.show', $lead->convertedApplicant) }}" class="btn btn-outline-success">
+                    <i class="bi bi-person-check me-1"></i> View Applicant
+                </a>
+            @endif
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
-    <div class="row">
-        <div class="col-md-3">
-            <div class="card mb-3">
+    <div class="row g-4">
+        {{-- Left Column --}}
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Status</h6>
-                    <span class="{{ $lead->status_badge }}">{{ ucfirst(str_replace('_', ' ', $lead->status)) }}</span>
+                    <h6 class="text-muted mb-3">Contact Info</h6>
+                    <p class="mb-1"><i class="bi bi-envelope me-2 text-muted"></i><a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></p>
+                    <p class="mb-1"><i class="bi bi-telephone me-2 text-muted"></i>{{ $lead->phone ?? '—' }}</p>
+                    <p class="mb-0"><i class="bi bi-mortarboard me-2 text-muted"></i>{{ $lead->program?->name ?? 'Not specified' }}</p>
                 </div>
             </div>
-
-            <div class="card mb-3">
+            <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Source</h6>
+                    <h6 class="text-muted mb-1">Source</h6>
                     <p class="mb-0">{{ $lead->source_label }}</p>
                 </div>
             </div>
-
-            <div class="card mb-3">
+            <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Program Interest</h6>
-                    <p class="mb-0">{{ $lead->program?->name ?? 'Not specified' }}</p>
-                </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Last Contacted</h6>
+                    <h6 class="text-muted mb-1">Last Contacted</h6>
                     <p class="mb-0">{{ $lead->last_contacted_at?->format('d M Y H:i') ?? 'Never' }}</p>
                 </div>
             </div>
-
-            @if($lead->isConverted())
-                <div class="card mb-3 border-success">
-                    <div class="card-body">
-                        <h6 class="card-title text-muted">Converted To</h6>
-                        <p class="mb-0">
-                            <a href="#">{{ $lead->convertedApplicant?->user->name }}</a>
-                        </p>
-                        <small class="text-muted">{{ $lead->converted_at?->format('d M Y H:i') }}</small>
-                    </div>
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Enquiry Date</h6>
+                    <p class="mb-0">{{ $lead->created_at->format('d M Y') }}</p>
                 </div>
+            </div>
+            @if($lead->isConverted())
+            <div class="card border-success border-0 shadow-sm mb-3" style="border-left:4px solid #198754!important">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Converted To Applicant</h6>
+                    <p class="mb-0"><a href="{{ route('admission.applicants.show', $lead->convertedApplicant) }}">{{ $lead->convertedApplicant?->application_number }}</a></p>
+                    <small class="text-muted">{{ $lead->converted_at?->format('d M Y H:i') }}</small>
+                </div>
+            </div>
             @endif
         </div>
 
-        <div class="col-md-9">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Lead Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Name:</strong> {{ $lead->name }}</p>
-                            <p><strong>Email:</strong> <a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Phone:</strong> {{ $lead->phone ?? '-' }}</p>
-                            <p><strong>Created:</strong> {{ $lead->created_at->format('d M Y H:i') }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Notes</h5>
-                </div>
+        {{-- Right Column --}}
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent fw-semibold">Notes</div>
                 <div class="card-body">
                     @if($lead->notes)
-                        <p>{{ $lead->notes }}</p>
+                        <p class="mb-0">{{ $lead->notes }}</p>
                     @else
-                        <p class="text-muted">No notes yet.</p>
+                        <p class="text-muted mb-0">No notes added yet.</p>
                     @endif
                 </div>
             </div>
 
             @if(!$lead->isConverted())
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Actions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @if($lead->status === 'new')
-                                <div class="col-md-6 mb-3">
-                                    <form action="{{ route('admission.leads.contact', $lead) }}" method="POST">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label class="form-label">Notes (Optional)</label>
-                                            <textarea name="notes" class="form-control" rows="3" placeholder="Add notes about the contact..."></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary w-100">Mark as Contacted</button>
-                                    </form>
-                                </div>
-                            @endif
-
-                            @if(in_array($lead->status, ['new', 'contacted']))
-                                <div class="col-md-6 mb-3">
-                                    <form action="{{ route('admission.leads.interested', $lead) }}" method="POST">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label class="form-label">Notes (Optional)</label>
-                                            <textarea name="notes" class="form-control" rows="3" placeholder="Add notes..."></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-success w-100">Mark as Interested</button>
-                                    </form>
-                                </div>
-                            @endif
-
-                            @if(!in_array($lead->status, ['not_interested']))
-                                <div class="col-md-6 mb-3">
-                                    <form action="{{ route('admission.leads.not-interested', $lead) }}" method="POST">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label class="form-label">Reason (Optional)</label>
-                                            <textarea name="notes" class="form-control" rows="3" placeholder="Why not interested..."></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-danger w-100">Mark as Not Interested</button>
-                                    </form>
-                                </div>
-                            @endif
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-semibold">Quick Actions</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @if($lead->status === 'new')
+                        <div class="col-md-6">
+                            <form action="{{ route('admission.leads.contact', $lead) }}" method="POST">
+                                @csrf
+                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Contact notes (optional)"></textarea>
+                                <button class="btn btn-secondary w-100"><i class="bi bi-telephone me-1"></i>Mark Contacted</button>
+                            </form>
                         </div>
+                        @endif
+                        @if(in_array($lead->status, ['new','contacted','not_interested']))
+                        <div class="col-md-6">
+                            <form action="{{ route('admission.leads.interested', $lead) }}" method="POST">
+                                @csrf
+                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Notes (optional)"></textarea>
+                                <button class="btn btn-warning w-100"><i class="bi bi-star me-1"></i>Mark Interested</button>
+                            </form>
+                        </div>
+                        @endif
+                        @if(!in_array($lead->status, ['not_interested','converted']))
+                        <div class="col-md-6">
+                            <form action="{{ route('admission.leads.not-interested', $lead) }}" method="POST">
+                                @csrf
+                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Reason (optional)"></textarea>
+                                <button class="btn btn-danger w-100"><i class="bi bi-x-circle me-1"></i>Not Interested</button>
+                            </form>
+                        </div>
+                        @endif
                     </div>
                 </div>
+            </div>
             @endif
         </div>
     </div>
 </div>
+
+{{-- Convert Modal --}}
+@if(!$lead->isConverted())
+<div class="modal fade" id="convertModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Convert to Applicant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('admission.leads.convert', $lead) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">This will create a new applicant account for <strong>{{ $lead->name }}</strong> ({{ $lead->email }}) and mark this lead as converted.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Program <span class="text-danger">*</span></label>
+                        <select name="program_id" class="form-select" required>
+                            <option value="">Select Program</option>
+                            @foreach(\App\Models\Program::where('is_active', true)->orderBy('name')->get() as $program)
+                                <option value="{{ $program->id }}" {{ $lead->program_id == $program->id ? 'selected' : '' }}>{{ $program->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Batch (Optional)</label>
+                        <select name="batch_id" class="form-select">
+                            <option value="">Select Batch</option>
+                            @foreach(\App\Models\Batch::orderByDesc('start_date')->get() as $batch)
+                                <option value="{{ $batch->id }}">{{ $batch->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-person-plus me-1"></i>Convert Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 @endsection

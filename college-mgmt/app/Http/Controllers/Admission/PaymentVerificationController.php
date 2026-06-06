@@ -76,6 +76,8 @@ class PaymentVerificationController extends Controller
 
         ActivityLog::record('verify_payment', "Verified payment #{$payment->id} for applicant {$payment->applicant?->application_number}", $payment);
 
+        app(\App\Services\AdmissionNotificationService::class)->notifyPaymentVerified($payment->fresh());
+
         return back()->with('success', 'Payment verified successfully.');
     }
 
@@ -91,6 +93,8 @@ class PaymentVerificationController extends Controller
             'verified_at'        => now(),
             'verification_notes' => $r->verification_notes,
         ]);
+
+        app(\App\Services\AdmissionNotificationService::class)->notifyPaymentRejected($payment->fresh(), $r->notes ?? 'Payment proof could not be verified.');
 
         return back()->with('success', 'Payment rejected with notes.');
     }

@@ -156,4 +156,43 @@ class LeadController extends Controller
 
         return back()->with('success', 'Lead captured successfully!');
     }
+
+    public function convert(Request $request, Lead $lead)
+    {
+        if ($lead->isConverted()) {
+            return back()->with('error', 'Lead has already been converted.');
+        }
+
+        $validated = $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+        ]);
+
+        // Reuse existing user or create new one
+        $user = \App\Models\User::firstOrCreate(
+            ['email' => $lead->email],
+            [
+                'name'     => $lead->name,
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+            ]
+        );
+
+        if (!$user->hasRole('applicant')) {
+            $user->assignRole('applicant');
+        }
+
+        $applicant = \App\Models\Applicant::create([
+            'user_id'    => $user->id,
+            'program_id' => $validated['program_id'],
+            'batch_id'   => $validated['batch_id'] ?? null,
+            'status'     => 'draft',
+            'notes'      => "Converted from Lead #{$lead->id} ({$lead->source_label})",
+        ]);
+
+        $lead->convertToApplicant($applicant);
+
+        return redirect()
+            ->route('admission.applicants.show', $applicant)
+            ->with('success', "Lead converted to applicant successfully. Application #{$applicant->application_number}");
+    }
 }
