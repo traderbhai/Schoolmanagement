@@ -378,6 +378,9 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::get('payments/{payment}/receipt', [Admission\FeeReceiptController::class, 'receipt'])->name('payments.receipt');
     Route::get('applicants/{applicant}/application-pdf', [Admission\ApplicationPdfController::class, 'generate'])->name('applicants.application-pdf');
 
+    // P3-1: Admission Reporting Dashboard
+    Route::get('reports', [Admission\ReportingController::class, 'index'])->name('reports.index');
+
     // P2-B: Refund Management
     Route::get('refunds', [Admission\RefundController::class, 'index'])->name('refunds.index');
     Route::get('refunds/{applicant}/create', [Admission\RefundController::class, 'create'])->name('refunds.create');
