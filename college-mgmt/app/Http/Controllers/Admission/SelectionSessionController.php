@@ -237,4 +237,44 @@ class SelectionSessionController extends Controller
 
         return back()->with('success', 'Session marked as completed.');
     }
+
+    public function dispatchCallLetters(SelectionSession $session)
+    {
+        $session->load(['sessionApplicants.applicant.user', 'program']);
+
+        $sent = 0;
+        $service = app(\App\Services\AdmissionNotificationService::class);
+
+        foreach ($session->sessionApplicants as $sa) {
+            $applicant = $sa->applicant;
+            if (!$applicant) continue;
+
+            // Create a DB notification for the call letter
+            \App\Models\Notification::create([
+                'user_id'  => $applicant->user_id,
+                'title'    => 'Interview Call Letter',
+                'message'  => "You have been scheduled for " . ($session->step->name ?? 'selection') . " on " . ($session->scheduled_date ? \Carbon\Carbon::parse($session->scheduled_date)->format('d M Y') : 'TBD') . " at " . ($session->venue ?? 'venue TBD') . ". Please report 30 minutes early.",
+                'type'     => 'call_letter',
+                'read_at'  => null,
+            ]);
+
+            // Attempt email with the call letter view
+            if ($applicant->user && $applicant->user->email) {
+                try {
+                    \Illuminate\Support\Facades\Mail::send(
+                        'admission.call-letters.template',
+                        ['applicant' => $applicant, 'session' => $session, 'collegeName' => config('app.name')],
+                        fn($m) => $m->to($applicant->user->email)
+                                    ->subject('Interview Call Letter — ' . ($session->program->name ?? 'Admission'))
+                    );
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Call letter email failed for applicant ' . $applicant->id . ': ' . $e->getMessage());
+                }
+            }
+
+            $sent++;
+        }
+
+        return back()->with('success', "Call letters dispatched to {$sent} candidate(s).");
+    }
 }

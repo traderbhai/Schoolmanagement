@@ -381,6 +381,17 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     // P3-1: Admission Reporting Dashboard
     Route::get('reports', [Admission\ReportingController::class, 'index'])->name('reports.index');
 
+    // P3-2: Session Call Letter Dispatch
+    Route::post('sessions/{session}/dispatch-call-letters', [Admission\SelectionSessionController::class, 'dispatchCallLetters'])->name('sessions.dispatch-call-letters');
+
+    // P3-3: Waitlist Management
+    Route::get('waitlist/{program}', [Admission\WaitlistController::class, 'index'])->name('waitlist.index');
+    Route::post('waitlist/{entry}/promote', [Admission\WaitlistController::class, 'promote'])->name('waitlist.promote');
+
+    // P3-4: Bulk Communication
+    Route::get('bulk-communication', [Admission\BulkCommunicationController::class, 'index'])->name('bulk-communication.index');
+    Route::post('bulk-communication/send', [Admission\BulkCommunicationController::class, 'send'])->name('bulk-communication.send');
+
     // P2-B: Refund Management
     Route::get('refunds', [Admission\RefundController::class, 'index'])->name('refunds.index');
     Route::get('refunds/{applicant}/create', [Admission\RefundController::class, 'create'])->name('refunds.create');

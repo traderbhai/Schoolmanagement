@@ -58,6 +58,14 @@
                         <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle me-1"></i> Complete Session</button>
                     </form>
                 @endif
+                <form action="{{ route('admission.sessions.dispatch-call-letters', $session) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-info"
+                        onclick="return confirm('Send call letter emails to all {{ $session->sessionApplicants->count() }} assigned candidates?')"
+                        {{ $session->sessionApplicants->count() === 0 ? 'disabled' : '' }}>
+                        <i class="bi bi-envelope me-1"></i> Send Call Letters ({{ $session->sessionApplicants->count() }})
+                    </button>
+                </form>
                 <a href="{{ route('admission.sessions.index') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i> Back
                 </a>
