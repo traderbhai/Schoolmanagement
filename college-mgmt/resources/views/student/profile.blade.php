@@ -1,202 +1,120 @@
 @extends('layouts.student')
 @section('title', 'My Profile')
-@section('page-title', 'My Profile')
-
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('student.dashboard') }}">Dashboard</a></li>
-    <li class="breadcrumb-item active">Profile</li>
-@endsection
 
 @section('content')
+<div class="container py-4">
+    <h4 class="fw-semibold mb-4">My Profile</h4>
 
-@if(session('status') === 'profile-updated')
-<div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
-    <i class="bi bi-check-circle-fill"></i>
-    <span>Profile updated successfully.</span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-@endif
-
-<div class="row g-4">
-
-    {{-- Left: Profile Card + Academic Info --}}
-    <div class="col-lg-4">
-        {{-- Profile Identity Card --}}
-        <div class="card mb-3 text-center" style="box-shadow:var(--shadow-sm)">
-            <div class="card-body pt-4 pb-3">
-                @if($student->photo)
-                    <img src="{{ asset('storage/' . $student->photo) }}"
-                         class="rounded-circle border border-3 mb-3"
-                         style="width:80px;height:80px;object-fit:cover;"
-                         alt="Photo">
-                @else
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 fw-bold text-white"
-                         style="width:80px;height:80px;background:var(--clr-primary,#4f46e5);font-size:2rem">
-                        {{ strtoupper(substr($student->user->name, 0, 1)) }}
+    <div class="row g-4">
+        {{-- Profile Summary Card --}}
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-4">
+                    <div class="mb-3">
+                        @if($student->photo)
+                        <img src="{{ Storage::url($student->photo) }}" alt="Photo"
+                             class="rounded-circle" style="width:90px;height:90px;object-fit:cover;">
+                        @else
+                        <div style="width:90px;height:90px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;margin:0 auto;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        @endif
                     </div>
-                @endif
-
-                <h5 class="fw-bold mb-1">{{ $student->user->name }}</h5>
-                <div class="text-muted small mb-2">{{ $student->user->email }}</div>
-                <div class="font-monospace small mb-3 text-muted">{{ $student->enrollment_number }}</div>
-                <span class="badge {{ $student->status === 'active' ? 'badge-active' : 'bg-secondary' }}">
-                    {{ ucfirst($student->status) }}
-                </span>
-            </div>
-        </div>
-
-        {{-- Academic Info Card --}}
-        <div class="card" style="box-shadow:var(--shadow-sm)">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-person-badge text-primary"></i>
-                <span class="fw-semibold">Academic Information</span>
-            </div>
-            <div class="card-body">
-                <dl class="row mb-0" style="font-size:.875rem">
-                    <dt class="col-5 fw-normal" style="color:var(--clr-text-muted)">Course</dt>
-                    <dd class="col-7 fw-semibold">{{ optional($student->course)->name ?: '—' }}</dd>
-
-                    <dt class="col-5 fw-normal" style="color:var(--clr-text-muted)">Department</dt>
-                    <dd class="col-7 fw-semibold">{{ optional($student->department)->name ?: '—' }}</dd>
-
-                    <dt class="col-5 fw-normal" style="color:var(--clr-text-muted)">Semester</dt>
-                    <dd class="col-7 fw-semibold">Semester {{ $student->current_semester }}</dd>
-
-                    <dt class="col-5 fw-normal" style="color:var(--clr-text-muted)">Roll No.</dt>
-                    <dd class="col-7 fw-semibold font-monospace">{{ $student->roll_number ?: '—' }}</dd>
-
-                    <dt class="col-5 fw-normal" style="color:var(--clr-text-muted)">Admission</dt>
-                    <dd class="col-7 fw-semibold">
-                        {{ $student->admission_date ? $student->admission_date->format('d M Y') : '—' }}
-                    </dd>
-                </dl>
-            </div>
-        </div>
-    </div>
-
-    {{-- Right: Edit Forms with Tabs --}}
-    <div class="col-lg-8">
-        <div class="card" style="box-shadow:var(--shadow-sm)">
-            <div class="card-header p-0">
-                <ul class="nav nav-tabs card-header-tabs px-3" id="profileTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-semibold" id="personal-tab"
-                                data-bs-toggle="tab" data-bs-target="#personal"
-                                type="button" role="tab">
-                            <i class="bi bi-person me-1"></i>Personal Info
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-semibold" id="password-tab"
-                                data-bs-toggle="tab" data-bs-target="#password"
-                                type="button" role="tab">
-                            <i class="bi bi-lock me-1"></i>Change Password
-                        </button>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="tab-content">
-                {{-- Personal Info Tab --}}
-                <div class="tab-pane fade show active p-4" id="personal" role="tabpanel">
-                    <form method="POST" action="{{ route('student.profile.update') }}">
-                        @csrf
-                        @method('PATCH')
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name"
-                                   class="form-control @error('name') is-invalid @enderror"
-                                   value="{{ old('name', $student->user->name) }}"
-                                   required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Email Address</label>
-                            <input type="email" class="form-control bg-light"
-                                   value="{{ $student->user->email }}" readonly disabled>
-                            <div class="form-text">Email cannot be changed. Contact admin if needed.</div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Date of Birth</label>
-                            <input type="text" class="form-control bg-light"
-                                   value="{{ $student->date_of_birth ? $student->date_of_birth->format('d M Y') : '—' }}"
-                                   readonly disabled>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>Save Changes
-                            </button>
-                            <a href="{{ route('student.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-
-                {{-- Change Password Tab --}}
-                <div class="tab-pane fade p-4" id="password" role="tabpanel">
-                    <form method="POST" action="{{ route('student.profile.update') }}">
-                        @csrf
-                        @method('PATCH')
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Current Password <span class="text-danger">*</span></label>
-                            <input type="password" name="current_password"
-                                   class="form-control @error('current_password') is-invalid @enderror"
-                                   autocomplete="current-password"
-                                   placeholder="Enter your current password">
-                            @error('current_password')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">New Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password"
-                                   class="form-control @error('password') is-invalid @enderror"
-                                   autocomplete="new-password"
-                                   placeholder="Min. 8 characters">
-                            @error('password')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="form-text">Use at least 8 characters with a mix of letters and numbers.</div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small">Confirm New Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password_confirmation"
-                                   class="form-control"
-                                   autocomplete="new-password"
-                                   placeholder="Re-enter new password">
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-warning text-dark fw-semibold">
-                                <i class="bi bi-shield-lock me-1"></i>Update Password
-                            </button>
-                        </div>
-                    </form>
+                    <h5 class="fw-semibold mb-0">{{ $student->user->name }}</h5>
+                    <p class="text-muted small">{{ $student->enrollment_number ?? 'Enrollment pending' }}</p>
+                    <table class="table table-sm text-start mb-0 mt-2" style="font-size:.82rem">
+                        <tr><td class="text-muted border-0 py-1">Program</td><td class="border-0 py-1">{{ $student->program->name ?? '—' }}</td></tr>
+                        <tr><td class="text-muted border-0 py-1">Batch</td><td class="border-0 py-1">{{ $student->batch->name ?? '—' }}</td></tr>
+                        <tr><td class="text-muted border-0 py-1">Status</td><td class="border-0 py-1"><span class="badge bg-success">{{ ucfirst($student->status ?? 'active') }}</span></td></tr>
+                        @if($student->mentor)
+                        <tr><td class="text-muted border-0 py-1">Mentor</td><td class="border-0 py-1">{{ $student->mentor->name }}</td></tr>
+                        @endif
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
 
+        {{-- Edit Form --}}
+        <div class="col-lg-8">
+            <form method="POST" action="{{ route('student.profile.update') }}" enctype="multipart/form-data">
+                @csrf
+                @method('PATCH')
+
+                {{-- Personal Info --}}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header fw-semibold"><i class="bi bi-person me-2"></i>Personal Information</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="name" value="{{ old('name', $student->user->name) }}" class="form-control @error('name') is-invalid @enderror">
+                                @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email <span class="text-muted">(cannot change)</span></label>
+                                <input type="email" value="{{ $student->user->email }}" class="form-control" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="phone" value="{{ old('phone', $student->phone) }}" class="form-control @error('phone') is-invalid @enderror">
+                                @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                <textarea name="address" rows="2" class="form-control @error('address') is-invalid @enderror">{{ old('address', $student->address) }}</textarea>
+                                @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Profile Photo <span class="text-muted">(JPG/PNG, max 2MB)</span></label>
+                                <input type="file" name="photo" accept="image/*" class="form-control @error('photo') is-invalid @enderror">
+                                @error('photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Guardian / Emergency Contact --}}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header fw-semibold"><i class="bi bi-people me-2"></i>Guardian / Emergency Contact</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Guardian Name</label>
+                                <input type="text" name="guardian_name" value="{{ old('guardian_name', $student->guardian_name) }}" class="form-control @error('guardian_name') is-invalid @enderror">
+                                @error('guardian_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Guardian Phone</label>
+                                <input type="text" name="guardian_phone" value="{{ old('guardian_phone', $student->guardian_phone) }}" class="form-control @error('guardian_phone') is-invalid @enderror">
+                                @error('guardian_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Change Password --}}
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header fw-semibold"><i class="bi bi-lock me-2"></i>Change Password <span class="text-muted fw-normal">(leave blank to keep current)</span></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" autocomplete="new-password">
+                                @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-check-lg me-1"></i>Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
-
 @endsection
-
-@push('scripts')
-<script>
-// Activate password tab if there are password errors
-@error('password') @error('current_password')
-document.addEventListener('DOMContentLoaded', function() {
-    const tab = document.getElementById('password-tab');
-    if (tab) { tab.click(); }
-});
-@enderror @enderror
-</script>
-@endpush

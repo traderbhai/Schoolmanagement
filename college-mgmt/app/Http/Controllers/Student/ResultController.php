@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\Semester;
+use App\Models\{Semester, ExamResult};
 use App\Services\GradeService;
 use Illuminate\Http\Request;
 
@@ -25,8 +25,27 @@ class ResultController extends Controller
         if ($semesterId) {
             $report = $this->gradeService->calculateStudentSemesterReport($student->id, $semesterId);
             $cgpa   = $this->gradeService->calculateCGPA($student->id);
+
+            // Eager-load assessment components for every result
+            foreach ($report['subjects'] as &$row) {
+                foreach ($row['results'] as $result) {
+                    $result->load('assessmentComponents');
+                }
+            }
+            unset($row);
         }
 
-        return view('student.results', compact('semesters', 'semesterId', 'report', 'cgpa', 'student'));
+        // Backlogs: failed subjects across ALL semesters
+        $backlogs = ExamResult::with(['exam.subject', 'exam.semester'])
+            ->where('student_id', $student->id)
+            ->where('is_absent', false)
+            ->get()
+            ->filter(function ($r) {
+                if (!$r->exam || $r->exam->total_marks <= 0) return false;
+                $pct = ($r->marks_obtained / $r->exam->total_marks) * 100;
+                return $pct < 35;
+            });
+
+        return view('student.results', compact('semesters', 'semesterId', 'report', 'cgpa', 'student', 'backlogs'));
     }
 }

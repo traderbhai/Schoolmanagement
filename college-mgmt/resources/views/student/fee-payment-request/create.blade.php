@@ -1,0 +1,68 @@
+@extends('layouts.student')
+@section('title', 'Submit Payment Proof')
+@section('content')
+<div class="container py-4" style="max-width:600px">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ route('student.fee-payment.index') }}">Payment Submissions</a></li>
+            <li class="breadcrumb-item active">Submit Proof</li>
+        </ol>
+    </nav>
+    <h4 class="fw-semibold mb-4">Submit Fee Payment Proof</h4>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST" action="{{ route('student.fee-payment.store') }}" enctype="multipart/form-data">
+                @csrf
+                @if($demands->isNotEmpty())
+                <div class="mb-3">
+                    <label class="form-label">Against Fee Demand <span class="text-muted">(optional)</span></label>
+                    <select name="fee_demand_id" class="form-select">
+                        <option value="">— Select demand (optional) —</option>
+                        @foreach($demands as $d)
+                        <option value="{{ $d->id }}" @selected(old('fee_demand_id') == $d->id)>
+                            {{ $d->description ?? 'Demand' }} — ₹{{ number_format($d->amount,0) }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+                <div class="mb-3">
+                    <label class="form-label">Amount Paid (₹)</label>
+                    <input type="number" name="amount" value="{{ old('amount') }}" step="0.01" class="form-control @error('amount') is-invalid @enderror">
+                    @error('amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select @error('payment_method') is-invalid @enderror">
+                        <option value="">— Select —</option>
+                        @foreach(['online'=>'Online (UPI/Net Banking)','neft'=>'NEFT','rtgs'=>'RTGS','dd'=>'Demand Draft','cash'=>'Cash'] as $v=>$l)
+                        <option value="{{ $v }}" @selected(old('payment_method') == $v)>{{ $l }}</option>
+                        @endforeach
+                    </select>
+                    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Bank Name <span class="text-muted">(optional)</span></label>
+                        <input type="text" name="bank_name" value="{{ old('bank_name') }}" class="form-control" placeholder="e.g. SBI, HDFC">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Transaction / UTR Reference</label>
+                        <input type="text" name="transaction_ref" value="{{ old('transaction_ref') }}" class="form-control @error('transaction_ref') is-invalid @enderror" placeholder="UTR / Transaction ID">
+                        @error('transaction_ref')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Upload Payment Proof <span class="text-muted">(screenshot/receipt, max 5MB)</span></label>
+                    <input type="file" name="proof" accept="image/*,.pdf" class="form-control @error('proof') is-invalid @enderror">
+                    @error('proof')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Submit for Verification</button>
+                    <a href="{{ route('student.fee-payment.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection

@@ -569,6 +569,25 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 
+    // Sprint 2: Attendance condonation
+    Route::get('condonation', [\App\Http\Controllers\Student\AttendanceCondonationController::class, 'index'])->name('condonation.index');
+    Route::get('condonation/create', [\App\Http\Controllers\Student\AttendanceCondonationController::class, 'create'])->name('condonation.create');
+    Route::post('condonation', [\App\Http\Controllers\Student\AttendanceCondonationController::class, 'store'])->name('condonation.store');
+
+    // Sprint 2: Fee payment proof submission
+    Route::get('fee-payment', [\App\Http\Controllers\Student\FeePaymentRequestController::class, 'index'])->name('fee-payment.index');
+    Route::get('fee-payment/create', [\App\Http\Controllers\Student\FeePaymentRequestController::class, 'create'])->name('fee-payment.create');
+    Route::post('fee-payment', [\App\Http\Controllers\Student\FeePaymentRequestController::class, 'store'])->name('fee-payment.store');
+
+    // Sprint 2: Document requests
+    Route::get('documents', [\App\Http\Controllers\Student\DocumentRequestController::class, 'index'])->name('documents.index');
+    Route::get('documents/request', [\App\Http\Controllers\Student\DocumentRequestController::class, 'create'])->name('documents.create');
+    Route::post('documents', [\App\Http\Controllers\Student\DocumentRequestController::class, 'store'])->name('documents.store');
+
+    // Sprint 2: Grievance follow-up comments + close
+    Route::post('grievances/{grievance}/comment', [\App\Http\Controllers\Student\GrievanceController::class, 'addComment'])->name('grievances.comment');
+    Route::post('grievances/{grievance}/close', [\App\Http\Controllers\Student\GrievanceController::class, 'close'])->name('grievances.close');
+
     // Sprint 1: Attendance drill-down
     Route::get('attendance/{subject}/sessions', [\App\Http\Controllers\Student\AttendanceController::class, 'sessions'])->name('attendance.sessions');
 

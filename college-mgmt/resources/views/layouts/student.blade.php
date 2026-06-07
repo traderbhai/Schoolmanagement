@@ -74,6 +74,9 @@
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif">
             <i class="bi bi-cash-coin"></i> Fee Status
         </a>
+        <a href="{{ route('student.fee-payment.index') }}" class="nav-link @if(request()->routeIs('student.fee-payment.*')) active @endif">
+            <i class="bi bi-upload me-2"></i>Submit Payment
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -84,12 +87,18 @@
 
         <div class="sidebar-divider"></div>
 
-        <div class="section-label">Communication</div>
+        <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
             <i class="bi bi-megaphone"></i> Notices
         </a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
             <i class="bi bi-chat-square-text me-2"></i>Grievances
+        </a>
+        <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif">
+            <i class="bi bi-shield-check me-2"></i>Attendance Condonation
+        </a>
+        <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif">
+            <i class="bi bi-file-earmark-text me-2"></i>Document Requests
         </a>
 
         <div class="sidebar-divider"></div>
@@ -137,13 +146,16 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
+        <a href="{{ route('student.fee-payment.index') }}" class="nav-link @if(request()->routeIs('student.fee-payment.*')) active @endif"><i class="bi bi-upload me-2"></i>Submit Payment</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Career</div>
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
         <div class="sidebar-divider"></div>
-        <div class="section-label">Communication</div>
+        <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-chat-square-text me-2"></i>Grievances</a>
+        <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
+        <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
