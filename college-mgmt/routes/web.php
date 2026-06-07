@@ -231,6 +231,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::delete('users/roles/{userRole}', [Admin\UserRoleController::class, 'destroy'])->name('users.roles.destroy');
     Route::post('users/{user}/roles/expire-all', [Admin\UserRoleController::class, 'expireAll'])->name('users.roles.expire-all');
 
+    // Reporting & Analytics
+    Route::get('institutional-kpi', [Admin\InstitutionalKpiController::class, 'index'])->name('institutional-kpi');
+    Route::get('aicte-report', [Admin\AicteReportController::class, 'index'])->name('aicte-report');
+    Route::get('aicte-report/export-pdf', [Admin\AicteReportController::class, 'exportPdf'])->name('aicte-report.pdf');
+
     // Audit Log (static routes before wildcards)
     Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
     Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');

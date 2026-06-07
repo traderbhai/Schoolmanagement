@@ -438,6 +438,14 @@
         <div class="section-label">System</div>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Reports & Analytics</div>
+        @hasanyrole('admin')
+        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
+        @endhasanyrole
+        @hasanyrole('admin|dean_academics')
+        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif"><i class="bi bi-file-earmark-bar-graph"></i> AICTE Report</a>
+        @endhasanyrole
     </div>
 </div>
 
