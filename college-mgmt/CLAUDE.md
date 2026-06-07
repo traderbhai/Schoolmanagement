@@ -18,10 +18,10 @@
 **Approach:** One department/user-type at a time, depth-first. Ship complete, useful features for each role before moving to the next.
 
 **Order of departments:**
-1. **Student** ← CURRENTLY IN PROGRESS
-2. Teacher / Faculty
-3. Exam Cell
-4. Admission
+1. **Student** ✅ COMPLETE — merged to main (PR #15, 2026-06-07)
+2. **PMC (Program Management Cell / Program Chair)** ← NEXT
+3. Teacher / Faculty
+4. Exam Cell
 5. Accounts / Finance
 6. HOD / Dean Academics
 7. CMC / Placement
@@ -77,7 +77,6 @@ $query = ApprovalWorkflow::where('approver_role', 'dean_academics')
     ->with(['approvable', 'approver'])
     ->latest();
 
-// Filter by program (polymorphic)
 if ($request->filled('program_id')) {
     $query->whereHasMorph('approvable', [Applicant::class], fn($q) =>
         $q->where('program_id', $request->program_id)
@@ -144,7 +143,7 @@ Admission Head selects applicant
 | Accounts | /accounts/* | layouts.admin |
 | Dean | /dean/* | layouts.admin |
 | HOD | /hod/* | layouts.admin |
-| Program Chair | /program-chair/* | layouts.admin |
+| Program Chair / PMC | /program-chair/* | layouts.admin |
 | Exam Cell | /exam-cell/* | layouts.admin |
 | Teacher | /teacher/* | layouts.admin |
 | Student | /student/* | layouts.student |
@@ -162,9 +161,7 @@ php artisan migrate:fresh --seed          # Full reseed
 php artisan serve --port=8000             # Dev server
 php artisan route:clear                   # Clear route cache
 php artisan route:list --name=<prefix>    # List routes
-
-# Playwright tests (screenshots to /tmp/screenshots/)
-NODE_PATH=/opt/node22/lib/node_modules node /tmp/test_admission2.js
+php artisan migrate --force               # Run new migrations (production mode)
 ```
 
 ---
@@ -173,461 +170,421 @@ NODE_PATH=/opt/node22/lib/node_modules node /tmp/test_admission2.js
 
 **67 pages tested — 64 HTTP 200 | 0 auth failures | 0 server errors**
 
-Known 404 (not bugs — test URL wrong):
-- `/admin/academic-calendar` — correct URL is `/academic/academic-calendars`
-
----
-
-## Phase 1: Role & Permission Hierarchy — COMPLETE (2026-06-06)
-
-**Status:** Days 1-10 done. All acceptance criteria met.
-
-### Role Hierarchy (highest → lowest)
-admin (6) → dean_academics (5) → admission_head (4) → program_chair/hod/admission_officer (3) → accounts_officer/exam_cell/cmc (2) → teacher/faculty (1) → student (0)
-
-Higher roles inherit feature access of all lower roles via `RoleHierarchyService`.
-
-### Key Files Added
-- `app/Services/RoleHierarchyService.php` — hierarchy + inheritance logic
-- `app/Http/Middleware/ProgramScope.php` — per-program route enforcement
-- `app/Http/Middleware/FeatureAccess.php` — feature-code access check (inheritance-aware)
-- `app/Providers/AppServiceProvider.php` — @canAccess blade directive
-- `database/seeders/RoleFeatureAccessSeeder.php` — 25+ feature codes seeded per role
-- `tests/Unit/RoleHierarchyTest.php` — hierarchy logic unit tests
-- `tests/Feature/RoleFeatureAccessSeederTest.php` — seeder integration tests
-
-### 25+ Feature Codes
-exam.enter_marks, exam.view_results, exam.approve_results, exam.schedule_exam, exam.manage_malpractice,
-admission.view_applicants, admission.approve_offers, admission.process_docs, admission.shortlist,
-enrollment.enroll_student, enrollment.view_enrolled,
-approval.dean_sign_off, approval.chair_sign_off,
-curriculum.view, curriculum.edit,
-attendance.mark, attendance.view_report,
-fee.view_demands, fee.collect_payment, fee.reconcile,
-placement.view_drives, placement.create_drive, placement.manage_drive,
-report.view_institutional, report.view_program,
-user.manage_roles, audit.view_log
-
 ---
 
 ## Key File Locations
 
 ```
-routes/web.php                                    — all 497 routes
+routes/web.php                                    — all routes (~670 lines)
+app/Http/Controllers/Student/                     — 25 student controllers
+app/Http/Controllers/Departmental/                — Dean, Chair, HOD, ExamCell, Accounts, CMC, Alumni
 app/Http/Controllers/Admission/                   — 26 admission controllers
-app/Http/Controllers/Departmental/                — Dean, Chair, HOD, ExamCell, Accounts
 app/Services/                                     — Grade, Enrollment, Report, Timetable, AdmissionNotification
 resources/views/layouts/admin.blade.php           — main staff layout (sidebar)
-resources/views/layouts/student.blade.php         — student layout
+resources/views/layouts/student.blade.php         — student layout (full sidebar: all 4 sprints)
+resources/views/student/                          — 40+ student view templates (Sprints 1-4)
 database/seeders/DemoDataSeeder.php               — all demo data
 GUIDE.md                                          — full user & developer guide
 ```
 
 ---
 
-## Academic Phase Implementation Plan
+## COMPLETED: Student Portal (Sprints 1–4) — merged to main
 
-**Status:** Plan created (2026-06-06), awaiting Phase 1 approval
+**PR #15** merged 2026-06-07. All student-facing features are complete.
 
-**Timeline:** 6-9 months, 8 phases, ~1,200-1,500 person-days
+### What Was Built
 
-**Detailed Roadmaps:** (in /college-mgmt/ root)
-- `PHASED_IMPLEMENTATION_ROADMAP.md` — Technical blueprint (all features, models, routes)
-- `IMPLEMENTATION_SUMMARY.md` — Executive summary for stakeholders
-- `IMPLEMENTATION_PATTERNS.md` — Code examples & patterns
-- `QUICK_REFERENCE.md` — One-page cheat sheet
+| Sprint | Key Features |
+|--------|-------------|
+| S1 | Dashboard (KPI cards, low-att banner, deadlines widget), timetable, session-level attendance drill-down, course content hub (pre-read/post-read/notes), assignments, academic calendar, leave applications |
+| S2 | Component-wise marks (IA1/IA2/End-Sem), backlog tracker, attendance condonation, fee payment proof, document requests, profile (photo upload, guardian), grievance comments |
+| S3 | Exam registration (eligibility check), marks appeals, scholarships, mentor (messages + meetings), course feedback, resume builder, career events |
+| S4 | Discussion board per subject, internship view, alumni network, term promotion status, academic summary card (printable) |
 
-**8 Phases:**
-
-| Phase | Theme | Duration | Key Deliverables |
-|-------|-------|----------|---|
-| 1 | Role & Permission Hierarchy | 2w | Role scoping, permission matrix, audit logging |
-| 2 | Role-Specific Dashboards | 2w | 9 dashboards (Dean, Chair, PMC, Exam, HOD, Faculty, CMC, Director, Owner) |
-| 3 | Approval Workflows | 2w | Multi-step chains, escalation, SLA tracking |
-| 4 | Offer & Enrollment | 2w | Bulk offers, enrollment numbers, portal updates |
-| 5 | Academic Lifecycle | 3w | Exams, grades, GPA, promotion, transcripts |
-| 6 | Fee Management | 2w | Demands, payments, reconciliation, scholarships |
-| 7 | Placement & Career | 2w | Drives, internships, alumni, placement stats |
-| 8 | Reporting & Analytics | 2w | AICTE compliance, institutional KPIs, director dashboards |
-
-**New Models (~30):** UserRole, RolePermissionMatrix, CurriculumChange, StudentGrievance, FacultyWorkload, StudentMentorship, PlacementDrive (extended), AlumniProfile, + more
-
-**Key Roles Impacted:** Dean, Program Chair, PMC, Exam Cell, HOD, Faculty, CMC/Placement, Director, Owner
-
-**Status:** All 8 phases COMPLETE and merged to main (2026-06-07).
-**Next:** Department-by-department feature depth sprints (see below).
+### New Tables Added (Student sprints)
+`program_subjects`, `student_subject_enrollments`, `study_materials`, `assignments`, `assignment_submissions`, `quizzes`, `quiz_questions`, `quiz_options`, `quiz_attempts`, `quiz_answers`, `leave_applications`, `academic_events`, `subject_announcements`, `mentor_meetings`, `mentor_messages`, `course_feedback`, `attendance_condonations`, `fee_payment_requests`, `document_requests`, `grievance_comments`, `student_scholarship_applications`, `marks_appeals`, `exam_registrations`, `student_resumes`, `career_events`, `career_event_registrations`, `subject_discussions`, `subject_discussion_replies`
 
 ---
 
-## SPRINT: Student Portal — Feature Depth
+## NEXT SPRINT: PMC (Program Management Cell) Portal — Feature Depth
 
-**Status:** IN PROGRESS  
-**Goal:** Make the student portal the single source of truth for a student's entire academic life — attendance, results, fees, assignments, documents, career, and communication — all in one place, zero friction.
+**Status:** PLANNING COMPLETE — ready to implement  
+**Branch to create:** `claude/pmc-sprint`  
+**Route prefix:** `/program-chair/*` (name prefix: `chair.`)  
+**Layout:** `layouts.admin`  
+**Controller directory:** `app/Http/Controllers/Departmental/`  
+**Main controller:** `ProgramChairController.php` (already exists — extend it)
 
----
-
-### What Already Works (Do NOT re-implement)
+### What Already Exists (Do NOT re-implement)
 
 | Feature | Route | Notes |
 |---------|-------|-------|
-| Dashboard (4 KPIs) | `student.dashboard` | Attendance %, SGPA, CGPA, Fee balance |
-| Attendance view | `student.attendance` | Per-subject breakdown |
-| Results / Grades | `student.results` | SGPA/CGPA, semester filter |
-| Admit Cards | `student.admit-cards.*` | List + PDF download |
-| Subject Registration | `student.subjects.*` | Enroll/drop, 24-credit limit |
-| Timetable | `student.timetable` | Weekly grid |
-| Transcript PDF | `student.transcript.download` | Official cumulative transcript |
-| Fee Status | `student.fees` | Structures, payments, demands, balance |
-| Notices | `student.notices.*` | Filtered list + detail |
-| Grievances | `student.grievances.*` | Create/list/view |
-| Placements | `student.placements.*` | Browse drives, apply, track |
-| Profile | `student.profile.*` | View + edit name/phone/password |
-| Grade Card PDF | `student.reports.grade-card` | Per-semester PDF |
-| Fee Receipt PDF | `student.reports.fee-receipt` | Per-payment PDF |
-| Notification Prefs | `student.notifications.*` | 4 email toggles |
+| Dashboard (basic) | `chair.dashboard` | KPI tiles + recent exams; needs full rebuild |
+| Student list | `chair.students` | Browse + filter by batch/status |
+| Curriculum view | `chair.curriculum` | Subjects grouped by program + term; read-only |
+| Timetable view | `chair.timetable` | Read-only grid grouped by day |
+| Exam list | `chair.exams` | Upcoming + past; read-only |
+| Approval workflows | `chair.approvals` | Approve/reject admission offer letters |
 
----
-
-### Data Model Gaps — Fix These First (Foundational)
-
-These are missing from the schema and block multiple features. Build before any sprint feature.
-
-#### Gap 1: Compulsory vs Elective — `program_subjects` table
-Currently subjects are linked to programs directly on the `subjects` table (`program_id`). There is no way to say "this subject is compulsory for all students" vs "students pick 2 from this elective pool". Need a proper curriculum mapping table.
-
-```php
-// New migration: create_program_subjects_table
-Schema::create('program_subjects', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('program_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('subject_id')->constrained()->cascadeOnDelete();
-    $table->unsignedTinyInteger('term_number');          // which semester/term this subject belongs to
-    $table->enum('category', ['core','elective','open_elective','audit','lab','project'])
-          ->default('core');
-    $table->boolean('is_mandatory')->default(true);      // false = student opts in
-    $table->unsignedTinyInteger('elective_group')->nullable(); // students pick N from same group
-    $table->unsignedTinyInteger('credits_override')->nullable(); // overrides subject.credits if set
-    $table->unsignedSmallInteger('sort_order')->default(0);
-    $table->unique(['program_id', 'subject_id', 'term_number']);
-    $table->timestamps();
-});
-```
-
-**Model:** `ProgramSubject` with `program()`, `subject()` relationships.  
-**Update:** `Subject::$fillable` — remove `program_id` (managed via junction), keep `department_id`.  
-**Update:** `Enrollment` — add `program_subject_id` nullable FK so we know which curriculum slot was filled.  
-**Seeders:** When creating subjects, also seed `program_subjects` records.
-
-#### Gap 2: Per-Session Attendance Drill-Down (model is fine, view is incomplete)
-The `Attendance` model correctly stores `(student_id, timetable_entry_id, date)` — session-level granularity is there. But `StudentAttendanceController` only shows **subject-level aggregates** (total sessions, present %, etc). Students need to see **exactly which sessions they missed** — date, time slot, subject — to plan condonation requests or dispute errors.
-
-Fix: Add `->with(['timetableEntry.slot', 'timetableEntry.subject'])` to the attendance query and show a session-by-session breakdown view accessible from the subject aggregate row.
-
-#### Gap 3: Session-linked Course Content (Pre-read / Post-read)
-Currently study materials would be attached to a subject. But pre-reads and post-reads are tied to a **specific class session** ("before Monday's 10am Data Structures class"). Need an optional `timetable_entry_id + date` on `StudyMaterial` so teachers can push pre-read to students before a specific class and post-read/recording after.
-
----
-
-### Complete Student Feature Master List
-
-Legend: ✅ EXISTS | 🔧 EXISTS BUT NEEDS FIX | 🆕 NEW | 🔗 CROSS-ROLE (shared with teacher/PMC/admin)
-
----
-
-#### ACADEMICS — Daily Interaction
-
-| # | Feature | Status | Cross-role? | Notes |
-|---|---------|--------|-------------|-------|
-| A1 | Dashboard (KPIs + widgets) | 🔧 | — | Needs: deadlines widget, low-att alert, quick actions, credit progress |
-| A2 | Personal Timetable (weekly grid) | 🔧 | 🔗 Teacher sees own schedule | Compulsory + elective subjects combined; needs elective awareness |
-| A3 | Attendance — subject aggregate view | ✅ | — | Shows % per subject; low-attendance flag |
-| A4 | Attendance — session drill-down | 🆕 | — | Show WHICH date/slot was absent/late; link to condonation request |
-| A5 | Subject Registration (elective selection) | 🔧 | 🔗 PMC/HOD sets elective pool | Currently no compulsory/elective distinction; needs `ProgramSubject` table |
-| A6 | Results — component-wise marks view | 🔧 | — | IA1, IA2, End-Sem breakdown already in DB (AssessmentComponent); not shown to student |
-| A7 | Results — cumulative across all terms | ✅ | — | SGPA/CGPA calculated; works |
-| A8 | Backlog / Arrear tracker | 🆕 | 🔗 Exam Cell manages | Show all failed subjects, attempt count, eligibility for supplementary |
-| A9 | Exam registration (end-sem) | 🆕 | 🔗 Exam Cell approves | Student formally registers; eligibility check: attendance ≥75% + no dues |
-| A10 | Admit cards (PDF) | ✅ | — | Exists; works |
-| A11 | Official Transcript (PDF) | ✅ | — | Exists; works |
-| A12 | Grade card per term (PDF) | ✅ | — | Exists; works |
-| A13 | Grade / Marks appeal | 🆕 | 🔗 Teacher/Exam Cell reviews | Student disputes a result with reason; teacher/exam cell can revise |
-| A14 | Academic calendar | 🆕 | 🔗 Admin/Dean creates | Exam windows, holidays, fee deadlines, registration periods, results dates |
-| A15 | Leave application | 🆕 | 🔗 HOD/Mentor approves | Sick/casual/event leave; attach proof; track approval |
-| A16 | Attendance condonation request | 🆕 | 🔗 HOD reviews | When <75% in a subject; attach medical/event certificate |
-| A17 | Term promotion status | 🆕 | 🔗 Exam Cell/Admin manages | See if promoted to next term, conditions if any |
-
----
-
-#### COURSE CONTENT — Multi-role Feature Set 🔗
-
-All of these involve at least Student + Teacher, and visibility for PMC/HOD.
-
-| # | Feature | Student side | Teacher side | PMC/HOD side |
-|---|---------|-------------|-------------|-------------|
-| C1 | **Study Materials** | Browse/download per subject | Upload PDFs/slides/links | View what's been shared |
-| C2 | **Pre-read** (before class) | Listed on session day in timetable | Attach to specific class session | — |
-| C3 | **Post-read / Session notes** (after class) | Available after class date | Upload recording/notes after session | — |
-| C4 | **Assignments** | View, submit file/text, see grade+feedback | Create, set due date, grade submissions | View completion rate per subject |
-| C5 | **Quizzes** (online MCQ/short answer) | Attempt within window, see score | Create, set window, view results | View score distribution |
-| C6 | **Coursework / Lab reports** | Submit, track marks | Grade per student | — |
-| C7 | **Syllabus / Course outline** | View term syllabus for each subject | Upload/update | Approve curriculum |
-| C8 | **Subject Announcements** | Receive per-subject alerts | Post to enrolled students | — |
-| C9 | **Discussion / Q&A board** | Ask questions, reply | Answer student questions | Moderation |
-
-**New models needed for C1–C9:**
+### Existing Schema (understand before adding)
 
 ```
-study_materials: id, subject_id, teacher_id, term_id, timetable_entry_id (nullable),
-                 session_date (nullable), material_type [pre_read/post_read/notes/reference/syllabus],
-                 title, description, file_path, file_size, is_published, published_at
+timetable_entries: id, semester_id, course_id, subject_id, teacher_id, classroom_id,
+                   timetable_slot_id, day_of_week, is_active, program_id, term_id
+                   (+ batch_id was referenced in view but check if column exists)
 
-assignments: id, subject_id, teacher_id, term_id, title, description, instructions,
-             due_date, max_marks, submission_type [file/text/both], allowed_file_types,
-             max_file_size_mb, is_published, late_submission_allowed, late_penalty_pct
+timetable_slots: id, name, start_time, end_time, is_break, sort_order, is_active
 
-assignment_submissions: id, assignment_id, student_id, file_path, text_content,
-                        submitted_at, is_late, marks_obtained, feedback,
-                        graded_at, graded_by, status [draft/submitted/graded/returned]
+program_subjects: id, program_id, subject_id, term_id, type, elective_group,
+                  credits, max_elective_choices, is_active
 
-quizzes: id, subject_id, teacher_id, term_id, title, description, duration_minutes,
-         start_at, end_at, total_marks, passing_marks, max_attempts, shuffle_questions,
-         show_result_immediately, is_published
+teachers: id, user_id, department_id, employee_id, designation, qualification,
+          specialization, phone, employment_type, status, photo
 
-quiz_questions: id, quiz_id, question_text, question_type [mcq/true_false/short_answer],
-                marks, sort_order, explanation (for post-quiz review)
+classrooms: id, name, room_number, capacity, type, building, floor,
+            has_projector, has_lab, is_active
 
-quiz_options: id, question_id, option_text, is_correct, sort_order
-
-quiz_attempts: id, quiz_id, student_id, started_at, submitted_at, score,
-               is_completed, attempt_number
-
-quiz_answers: id, attempt_id, question_id, selected_option_id, text_answer, is_correct, marks_awarded
-
-subject_announcements: id, subject_id, teacher_id, term_id, title, body,
-                       is_pinned, published_at
+subjects: id, department_id, name, code, credits, type, hours_per_week,
+          is_active, program_id, term_number
 ```
 
 ---
 
-#### FINANCE
+### PMC Role — Who They Are & What They Do Daily
+
+The PMC (Program Management Cell / Program Chair) is the **operational backbone of a program**. Unlike the HOD (who manages a department) or the Dean (strategic oversight), the PMC is hands-on academic management:
+
+- Owns **one or more programs** (e.g., B.Tech CSE, MBA Finance)
+- Is accountable for **every student's academic journey** in their program
+- Coordinates between students, faculty, exam cell, accounts, and administration
+- Has **no authority over HR** (that's HOD) but full authority over **academic operations**
+
+---
+
+### PMC Feature Master List
+
+Legend: ✅ EXISTS (basic) | 🔧 EXISTS BUT INCOMPLETE | 🆕 NEW
+
+---
+
+#### CURRICULUM MANAGEMENT
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| F1 | Fee status — view demands + payments | ✅ | Works; FeeDemand is source of truth |
-| F2 | Fee payment — manual UTR/proof submission | 🆕 | Student submits payment proof; Accounts verifies |
-| F3 | Fee receipt download (PDF) | ✅ | Works |
-| F4 | Fee structure breakdown | 🔧 | Show what each component (tuition/exam/library) costs |
-| F5 | Scholarship — view available | 🆕 | 🔗 Admin/Dean manages scholarships |
-| F6 | Scholarship — apply + track | 🆕 | 🔗 Accounts processes, Dean approves |
-| F7 | Fine / penalty details | 🔧 | Show late fee, library fines in one place |
-| F8 | Payment history — all transactions | ✅ | Works |
-
-```
-fee_payment_requests: id, student_id, fee_demand_id, amount, payment_method,
-                      bank_name, transaction_ref, proof_path, submitted_at,
-                      verified_by, verified_at, status [pending/verified/rejected], notes
-
-scholarships: id, name, type [merit/need/government/institutional/sports],
-              program_id (nullable), amount, description, eligibility_criteria,
-              application_deadline, max_recipients, is_active
-
-scholarship_applications: id, scholarship_id, student_id, term_id,
-                          cgpa_at_application, reason, documents_path,
-                          status [pending/shortlisted/approved/rejected/disbursed],
-                          reviewed_by, review_note, disbursed_at, disbursed_amount
-```
+| CM1 | View curriculum by term | ✅ | Subjects grouped by program + term; read-only |
+| CM2 | Add/edit subjects to program-term | 🆕 | Create ProgramSubject entries; set type (core/elective/lab/project) |
+| CM3 | Manage elective pools | 🆕 | Define elective groups; set how many students must pick from each group; set min/max credits |
+| CM4 | Set term credit limits | 🆕 | Max credits a student can register per term (e.g., 24 credits) |
+| CM5 | Curriculum change requests | 🔧 | `CurriculumChange` model exists via `academic/curriculum-changes`; PMC should initiate + track |
+| CM6 | Subject-to-faculty assignment | 🆕 | Assign which teacher teaches which subject in which term; basis for timetable |
+| CM7 | Course outline / syllabus upload | 🆕 | Upload PDF syllabus per subject per term; visible to students |
+| CM8 | Prerequisite management | 🆕 | Mark which subjects require prior completion (e.g., DSA requires C Programming) |
 
 ---
 
-#### CAREER
+#### TIMETABLE MANAGEMENT (Core PMC Responsibility)
+
+This is the most complex feature. A real timetable engine must handle:
+
+**Hard Constraints (must not be violated):**
+- No teacher assigned to two sessions at the same time
+- No classroom double-booked for the same slot
+- No batch has two subjects at the same time
+- Lab sessions need rooms with `has_lab = true`
+- Room `capacity` ≥ batch size
+
+**Soft Constraints (try to satisfy):**
+- Teacher availability preferences (not before 9am, not on Friday afternoon)
+- Spread subjects evenly across the week (don't stack 4 lectures Monday morning)
+- Back-to-back labs preferred (2-hour contiguous blocks)
+- Core subjects earlier in the day, electives/labs later
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| CR1 | Placement drives — browse + apply | ✅ | Works |
-| CR2 | My placement applications — track | ✅ | Works |
-| CR3 | Internship — view assigned/active | 🔧 | InternshipController exists (CMC creates); student view missing |
-| CR4 | Resume / CV builder | 🆕 | Auto-fill education from DB; add skills/experience/projects |
-| CR5 | Alumni — browse same-program alumni | 🆕 | Filter by graduation year, company; request connection |
-| CR6 | Career events / workshops | 🆕 | Register for seminars, mock interviews |
+| TT1 | Timetable view (read-only grid) | ✅ | Already exists; day-grouped; needs slot-grid format |
+| TT2 | Timetable builder — drag-and-drop slot assignment | 🆕 | Assign subject+teacher+room to day+slot for a batch+term; conflict detection on save |
+| TT3 | Teacher availability management | 🆕 | Each teacher sets preferred/blocked slots per week; PMC sees when building timetable |
+| TT4 | Conflict detection engine | 🆕 | Real-time check: teacher clash, room clash, batch clash; return specific conflict message |
+| TT5 | Timetable publish / draft state | 🆕 | Draft → Published; students/teachers only see published timetable |
+| TT6 | Timetable version history | 🆕 | Keep old published timetables; allow rollback; show "effective from" date |
+| TT7 | Substitute / replacement session | 🆕 | When a teacher is absent, PMC assigns substitute or cancels session with notice |
+| TT8 | Extra / makeup class scheduling | 🆕 | Schedule one-off additional sessions outside the regular timetable |
+| TT9 | Timetable export (PDF + Excel) | 🆕 | Print-ready timetable for each batch; teacher-wise schedule export |
+| TT10 | Room utilization report | 🆕 | Which rooms are over/under-utilized; free slots per room |
 
+**New tables needed for timetable:**
 ```
-student_resumes: id, student_id, headline, objective, skills (JSON array), 
-                 languages (JSON), projects (JSON), certifications (JSON),
-                 custom_resume_path, is_complete, last_updated_at
+teacher_availability: id, teacher_id, term_id, day_of_week, timetable_slot_id,
+                      availability_type [available/unavailable/preferred], notes
 
-career_events: id, title, event_type [seminar/mock_interview/workshop/company_visit],
-               organizer_id, date, venue, description, seats, registration_deadline
+timetable_versions: id, program_id, term_id, batch_id, version_number,
+                    status [draft/published/archived], published_at, published_by,
+                    effective_from, notes
 
-career_event_registrations: id, event_id, student_id, registered_at, attended (bool)
+timetable_substitutions: id, original_entry_id, substitute_teacher_id, date,
+                         reason, status [scheduled/cancelled], notified_at
 ```
+
+**Key rule:** `timetable_entries` already has the right shape. Add `timetable_version_id` FK and `batch_id` (check if missing). The builder assigns entries; publish pushes version to active.
 
 ---
 
-#### WELLBEING & SUPPORT
+#### FACULTY COORDINATION
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| W1 | Grievances — create/track | ✅ | Works |
-| W2 | Grievances — add follow-up / close | 🔧 | Currently read-only after submit; add comment/close |
-| W3 | Mentor — view assigned faculty mentor | 🆕 | 🔗 Mentor is a teacher; assigned by HOD |
-| W4 | Mentor — request meeting | 🆕 | 🔗 Teacher confirms/declines meeting request |
-| W5 | Mentor — message thread | 🆕 | Simple text thread between student and mentor |
-| W6 | Course / Teacher feedback | 🆕 | 🔗 At term-end; anonymous; HOD/Dean sees results |
-| W7 | Health / medical record access | 🆕 | (Low priority, Phase 3 or later) |
-
-```
-mentor_assignments: id, student_id, teacher_id (mentor), assigned_by, assigned_at, is_active
-  (add mentor_id FK to students table for quick access)
-
-mentor_meetings: id, mentor_assignment_id, student_id, teacher_id, 
-                 requested_at, scheduled_at, duration_minutes, agenda,
-                 status [requested/confirmed/completed/cancelled], notes
-
-mentor_messages: id, mentor_assignment_id, sender_id (user_id), body, 
-                 sent_at, read_at
-
-course_feedback: id, student_id, subject_id, teacher_id, term_id,
-                 teaching_rating (1-5), content_rating (1-5), engagement_rating (1-5),
-                 overall_rating (1-5), comments, is_anonymous, submitted_at
-  (unique: student_id + subject_id + term_id — one per subject per term)
-```
+| FC1 | Faculty workload view | 🆕 | Hours per week per teacher for the term; flag overloaded (>18 hrs) or underloaded |
+| FC2 | Subject-faculty assignment | 🆕 | Map teacher → subject → term → batch (one teacher per subject-batch-term) |
+| FC3 | Faculty attendance summary | 🆕 | How many sessions each teacher has conducted vs scheduled; flag absenteeism |
+| FC4 | Leave approval for faculty (from PMC perspective) | 🆕 | PMC sees teacher leave requests; ensures coverage is arranged |
+| FC5 | Course delivery tracking | 🆕 | How many of the planned syllabus topics have been covered; % completion per subject |
+| FC6 | Faculty feedback summary (from students) | 🆕 | Aggregated anonymous ratings per teacher per subject; visible only to PMC + HOD + Dean |
+| FC7 | Faculty communication (broadcast) | 🆕 | PMC sends notice/announcement to all faculty in their program |
 
 ---
 
-#### DOCUMENTS
+#### STUDENT MANAGEMENT (PMC's Central Responsibility)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| D1 | Request bonafide certificate | 🆕 | Admin generates PDF, student downloads |
-| D2 | Request fee paid letter | 🆕 | Admin generates, includes term-wise paid amounts |
-| D3 | Request character certificate | 🆕 | Requires HOD approval before admin generates |
-| D4 | ID card download (digital) | 🆕 | Auto-generated PDF with photo, enrollment number, QR code |
-| D5 | My uploaded documents vault | 🆕 | Personal docs: Aadhar, 10th/12th marksheets, etc. |
-
-```
-document_requests: id, student_id, document_type [bonafide/fee_letter/character/migration/noc],
-                   purpose, additional_info, status [pending/approved/rejected/ready],
-                   requested_at, reviewed_by, fulfilled_at, output_path, notes
-
-student_documents: id, student_id, document_name, document_type, file_path,
-                   uploaded_at, is_verified, verified_by
-```
+| SM1 | Student list with full academic status | 🔧 | Exists; add CGPA, attendance %, arrear count, fee status columns |
+| SM2 | At-risk student dashboard | 🆕 | Students who are: attendance < 75% in any subject, CGPA < 5.0, have arrears, or have dues |
+| SM3 | Elective registration management | 🆕 | View which students picked which electives; override/fix registrations; enforce group limits |
+| SM4 | Mentor assignment | 🆕 | Assign faculty mentors to students; bulk assign by batch or roll number range |
+| SM5 | Leave application approvals | 🆕 | PMC approves/rejects student leave requests; can delegate to teacher |
+| SM6 | Attendance condonation review | 🆕 | Review student condonation requests; approve with session count; forward to Dean if > threshold |
+| SM7 | Grievance management (program-level) | 🆕 | See all open grievances in their program; assign staff to resolve; escalate to HOD |
+| SM8 | Student promotion decisions | 🆕 | View term-end promotion eligibility; flag detained students; process batch promotions |
+| SM9 | Batch-level communication | 🆕 | Send announcements to entire batch or specific section |
+| SM10 | Detained/ATKT students register | 🆕 | List of students with arrears, their subject-wise attempt history, supplementary eligibility |
 
 ---
 
-#### PROFILE & ACCOUNT
+#### ACADEMIC CALENDAR MANAGEMENT
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| P1 | Profile — view + edit name/phone | ✅ | Works |
-| P2 | Profile — photo upload | 🔧 | `photo` field exists on Student model; no upload UI |
-| P3 | Profile — guardian/emergency contacts | 🔧 | Fields exist (guardian_name, guardian_phone); no edit UI |
-| P4 | Notification preferences | ✅ | 4 email toggles; works |
-| P5 | Change password | ✅ | Works via profile edit |
-| P6 | Academic summary card | 🆕 | One-page view: program, batch, term, CGPA, credits, mentor name |
+| AC1 | Create academic events | 🆕 | Holidays, exam windows, assignment deadlines, registration periods, result dates, fee due dates |
+| AC2 | Calendar visible to students/faculty | 🆕 | Published events flow to `student.calendar.index` (already wired) |
+| AC3 | Term/semester planning | 🆕 | Define term start/end dates, teaching weeks, exam week; link to program |
+| AC4 | Exam schedule coordination | 🆕 | PMC proposes exam dates per subject → Exam Cell publishes; no direct conflict across subjects |
 
 ---
 
-### Cross-Role Feature Matrix
+#### ASSESSMENT & MARKS MANAGEMENT
 
-Features that span multiple portals — must be designed consistently from day one.
-
-| Feature | Student | Teacher | PMC/Chair | HOD | Exam Cell | Admin |
-|---------|---------|---------|-----------|-----|-----------|-------|
-| Timetable | View personal | View personal schedule | View program timetable | View dept timetable | — | Create/manage |
-| Attendance | View own sessions | Mark for each class | View program-level stats | View dept alerts | Export | Override/audit |
-| Assignments | Submit + view grade | Create + grade | View completion % | View dept summary | — | Audit |
-| Study Materials | Download | Upload/manage | Approve syllabus | Monitor | — | Audit |
-| Quizzes | Attempt | Create/grade | View analytics | — | — | Audit |
-| Leave | Apply | Approve (for mentees) | View program absences | Approve (dept) | — | Override |
-| Grievances | Raise | — | — | Resolve/escalate | — | Final escalation |
-| Academic Calendar | View | View | View + suggest | View + suggest | Manage exam dates | Create/manage |
-| Results | View own | Enter marks | View program stats | View dept stats | Publish/audit | Override |
-| Course Feedback | Submit | View own ratings | View program ratings | View dept ratings | — | View all |
-| Scholarships | Apply | — | — | Recommend | — | Approve/disburse |
-| Documents | Request | — | — | Approve character cert | — | Fulfil + generate |
-| Mentor | View mentor | See mentees + messages | — | Assign mentors | — | — |
-| Placements | Apply to drives | — | Track students | — | — | Manage drives (CMC) |
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| AM1 | Assessment component setup | 🆕 | For each subject-term: define IA1 (20%), IA2 (20%), End-Sem (60%) weights |
+| AM2 | Marks submission tracking | 🆕 | Track which teachers have submitted IA marks vs pending; send reminders |
+| AM3 | Marks appeal review | 🆕 | PMC sees all marks appeals in their program; forwards to teacher or overrides |
+| AM4 | Grade moderation | 🆕 | If average marks < threshold, PMC can trigger moderation; log reason |
+| AM5 | Result publication workflow | 🆕 | PMC certifies results are correct → sends to Exam Cell for official publication |
 
 ---
 
-### Build Sequence (Student Sprint Plan)
+#### ELECTIVE MANAGEMENT (Unique to PMC)
 
-**Foundation first (no UI, just schema + models):**
-- [ ] `program_subjects` table + `ProgramSubject` model + seeder
-- [ ] `study_materials` table + model
-- [ ] `assignments` + `assignment_submissions` tables + models
-- [ ] `quizzes` + `quiz_questions` + `quiz_options` + `quiz_attempts` + `quiz_answers` tables + models
-- [ ] `leave_applications` table + model
-- [ ] `academic_events` table + model
-- [ ] `attendance_condonations` table + model
-- [ ] `document_requests` + `student_documents` tables + models
-- [ ] `mentor_assignments` + `mentor_meetings` + `mentor_messages` tables + models
-- [ ] `course_feedback` table + model
-- [ ] `fee_payment_requests` table + model
-- [ ] `scholarships` + `scholarship_applications` tables + models
-- [ ] `student_resumes` table + model
-- [ ] Add `mentor_id` FK to `students` table
+This is a key PMC function. Students pick electives from a pool; PMC must:
+1. Float electives (announce which electives are available this term)
+2. Set registration window (dates when students can pick)
+3. See demand (how many students want each elective)
+4. Decide section allocation (if 60 students want one elective, split into two sections)
+5. Close registration and finalize elective rosters
+6. Handle exceptions (student wanting to change elective post-deadline)
 
-**Sprint 1 — Daily use (what a student opens every day):**
-- [ ] S1-1: Dashboard redesign — deadlines widget, credit progress, low-att banner, quick actions
-- [ ] S1-2: Timetable — fix to show compulsory vs elective labels; today's-classes widget
-- [ ] S1-3: Attendance drill-down — session-by-session missed classes view
-- [ ] S1-4: Course content hub — study materials (pre-read / post-read / notes) per subject
-- [ ] S1-5: Assignments — view + submit + see grade/feedback
-- [ ] S1-6: Academic calendar — monthly view of all important dates
-- [ ] S1-7: Leave application — submit + track status
-- [ ] S1-8: Subject announcements — per-subject teacher announcements visible to enrolled students
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| EL1 | Float electives for a term | 🆕 | Mark program_subjects records as elective+published; set registration window |
+| EL2 | View elective demand | 🆕 | Real-time count of how many students have registered for each elective |
+| EL3 | Set section capacity for electives | 🆕 | If demand > capacity, PMC decides which students get which section |
+| EL4 | Close elective registration | 🆕 | Lock registrations; auto-notify students of their confirmed elective |
+| EL5 | Override individual elective registration | 🆕 | Change a specific student's elective assignment (with reason log) |
+| EL6 | Elective minimum enrollment check | 🆕 | If < N students register for an elective, cancel it and redirect students |
 
-**Sprint 2 — Weekly use:**
-- [ ] S2-1: Component-wise marks (IA1/IA2/End-Sem) visible in Results page
-- [ ] S2-2: Backlog / arrear tracker — failed subjects across all terms
-- [ ] S2-3: Attendance condonation request
-- [ ] S2-4: Fee payment proof submission (manual UTR) + status tracking
-- [ ] S2-5: Document requests — bonafide, fee letter
-- [ ] S2-6: Digital ID card download
-- [ ] S2-7: Profile — photo upload + guardian contact edit
-- [ ] S2-8: Grievances — add follow-up message + close resolved
-
-**Sprint 3 — High value, less frequent:**
-- [ ] S3-1: Online quizzes — attempt, see score, review answers
-- [ ] S3-2: Exam registration with eligibility check
-- [ ] S3-3: Grade / marks appeal
-- [ ] S3-4: Scholarship — view + apply + track
-- [ ] S3-5: Mentor — view assignment, message thread, request meeting
-- [ ] S3-6: Course / teacher feedback at term-end
-- [ ] S3-7: Resume / CV builder for placements
-- [ ] S3-8: Career events — browse + register
-
-**Sprint 4 — Nice to have:**
-- [ ] S4-1: Discussion / Q&A board per subject
-- [ ] S4-2: Character certificate request (requires HOD approval)
-- [ ] S4-3: Internship view (student sees own internship records)
-- [ ] S4-4: Alumni browse + connect
-- [ ] S4-5: Term promotion status view
-- [ ] S4-6: Academic summary card (one-page printable student card)
+**New table:**
+```
+elective_registration_windows: id, program_id, term_id, elective_group,
+                                 opens_at, closes_at, max_per_student,
+                                 status [draft/open/closed], created_by
+```
 
 ---
 
-### Known Bugs to Fix (Do Before Sprint 1)
+#### REPORTING & ANALYTICS
 
-1. **Sidebar duplicate** — Grievances appears twice in `layouts/student.blade.php`
-2. **Fee balance inconsistency** — Dashboard uses `max(fee_due, demands)` which can mislead; consolidate to `FeeDemand` as single source
-3. **Subject registration** — `term_id→semester_id` fallback shows all subjects if no mapping; fix after `ProgramSubject` table added
-4. **Attendance view** — Queries attendance without `timetableEntry` eager load; causes N+1 queries at scale
-5. **Results page** — `AssessmentComponent` data exists in DB but is not shown to students; surface IA1/IA2/End-Sem breakdown
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| R1 | Program health dashboard | 🔧 | Exists but basic; needs: term-over-term CGPA trend, attendance trend, pass rate |
+| R2 | Subject-wise performance report | 🆕 | Average marks per subject; distribution chart; compare across batches |
+| R3 | Faculty performance report | 🆕 | Sessions conducted %, student feedback ratings, assignment grading turnaround |
+| R4 | Placement readiness report | 🆕 | Students with CGPA ≥ 6.5, no arrears, resume complete — eligible for on-campus drives |
+| R5 | Attendance defaulter report | 🆕 | Students below 75% in any subject; exportable with contact info for parent notification |
+| R6 | Term-end summary report (PDF) | 🆕 | One PDF with: enrollment count, pass/fail stats, CGPA distribution, top performers |
+| R7 | AICTE/regulatory compliance report | 🆕 | Teaching days completed, syllabus coverage %, exam compliance |
 
 ---
 
-### Student Portal — File Locations
+### Build Sequence (PMC Sprint Plan)
+
+#### Foundation (schema + models — build first, no UI)
+
+New migrations needed:
+```
+2026_06_07_800000_create_teacher_availability_table.php
+2026_06_07_800001_create_timetable_versions_table.php
+2026_06_07_800002_create_timetable_substitutions_table.php
+2026_06_07_800003_create_elective_registration_windows_table.php
+2026_06_07_800004_add_batch_id_to_timetable_entries.php  (if missing)
+2026_06_07_800005_create_subject_faculty_assignments_table.php
+2026_06_07_800006_create_faculty_workload_summary_table.php  (or compute on-the-fly)
+```
+
+New models needed: `TeacherAvailability`, `TimetableVersion`, `TimetableSubstitution`, `ElectiveRegistrationWindow`, `SubjectFacultyAssignment`
+
+Update existing: `TimetableEntry` — add `timetable_version_id` FK; `ProgramSubject` — confirm `elective_group` is usable
+
+---
+
+#### Sprint 1 — Dashboard + Curriculum Management
+
+- PMC-S1-1: Dashboard rebuild — at-risk students widget, faculty workload summary, timetable status (published/draft), upcoming exam dates, elective registration status
+- PMC-S1-2: Curriculum manager — add/edit/remove subjects from program-term; set type; set credit weights
+- PMC-S1-3: Elective pool manager — define elective groups, float for current term, set registration window
+- PMC-S1-4: Subject-faculty assignment — map teacher → subject → term → batch; check workload before assigning
+- PMC-S1-5: Elective demand view — real-time registration counts per elective; section capacity management
+- PMC-S1-6: Assessment component setup — define IA1/IA2/End-Sem weights per subject-term
+
+---
+
+#### Sprint 2 — Timetable Builder
+
+- PMC-S2-1: Timetable builder UI — grid of day × slot for a batch; assign subject+teacher+room per cell
+- PMC-S2-2: Conflict detection — validate on each slot assignment; block save if teacher/room/batch clash
+- PMC-S2-3: Teacher availability overlay — show which slots a teacher has marked unavailable/preferred
+- PMC-S2-4: Room utilization view — see which rooms are free for a given slot
+- PMC-S2-5: Draft → Publish workflow — draft timetable visible only to PMC; publish makes it live for all
+- PMC-S2-6: Substitution management — mark teacher absent for a date; assign substitute; auto-notify students
+- PMC-S2-7: Extra class scheduler — one-off session outside regular timetable
+- PMC-S2-8: Timetable PDF export — print-ready per batch; teacher-wise schedule PDF
+
+---
+
+#### Sprint 3 — Student Oversight
+
+- PMC-S3-1: At-risk student view — filterable by attendance %, CGPA, arrears, fee status; bulk alert
+- PMC-S3-2: Mentor assignment — assign/change faculty mentor per student; bulk assign by batch
+- PMC-S3-3: Leave approvals — review + approve/reject student leave applications
+- PMC-S3-4: Condonation review — review attendance condonation requests; approve with session count
+- PMC-S3-5: Grievance management — program-level grievance inbox; assign + resolve + escalate
+- PMC-S3-6: Elective override — change a specific student's elective registration (with reason)
+- PMC-S3-7: Detention/ATKT register — detained students list with subject-wise arrear history
+- PMC-S3-8: Batch promotion processing — view eligibility; promote batch; flag detained students
+
+---
+
+#### Sprint 4 — Faculty Oversight + Reporting
+
+- PMC-S4-1: Faculty workload monitor — hours/week per teacher; flag over/under load
+- PMC-S4-2: Marks submission tracker — which subjects have IA marks submitted vs pending
+- PMC-S4-3: Marks appeals review — program-level marks appeal inbox; forward to teacher or override
+- PMC-S4-4: Course delivery tracking — syllabus coverage % per subject; sessions conducted vs planned
+- PMC-S4-5: Faculty feedback aggregation — anonymous student ratings per teacher; trend view
+- PMC-S4-6: Subject performance report — marks distribution; compare across batches and terms
+- PMC-S4-7: Attendance defaulter export — below-75% students with parent contact info
+- PMC-S4-8: Term-end summary PDF — enrollment stats, pass/fail, CGPA distribution, top performers
+
+---
+
+### Cross-Role Interactions (PMC ↔ others)
+
+| PMC Action | Who sees it |
+|-----------|-------------|
+| Publishes timetable | Students (student.timetable), Teachers (teacher.timetable) |
+| Assigns subject to teacher | Teacher gets new subject in their portal |
+| Floats electives + opens registration | Students see in student.subjects.index |
+| Approves leave | Student leave status updates in student.leave.index |
+| Approves condonation | Student condonation status updates |
+| Assigns mentor | Student sees mentor in student.mentor.index |
+| Publishes academic event | Students see in student.calendar.index |
+| Sends grievance to HOD | HOD sees in their grievance inbox |
+| Finalizes elective sections | Students enrolled in their confirmed elective |
+
+---
+
+### Key Design Decisions for Implementation
+
+1. **Timetable builder UX**: Use a day × slot HTML table with `<select>` dropdowns in each cell. On change, fire AJAX to `/program-chair/timetable/check-conflict` returning JSON. Save entire draft via one form POST. No drag-and-drop (too complex, poor mobile UX).
+
+2. **Conflict detection logic** (in a `TimetableConflictService`):
+   ```php
+   // Teacher clash: same teacher, same slot, same day, overlapping term
+   // Room clash: same classroom, same slot, same day
+   // Batch clash: same batch, same slot, same day (different subjects)
+   // Check against both the current draft AND all published entries for the term
+   ```
+
+3. **Elective registration flow**:
+   - PMC creates `ElectiveRegistrationWindow` (opens_at, closes_at, max_per_student)
+   - Students register via `student.subjects.*` (already exists)
+   - PMC sees live counts; after window closes, PMC confirms/overrides assignments
+   - Confirmed enrollments create `StudentSubjectEnrollment` records with `enrollment_type = elective`
+
+4. **Faculty workload calculation**: Query `timetable_entries` where `teacher_id = X` for the current term; sum `timetable_slots.end_time - start_time` across all entries. Display as hours/week.
+
+5. **Assessment components** are already in `assessment_components` table (used by Exam Cell). PMC sets them up at term start; Exam Cell enters marks later. Don't duplicate the model.
+
+6. **At-risk threshold defaults** (configurable per program):
+   - Attendance < 75% in ANY subject → attendance risk
+   - CGPA < 5.0 → academic risk
+   - Any `exam_results` with marks < passing_marks AND no supplementary attempt → arrear risk
+   - Any `fee_demands` with status = pending AND due_date < today → financial risk
+
+---
+
+### File Locations for PMC Sprint
 
 ```
-app/Http/Controllers/Student/          — all student controllers (14 files)
-resources/views/student/               — all student views (18 templates)
-resources/views/layouts/student.blade.php — student layout + sidebar nav
-routes/web.php                         — student routes (~line 490-580, student. prefix)
-app/Models/                            — Enrollment, Attendance, Exam, ExamResult, AssessmentComponent
-app/Services/GradeService.php          — SGPA/CGPA calculation
-app/Services/TimetableService.php      — timetable grid builder
-database/migrations/                   — see Gap 1 above for ProgramSubject migration
+app/Http/Controllers/Departmental/ProgramChairController.php  — main controller (extend this)
+resources/views/departmental/program-chair/                   — all PMC views (6 files exist; add more)
+routes/web.php                                                — program-chair routes (~line 390-430)
+app/Models/ProgramSubject.php                                 — already exists
+app/Models/TimetableEntry.php                                 — already exists
+app/Models/TimetableSlot.php                                  — already exists
+app/Models/Teacher.php                                        — already exists
+app/Models/Classroom.php                                      — already exists
+app/Services/TimetableService.php                             — already exists (check methods)
 ```
+
+---
+
+## Future Sprints (After PMC)
+
+### 3. Teacher / Faculty Portal
+Key features: Mark attendance (per session, from timetable), upload study materials, create/grade assignments, create quizzes, enter IA marks, view own timetable, mentor dashboard (see mentee list, messages, meetings), subject announcements, view course feedback ratings.
+
+### 4. Exam Cell Portal
+Key features: Schedule exams, create assessment components, accept marks from teachers, moderate/publish results, manage malpractice logs, generate hall tickets (admit cards), manage supplementary/ATKT exams, process marks appeals, term promotion batch processing.
+
+### 5. Accounts / Finance Portal
+Key features: Verify fee payment proofs (from students), generate receipts, manage fee demands by batch, process refunds, scholarship disbursement, generate NAAC financial reports, pending dues dashboard, fee waiver approvals.
+
+### 6. HOD Portal
+Key features: Department faculty roster, workload oversight, leave approvals (faculty), departmental grievance resolution, mentor assignment oversight, department-level performance dashboard, faculty appraisal inputs.
+
+### 7. CMC / Placement Portal
+Key features: Create/manage placement drives, manage company relationships, assign internships to students, track student placement status, alumni management, career events, placement statistics dashboard.
+
+### 8. Admin Portal
+Key features: User management, role assignments, system configuration, audit logs, batch/program/term CRUD, fee structure management, bulk operations, data export.
+
+---
+
+## Phase History
+
+**All 8 infrastructure phases COMPLETE (2026-06-07):**
+Role hierarchy, dashboards, approval workflows, offer/enrollment, academic lifecycle, fee management, placement/career, reporting/analytics.
+
+**Student Portal COMPLETE (2026-06-07, PR #15):**
+4 sprints, 28 new tables, 25+ controllers, 40+ views.
