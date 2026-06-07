@@ -8,7 +8,10 @@
 
     {{-- Quick Nav --}}
     <div class="d-flex gap-2 mb-4 flex-wrap">
-        <a href="{{ route('chair.curriculum.assignments') }}" class="btn btn-outline-primary btn-sm">
+        <span class="btn btn-primary btn-sm disabled">
+            <i class="bi bi-journal-bookmark-fill me-1"></i> Curriculum
+        </span>
+        <a href="{{ route('chair.curriculum.assignments') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-person-badge me-1"></i> Subject–Faculty Assignments
         </a>
         <a href="{{ route('chair.curriculum.electives') }}" class="btn btn-outline-secondary btn-sm">
@@ -62,9 +65,9 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4 d-flex gap-2">
+                    <div class="col-md-4 d-flex gap-2 align-items-end">
                         @if($selectedProgram)
-                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
                                 <i class="bi bi-plus-circle me-1"></i> Add Subject
                             </button>
                         @endif
@@ -78,22 +81,28 @@
     </div>
 
     @if($selectedProgram)
-        <h5 class="mb-3 text-primary fw-semibold">
-            <i class="bi bi-book me-2"></i>{{ $selectedProgram->name }} — Curriculum
-        </h5>
+        <div class="d-flex align-items-center mb-3">
+            <h5 class="mb-0 text-primary fw-semibold">
+                <i class="bi bi-mortarboard me-2"></i>{{ $selectedProgram->name }} — Curriculum
+            </h5>
+        </div>
 
         @if($programSubjects->isEmpty())
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>No subjects found for the selected filters.
-                <button type="button" class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
-                    Add Subject
-                </button>
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-info-circle me-2 fs-5"></i>
+                <div>
+                    No subjects found for the selected filters.
+                    <button type="button" class="btn btn-sm btn-primary ms-2"
+                            data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+                        <i class="bi bi-plus-circle me-1"></i> Add Subject
+                    </button>
+                </div>
             </div>
         @else
             @foreach($programSubjects->groupBy('term_id') as $termId => $subjects)
-                @php $termName = $terms->firstWhere('id', $termId)?->name ?? 'Term ' . $termId; @endphp
+                @php $termName = $terms->firstWhere('id', $termId)?->name ?? ('Term ' . $termId); @endphp
                 <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
                         <h6 class="mb-0 fw-bold text-dark">
                             <i class="bi bi-bookmark-fill text-primary me-2"></i>{{ $termName }}
                         </h6>
@@ -104,7 +113,7 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-3">#</th>
+                                        <th class="ps-3" style="width:50px;">#</th>
                                         <th>Subject Name</th>
                                         <th>Code</th>
                                         <th>Type</th>
@@ -114,34 +123,39 @@
                                 </thead>
                                 <tbody>
                                     @foreach($subjects as $i => $ps)
+                                        @php
+                                            $typeBadges = [
+                                                'compulsory'    => 'primary',
+                                                'elective'      => 'warning',
+                                                'lab'           => 'info',
+                                                'project'       => 'secondary',
+                                                'audit'         => 'light text-dark border',
+                                                'open_elective' => 'success',
+                                            ];
+                                            $badge = $typeBadges[$ps->type] ?? 'secondary';
+                                        @endphp
                                         <tr>
                                             <td class="ps-3 text-muted">{{ $i + 1 }}</td>
-                                            <td class="fw-semibold">{{ $ps->subject->name }}</td>
-                                            <td><code>{{ $ps->subject->code }}</code></td>
+                                            <td class="fw-semibold">{{ $ps->subject->name ?? '—' }}</td>
+                                            <td><code class="text-secondary">{{ $ps->subject->code ?? '—' }}</code></td>
                                             <td>
-                                                @php
-                                                    $typeBadges = [
-                                                        'compulsory'   => 'primary',
-                                                        'elective'     => 'warning',
-                                                        'lab'          => 'info',
-                                                        'project'      => 'secondary',
-                                                        'audit'        => 'light text-dark border',
-                                                        'open_elective'=> 'success',
-                                                    ];
-                                                    $badge = $typeBadges[$ps->type] ?? 'secondary';
-                                                @endphp
                                                 <span class="badge bg-{{ $badge }} text-capitalize">
-                                                    {{ str_replace('_', ' ', $ps->type) }}
+                                                    {{ str_replace('_', ' ', $ps->type ?? 'N/A') }}
                                                 </span>
                                             </td>
-                                            <td class="text-center">{{ $ps->subject->credits ?? $ps->credits ?? '—' }}</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-dark border">
+                                                    {{ $ps->credits ?? $ps->subject->credits ?? '—' }}
+                                                </span>
+                                            </td>
                                             <td class="text-end pe-3">
                                                 <form method="POST"
                                                       action="{{ route('chair.curriculum.remove-subject', $ps->id) }}"
-                                                      onsubmit="return confirm('Remove {{ addslashes($ps->subject->name) }} from this curriculum?')">
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('Remove \'{{ addslashes($ps->subject->name ?? 'this subject') }}\' from this curriculum?')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove subject">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </form>
@@ -157,28 +171,30 @@
         @endif
     @else
         <div class="text-center py-5 text-muted">
-            <i class="bi bi-mortarboard display-3 d-block mb-3"></i>
-            <h5>Select a program to manage its curriculum</h5>
+            <i class="bi bi-mortarboard display-3 d-block mb-3 opacity-25"></i>
+            <h5 class="fw-semibold">Select a program to manage its curriculum</h5>
             <p class="small">Use the filter above to choose a program and optionally filter by term.</p>
         </div>
     @endif
 </div>
 
-{{-- Add Subject Modal --}}
+{{-- ===================== ADD SUBJECT MODAL ===================== --}}
 <div class="modal fade" id="addSubjectModal" tabindex="-1" aria-labelledby="addSubjectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content shadow">
             <form method="POST" action="{{ route('chair.curriculum.add-subject') }}">
                 @csrf
                 @if($selectedProgram)
                     <input type="hidden" name="program_id" value="{{ $selectedProgram->id }}">
                 @endif
+
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="addSubjectModalLabel">
+                    <h5 class="modal-title fw-semibold" id="addSubjectModalLabel">
                         <i class="bi bi-plus-circle me-2"></i>Add Subject to Curriculum
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
+
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -186,21 +202,26 @@
                             <select name="subject_id" class="form-select" required>
                                 <option value="">— Select Subject —</option>
                                 @foreach($allSubjects as $subject)
-                                    <option value="{{ $subject->id }}">{{ $subject->name }} ({{ $subject->code }})</option>
+                                    <option value="{{ $subject->id }}">
+                                        {{ $subject->name }} ({{ $subject->code }})
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Term / Semester <span class="text-danger">*</span></label>
                             <select name="term_id" class="form-select" required>
                                 <option value="">— Select Term —</option>
                                 @foreach($terms as $term)
-                                    <option value="{{ $term->id }}" {{ request('term_id') == $term->id ? 'selected' : '' }}>
+                                    <option value="{{ $term->id }}"
+                                        {{ request('term_id') == $term->id ? 'selected' : '' }}>
                                         {{ $term->name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
                             <select name="type" id="subjectType" class="form-select" required
@@ -214,21 +235,32 @@
                                 <option value="open_elective">Open Elective</option>
                             </select>
                         </div>
+
                         <div class="col-md-6" id="electiveGroupWrapper" style="display:none;">
                             <label class="form-label fw-semibold">Elective Group</label>
-                            <input type="number" name="elective_group" class="form-control"
-                                   min="1" placeholder="e.g. 1">
-                            <div class="form-text">Group number for elective pooling</div>
+                            <input type="number" name="elective_group" class="form-control" min="1" placeholder="e.g. 1">
+                            <div class="form-text">Group number for elective pooling (1, 2, 3…)</div>
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Credits <span class="text-danger">*</span></label>
                             <input type="number" name="credits" class="form-control"
                                    min="0" max="10" step="0.5" placeholder="e.g. 4" required>
                         </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Max Elective Choices</label>
+                            <input type="number" name="max_elective_choices" class="form-control"
+                                   min="1" placeholder="e.g. 1">
+                            <div class="form-text">How many subjects can be selected from this group.</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-plus-circle me-1"></i>Add Subject
                     </button>
