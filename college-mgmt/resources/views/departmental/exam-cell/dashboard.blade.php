@@ -57,6 +57,16 @@
             </div>
         </div>
     </div>
+    <div class="col-sm-6 col-lg-2">
+        <a href="{{ route('exam-cell.anomalies.index') }}" class="text-decoration-none">
+            <div class="card text-center border-0 shadow-sm h-100 {{ ($anomalyCount ?? 0) > 0 ? 'border border-danger' : '' }}">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold {{ ($anomalyCount ?? 0) > 0 ? 'text-danger' : 'text-secondary' }}">{{ $anomalyCount ?? 0 }}</div>
+                    <div class="text-muted small">Open Anomalies</div>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
 
 {{-- Progress Bar --}}

@@ -226,6 +226,11 @@
         <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif">
             <i class="bi bi-award"></i> Grade Reports
         </a>
+        @hasrole('dean_academics|exam_cell|admin')
+        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
+            <i class="bi bi-file-earmark-text"></i> Transcripts
+        </a>
+        @endhasrole
 
         <div class="sidebar-divider"></div>
 
@@ -287,8 +292,11 @@
         </a>
         @endhasrole
         @hasrole('exam_cell|dean_academics|admin')
-        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.*')) active @endif">
+        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.dashboard')) active @endif">
             <i class="bi bi-file-earmark-check"></i> Exam Cell
+        </a>
+        <a href="{{ route('exam-cell.anomalies.index') }}" class="nav-link @if(request()->routeIs('exam-cell.anomalies.*')) active @endif">
+            <i class="bi bi-exclamation-triangle"></i> Anomaly Log
         </a>
         @endhasrole
         @hasrole('accounts_officer|admin')

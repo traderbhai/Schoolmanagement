@@ -61,9 +61,13 @@ class ExamCellController extends Controller
             ->take(5)
             ->get();
 
+        try {
+            $anomalyCount = \App\Models\ExamAnomalyLog::whereNull('resolved_at')->count();
+        } catch (\Exception $e) { $anomalyCount = 0; }
+
         return view('departmental.exam-cell.dashboard', compact(
             'total', 'upcoming', 'pending', 'withResults',
-            'completionPct', 'published', 'recentExams', 'upcomingExams'
+            'completionPct', 'published', 'recentExams', 'upcomingExams', 'anomalyCount'
         ));
     }
 
