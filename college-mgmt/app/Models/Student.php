@@ -10,7 +10,7 @@ class Student extends Model
         'user_id', 'department_id', 'course_id', 'program_id', 'batch_id', 'specialization_id',
         'enrollment_number', 'roll_number', 'date_of_birth', 'gender', 'phone', 'address',
         'guardian_name', 'guardian_phone', 'admission_date', 'current_semester', 'current_term',
-        'current_term_id', 'status', 'photo',
+        'current_term_id', 'status', 'photo', 'mentor_id',
     ];
     protected $casts = ['date_of_birth' => 'date', 'admission_date' => 'date'];
 
@@ -30,6 +30,11 @@ class Student extends Model
     public function termPromotions() { return $this->hasMany(TermPromotion::class); }
     public function feeDemands() { return $this->hasMany(FeeDemand::class); }
     public function transcripts() { return $this->hasMany(AcademicTranscript::class); }
+    public function mentor() { return $this->belongsTo(User::class, 'mentor_id'); }
+    public function mentorMeetings() { return $this->hasMany(MentorMeeting::class); }
+    public function leaveApplications() { return $this->hasMany(LeaveApplication::class); }
+    public function subjectEnrollments() { return $this->hasMany(StudentSubjectEnrollment::class); }
+    public function subjects() { return $this->belongsToMany(Subject::class, 'student_subject_enrollments')->wherePivot('status', 'active'); }
 
     public function calculateCGPA(): float
     {

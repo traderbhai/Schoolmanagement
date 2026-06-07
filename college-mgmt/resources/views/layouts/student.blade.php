@@ -30,27 +30,48 @@
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Academics</div>
-        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif">
-            <i class="bi bi-check2-square"></i> My Attendance
+        <a href="{{ route('student.timetable') }}" class="nav-link @if(request()->routeIs('student.timetable')) active @endif">
+            <i class="bi bi-calendar3 me-2"></i>My Timetable
+        </a>
+        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance*')) active @endif">
+            <i class="bi bi-check2-square"></i> Attendance
         </a>
         <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif">
-            <i class="bi bi-award"></i> My Results
+            <i class="bi bi-award"></i> Results & Grades
         </a>
         <a href="{{ route('student.admit-cards.index') }}" class="nav-link @if(request()->routeIs('student.admit-cards.*')) active @endif">
             <i class="bi bi-card-checklist me-2"></i>Admit Cards
         </a>
-        <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
-           href="{{ route('student.subjects.index') }}">
+        <a href="{{ route('student.subjects.index') }}" class="nav-link @if(request()->routeIs('student.subjects.*')) active @endif">
             <i class="bi bi-journal-text me-2"></i>Subject Registration
         </a>
-        <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
-           href="{{ route('student.timetable') }}">
-            <i class="bi bi-calendar3 me-2"></i>My Timetable
+        <a href="{{ route('student.calendar.index') }}" class="nav-link @if(request()->routeIs('student.calendar.*')) active @endif">
+            <i class="bi bi-calendar-event me-2"></i>Academic Calendar
         </a>
-        <a href="{{ route('student.transcript.download') }}"
-           class="nav-link"
-           title="Download official cumulative transcript">
+        <a href="{{ route('student.leave.index') }}" class="nav-link @if(request()->routeIs('student.leave.*')) active @endif">
+            <i class="bi bi-person-dash me-2"></i>Leave Applications
+        </a>
+        <a href="{{ route('student.transcript.download') }}" class="nav-link">
             <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
+        </a>
+        <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif">
+            <i class="bi bi-clipboard-check me-2"></i>Exam Registration
+        </a>
+        <a href="{{ route('student.appeals.index') }}" class="nav-link @if(request()->routeIs('student.appeals.*')) active @endif">
+            <i class="bi bi-megaphone me-2"></i>Marks Appeals
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="section-label">Course Content</div>
+        <a href="{{ route('student.courses.index') }}" class="nav-link @if(request()->routeIs('student.courses.*')) active @endif">
+            <i class="bi bi-book me-2"></i>My Courses
+        </a>
+        <a href="{{ route('student.assignments.index') }}" class="nav-link @if(request()->routeIs('student.assignments.*')) active @endif">
+            <i class="bi bi-pencil-square me-2"></i>Assignments
+        </a>
+        <a href="{{ route('student.quizzes.index') }}" class="nav-link @if(request()->routeIs('student.quizzes.*')) active @endif">
+            <i class="bi bi-patch-question me-2"></i>Quizzes
         </a>
 
         <div class="sidebar-divider"></div>
@@ -59,18 +80,9 @@
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif">
             <i class="bi bi-cash-coin"></i> Fee Status
         </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Communication</div>
-        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
-            <i class="bi bi-megaphone"></i> Notices
+        <a href="{{ route('student.fee-payment.index') }}" class="nav-link @if(request()->routeIs('student.fee-payment.*')) active @endif">
+            <i class="bi bi-upload me-2"></i>Submit Payment
         </a>
-        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
-            <i class="bi bi-chat-square-text"></i> My Grievances
-        </a>
-
-        <div class="sidebar-divider"></div>
 
         <div class="sidebar-divider"></div>
 
@@ -78,19 +90,58 @@
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif">
             <i class="bi bi-briefcase"></i> Placements
         </a>
+        <a href="{{ route('student.scholarships.index') }}" class="nav-link @if(request()->routeIs('student.scholarships.*')) active @endif">
+            <i class="bi bi-award me-2"></i>Scholarships
+        </a>
+        <a href="{{ route('student.resume.index') }}" class="nav-link @if(request()->routeIs('student.resume.*')) active @endif">
+            <i class="bi bi-person-vcard me-2"></i>My Resume
+        </a>
+        <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif">
+            <i class="bi bi-calendar-event me-2"></i>Career Events
+        </a>
+        <a href="{{ route('student.internships.index') }}" class="nav-link @if(request()->routeIs('student.internships.*')) active @endif">
+            <i class="bi bi-building me-2"></i>My Internships
+        </a>
+        <a href="{{ route('student.alumni.index') }}" class="nav-link @if(request()->routeIs('student.alumni.*')) active @endif">
+            <i class="bi bi-people me-2"></i>Alumni Network
+        </a>
 
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Support</div>
+        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
+            <i class="bi bi-megaphone"></i> Notices
+        </a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
-            <i class="bi bi-shield-exclamation me-2"></i>Grievances
+            <i class="bi bi-chat-square-text me-2"></i>Grievances
+        </a>
+        <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif">
+            <i class="bi bi-person-badge me-2"></i>My Mentor
+        </a>
+        <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif">
+            <i class="bi bi-star me-2"></i>Course Feedback
+        </a>
+        <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif">
+            <i class="bi bi-shield-check me-2"></i>Attendance Condonation
+        </a>
+        <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif">
+            <i class="bi bi-file-earmark-text me-2"></i>Document Requests
         </a>
 
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Account</div>
+        <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif">
+            <i class="bi bi-card-text me-2"></i>Academic Summary
+        </a>
+        <a href="{{ route('student.promotion.index') }}" class="nav-link @if(request()->routeIs('student.promotion.*')) active @endif">
+            <i class="bi bi-arrow-up-circle me-2"></i>Promotion Status
+        </a>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
+        </a>
+        <a href="{{ route('student.notifications.edit') }}" class="nav-link @if(request()->routeIs('student.notifications.*')) active @endif">
+            <i class="bi bi-bell me-2"></i>Notifications
         </a>
     </div>
 </div>
@@ -112,31 +163,47 @@
         <a href="{{ route('student.dashboard') }}" class="nav-link @if(request()->routeIs('student.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
-        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif"><i class="bi bi-check2-square"></i> My Attendance</a>
-        <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif"><i class="bi bi-award"></i> My Results</a>
+        <a href="{{ route('student.timetable') }}" class="nav-link @if(request()->routeIs('student.timetable')) active @endif"><i class="bi bi-calendar3 me-2"></i>My Timetable</a>
+        <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
+        <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif"><i class="bi bi-award"></i> Results & Grades</a>
         <a href="{{ route('student.admit-cards.index') }}" class="nav-link @if(request()->routeIs('student.admit-cards.*')) active @endif"><i class="bi bi-card-checklist me-2"></i>Admit Cards</a>
-        <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
-           href="{{ route('student.subjects.index') }}"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
-        <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
-           href="{{ route('student.timetable') }}"><i class="bi bi-calendar3 me-2"></i>My Timetable</a>
-        <a href="{{ route('student.transcript.download') }}" class="nav-link">
-            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
+        <a href="{{ route('student.subjects.index') }}" class="nav-link @if(request()->routeIs('student.subjects.*')) active @endif"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
+        <a href="{{ route('student.calendar.index') }}" class="nav-link @if(request()->routeIs('student.calendar.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Academic Calendar</a>
+        <a href="{{ route('student.leave.index') }}" class="nav-link @if(request()->routeIs('student.leave.*')) active @endif"><i class="bi bi-person-dash me-2"></i>Leave Applications</a>
+        <a href="{{ route('student.transcript.download') }}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
+        <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif"><i class="bi bi-clipboard-check me-2"></i>Exam Registration</a>
+        <a href="{{ route('student.appeals.index') }}" class="nav-link @if(request()->routeIs('student.appeals.*')) active @endif"><i class="bi bi-megaphone me-2"></i>Marks Appeals</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Course Content</div>
+        <a href="{{ route('student.courses.index') }}" class="nav-link @if(request()->routeIs('student.courses.*')) active @endif"><i class="bi bi-book me-2"></i>My Courses</a>
+        <a href="{{ route('student.assignments.index') }}" class="nav-link @if(request()->routeIs('student.assignments.*')) active @endif"><i class="bi bi-pencil-square me-2"></i>Assignments</a>
+        <a href="{{ route('student.quizzes.index') }}" class="nav-link @if(request()->routeIs('student.quizzes.*')) active @endif"><i class="bi bi-patch-question me-2"></i>Quizzes</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Communication</div>
-        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
-        <div class="sidebar-divider"></div>
+        <a href="{{ route('student.fee-payment.index') }}" class="nav-link @if(request()->routeIs('student.fee-payment.*')) active @endif"><i class="bi bi-upload me-2"></i>Submit Payment</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Career</div>
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
+        <a href="{{ route('student.scholarships.index') }}" class="nav-link @if(request()->routeIs('student.scholarships.*')) active @endif"><i class="bi bi-award me-2"></i>Scholarships</a>
+        <a href="{{ route('student.resume.index') }}" class="nav-link @if(request()->routeIs('student.resume.*')) active @endif"><i class="bi bi-person-vcard me-2"></i>My Resume</a>
+        <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Career Events</a>
+        <a href="{{ route('student.internships.index') }}" class="nav-link @if(request()->routeIs('student.internships.*')) active @endif"><i class="bi bi-building me-2"></i>My Internships</a>
+        <a href="{{ route('student.alumni.index') }}" class="nav-link @if(request()->routeIs('student.alumni.*')) active @endif"><i class="bi bi-people me-2"></i>Alumni Network</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Support</div>
-        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-shield-exclamation me-2"></i>Grievances</a>
+        <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-chat-square-text me-2"></i>Grievances</a>
+        <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif"><i class="bi bi-person-badge me-2"></i>My Mentor</a>
+        <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>
+        <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
+        <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
+        <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif"><i class="bi bi-card-text me-2"></i>Academic Summary</a>
+        <a href="{{ route('student.promotion.index') }}" class="nav-link @if(request()->routeIs('student.promotion.*')) active @endif"><i class="bi bi-arrow-up-circle me-2"></i>Promotion Status</a>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
+        <a href="{{ route('student.notifications.edit') }}" class="nav-link @if(request()->routeIs('student.notifications.*')) active @endif"><i class="bi bi-bell me-2"></i>Notifications</a>
     </div>
 </div>
 
@@ -166,119 +233,47 @@
         </div>
 
         <div class="topbar-right">
-            <div class="topbar-search d-none d-md-flex">
-                <i class="bi bi-search search-icon"></i>
-                <input type="search" placeholder="Search..." aria-label="Search">
-            </div>
-
-            <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-                <i class="bi bi-moon-fill" id="themeIcon"></i>
-            </button>
-
-            <button class="notif-btn" aria-label="Notifications" title="Notifications">
-                <i class="bi bi-bell"></i>
-                <span class="notif-badge"></span>
-            </button>
-
-            <div class="dropdown">
-                <button class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+            <span class="text-muted small d-none d-md-inline me-2">
+                {{ Auth::user()->name }}
+            </span>
+            <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px;">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px;font-size:.84rem;border-color:var(--clr-border);">
-                    <li>
-                        <div class="px-3 py-2">
-                            <div style="font-weight:600;color:var(--clr-text);">{{ auth()->user()->name }}</div>
-                            <div style="font-size:.75rem;color:var(--clr-text-muted);">{{ auth()->user()->email }}</div>
-                        </div>
-                    </li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item" href="{{ route('student.profile') }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="dropdown-item text-danger">
-                                <i class="bi bi-box-arrow-right me-2"></i>Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+            </form>
         </div>
     </div>
 
-    {{-- PAGE BODY --}}
-    <div class="page-body">
+    {{-- ALERTS --}}
+    <div class="px-3 pt-3">
         @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
-                <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         @endif
         @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
-        @endif
-        @if(session('info'))
-            <div class="alert alert-info alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
-                <i class="bi bi-info-circle me-2"></i>{{ session('info') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
-        @endif
-        @if(session('warning'))
-            <div class="alert alert-warning alert-dismissible fade show" role="alert" aria-live="polite">
-                <i class="bi bi-exclamation-circle me-2"></i>{{ session('warning') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         @endif
         @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
-            </div>
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <ul class="mb-0 ps-3">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         @endif
+    </div>
 
+    <div class="content-area">
         @yield('content')
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script>
-// ── Auto-dismiss success/info alerts ──────────────────────
-(function () {
-    setTimeout(function () {
-        document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
-            var alert = bootstrap.Alert.getOrCreateInstance(el);
-            alert.close();
-        });
-    }, 4000);
-})();
-
-(function () {
-    var saved = localStorage.getItem('edumTheme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-    updateThemeIcon(saved);
-
-    document.getElementById('themeToggle').addEventListener('click', function () {
-        var current = document.documentElement.getAttribute('data-theme');
-        var next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('edumTheme', next);
-        updateThemeIcon(next);
-    });
-
-    function updateThemeIcon(theme) {
-        var icon = document.getElementById('themeIcon');
-        if (!icon) return;
-        icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
-    }
-})();
-</script>
-
 @stack('scripts')
 </body>
 </html>

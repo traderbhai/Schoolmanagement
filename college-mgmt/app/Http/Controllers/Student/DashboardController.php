@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam};
+use App\Models\{Assignment, Quiz, LeaveApplication, AcademicEvent, SubjectAnnouncement};
 use App\Services\TimetableService;
 
 class DashboardController extends Controller
@@ -13,7 +14,7 @@ class DashboardController extends Controller
         if (!$student) return redirect()->route('login');
 
         $currentSemester = Semester::current();
-        $notices = Notice::active()->where(fn($q) => $q->where('audience','all')->orWhere('audience','students'))->latest()->take(5)->get();
+        $notices = Notice::active()->where(fn($q) => $q->where('audience','all')->orWhere('audience','students'))->latest()->take(3)->get();
         $slots = TimetableSlot::where('is_active',true)->orderBy('sort_order')->get();
         $grid = $currentSemester ? $this->service->buildWeeklyGrid($currentSemester->id, $student->course_id) : [];
 
@@ -28,7 +29,22 @@ class DashboardController extends Controller
         $presentAttendance = Attendance::where('student_id', $student->id)->whereIn('status', ['present','late'])->count();
         $attendanceOverall = $totalAttendance > 0 ? round(($presentAttendance / $totalAttendance) * 100) : null;
 
-        // SGPA — compute from marks_obtained / total_marks * 10 for current semester
+        // Per-subject attendance — flag low ones
+        $lowAttendanceSubjects = [];
+        $attendanceBySubject = Attendance::with('timetableEntry.subject')
+            ->where('student_id', $student->id)
+            ->get()
+            ->groupBy(fn($a) => $a->timetableEntry?->subject?->name ?? 'Unknown');
+        foreach ($attendanceBySubject as $subjName => $records) {
+            $total   = $records->count();
+            $present = $records->whereIn('status', ['present','late'])->count();
+            $pct     = $total > 0 ? round(($present / $total) * 100) : 0;
+            if ($pct < 75 && $total > 0) {
+                $lowAttendanceSubjects[] = ['subject' => $subjName, 'pct' => $pct, 'total' => $total, 'present' => $present];
+            }
+        }
+
+        // SGPA — from current semester
         $sgpa = null;
         if ($currentSemester) {
             $results = ExamResult::with('exam')
@@ -57,22 +73,33 @@ class DashboardController extends Controller
             }
         } catch (\Exception $e) { $cgpa = null; }
 
-        // Fee balance due
-        $feeDue = FeeStructure::where('course_id', $student->course_id)->sum('amount');
-        $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
-        $balanceDue = max(0, $feeDue - $feePaid);
-
-        // Fee outstanding from FeeDemand
+        // Fee balance — use FeeDemand as source of truth
         $feeOutstanding = 0;
         try {
             $feeOutstanding = FeeDemand::where('student_id', $student->id)
                 ->where('status', '!=', 'paid')
                 ->sum('amount');
-            $balanceDue = max($balanceDue, $feeOutstanding);
+        } catch (\Exception $e) {
+            $feeDue  = FeeStructure::where('course_id', $student->course_id)->sum('amount');
+            $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
+            $feeOutstanding = max(0, $feeDue - $feePaid);
+        }
+
+        // Upcoming assignments (due within 7 days)
+        $upcomingAssignments = collect();
+        try {
+            $subjectIds = $student->subjects()->pluck('subjects.id');
+            $upcomingAssignments = Assignment::whereIn('subject_id', $subjectIds)
+                ->where('is_published', true)
+                ->where('due_at', '>', now())
+                ->where('due_at', '<=', now()->addDays(7))
+                ->with(['subject', 'submissions' => fn($q) => $q->where('student_id', $student->id)])
+                ->orderBy('due_at')
+                ->get();
         } catch (\Exception $e) {}
 
         // Upcoming exams
-        $upcomingExams = [];
+        $upcomingExams = collect();
         try {
             if ($student->program_id) {
                 $upcomingExams = Exam::where('program_id', $student->program_id)
@@ -82,11 +109,31 @@ class DashboardController extends Controller
                     ->take(5)
                     ->get();
             }
-        } catch (\Exception $e) { $upcomingExams = collect(); }
+        } catch (\Exception $e) {}
+
+        // Upcoming academic events (next 30 days)
+        $upcomingEvents = collect();
+        try {
+            $upcomingEvents = AcademicEvent::where('is_public', true)
+                ->where('start_date', '>=', today())
+                ->where('start_date', '<=', today()->addDays(30))
+                ->where(fn($q) => $q->whereNull('program_id')->orWhere('program_id', $student->program_id))
+                ->orderBy('start_date')
+                ->take(5)
+                ->get();
+        } catch (\Exception $e) {}
+
+        // Pending leave applications
+        $pendingLeaves = 0;
+        try {
+            $pendingLeaves = LeaveApplication::where('student_id', $student->id)
+                ->where('status', 'pending')->count();
+        } catch (\Exception $e) {}
 
         return view('student.dashboard', compact(
             'student', 'currentSemester', 'notices', 'slots', 'grid', 'todayClasses',
-            'attendanceOverall', 'sgpa', 'cgpa', 'balanceDue', 'upcomingExams'
+            'attendanceOverall', 'lowAttendanceSubjects', 'sgpa', 'cgpa', 'feeOutstanding',
+            'upcomingAssignments', 'upcomingExams', 'upcomingEvents', 'pendingLeaves'
         ));
     }
 }

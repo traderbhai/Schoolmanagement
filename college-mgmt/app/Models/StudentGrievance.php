@@ -11,6 +11,7 @@ class StudentGrievance extends Model {
     public function program(): BelongsTo { return $this->belongsTo(Program::class); }
     public function assignedTo(): BelongsTo { return $this->belongsTo(User::class,'assigned_to'); }
     public function resolvedBy(): BelongsTo { return $this->belongsTo(User::class,'resolved_by'); }
+    public function comments() { return $this->hasMany(GrievanceComment::class,"student_grievance_id")->with("user")->orderBy("created_at"); }
     public function isOpen(): bool { return in_array($this->status,['open','under_review','escalated']); }
     public function isOverdue(): bool { return $this->isOpen() && $this->created_at->lt(now()->subDays(7)); }
 }
