@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix};
+use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
+    TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
 use Illuminate\Http\Request;
 
@@ -78,9 +79,69 @@ class ProgramChairController extends Controller
             ->sortBy('attendance_pct')
             ->take(5);
 
+        // At-risk students (attendance < 75% in any subject, quick approximation)
+        $atRiskStudents = collect();
+        try {
+            $pmcStudentCtrl = new \App\Http\Controllers\Departmental\PmcStudentController();
+            // Use a lightweight in-line approach for the dashboard
+            $allStudents = Student::whereIn('program_id', $programIds)
+                ->where('status', 'active')->with(['user','batch'])->take(100)->get();
+            $atRiskStudents = $allStudents->filter(function ($student) {
+                $attBySubject = Attendance::where('student_id', $student->id)
+                    ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present')
+                    ->groupBy('subject_id')->get();
+                $risks = [];
+                if ($attBySubject->filter(fn($r) => $r->total > 0 && ($r->present/$r->total) < 0.75)->isNotEmpty()) $risks[] = 'attendance';
+                $results = ExamResult::where('student_id', $student->id)->get();
+                if ($results->isNotEmpty()) {
+                    $arrears = $results->filter(fn($r) => $r->exam && ($r->marks_obtained / max($r->exam->total_marks??100,1))*100 < 35);
+                    if ($arrears->isNotEmpty()) $risks[] = 'arrear';
+                    $avg = $results->avg(fn($r) => $r->exam ? ($r->marks_obtained/max($r->exam->total_marks??100,1))*100 : null);
+                    if ($avg !== null && $avg < 50) $risks[] = 'academic';
+                }
+                $student->risks = $risks;
+                return !empty($risks);
+            })->take(8);
+        } catch (\Throwable $e) {}
+
+        // Faculty workload summary
+        $workloadSummary = TimetableEntry::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->when($currentTerm ?? null, fn($q) => $q->where('term_id', ($currentTerm = Term::latest('start_date')->first())?->id))
+            ->where('is_active', true)
+            ->selectRaw('teacher_id, COUNT(*) as sessions')
+            ->groupBy('teacher_id')
+            ->with('teacher.user')
+            ->orderByDesc('sessions')
+            ->take(8)
+            ->get();
+
+        // Timetable versions
+        $timetableVersions = TimetableVersion::whereIn('program_id', $programIds)
+            ->with(['program','batch'])
+            ->orderByDesc('id')
+            ->take(6)
+            ->get();
+
+        // Elective windows
+        $electiveWindows = ElectiveRegistrationWindow::whereIn('program_id', $programIds)
+            ->with('program')
+            ->orderByDesc('id')
+            ->take(4)
+            ->get();
+
+        // Pending counts
+        $pendingLeaves = LeaveApplication::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
+            ->where('status', 'pending')->count();
+        $pendingCondonations = AttendanceCondonation::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
+            ->where('status', 'pending')->count();
+        $openGrievances = StudentGrievance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
+            ->whereIn('status', ['open','under_review'])->count();
+
         return view('departmental.program-chair.dashboard', compact(
             'activeStudents', 'subjectsThisTerm', 'examCount', 'avgMarks',
-            'pendingApprovals', 'attendancePct', 'recentExams', 'lowAttSubjects', 'programs'
+            'pendingApprovals', 'attendancePct', 'recentExams', 'lowAttSubjects', 'programs',
+            'atRiskStudents', 'workloadSummary', 'timetableVersions', 'electiveWindows',
+            'pendingLeaves', 'pendingCondonations', 'openGrievances'
         ));
     }
 
