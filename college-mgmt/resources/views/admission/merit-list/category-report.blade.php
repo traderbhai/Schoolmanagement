@@ -20,7 +20,7 @@
 @if(!$seatMatrix)
 <div class="alert alert-warning">
     <i class="bi bi-exclamation-triangle me-2"></i>No seat matrix configured for this program.
-    <a href="{{ route('admin.seat-matrix.create', $program) }}" class="alert-link">Create Seat Matrix</a>
+    <a href="{{ route('admission.seat-matrices.create', $program) }}" class="alert-link">Create Seat Matrix</a>
 </div>
 @endif
 

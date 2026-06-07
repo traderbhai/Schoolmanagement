@@ -99,7 +99,7 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3-gap me-2"></i>Seat Matrix (Reservation)</h6>
-        <a href="{{ route('admin.seat-matrix.index', $program) }}" class="btn btn-sm btn-outline-primary">
+        <a href="{{ route('admission.seat-matrices.index', $program) }}" class="btn btn-sm btn-outline-primary">
             Manage Seat Matrix
         </a>
     </div>
@@ -125,7 +125,7 @@
         <div class="mt-2" style="font-size:.7rem" class="text-muted">* Supernumerary seats</div>
         @else
         <p class="text-muted small mb-2">No seat matrix configured for this program.</p>
-        <a href="{{ route('admin.seat-matrix.create', $program) }}" class="btn btn-sm btn-primary">
+        <a href="{{ route('admission.seat-matrices.create', $program) }}" class="btn btn-sm btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Set Up Seat Matrix
         </a>
         @endif

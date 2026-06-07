@@ -175,7 +175,7 @@
                                     </td>
                                     <td class="text-end pe-3">
                                         <form method="POST"
-                                              action="{{ route('chair.curriculum.remove-assignment', $assignment->id) }}"
+                                              action="{{ route('chair.curriculum.unassign-faculty', $assignment->id) }}"
                                               class="d-inline"
                                               onsubmit="return confirm('Remove this faculty assignment?')">
                                             @csrf

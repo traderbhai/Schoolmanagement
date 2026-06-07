@@ -21,67 +21,58 @@
         </div>
     </div>
 
-    {{-- Summary Cards --}}
+    {{-- KPI Cards --}}
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center" style="width:48px;height:48px">
-                            <i class="bi bi-briefcase-fill text-primary fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold fs-4">{{ $activeDrives }}</div>
-                            <div class="text-muted small">Active Drives</div>
-                        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card kpi-blue">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $activeDrives }}</div>
+                        <div class="kpi-label">Active Drives</div>
                     </div>
+                </div>
+                <div class="kpi-trend {{ $activeDrives > 0 ? 'up' : '' }}">
+                    <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Ongoing recruitment
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle bg-success-subtle d-flex align-items-center justify-content-center" style="width:48px;height:48px">
-                            <i class="bi bi-trophy-fill text-success fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold fs-4">{{ $totalPlacements }}</div>
-                            <div class="text-muted small">Total Placed</div>
-                        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card kpi-green">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-trophy-fill"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $totalPlacements }}</div>
+                        <div class="kpi-label">Total Placed</div>
                     </div>
                 </div>
+                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Offers accepted</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle bg-info-subtle d-flex align-items-center justify-content-center" style="width:48px;height:48px">
-                            <i class="bi bi-people-fill text-info fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold fs-4">{{ $totalStudents }}</div>
-                            <div class="text-muted small">Total Students</div>
-                        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="kpi-card kpi-cyan">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $totalStudents }}</div>
+                        <div class="kpi-label">Total Students</div>
                     </div>
                 </div>
+                <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Placement eligible</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle bg-warning-subtle d-flex align-items-center justify-content-center" style="width:48px;height:48px">
-                            <i class="bi bi-percent text-warning fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold fs-4">
-                                {{ $totalStudents > 0 ? round(($totalPlacements / $totalStudents) * 100, 0) : 0 }}%
-                            </div>
-                            <div class="text-muted small">Placement Rate</div>
-                        </div>
+        <div class="col-sm-6 col-lg-3">
+            @php $placementRate = $totalStudents > 0 ? round(($totalPlacements / $totalStudents) * 100, 0) : 0; @endphp
+            <div class="kpi-card {{ $placementRate >= 70 ? 'kpi-green' : ($placementRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-percent"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $placementRate }}%</div>
+                        <div class="kpi-label">Placement Rate</div>
                     </div>
+                </div>
+                <div class="kpi-trend {{ $placementRate >= 70 ? 'up' : 'down' }}">
+                    <i class="bi bi-arrow-{{ $placementRate >= 70 ? 'up' : 'down' }} me-1"></i>This academic year
                 </div>
             </div>
         </div>
@@ -131,25 +122,46 @@
         </div>
 
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pt-3 pb-0">
-                    <h6 class="fw-semibold mb-0">Quick Links</h6>
+            {{-- Upcoming Career Events --}}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent fw-semibold">
+                    <i class="bi bi-calendar-event me-2 text-primary"></i>Upcoming Career Events
                 </div>
-                <div class="card-body">
-                    <div class="d-flex flex-column gap-2">
-                        <a href="{{ route('admin.placement-drives.index') }}" class="btn btn-outline-primary text-start">
-                            <i class="bi bi-briefcase me-2"></i>All Placement Drives
-                        </a>
-                        <a href="{{ route('cmc.placements') }}" class="btn btn-outline-success text-start">
-                            <i class="bi bi-trophy me-2"></i>Placed Students
-                        </a>
-                        <a href="{{ route('cmc.analytics') }}" class="btn btn-outline-secondary text-start">
-                            <i class="bi bi-bar-chart me-2"></i>Placement Analytics
-                        </a>
-                        <a href="{{ route('admin.placements.export') }}" class="btn btn-outline-dark text-start">
-                            <i class="bi bi-download me-2"></i>Export Placements
-                        </a>
-                    </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                    @forelse($upcomingEvents ?? [] as $event)
+                        <li class="list-group-item py-2 px-3">
+                            <div class="fw-semibold small">{{ $event->title }}</div>
+                            <div class="text-muted" style="font-size:.75rem">
+                                <i class="bi bi-calendar3 me-1"></i>{{ $event->event_date ? $event->event_date->format('d M Y') : ($event->starts_at ? $event->starts_at->format('d M Y') : '—') }}
+                                @if($event->type ?? null) · <span class="badge bg-primary-subtle text-primary">{{ ucfirst($event->type) }}</span>@endif
+                            </div>
+                        </li>
+                    @empty
+                        <li class="list-group-item text-center text-muted py-3 small">No upcoming events.</li>
+                    @endforelse
+                    </ul>
+                </div>
+            </div>
+
+            {{-- Quick Actions --}}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent fw-semibold">
+                    <i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Quick Actions
+                </div>
+                <div class="card-body d-flex flex-column gap-2">
+                    <a href="{{ route('cmc.drives.create') }}" class="btn btn-sm btn-primary text-start">
+                        <i class="bi bi-briefcase me-2"></i>New Placement Drive
+                    </a>
+                    <a href="{{ route('cmc.events.create') }}" class="btn btn-sm btn-outline-primary text-start">
+                        <i class="bi bi-calendar-plus me-2"></i>New Career Event
+                    </a>
+                    <a href="{{ route('cmc.companies') }}" class="btn btn-sm btn-outline-cyan text-start">
+                        <i class="bi bi-building me-2"></i>Manage Companies
+                    </a>
+                    <a href="{{ route('cmc.analytics') }}" class="btn btn-sm btn-outline-secondary text-start">
+                        <i class="bi bi-bar-chart-line me-2"></i>Placement Analytics
+                    </a>
                 </div>
             </div>
         </div>

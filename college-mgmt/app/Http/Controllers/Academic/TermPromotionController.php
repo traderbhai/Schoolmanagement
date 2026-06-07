@@ -16,6 +16,24 @@ class TermPromotionController extends Controller
         return view('academic.term-promotions.index', compact('promotions'));
     }
 
+    public function edit(TermPromotion $termPromotion)
+    {
+        $termPromotion->load(['student', 'currentTerm', 'promotedToTerm']);
+        return view('academic.term-promotions.edit', compact('termPromotion'));
+    }
+
+    public function update(Request $request, TermPromotion $termPromotion)
+    {
+        $request->validate(['status' => 'required|in:approved,rejected,pending']);
+        $termPromotion->update([
+            'status'        => $request->status,
+            'remarks'       => $request->remarks,
+            'processed_by'  => auth()->id(),
+            'processed_at'  => now(),
+        ]);
+        return redirect()->route('academic.term-promotions.index')->with('success', 'Promotion updated.');
+    }
+
     public function show(TermPromotion $termPromotion)
     {
         $termPromotion->load(['student', 'currentTerm', 'promotedToTerm', 'processedBy']);

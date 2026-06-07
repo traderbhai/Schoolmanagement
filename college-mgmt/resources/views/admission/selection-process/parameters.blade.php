@@ -10,7 +10,7 @@
             <h4 class="fw-bold mb-0 mt-1">{{ $step->name }}</h4>
             <span class="text-muted small">{{ $program->name }} &middot; Max Score: {{ $step->max_score }} &middot; Weightage: {{ $step->weightage }}%</span>
         </div>
-        <a href="{{ route('admission.selection-process.create-parameter', $step) }}" class="btn btn-primary btn-sm">
+        <a href="{{ route('admission.selection-process.parameters.create', $step) }}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Add Parameter
         </a>
     </div>
@@ -30,7 +30,7 @@
                 <div class="text-center text-muted py-5">
                     <i class="bi bi-list-check fs-1 d-block mb-2"></i>
                     <p>No scoring parameters defined yet.</p>
-                    <a href="{{ route('admission.selection-process.create-parameter', $step) }}" class="btn btn-primary btn-sm">Add First Parameter</a>
+                    <a href="{{ route('admission.selection-process.parameters.create', $step) }}" class="btn btn-primary btn-sm">Add First Parameter</a>
                 </div>
             @else
             <table class="table table-hover mb-0 align-middle">
@@ -52,8 +52,8 @@
                         <td class="text-muted small">{{ $param->description ?? '—' }}</td>
                         <td>
                             <div class="d-flex gap-1 justify-content-end">
-                                <a href="{{ route('admission.selection-process.edit-parameter', $param) }}" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="bi bi-pencil"></i></a>
-                                <form action="{{ route('admission.selection-process.destroy-parameter', $param) }}" method="POST" onsubmit="return confirm('Delete this parameter?')">
+                                <a href="{{ route('admission.selection-process.parameters.edit', $param) }}" class="btn btn-sm btn-outline-secondary py-0 px-1"><i class="bi bi-pencil"></i></a>
+                                <form action="{{ route('admission.selection-process.parameters.destroy', $param) }}" method="POST" onsubmit="return confirm('Delete this parameter?')">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger py-0 px-1"><i class="bi bi-trash"></i></button>
                                 </form>

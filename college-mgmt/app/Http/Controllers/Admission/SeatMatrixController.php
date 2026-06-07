@@ -78,4 +78,12 @@ class SeatMatrixController extends Controller
         return redirect()->route('admission.seat-matrices.index', $seatMatrix->program)
             ->with('success', 'Seat matrix updated.');
     }
+
+    public function destroy(SeatMatrix $seatMatrix)
+    {
+        $program = $seatMatrix->program;
+        $seatMatrix->delete();
+        return redirect()->route('admission.seat-matrices.index', $program)
+            ->with('success', 'Seat matrix deleted.');
+    }
 }
