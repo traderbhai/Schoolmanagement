@@ -30,21 +30,42 @@
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Academics</div>
+        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif">
+            <i class="bi bi-grid-3x3-gap"></i> My Timetable
+        </a>
         <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif">
             <i class="bi bi-check2-square"></i> Mark Attendance
         </a>
         <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif">
             <i class="bi bi-pencil-square"></i> Enter Marks
         </a>
+        <a href="{{ route('teacher.materials.index') }}" class="nav-link @if(request()->routeIs('teacher.materials.*')) active @endif">
+            <i class="bi bi-folder2-open"></i> Study Materials
+        </a>
+        <a href="{{ route('teacher.assignments.index') }}" class="nav-link @if(request()->routeIs('teacher.assignments.*')) active @endif">
+            <i class="bi bi-clipboard2-check"></i> Assignments
+        </a>
+        <a href="{{ route('teacher.announcements.index') }}" class="nav-link @if(request()->routeIs('teacher.announcements.*')) active @endif">
+            <i class="bi bi-megaphone"></i> Announcements
+        </a>
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif">
             <i class="bi bi-people"></i> My Students
         </a>
-        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave
+
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Mentoring</div>
+        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif">
+            <i class="bi bi-person-hearts"></i> My Mentees
         </a>
 
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
+        <a href="{{ route('teacher.feedback.index') }}" class="nav-link @if(request()->routeIs('teacher.feedback.*')) active @endif">
+            <i class="bi bi-star-half"></i> My Feedback
+        </a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave
+        </a>
         <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
         </a>
@@ -68,12 +89,20 @@
         <a href="{{ route('teacher.dashboard') }}" class="nav-link @if(request()->routeIs('teacher.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>
+        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif"><i class="bi bi-grid-3x3-gap"></i> My Timetable</a>
         <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Mark Attendance</a>
         <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif"><i class="bi bi-pencil-square"></i> Enter Marks</a>
+        <a href="{{ route('teacher.materials.index') }}" class="nav-link @if(request()->routeIs('teacher.materials.*')) active @endif"><i class="bi bi-folder2-open"></i> Study Materials</a>
+        <a href="{{ route('teacher.assignments.index') }}" class="nav-link @if(request()->routeIs('teacher.assignments.*')) active @endif"><i class="bi bi-clipboard2-check"></i> Assignments</a>
+        <a href="{{ route('teacher.announcements.index') }}" class="nav-link @if(request()->routeIs('teacher.announcements.*')) active @endif"><i class="bi bi-megaphone"></i> Announcements</a>
         <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif"><i class="bi bi-people"></i> My Students</a>
-        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Mentoring</div>
+        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif"><i class="bi bi-person-hearts"></i> My Mentees</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
+        <a href="{{ route('teacher.feedback.index') }}" class="nav-link @if(request()->routeIs('teacher.feedback.*')) active @endif"><i class="bi bi-star-half"></i> My Feedback</a>
+        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave</a>
         <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
     </div>
 </div>
