@@ -651,6 +651,17 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // Sprint 3: Career events
     Route::get('career-events', [\App\Http\Controllers\Student\CareerEventController::class, 'index'])->name('career-events.index');
     Route::post('career-events/{event}/register', [\App\Http\Controllers\Student\CareerEventController::class, 'register'])->name('career-events.register');
+
+    // Sprint 4
+    Route::get('discussions/{subject}', [\App\Http\Controllers\Student\DiscussionController::class, 'index'])->name('discussions.index');
+    Route::post('discussions/{subject}', [\App\Http\Controllers\Student\DiscussionController::class, 'store'])->name('discussions.store');
+    Route::get('discussions/{subject}/{discussion}', [\App\Http\Controllers\Student\DiscussionController::class, 'show'])->name('discussions.show');
+    Route::post('discussions/{subject}/{discussion}/reply', [\App\Http\Controllers\Student\DiscussionController::class, 'reply'])->name('discussions.reply');
+    Route::post('discussions/{subject}/{discussion}/resolve', [\App\Http\Controllers\Student\DiscussionController::class, 'markResolved'])->name('discussions.resolve');
+    Route::get('internships', [\App\Http\Controllers\Student\InternshipViewController::class, 'index'])->name('internships.index');
+    Route::get('alumni', [\App\Http\Controllers\Student\AlumniController::class, 'index'])->name('alumni.index');
+    Route::get('promotion-status', [\App\Http\Controllers\Student\PromotionStatusController::class, 'index'])->name('promotion.index');
+    Route::get('academic-summary', [\App\Http\Controllers\Student\AcademicSummaryController::class, 'index'])->name('summary.index');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

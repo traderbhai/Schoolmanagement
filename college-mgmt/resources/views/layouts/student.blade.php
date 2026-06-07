@@ -99,6 +99,12 @@
         <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif">
             <i class="bi bi-calendar-event me-2"></i>Career Events
         </a>
+        <a href="{{ route('student.internships.index') }}" class="nav-link @if(request()->routeIs('student.internships.*')) active @endif">
+            <i class="bi bi-building me-2"></i>My Internships
+        </a>
+        <a href="{{ route('student.alumni.index') }}" class="nav-link @if(request()->routeIs('student.alumni.*')) active @endif">
+            <i class="bi bi-people me-2"></i>Alumni Network
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -125,6 +131,12 @@
         <div class="sidebar-divider"></div>
 
         <div class="section-label">Account</div>
+        <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif">
+            <i class="bi bi-card-text me-2"></i>Academic Summary
+        </a>
+        <a href="{{ route('student.promotion.index') }}" class="nav-link @if(request()->routeIs('student.promotion.*')) active @endif">
+            <i class="bi bi-arrow-up-circle me-2"></i>Promotion Status
+        </a>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
         </a>
@@ -176,6 +188,8 @@
         <a href="{{ route('student.scholarships.index') }}" class="nav-link @if(request()->routeIs('student.scholarships.*')) active @endif"><i class="bi bi-award me-2"></i>Scholarships</a>
         <a href="{{ route('student.resume.index') }}" class="nav-link @if(request()->routeIs('student.resume.*')) active @endif"><i class="bi bi-person-vcard me-2"></i>My Resume</a>
         <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Career Events</a>
+        <a href="{{ route('student.internships.index') }}" class="nav-link @if(request()->routeIs('student.internships.*')) active @endif"><i class="bi bi-building me-2"></i>My Internships</a>
+        <a href="{{ route('student.alumni.index') }}" class="nav-link @if(request()->routeIs('student.alumni.*')) active @endif"><i class="bi bi-people me-2"></i>Alumni Network</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
@@ -186,6 +200,8 @@
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
+        <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif"><i class="bi bi-card-text me-2"></i>Academic Summary</a>
+        <a href="{{ route('student.promotion.index') }}" class="nav-link @if(request()->routeIs('student.promotion.*')) active @endif"><i class="bi bi-arrow-up-circle me-2"></i>Promotion Status</a>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
         <a href="{{ route('student.notifications.edit') }}" class="nav-link @if(request()->routeIs('student.notifications.*')) active @endif"><i class="bi bi-bell me-2"></i>Notifications</a>
     </div>
