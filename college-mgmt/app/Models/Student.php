@@ -29,6 +29,7 @@ class Student extends Model
     public function scholarships() { return $this->hasMany(Scholarship::class); }
     public function termPromotions() { return $this->hasMany(TermPromotion::class); }
     public function feeDemands() { return $this->hasMany(FeeDemand::class); }
+    public function transcripts() { return $this->hasMany(AcademicTranscript::class); }
 
     public function calculateCGPA(): float
     {

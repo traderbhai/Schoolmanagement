@@ -239,6 +239,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 
 // ── Academic routes ─────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|accounts_officer|admin'])->prefix('academic')->name('academic.')->group(function () {
+    // Phase 5: Academic Transcripts
+    Route::get('transcripts', [Academic\TranscriptController::class, 'index'])->name('transcripts.index');
+    Route::get('transcripts/{student}/pdf', [Academic\TranscriptController::class, 'generatePdf'])->name('transcripts.pdf');
+    Route::get('transcripts/{student}', [Academic\TranscriptController::class, 'show'])->name('transcripts.show');
+
     // B2: Term Promotions
     Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
     Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
@@ -573,6 +578,13 @@ Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam
     Route::get('results',                            [Departmental\ExamCellController::class, 'results'])->name('results');
     Route::get('results/{exam}/grade-sheet',         [Departmental\ExamCellController::class, 'gradeSheet'])->name('grade-sheet');
     Route::post('results/{exam}/publish',            [Departmental\ExamCellController::class, 'publishResults'])->name('publish');
+
+    // Phase 5: Exam Anomaly Log
+    Route::get('anomalies', [Departmental\ExamAnomalyController::class, 'index'])->name('anomalies.index');
+    Route::get('anomalies/create', [Departmental\ExamAnomalyController::class, 'create'])->name('anomalies.create');
+    Route::post('anomalies', [Departmental\ExamAnomalyController::class, 'store'])->name('anomalies.store');
+    Route::get('anomalies/{anomalyLog}', [Departmental\ExamAnomalyController::class, 'show'])->name('anomalies.show');
+    Route::post('anomalies/{anomalyLog}/resolve', [Departmental\ExamAnomalyController::class, 'resolve'])->name('anomalies.resolve');
 });
 
 // ── Accounts ─────────────────────────────────────────────────────────────────
