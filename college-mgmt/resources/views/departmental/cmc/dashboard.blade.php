@@ -9,8 +9,11 @@
             <span class="text-muted small">Placement drives, internships, career services</span>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.placement-drives.create') }}" class="btn btn-primary btn-sm">
+            <a href="{{ route('cmc.drives.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i> New Drive
+            </a>
+            <a href="{{ route('cmc.events.create') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calendar-plus me-1"></i> New Event
             </a>
             <a href="{{ route('cmc.analytics') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-bar-chart me-1"></i> Analytics

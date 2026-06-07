@@ -4,7 +4,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>All Exams</h4>
-    <a href="{{ route('admin.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
+    <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
 </div>
 
 <form method="GET" class="row g-2 mb-3">
@@ -40,7 +40,16 @@
                         <td>{{ $exam->program?->name ?? '—' }}</td>
                         <td>{{ $exam->subject?->name ?? '—' }}</td>
                         <td><span class="badge bg-{{ $exam->results_count > 0 ? 'success' : 'warning' }}">{{ $exam->results_count }} entered</span></td>
-                        <td><a href="{{ route('exam-cell.grade-sheet', $exam) }}" class="btn btn-sm btn-outline-primary">Grade Sheet</a></td>
+                        <td class="d-flex gap-1 flex-wrap">
+                            <a href="{{ route('exam-cell.grade-sheet', $exam) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Grade Sheet</a>
+                            <a href="{{ route('exam-cell.exams.edit', $exam) }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-pencil"></i></a>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                data-action="{{ route('exam-cell.exams.destroy', $exam) }}"
+                                data-name="{{ $exam->name }}">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
                     </tr>
                 @empty
                     <tr><td colspan="6" class="text-center text-muted">No exams found.</td></tr>

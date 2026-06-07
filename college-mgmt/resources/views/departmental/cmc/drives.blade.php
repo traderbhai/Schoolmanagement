@@ -8,7 +8,7 @@
             <h4 class="fw-bold mb-0">Placement Drives</h4>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.placement-drives.create') }}" class="btn btn-primary btn-sm">
+            <a href="{{ route('cmc.drives.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i> New Drive
             </a>
             <a href="{{ route('cmc.dashboard') }}" class="btn btn-outline-secondary btn-sm">
@@ -44,9 +44,18 @@
                             <td>{{ $drive->placements->count() }}</td>
                             <td class="small text-muted">{{ $drive->created_at->format('d M Y') }}</td>
                             <td class="text-end pe-3">
-                                <a href="{{ route('admin.placement-drives.show', $drive) }}" class="btn btn-sm btn-outline-secondary py-0 px-2">
-                                    <i class="bi bi-eye"></i>
+                                <a href="{{ route('cmc.drives.applications', $drive) }}" class="btn btn-sm btn-outline-info py-0 px-2" title="Applications">
+                                    <i class="bi bi-people"></i>
                                 </a>
+                                <a href="{{ route('cmc.drives.edit', $drive) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                    data-action="{{ route('cmc.drives.destroy', $drive) }}"
+                                    data-name="{{ $drive->title }}" title="Delete">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
                             </td>
                         </tr>
                         @empty
