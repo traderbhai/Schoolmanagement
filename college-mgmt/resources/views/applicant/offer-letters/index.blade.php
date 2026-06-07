@@ -25,6 +25,18 @@
         </div>
     @endif
 
+    {{-- Expiry alerts for offers expiring within 3 days --}}
+    @foreach($offerLetters->where('status', 'issued') as $ol)
+        @if($ol->acceptance_deadline && \Carbon\Carbon::parse($ol->acceptance_deadline)->diffInDays(now()) <= 3)
+        <div class="alert alert-warning">
+            <i class="bi bi-alarm me-2"></i>
+            Your offer for <strong>{{ $ol->program->name }}</strong> expires on
+            <strong>{{ \Carbon\Carbon::parse($ol->acceptance_deadline)->format('d M Y') }}</strong>.
+            Please accept or decline soon!
+        </div>
+        @endif
+    @endforeach
+
     @if($offerLetters->isEmpty())
         <div class="alert alert-info">
             <h5>No Offer Letters Yet</h5>

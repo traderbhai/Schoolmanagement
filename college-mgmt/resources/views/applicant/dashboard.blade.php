@@ -123,6 +123,57 @@
         </div>
     </div>
 
+    {{-- Application Status Timeline --}}
+    <div class="card mb-4">
+        <div class="card-header fw-semibold"><i class="bi bi-clock-history me-2"></i>Application Journey</div>
+        <div class="card-body">
+            @php
+                $statuses = [
+                    'submitted'    => in_array($applicant->status, ['submitted','under_review','shortlisted','selected','enrolled']),
+                    'under_review' => in_array($applicant->status, ['under_review','shortlisted','selected','enrolled']),
+                    'selected'     => in_array($applicant->status, ['shortlisted','selected','enrolled']),
+                    'offer_issued' => isset($offerLetter),
+                    'enrolled'     => isset($enrollment) && $enrollment->status === 'completed',
+                ];
+            @endphp
+            <div class="d-flex flex-wrap gap-0 align-items-center">
+                @php
+                    $steps = [
+                        ['label' => 'Submitted',    'key' => 'submitted',    'icon' => 'send-check'],
+                        ['label' => 'Under Review', 'key' => 'under_review', 'icon' => 'search'],
+                        ['label' => 'Selected',     'key' => 'selected',     'icon' => 'person-check'],
+                        ['label' => 'Offer Issued', 'key' => 'offer_issued', 'icon' => 'envelope-check'],
+                        ['label' => 'Enrolled',     'key' => 'enrolled',     'icon' => 'mortarboard-fill'],
+                    ];
+                @endphp
+                @foreach($steps as $i => $step)
+                    <div class="text-center" style="min-width:100px">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-1
+                            {{ $statuses[$step['key']] ? 'bg-success text-white' : 'bg-light text-muted border' }}"
+                            style="width:44px;height:44px">
+                            <i class="bi bi-{{ $step['icon'] }}"></i>
+                        </div>
+                        <div class="small fw-semibold {{ $statuses[$step['key']] ? 'text-success' : 'text-muted' }}">
+                            {{ $step['label'] }}
+                        </div>
+                        @if($step['key'] === 'offer_issued' && isset($offerLetter) && $offerLetter->status === 'issued')
+                            <div class="smaller text-warning" style="font-size:0.72rem">
+                                Deadline: {{ \Carbon\Carbon::parse($offerLetter->acceptance_deadline)->format('d M Y') }}
+                            </div>
+                        @elseif($step['key'] === 'enrolled' && isset($enrollment) && $enrollment->status === 'completed')
+                            <div class="smaller text-success" style="font-size:0.72rem">
+                                {{ $enrollment->enrollment_number }}
+                            </div>
+                        @endif
+                    </div>
+                    @if(!$loop->last)
+                        <div class="flex-grow-1" style="height:2px;background:{{ $statuses[$step['key']] ? '#198754' : '#dee2e6' }};min-width:20px;max-width:60px;margin-bottom:24px"></div>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    </div>
+
     {{-- What's Next --}}
     <div class="row g-4">
         <div class="col-md-8">

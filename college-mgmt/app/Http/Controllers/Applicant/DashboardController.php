@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Applicant;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdmissionFormConfig;
+use App\Models\EnrollmentConfirmation;
+use App\Models\OfferLetter;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -22,6 +24,9 @@ class DashboardController extends Controller
             }
         }
 
-        return view('applicant.dashboard', compact('applicant', 'sections', 'completedSections'));
+        $offerLetter = OfferLetter::where('applicant_id', $applicant->id)->first();
+        $enrollment  = EnrollmentConfirmation::where('applicant_id', $applicant->id)->first();
+
+        return view('applicant.dashboard', compact('applicant', 'sections', 'completedSections', 'offerLetter', 'enrollment'));
     }
 }

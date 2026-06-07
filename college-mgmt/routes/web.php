@@ -340,6 +340,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
 
     // Offer Letters (static routes before {offerLetter} parameter)
+    Route::post('offer-letters/bulk-generate', [Admission\OfferLetterController::class, 'bulkGenerateFromMeritList'])->name('admission.offer-letters.bulk-generate');
     Route::get('offer-letters/{program}', [Admission\OfferLetterController::class, 'index'])->name('offer-letters.index');
     Route::post('offer-letters/{program}/generate', [Admission\OfferLetterController::class, 'generate'])->name('offer-letters.generate');
     Route::post('offer-letters/{program}/bulk-generate', [Admission\OfferLetterController::class, 'bulkGenerate'])->name('offer-letters.bulk-generate');

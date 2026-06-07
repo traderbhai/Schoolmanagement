@@ -78,6 +78,19 @@
 </div>
 @endif
 
+{{-- Bulk Generate Offer Letters --}}
+@if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+<form method="POST" action="{{ route('admission.offer-letters.bulk-generate') }}" id="bulkOfferForm">
+    @csrf
+    <input type="hidden" name="program_id" value="{{ $program->id }}">
+    <div class="d-flex gap-2 mb-3">
+        <button type="button" onclick="selectAll()" class="btn btn-outline-secondary btn-sm">Select All</button>
+        <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Generate offer letters for selected applicants?')">
+            <i class="bi bi-envelope-check me-1"></i>Generate Offer Letters
+        </button>
+    </div>
+@endif
+
 {{-- Merit List Table --}}
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
@@ -85,6 +98,7 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
+                        <th><input type="checkbox" id="selectAllChk" onchange="document.querySelectorAll('input[name=\'applicant_ids[]\']').forEach(c=>c.checked=this.checked)" title="Select all"></th>
                         <th>Rank</th>
                         <th>Name</th>
                         <th>Application #</th>
@@ -102,6 +116,11 @@
                 <tbody>
                     @forelse($entries as $entry)
                     <tr>
+                        <td>
+                            @if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+                            <input type="checkbox" name="applicant_ids[]" value="{{ $entry->applicant_id }}" form="bulkOfferForm">
+                            @endif
+                        </td>
                         <td><strong>#{{ $entry->rank }}</strong></td>
                         <td>
                             <a href="{{ route('admission.applicants.show', $entry->applicant) }}">
@@ -146,4 +165,14 @@
 </div>
 
 <div class="mt-3">{{ $entries->withQueryString()->links() }}</div>
+
+@if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+</form>
+@endif
+
+<script>
+function selectAll() {
+    document.querySelectorAll('input[name="applicant_ids[]"]').forEach(c => c.checked = true);
+}
+</script>
 @endsection

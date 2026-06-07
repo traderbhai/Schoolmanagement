@@ -186,6 +186,50 @@ class OfferLetterController extends Controller
         }
     }
 
+    public function bulkGenerateFromMeritList(Request $request)
+    {
+        $request->validate([
+            'program_id'      => 'required|exists:programs,id',
+            'applicant_ids'   => 'required|array|min:1',
+            'applicant_ids.*' => 'exists:applicants,id',
+        ]);
+
+        $program = \App\Models\Program::findOrFail($request->program_id);
+        $batch   = \App\Models\Batch::where('program_id', $program->id)
+                       ->where('is_active', true)->first();
+
+        if (!$batch) {
+            return back()->with('error', 'No active batch found for this program.');
+        }
+
+        $generated = 0;
+        $skipped   = 0;
+
+        foreach ($request->applicant_ids as $applicantId) {
+            $applicant = \App\Models\Applicant::find($applicantId);
+            if (!$applicant || $applicant->program_id != $program->id) { $skipped++; continue; }
+            if (\App\Models\OfferLetter::where('applicant_id', $applicant->id)->exists()) { $skipped++; continue; }
+
+            \App\Models\OfferLetter::create([
+                'applicant_id'        => $applicant->id,
+                'program_id'          => $program->id,
+                'batch_id'            => $batch->id,
+                'status'              => 'issued',
+                'issued_at'           => now(),
+                'issued_by'           => auth()->id(),
+                'acceptance_deadline' => now()->addDays(14)->toDateString(),
+            ]);
+
+            if (!in_array($applicant->status, ['selected', 'enrolled'])) {
+                $applicant->update(['status' => 'selected']);
+            }
+
+            $generated++;
+        }
+
+        return back()->with('success', "Offer letters generated: {$generated}. Skipped (already exist): {$skipped}.");
+    }
+
     public function bulkGenerate(Request $request, Program $program)
     {
         $request->validate([
