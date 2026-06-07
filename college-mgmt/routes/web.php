@@ -620,6 +620,37 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // Sprint 1: Course Content Hub (materials + announcements overview)
     Route::get('courses', [\App\Http\Controllers\Student\CourseHubController::class, 'index'])->name('courses.index');
     Route::get('courses/{subject}', [\App\Http\Controllers\Student\CourseHubController::class, 'show'])->name('courses.show');
+
+    // Sprint 3: Exam registration
+    Route::get('exam-registration', [\App\Http\Controllers\Student\ExamRegistrationController::class, 'index'])->name('exam-reg.index');
+    Route::post('exam-registration/{exam}/register', [\App\Http\Controllers\Student\ExamRegistrationController::class, 'register'])->name('exam-reg.register');
+
+    // Sprint 3: Marks appeals
+    Route::get('appeals/create', [\App\Http\Controllers\Student\MarksAppealController::class, 'create'])->name('appeals.create');
+    Route::post('appeals', [\App\Http\Controllers\Student\MarksAppealController::class, 'store'])->name('appeals.store');
+    Route::get('appeals', [\App\Http\Controllers\Student\MarksAppealController::class, 'index'])->name('appeals.index');
+
+    // Sprint 3: Scholarships
+    Route::get('scholarships', [\App\Http\Controllers\Student\ScholarshipController::class, 'index'])->name('scholarships.index');
+    Route::post('scholarships/{scheme}/apply', [\App\Http\Controllers\Student\ScholarshipController::class, 'apply'])->name('scholarships.apply');
+
+    // Sprint 3: Mentor
+    Route::get('mentor', [\App\Http\Controllers\Student\MentorController::class, 'index'])->name('mentor.index');
+    Route::post('mentor/meeting', [\App\Http\Controllers\Student\MentorController::class, 'requestMeeting'])->name('mentor.meeting');
+    Route::post('mentor/message', [\App\Http\Controllers\Student\MentorController::class, 'sendMessage'])->name('mentor.message');
+
+    // Sprint 3: Course feedback
+    Route::get('feedback', [\App\Http\Controllers\Student\CourseFeedbackController::class, 'index'])->name('feedback.index');
+    Route::get('feedback/{subject}', [\App\Http\Controllers\Student\CourseFeedbackController::class, 'create'])->name('feedback.create');
+    Route::post('feedback/{subject}', [\App\Http\Controllers\Student\CourseFeedbackController::class, 'store'])->name('feedback.store');
+
+    // Sprint 3: Resume builder
+    Route::get('resume', [\App\Http\Controllers\Student\ResumeController::class, 'index'])->name('resume.index');
+    Route::post('resume', [\App\Http\Controllers\Student\ResumeController::class, 'save'])->name('resume.save');
+
+    // Sprint 3: Career events
+    Route::get('career-events', [\App\Http\Controllers\Student\CareerEventController::class, 'index'])->name('career-events.index');
+    Route::post('career-events/{event}/register', [\App\Http\Controllers\Student\CareerEventController::class, 'register'])->name('career-events.register');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

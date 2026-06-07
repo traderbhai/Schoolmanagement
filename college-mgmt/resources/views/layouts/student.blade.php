@@ -54,6 +54,12 @@
         <a href="{{ route('student.transcript.download') }}" class="nav-link">
             <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
         </a>
+        <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif">
+            <i class="bi bi-clipboard-check me-2"></i>Exam Registration
+        </a>
+        <a href="{{ route('student.appeals.index') }}" class="nav-link @if(request()->routeIs('student.appeals.*')) active @endif">
+            <i class="bi bi-megaphone me-2"></i>Marks Appeals
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -84,6 +90,15 @@
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif">
             <i class="bi bi-briefcase"></i> Placements
         </a>
+        <a href="{{ route('student.scholarships.index') }}" class="nav-link @if(request()->routeIs('student.scholarships.*')) active @endif">
+            <i class="bi bi-award me-2"></i>Scholarships
+        </a>
+        <a href="{{ route('student.resume.index') }}" class="nav-link @if(request()->routeIs('student.resume.*')) active @endif">
+            <i class="bi bi-person-vcard me-2"></i>My Resume
+        </a>
+        <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif">
+            <i class="bi bi-calendar-event me-2"></i>Career Events
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -93,6 +108,12 @@
         </a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
             <i class="bi bi-chat-square-text me-2"></i>Grievances
+        </a>
+        <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif">
+            <i class="bi bi-person-badge me-2"></i>My Mentor
+        </a>
+        <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif">
+            <i class="bi bi-star me-2"></i>Course Feedback
         </a>
         <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif">
             <i class="bi bi-shield-check me-2"></i>Attendance Condonation
@@ -138,6 +159,8 @@
         <a href="{{ route('student.calendar.index') }}" class="nav-link @if(request()->routeIs('student.calendar.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Academic Calendar</a>
         <a href="{{ route('student.leave.index') }}" class="nav-link @if(request()->routeIs('student.leave.*')) active @endif"><i class="bi bi-person-dash me-2"></i>Leave Applications</a>
         <a href="{{ route('student.transcript.download') }}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
+        <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif"><i class="bi bi-clipboard-check me-2"></i>Exam Registration</a>
+        <a href="{{ route('student.appeals.index') }}" class="nav-link @if(request()->routeIs('student.appeals.*')) active @endif"><i class="bi bi-megaphone me-2"></i>Marks Appeals</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Course Content</div>
         <a href="{{ route('student.courses.index') }}" class="nav-link @if(request()->routeIs('student.courses.*')) active @endif"><i class="bi bi-book me-2"></i>My Courses</a>
@@ -150,10 +173,15 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Career</div>
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
+        <a href="{{ route('student.scholarships.index') }}" class="nav-link @if(request()->routeIs('student.scholarships.*')) active @endif"><i class="bi bi-award me-2"></i>Scholarships</a>
+        <a href="{{ route('student.resume.index') }}" class="nav-link @if(request()->routeIs('student.resume.*')) active @endif"><i class="bi bi-person-vcard me-2"></i>My Resume</a>
+        <a href="{{ route('student.career-events.index') }}" class="nav-link @if(request()->routeIs('student.career-events.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Career Events</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-chat-square-text me-2"></i>Grievances</a>
+        <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif"><i class="bi bi-person-badge me-2"></i>My Mentor</a>
+        <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>
         <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
         <div class="sidebar-divider"></div>
