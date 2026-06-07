@@ -738,6 +738,17 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('students/elective-override',                 [Departmental\PmcStudentController::class, 'electiveOverride'])->name('students.elective-override');
     Route::post('students/elective-override/{enrollment}',   [Departmental\PmcStudentController::class, 'changeElective'])->name('students.elective-override.change');
     Route::get('students/promotions',                        [Departmental\PmcStudentController::class, 'promotions'])->name('students.promotions');
+
+    // PMC Sprint 2 — Faculty oversight
+    Route::get('faculty/workload',                           [Departmental\PmcFacultyController::class, 'workload'])->name('faculty.workload');
+    Route::get('faculty/marks-tracker',                      [Departmental\PmcFacultyController::class, 'marksTracker'])->name('faculty.marks-tracker');
+    Route::get('faculty/course-delivery',                    [Departmental\PmcFacultyController::class, 'courseDelivery'])->name('faculty.course-delivery');
+    Route::get('faculty/feedback',                           [Departmental\PmcFacultyController::class, 'feedbackSummary'])->name('faculty.feedback');
+
+    // PMC Sprint 2 — Reports
+    Route::get('reports/subject-performance',                [Departmental\PmcReportsController::class, 'subjectPerformance'])->name('reports.subject-performance');
+    Route::get('reports/attendance-defaulters',              [Departmental\PmcReportsController::class, 'attendanceDefaulters'])->name('reports.attendance-defaulters');
+    Route::get('reports/term-summary',                       [Departmental\PmcReportsController::class, 'termSummary'])->name('reports.term-summary');
 });
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────

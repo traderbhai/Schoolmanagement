@@ -352,6 +352,12 @@
         <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.*')) active @endif">
             <i class="bi bi-people me-1"></i>Students
         </a>
+        <a href="{{ route('chair.faculty.workload') }}" class="nav-link @if(request()->routeIs('chair.faculty.*')) active @endif">
+            <i class="bi bi-person-badge me-1"></i>Faculty
+        </a>
+        <a href="{{ route('chair.reports.subject-performance') }}" class="nav-link @if(request()->routeIs('chair.reports.*')) active @endif">
+            <i class="bi bi-bar-chart-line me-1"></i>Reports
+        </a>
         <a href="{{ route('chair.approvals') }}" class="nav-link @if(request()->routeIs('chair.approvals')) active @endif">
             <i class="bi bi-check2-circle me-1"></i>Approvals
         </a>
