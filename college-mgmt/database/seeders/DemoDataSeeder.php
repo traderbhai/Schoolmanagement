@@ -602,13 +602,10 @@ class DemoDataSeeder extends Seeder
                 'applied_at'                    => $data['applied_at'] ?? null,
                 'reviewed_at'                   => $data['reviewed_at'] ?? null,
                 'reviewed_by'                   => isset($data['reviewed_at']) ? $admin->id : null,
-                'category'                      => $data['category'] ?? 'general',
-                'entrance_exam_type'            => $data['entrance_exam_type'] ?? null,
-                'entrance_exam_score'           => $data['entrance_exam_score'] ?? null,
-                'entrance_exam_roll_number'     => $data['entrance_exam_roll_number'] ?? null,
-                'entrance_exam_year'            => $data['entrance_exam_year'] ?? null,
-                'domicile_state'                => $data['domicile_state'] ?? null,
-                'category_certificate_verified' => $data['category_certificate_verified'] ?? false,
+                'category'                  => $data['category'] ?? 'general',
+                'entrance_exam_name'        => strtoupper($data['entrance_exam_type'] ?? 'CAT'),
+                'entrance_exam_score'       => $data['entrance_exam_score'] ?? null,
+                'entrance_exam_roll_number' => $data['entrance_exam_roll_number'] ?? null,
             ]);
         }
 

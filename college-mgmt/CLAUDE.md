@@ -19,13 +19,13 @@
 
 **Order of departments:**
 1. **Student** ✅ COMPLETE — merged to main (PR #15, 2026-06-07)
-2. **PMC (Program Management Cell / Program Chair)** ← NEXT
-3. Teacher / Faculty
-4. Exam Cell
-5. Accounts / Finance
-6. HOD / Dean Academics
-7. CMC / Placement
-8. Admin
+2. **PMC (Program Management Cell / Program Chair)** ✅ COMPLETE — merged to main (PR #16, 2026-06-07)
+3. **Teacher / Faculty** ✅ COMPLETE — merged to main (PR #17, 2026-06-07)
+4. **Exam Cell** ✅ COMPLETE — merged to main (PR #18, 2026-06-07)
+5. **Accounts / Finance** ✅ COMPLETE — merged to main (PR #18, 2026-06-07)
+6. **HOD** ✅ COMPLETE — merged to main (PR #18, 2026-06-07)
+7. **CMC / Placement** ✅ COMPLETE — merged to main (PR #18, 2026-06-07)
+8. **Admin** ✅ COMPLETE — 235+ routes covering all management functions
 
 **Guiding principle:** Think from the user's daily reality — what does a student/teacher actually need to do every single day? Every feature must solve a real, frequent pain point. No feature theatre.
 
@@ -35,16 +35,18 @@
 
 | Role | Email |
 |------|-------|
-| admin | admin@college.com |
+| admin | admin@demo.edu |
 | admission_head | head@college.com |
 | admission_officer | officer@college.com |
 | accounts_officer | accounts@college.com |
 | dean_academics | dean@college.com |
 | hod | hod@college.com |
 | program_chair | chair@college.com |
+| cmc | cmc@college.com |
+| director | director@college.com |
 | exam_cell | exam@college.com |
-| teacher | ravi@college.com |
-| student | aarav@college.com |
+| teacher | anjali@demo.edu |
+| student | arjun.k@demo.edu |
 
 ---
 
