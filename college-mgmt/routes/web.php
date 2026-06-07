@@ -784,26 +784,38 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
     Route::get('dashboard', [Departmental\HodController::class, 'dashboard'])->name('dashboard');
-    // P5-5: Approval Workflow Routes for HOD
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
     Route::post('approvals/{approval}/reject', [Departmental\HodController::class, 'reject'])->name('reject');
-    // Phase 3: Grievance Management
     Route::get('grievances', [Departmental\GrievanceManagementController::class, 'index'])->name('grievances.index');
     Route::get('grievances/{grievance}', [Departmental\GrievanceManagementController::class, 'show'])->name('grievances.show');
     Route::post('grievances/{grievance}/resolve', [Departmental\GrievanceManagementController::class, 'resolve'])->name('grievances.resolve');
     Route::post('grievances/{grievance}/escalate', [Departmental\GrievanceManagementController::class, 'escalate'])->name('grievances.escalate');
+    // Faculty management
+    Route::get('faculty', [Departmental\HodController::class, 'facultyRoster'])->name('faculty.roster');
+    Route::get('faculty/workload', [Departmental\HodController::class, 'facultyWorkload'])->name('faculty.workload');
+    Route::get('leaves', [Departmental\HodController::class, 'leaves'])->name('leaves');
+    Route::post('leaves/{leave}/review', [Departmental\HodController::class, 'reviewLeave'])->name('leaves.review');
+    Route::get('department-performance', [Departmental\HodController::class, 'departmentPerformance'])->name('department-performance');
 });
 
 // ── Exam Cell ────────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam-cell')->name('exam-cell.')->group(function () {
     Route::get('dashboard',                          [Departmental\ExamCellController::class, 'dashboard'])->name('dashboard');
     Route::get('exams',                              [Departmental\ExamCellController::class, 'exams'])->name('exams');
+    Route::get('exams/create',                       [Departmental\ExamCellController::class, 'createExam'])->name('exams.create');
+    Route::post('exams',                             [Departmental\ExamCellController::class, 'storeExam'])->name('exams.store');
+    Route::get('exams/{exam}/edit',                  [Departmental\ExamCellController::class, 'editExam'])->name('exams.edit');
+    Route::put('exams/{exam}',                       [Departmental\ExamCellController::class, 'updateExam'])->name('exams.update');
+    Route::delete('exams/{exam}',                    [Departmental\ExamCellController::class, 'destroyExam'])->name('exams.destroy');
     Route::get('results',                            [Departmental\ExamCellController::class, 'results'])->name('results');
     Route::get('results/{exam}/grade-sheet',         [Departmental\ExamCellController::class, 'gradeSheet'])->name('grade-sheet');
+    Route::post('results/{exam}/save-marks',         [Departmental\ExamCellController::class, 'saveMarks'])->name('save-marks');
     Route::post('results/{exam}/publish',            [Departmental\ExamCellController::class, 'publishResults'])->name('publish');
-
-    // Phase 5: Exam Anomaly Log
+    Route::get('hall-tickets',                       [Departmental\ExamCellController::class, 'hallTickets'])->name('hall-tickets');
+    Route::get('hall-tickets/{exam}/{student}/download', [Departmental\ExamCellController::class, 'downloadHallTicket'])->name('hall-ticket.download');
+    Route::get('marks-appeals',                      [Departmental\ExamCellController::class, 'marksAppeals'])->name('marks-appeals');
+    Route::post('marks-appeals/{appeal}/review',     [Departmental\ExamCellController::class, 'reviewAppeal'])->name('marks-appeals.review');
     Route::get('anomalies', [Departmental\ExamAnomalyController::class, 'index'])->name('anomalies.index');
     Route::get('anomalies/create', [Departmental\ExamAnomalyController::class, 'create'])->name('anomalies.create');
     Route::post('anomalies', [Departmental\ExamAnomalyController::class, 'store'])->name('anomalies.store');
@@ -833,19 +845,45 @@ Route::middleware('auth')->prefix('approvals')->name('approvals.')->group(functi
     Route::post('{approval}/reject', [ApprovalController::class, 'reject'])->name('reject');
 });
 
-// ── CMC / Placement routes (Phase 7) ─────────────────────────────────────────
+// ── CMC / Placement routes ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:admin|cmc|dean_academics|program_chair'])->prefix('cmc')->name('cmc.')->group(function () {
+    Route::get('dashboard', [Departmental\CmcController::class, 'dashboard'])->name('dashboard');
+    // Placement Drives
+    Route::get('drives', [Departmental\CmcController::class, 'drives'])->name('drives');
+    Route::get('drives/create', [Departmental\CmcController::class, 'createDrive'])->name('drives.create');
+    Route::post('drives', [Departmental\CmcController::class, 'storeDrive'])->name('drives.store');
+    Route::get('drives/{drive}/edit', [Departmental\CmcController::class, 'editDrive'])->name('drives.edit');
+    Route::put('drives/{drive}', [Departmental\CmcController::class, 'updateDrive'])->name('drives.update');
+    Route::delete('drives/{drive}', [Departmental\CmcController::class, 'destroyDrive'])->name('drives.destroy');
+    Route::get('drives/{drive}/applications', [Departmental\CmcController::class, 'driveApplications'])->name('drives.applications');
+    Route::patch('placements/{placement}/status', [Departmental\CmcController::class, 'updateApplicationStatus'])->name('placements.update-status');
+    Route::get('placements', [Departmental\CmcController::class, 'placements'])->name('placements');
+    Route::get('analytics', [Departmental\CmcController::class, 'analytics'])->name('analytics');
+    // Companies
+    Route::get('companies', [Departmental\CmcController::class, 'companies'])->name('companies');
+    Route::get('companies/create', [Departmental\CmcController::class, 'createCompany'])->name('companies.create');
+    Route::post('companies', [Departmental\CmcController::class, 'storeCompany'])->name('companies.store');
+    Route::get('companies/{company}/edit', [Departmental\CmcController::class, 'editCompany'])->name('companies.edit');
+    Route::put('companies/{company}', [Departmental\CmcController::class, 'updateCompany'])->name('companies.update');
+    // Career Events
+    Route::get('events', [Departmental\CmcController::class, 'events'])->name('events');
+    Route::get('events/create', [Departmental\CmcController::class, 'createEvent'])->name('events.create');
+    Route::post('events', [Departmental\CmcController::class, 'storeEvent'])->name('events.store');
+    Route::get('events/{event}/edit', [Departmental\CmcController::class, 'editEvent'])->name('events.edit');
+    Route::put('events/{event}', [Departmental\CmcController::class, 'updateEvent'])->name('events.update');
+    Route::delete('events/{event}', [Departmental\CmcController::class, 'destroyEvent'])->name('events.destroy');
+    Route::get('events/{event}/registrations', [Departmental\CmcController::class, 'eventRegistrations'])->name('events.registrations');
+    // Internships
     Route::get('internships', [Departmental\InternshipController::class, 'index'])->name('internships.index');
     Route::get('internships/create', [Departmental\InternshipController::class, 'create'])->name('internships.create');
     Route::post('internships', [Departmental\InternshipController::class, 'store'])->name('internships.store');
     Route::get('internships/{internship}', [Departmental\InternshipController::class, 'show'])->name('internships.show');
     Route::post('internships/{internship}/complete', [Departmental\InternshipController::class, 'complete'])->name('internships.complete');
-
+    // Alumni
     Route::get('alumni', [Departmental\AlumniController::class, 'index'])->name('alumni.index');
     Route::get('alumni/create', [Departmental\AlumniController::class, 'create'])->name('alumni.create');
     Route::post('alumni', [Departmental\AlumniController::class, 'store'])->name('alumni.store');
     Route::post('alumni/{alumniProfile}/verify', [Departmental\AlumniController::class, 'verify'])->name('alumni.verify');
-
     Route::get('placement-stats', [Departmental\PlacementStatsController::class, 'index'])->name('placement-stats');
 });
 

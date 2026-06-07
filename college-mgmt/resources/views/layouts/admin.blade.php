@@ -204,6 +204,15 @@
         </a>
         @endhasrole
         @hasrole('hod|admin')
+        <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.*')) active @endif">
+            <i class="bi bi-people"></i> Faculty Roster
+        </a>
+        <a href="{{ route('hod.leaves') }}" class="nav-link @if(request()->routeIs('hod.leaves*')) active @endif">
+            <i class="bi bi-calendar-x"></i> Leave Approvals
+        </a>
+        <a href="{{ route('hod.department-performance') }}" class="nav-link @if(request()->routeIs('hod.department-performance')) active @endif">
+            <i class="bi bi-graph-up"></i> Dept Performance
+        </a>
         <a href="{{ route('hod.grievances.index') }}" class="nav-link @if(request()->routeIs('hod.grievances.*')) active @endif">
             <i class="bi bi-chat-square-text"></i> Student Grievances
         </a>
@@ -229,6 +238,15 @@
         @hasrole('dean_academics|exam_cell|admin')
         <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
             <i class="bi bi-file-earmark-text"></i> Transcripts
+        </a>
+        <a href="{{ route('exam-cell.exams.create') }}" class="nav-link @if(request()->routeIs('exam-cell.exams.create')) active @endif">
+            <i class="bi bi-plus-circle"></i> Schedule Exam
+        </a>
+        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif">
+            <i class="bi bi-ticket-perforated"></i> Hall Tickets
+        </a>
+        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif">
+            <i class="bi bi-envelope-exclamation"></i> Marks Appeals
         </a>
         @endhasrole
 
@@ -264,11 +282,23 @@
             <i class="bi bi-briefcase"></i> Drives
         </a>
         @hasanyrole('admin|cmc|dean_academics')
+        <a href="{{ route('cmc.drives') }}" class="nav-link @if(request()->routeIs('cmc.drives*')) active @endif">
+            <i class="bi bi-briefcase"></i> Placement Drives
+        </a>
+        <a href="{{ route('cmc.companies') }}" class="nav-link @if(request()->routeIs('cmc.companies*')) active @endif">
+            <i class="bi bi-building"></i> Companies
+        </a>
+        <a href="{{ route('cmc.events') }}" class="nav-link @if(request()->routeIs('cmc.events*')) active @endif">
+            <i class="bi bi-calendar-event"></i> Career Events
+        </a>
         <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif">
             <i class="bi bi-laptop"></i> Internships
         </a>
         <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif">
             <i class="bi bi-people-fill"></i> Alumni Database
+        </a>
+        <a href="{{ route('cmc.analytics') }}" class="nav-link @if(request()->routeIs('cmc.analytics')) active @endif">
+            <i class="bi bi-pie-chart"></i> Analytics
         </a>
         @endhasanyrole
         @hasanyrole('admin|cmc|dean_academics|program_chair')
