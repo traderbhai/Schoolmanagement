@@ -17,10 +17,16 @@ class ApprovalWorkflow extends Model
         'remarks',
         'approver_id',
         'approved_at',
+        'sla_days',
+        'due_at',
+        'escalated_to_role',
+        'escalated_at',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'due_at' => 'datetime',
+        'escalated_at' => 'datetime',
     ];
 
     public function approvable()
@@ -31,6 +37,10 @@ class ApprovalWorkflow extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approver_id');
+    }
+
+    public function isOverdue(): bool {
+        return $this->status === 'pending' && $this->due_at && $this->due_at->isPast();
     }
 
     public function getStatusBadgeAttribute(): string

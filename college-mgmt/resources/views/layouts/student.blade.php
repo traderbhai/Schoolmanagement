@@ -58,6 +58,9 @@
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
             <i class="bi bi-megaphone"></i> Notices
         </a>
+        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
+            <i class="bi bi-chat-square-text"></i> My Grievances
+        </a>
 
         <div class="sidebar-divider"></div>
 

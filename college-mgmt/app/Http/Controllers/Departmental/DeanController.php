@@ -71,10 +71,17 @@ class DeanController extends Controller
             ->with('approvable')
             ->latest()->take(5)->get();
 
+        try {
+            $openGrievances = \App\Models\StudentGrievance::whereIn('status', ['open','under_review','escalated'])->count();
+        } catch (\Exception $e) { $openGrievances = 0; }
+        $overdueApprovals = ApprovalWorkflow::where('status','pending')
+            ->whereNotNull('due_at')->where('due_at','<',now())->count();
+
         return view('departmental.dean.dashboard', compact(
             'totalPrograms', 'totalStudents', 'totalFaculty',
             'totalExams', 'attendancePct', 'programs', 'recentResults',
-            'pendingApprovals', 'atRiskStudents', 'recentApprovals'
+            'pendingApprovals', 'atRiskStudents', 'recentApprovals',
+            'openGrievances', 'overdueApprovals'
         ));
     }
 

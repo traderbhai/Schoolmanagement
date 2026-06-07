@@ -258,6 +258,14 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     // B5: Academic Calendar
     Route::resource('academic-calendars', Academic\AcademicCalendarController::class);
     Route::get('academic-calendars-events', [Academic\AcademicCalendarController::class, 'getEvents'])->name('academic-calendars.events');
+
+    // Phase 3: Curriculum Changes
+    Route::get('curriculum-changes', [Academic\CurriculumChangeController::class, 'index'])->name('curriculum-changes.index');
+    Route::get('curriculum-changes/create', [Academic\CurriculumChangeController::class, 'create'])->name('curriculum-changes.create');
+    Route::post('curriculum-changes', [Academic\CurriculumChangeController::class, 'store'])->name('curriculum-changes.store');
+    Route::get('curriculum-changes/{curriculumChange}', [Academic\CurriculumChangeController::class, 'show'])->name('curriculum-changes.show');
+    Route::post('curriculum-changes/{curriculumChange}/approve', [Academic\CurriculumChangeController::class, 'approve'])->name('curriculum-changes.approve');
+    Route::post('curriculum-changes/{curriculumChange}/reject', [Academic\CurriculumChangeController::class, 'reject'])->name('curriculum-changes.reject');
 });
 
 // ── Admission Team routes ───────────────────────────────────────────────────
@@ -499,6 +507,12 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
     // P9-3: Timetable
     Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
+
+    // Phase 3: Student Grievances (static routes before wildcard)
+    Route::get('grievances/create', [Student\GrievanceController::class, 'create'])->name('grievances.create');
+    Route::post('grievances', [Student\GrievanceController::class, 'store'])->name('grievances.store');
+    Route::get('grievances', [Student\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Student\GrievanceController::class, 'show'])->name('grievances.show');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
@@ -544,6 +558,11 @@ Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->grou
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
     Route::post('approvals/{approval}/reject', [Departmental\HodController::class, 'reject'])->name('reject');
+    // Phase 3: Grievance Management
+    Route::get('grievances', [Departmental\GrievanceManagementController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Departmental\GrievanceManagementController::class, 'show'])->name('grievances.show');
+    Route::post('grievances/{grievance}/resolve', [Departmental\GrievanceManagementController::class, 'resolve'])->name('grievances.resolve');
+    Route::post('grievances/{grievance}/escalate', [Departmental\GrievanceManagementController::class, 'escalate'])->name('grievances.escalate');
 });
 
 // ── Exam Cell ────────────────────────────────────────────────────────────────

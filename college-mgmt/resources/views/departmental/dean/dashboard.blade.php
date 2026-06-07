@@ -64,6 +64,24 @@
             </div>
         </div>
     </div>
+    <div class="col-sm-6 col-lg-2">
+        <a href="{{ route('hod.grievances.index') }}" class="text-decoration-none">
+            <div class="card text-center border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold {{ $openGrievances > 0 ? 'text-warning' : 'text-secondary' }}">{{ $openGrievances }}</div>
+                    <div class="text-muted small">Open Grievances</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card text-center border-0 shadow-sm h-100 {{ $overdueApprovals > 0 ? 'border border-danger' : '' }}">
+            <div class="card-body">
+                <div class="fs-2 fw-bold {{ $overdueApprovals > 0 ? 'text-danger' : 'text-secondary' }}">{{ $overdueApprovals }}</div>
+                <div class="text-muted small">Overdue Approvals</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-3 mb-3">

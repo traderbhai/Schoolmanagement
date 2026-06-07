@@ -198,6 +198,16 @@
 
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
+        @hasrole('dean_academics|program_chair|hod|admin')
+        <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
+            <i class="bi bi-journal-text"></i> Curriculum Changes
+        </a>
+        @endhasrole
+        @hasrole('hod|admin')
+        <a href="{{ route('hod.grievances.index') }}" class="nav-link @if(request()->routeIs('hod.grievances.*')) active @endif">
+            <i class="bi bi-chat-square-text"></i> Student Grievances
+        </a>
+        @endhasrole
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
             <i class="bi bi-calendar-x"></i> Leave Mgmt
         </a>
