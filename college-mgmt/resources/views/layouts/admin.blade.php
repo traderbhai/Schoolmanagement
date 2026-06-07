@@ -340,8 +340,20 @@
         </a>
         @endhasrole
         @hasrole('program_chair|hod|dean_academics|admin')
-        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Program Chair
+        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.dashboard')) active @endif">
+            <i class="bi bi-diagram-3-fill"></i> PMC Dashboard
+        </a>
+        <a href="{{ route('chair.curriculum.index') }}" class="nav-link @if(request()->routeIs('chair.curriculum.*')) active @endif">
+            <i class="bi bi-journal-bookmark me-1"></i>Curriculum
+        </a>
+        <a href="{{ route('chair.timetable.builder') }}" class="nav-link @if(request()->routeIs('chair.timetable.*')) active @endif">
+            <i class="bi bi-grid-3x3 me-1"></i>Timetable
+        </a>
+        <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.*')) active @endif">
+            <i class="bi bi-people me-1"></i>Students
+        </a>
+        <a href="{{ route('chair.approvals') }}" class="nav-link @if(request()->routeIs('chair.approvals')) active @endif">
+            <i class="bi bi-check2-circle me-1"></i>Approvals
         </a>
         @endhasrole
         @hasrole('hod|admin')

@@ -698,6 +698,46 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('approvals', [Departmental\ProgramChairController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');
     Route::post('approvals/{approval}/reject', [Departmental\ProgramChairController::class, 'reject'])->name('reject');
+
+    // PMC Sprint — Curriculum Management
+    Route::get('curriculum/assignments',                     [Departmental\PmcCurriculumController::class, 'assignments'])->name('curriculum.assignments');
+    Route::post('curriculum/assign-faculty',                 [Departmental\PmcCurriculumController::class, 'assignFaculty'])->name('curriculum.assign-faculty');
+    Route::delete('curriculum/assignments/{assignment}',     [Departmental\PmcCurriculumController::class, 'unassignFaculty'])->name('curriculum.unassign-faculty');
+    Route::get('curriculum/electives',                       [Departmental\PmcCurriculumController::class, 'electives'])->name('curriculum.electives');
+    Route::post('curriculum/electives/window',               [Departmental\PmcCurriculumController::class, 'createWindow'])->name('curriculum.electives.window');
+    Route::post('curriculum/electives/window/{window}/status', [Departmental\PmcCurriculumController::class, 'updateWindowStatus'])->name('curriculum.electives.window.status');
+    Route::get('curriculum/assessment',                      [Departmental\PmcCurriculumController::class, 'assessmentSetup'])->name('curriculum.assessment');
+    Route::post('curriculum/assessment',                     [Departmental\PmcCurriculumController::class, 'saveAssessmentComponent'])->name('curriculum.assessment.save');
+    Route::get('curriculum',                                 [Departmental\PmcCurriculumController::class, 'index'])->name('curriculum.index');
+    Route::post('curriculum/subject',                        [Departmental\PmcCurriculumController::class, 'addSubject'])->name('curriculum.add-subject');
+    Route::delete('curriculum/subject/{programSubject}',     [Departmental\PmcCurriculumController::class, 'removeSubject'])->name('curriculum.remove-subject');
+
+    // PMC Sprint — Timetable
+    Route::get('timetable/builder',                          [Departmental\PmcTimetableController::class, 'builder'])->name('timetable.builder');
+    Route::post('timetable/slot',                            [Departmental\PmcTimetableController::class, 'saveSlot'])->name('timetable.save-slot');
+    Route::post('timetable/publish',                         [Departmental\PmcTimetableController::class, 'publish'])->name('timetable.publish');
+    Route::post('timetable/check-conflict',                  [Departmental\PmcTimetableController::class, 'checkConflict'])->name('timetable.check-conflict');
+    Route::get('timetable/substitutions',                    [Departmental\PmcTimetableController::class, 'substitutions'])->name('timetable.substitutions');
+    Route::post('timetable/substitutions',                   [Departmental\PmcTimetableController::class, 'createSubstitution'])->name('timetable.substitutions.create');
+    Route::get('timetable/availability',                     [Departmental\PmcTimetableController::class, 'teacherAvailability'])->name('timetable.availability');
+    Route::post('timetable/availability',                    [Departmental\PmcTimetableController::class, 'saveAvailability'])->name('timetable.availability.save');
+
+    // PMC Sprint — Student oversight
+    Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');
+    Route::get('students/mentors',                           [Departmental\PmcStudentController::class, 'mentors'])->name('students.mentors');
+    Route::post('students/mentors/assign',                   [Departmental\PmcStudentController::class, 'assignMentor'])->name('students.mentors.assign');
+    Route::post('students/mentors/bulk',                     [Departmental\PmcStudentController::class, 'bulkAssignMentor'])->name('students.mentors.bulk');
+    Route::get('students/leaves',                            [Departmental\PmcStudentController::class, 'leaves'])->name('students.leaves');
+    Route::post('students/leaves/{leave}/approve',           [Departmental\PmcStudentController::class, 'approveLeave'])->name('students.leaves.approve');
+    Route::post('students/leaves/{leave}/reject',            [Departmental\PmcStudentController::class, 'rejectLeave'])->name('students.leaves.reject');
+    Route::get('students/condonations',                      [Departmental\PmcStudentController::class, 'condonations'])->name('students.condonations');
+    Route::post('students/condonations/{condonation}/approve', [Departmental\PmcStudentController::class, 'approveCondonation'])->name('students.condonations.approve');
+    Route::post('students/condonations/{condonation}/reject',  [Departmental\PmcStudentController::class, 'rejectCondonation'])->name('students.condonations.reject');
+    Route::get('students/grievances',                        [Departmental\PmcStudentController::class, 'grievances'])->name('students.grievances');
+    Route::post('students/grievances/{grievance}',           [Departmental\PmcStudentController::class, 'updateGrievance'])->name('students.grievances.update');
+    Route::get('students/elective-override',                 [Departmental\PmcStudentController::class, 'electiveOverride'])->name('students.elective-override');
+    Route::post('students/elective-override/{enrollment}',   [Departmental\PmcStudentController::class, 'changeElective'])->name('students.elective-override.change');
+    Route::get('students/promotions',                        [Departmental\PmcStudentController::class, 'promotions'])->name('students.promotions');
 });
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
