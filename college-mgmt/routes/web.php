@@ -602,6 +602,22 @@ Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->
     Route::get('fee-demands/{feeDemand}/demand-letter', [Departmental\AccountsController::class, 'demandLetter'])->name('fee-demands.demand-letter');
 });
 
+// ── CMC / Placement routes ───────────────────────────────────────────────────
+Route::middleware(['auth', 'role:admin|cmc|dean_academics|program_chair'])->prefix('cmc')->name('cmc.')->group(function () {
+    Route::get('internships', [Departmental\InternshipController::class, 'index'])->name('internships.index');
+    Route::get('internships/create', [Departmental\InternshipController::class, 'create'])->name('internships.create');
+    Route::post('internships', [Departmental\InternshipController::class, 'store'])->name('internships.store');
+    Route::get('internships/{internship}', [Departmental\InternshipController::class, 'show'])->name('internships.show');
+    Route::post('internships/{internship}/complete', [Departmental\InternshipController::class, 'complete'])->name('internships.complete');
+
+    Route::get('alumni', [Departmental\AlumniController::class, 'index'])->name('alumni.index');
+    Route::get('alumni/create', [Departmental\AlumniController::class, 'create'])->name('alumni.create');
+    Route::post('alumni', [Departmental\AlumniController::class, 'store'])->name('alumni.store');
+    Route::post('alumni/{alumniProfile}/verify', [Departmental\AlumniController::class, 'verify'])->name('alumni.verify');
+
+    Route::get('placement-stats', [Departmental\PlacementStatsController::class, 'index'])->name('placement-stats');
+});
+
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
