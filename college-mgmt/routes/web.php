@@ -16,6 +16,7 @@ use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
 use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StatusTrackerController;
+use App\Http\Controllers\ApprovalController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Status Tracker ─────────────────────────────────────
@@ -64,10 +65,17 @@ Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->gr
 Route::get('/', function () {
     if (auth()->check()) {
         $user = auth()->user();
-        if ($user->hasRole('admin'))     return redirect()->route('admin.dashboard');
-        if ($user->hasRole('teacher'))   return redirect()->route('teacher.dashboard');
-        if ($user->hasRole('parent'))    return redirect()->route('parent.dashboard');
-        if ($user->hasRole('applicant')) return redirect()->route('applicant.dashboard');
+        if ($user->hasRole('admin'))            return redirect()->route('admin.dashboard');
+        if ($user->hasRole('dean_academics'))   return redirect()->route('dean.dashboard');
+        if ($user->hasRole('program_chair'))    return redirect()->route('chair.dashboard');
+        if ($user->hasRole('hod'))              return redirect()->route('hod.dashboard');
+        if ($user->hasRole('exam_cell'))        return redirect()->route('exam-cell.dashboard');
+        if ($user->hasRole('accounts_officer')) return redirect()->route('accounts.dashboard');
+        if ($user->hasRole('cmc'))              return redirect()->route('cmc.dashboard');
+        if ($user->hasRole('director'))         return redirect()->route('director.dashboard');
+        if ($user->hasRole('teacher'))          return redirect()->route('teacher.dashboard');
+        if ($user->hasRole('parent'))           return redirect()->route('parent.dashboard');
+        if ($user->hasRole('applicant'))        return redirect()->route('applicant.dashboard');
         return redirect()->route('student.dashboard');
     }
     return view('welcome');
@@ -76,15 +84,22 @@ Route::get('/', function () {
 // Compatibility alias so Breeze tests and legacy redirects still work
 Route::get('/dashboard', function () {
     $user = auth()->user();
-    if ($user?->hasRole('admin'))     return redirect()->route('admin.dashboard');
-    if ($user?->hasRole('teacher'))   return redirect()->route('teacher.dashboard');
-    if ($user?->hasRole('parent'))    return redirect()->route('parent.dashboard');
-    if ($user?->hasRole('applicant')) return redirect()->route('applicant.dashboard');
+    if ($user?->hasRole('admin'))            return redirect()->route('admin.dashboard');
+    if ($user?->hasRole('dean_academics'))   return redirect()->route('dean.dashboard');
+    if ($user?->hasRole('program_chair'))    return redirect()->route('chair.dashboard');
+    if ($user?->hasRole('hod'))              return redirect()->route('hod.dashboard');
+    if ($user?->hasRole('exam_cell'))        return redirect()->route('exam-cell.dashboard');
+    if ($user?->hasRole('accounts_officer')) return redirect()->route('accounts.dashboard');
+    if ($user?->hasRole('cmc'))              return redirect()->route('cmc.dashboard');
+    if ($user?->hasRole('director'))         return redirect()->route('director.dashboard');
+    if ($user?->hasRole('teacher'))          return redirect()->route('teacher.dashboard');
+    if ($user?->hasRole('parent'))           return redirect()->route('parent.dashboard');
+    if ($user?->hasRole('applicant'))        return redirect()->route('applicant.dashboard');
     return redirect()->route('student.dashboard');
 })->middleware(['auth'])->name('dashboard');
 
 // ── Admin routes ────────────────────────────────────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer|cmc|director'])->group(function () {
     Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('departments',   Admin\DepartmentController::class);
@@ -202,6 +217,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 
     // Global Search
     Route::get('search', [Admin\SearchController::class, 'index'])->name('search');
+
+    // Phase 8: Institution Analytics
+    Route::get('analytics', [Admin\AnalyticsController::class, 'index'])->name('analytics');
+
+    // Phase 5: Student Grievances (admin side)
+    Route::get('grievances', [Admin\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Admin\GrievanceController::class, 'show'])->name('grievances.show');
+    Route::patch('grievances/{grievance}', [Admin\GrievanceController::class, 'update'])->name('grievances.update');
 
     // Activity Log
     Route::get('activity-log', [Admin\ActivityLogController::class, 'index'])->name('activity-log');
@@ -499,6 +522,19 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
     // P9-3: Timetable
     Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
+
+    // Phase 5: Official Academic Transcript
+    Route::get('transcript/download', [Student\TranscriptController::class, 'download'])->name('transcript.download');
+
+    // Phase 5: Exam Admit Cards (static before wildcard)
+    Route::get('admit-cards', [\App\Http\Controllers\Student\AdmitCardController::class, 'index'])->name('admit-cards.index');
+    Route::get('admit-cards/{exam}/download', [\App\Http\Controllers\Student\AdmitCardController::class, 'download'])->name('admit-cards.download');
+
+    // Phase 5: Student Grievances (student side)
+    Route::get('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/create', [\App\Http\Controllers\Student\GrievanceController::class, 'create'])->name('grievances.create');
+    Route::post('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'store'])->name('grievances.store');
+    Route::get('grievances/{grievance}', [\App\Http\Controllers\Student\GrievanceController::class, 'show'])->name('grievances.show');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
@@ -539,6 +575,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
 Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+    Route::get('dashboard', [Departmental\HodController::class, 'dashboard'])->name('dashboard');
     // P5-5: Approval Workflow Routes for HOD
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
@@ -566,6 +603,29 @@ Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->
     Route::get('export-admission-payments', [Departmental\AccountsController::class, 'exportAdmissionPayments'])->name('export-admission-payments');
     Route::get('export-outstanding', [Departmental\AccountsController::class, 'exportOutstanding'])->name('export-outstanding');
     Route::get('fee-demands/{feeDemand}/demand-letter', [Departmental\AccountsController::class, 'demandLetter'])->name('fee-demands.demand-letter');
+});
+
+// ── Shared Approval Inbox (all roles) ────────────────────────────────────────
+Route::middleware('auth')->prefix('approvals')->name('approvals.')->group(function () {
+    Route::get('inbox', [ApprovalController::class, 'inbox'])->name('inbox');
+    Route::get('{approval}/chain', [ApprovalController::class, 'chain'])->name('chain');
+    Route::post('{approval}/approve', [ApprovalController::class, 'approve'])->name('approve');
+    Route::post('{approval}/reject', [ApprovalController::class, 'reject'])->name('reject');
+});
+
+// ── CMC / Placement ──────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:cmc|admin'])->prefix('cmc')->name('cmc.')->group(function () {
+    Route::get('dashboard',  [Departmental\CmcController::class, 'dashboard'])->name('dashboard');
+    Route::get('drives',     [Departmental\CmcController::class, 'drives'])->name('drives');
+    Route::get('placements', [Departmental\CmcController::class, 'placements'])->name('placements');
+    Route::get('analytics',  [Departmental\CmcController::class, 'analytics'])->name('analytics');
+});
+
+// ── Director ─────────────────────────────────────────────────────────────────
+Route::middleware(['auth', 'role:director|admin'])->prefix('director')->name('director.')->group(function () {
+    Route::get('dashboard', [Departmental\DirectorController::class, 'dashboard'])->name('dashboard');
+    Route::get('programs',  [Departmental\DirectorController::class, 'programs'])->name('programs');
+    Route::get('reports',   [Departmental\DirectorController::class, 'reports'])->name('reports');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────

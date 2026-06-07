@@ -3,11 +3,28 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ApprovalWorkflow, Applicant, Program};
+use App\Models\{ApprovalWorkflow, Applicant, Program, Student, Teacher, Subject, LeaveRequest};
 use Illuminate\Http\Request;
 
 class HodController extends Controller
 {
+    public function dashboard()
+    {
+        $programs = Program::where('is_active', true)->orderBy('name')->get();
+        $totalStudents = Student::count();
+        $pendingApprovals = ApprovalWorkflow::where('approver_role', 'hod')
+            ->where('status', 'pending')
+            ->count();
+        $pendingLeaves = 0;
+        if (class_exists(LeaveRequest::class)) {
+            $pendingLeaves = LeaveRequest::where('status', 'pending')->count();
+        }
+
+        return view('departmental.hod.dashboard', compact(
+            'programs', 'totalStudents', 'pendingApprovals', 'pendingLeaves'
+        ));
+    }
+
     public function approvals(Request $request)
     {
         $query = ApprovalWorkflow::where('approver_role', 'hod')
