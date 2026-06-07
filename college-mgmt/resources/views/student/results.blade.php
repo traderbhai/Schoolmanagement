@@ -12,24 +12,33 @@
 {{-- Semester Filter --}}
 <div class="card mb-4">
     <div class="card-body py-3">
-        <form method="GET" action="{{ route('student.results') }}" class="row g-2 align-items-end">
-            <div class="col-auto">
-                <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
-                    @forelse($semesters as $sem)
-                        <option value="{{ $sem->id }}" @selected($sem->id == $semesterId)>
-                            {{ $sem->name }}
-                            @if($sem->academicYear) &mdash; {{ $sem->academicYear->name }} @endif
-                        </option>
-                    @empty
-                        <option disabled>No semesters found</option>
-                    @endforelse
-                </select>
+        <div class="d-flex flex-wrap gap-3 align-items-end justify-content-between">
+            <form method="GET" action="{{ route('student.results') }}" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">Semester</label>
+                    <select name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
+                        @forelse($semesters as $sem)
+                            <option value="{{ $sem->id }}" @selected($sem->id == $semesterId)>
+                                {{ $sem->name }}
+                                @if($sem->academicYear) &mdash; {{ $sem->academicYear->name }} @endif
+                            </option>
+                        @empty
+                            <option disabled>No semesters found</option>
+                        @endforelse
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+                </div>
+            </form>
+            <div>
+                <a href="{{ route('student.transcript.download') }}"
+                   class="btn btn-sm btn-outline-primary"
+                   title="Download official cumulative transcript (all semesters)">
+                    <i class="bi bi-file-earmark-text me-1"></i>Download Official Transcript
+                </a>
             </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 

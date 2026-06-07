@@ -36,6 +36,9 @@
         <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif">
             <i class="bi bi-award"></i> My Results
         </a>
+        <a href="{{ route('student.admit-cards.index') }}" class="nav-link @if(request()->routeIs('student.admit-cards.*')) active @endif">
+            <i class="bi bi-card-checklist me-2"></i>Admit Cards
+        </a>
         <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
            href="{{ route('student.subjects.index') }}">
             <i class="bi bi-journal-text me-2"></i>Subject Registration
@@ -43,6 +46,11 @@
         <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
            href="{{ route('student.timetable') }}">
             <i class="bi bi-calendar3 me-2"></i>My Timetable
+        </a>
+        <a href="{{ route('student.transcript.download') }}"
+           class="nav-link"
+           title="Download official cumulative transcript">
+            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
         </a>
 
         <div class="sidebar-divider"></div>
@@ -73,6 +81,13 @@
 
         <div class="sidebar-divider"></div>
 
+        <div class="section-label">Support</div>
+        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
+            <i class="bi bi-shield-exclamation me-2"></i>Grievances
+        </a>
+
+        <div class="sidebar-divider"></div>
+
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif">
             <i class="bi bi-person-circle"></i> My Profile
@@ -99,10 +114,13 @@
         <div class="section-label">Academics</div>
         <a href="{{ route('student.attendance') }}" class="nav-link @if(request()->routeIs('student.attendance')) active @endif"><i class="bi bi-check2-square"></i> My Attendance</a>
         <a href="{{ route('student.results') }}" class="nav-link @if(request()->routeIs('student.results')) active @endif"><i class="bi bi-award"></i> My Results</a>
+        <a href="{{ route('student.admit-cards.index') }}" class="nav-link @if(request()->routeIs('student.admit-cards.*')) active @endif"><i class="bi bi-card-checklist me-2"></i>Admit Cards</a>
         <a class="nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
            href="{{ route('student.subjects.index') }}"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
         <a class="nav-link {{ request()->routeIs('student.timetable') ? 'active' : '' }}"
            href="{{ route('student.timetable') }}"><i class="bi bi-calendar3 me-2"></i>My Timetable</a>
+        <a href="{{ route('student.transcript.download') }}" class="nav-link">
+            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Finance</div>
         <a href="{{ route('student.fees') }}" class="nav-link @if(request()->routeIs('student.fees')) active @endif"><i class="bi bi-cash-coin"></i> Fee Status</a>
@@ -113,6 +131,9 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Career</div>
         <a href="{{ route('student.placements') }}" class="nav-link @if(request()->routeIs('student.placements*')) active @endif"><i class="bi bi-briefcase"></i> Placements</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Support</div>
+        <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-shield-exclamation me-2"></i>Grievances</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.profile') }}" class="nav-link @if(request()->routeIs('student.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>

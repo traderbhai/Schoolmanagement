@@ -39,8 +39,28 @@ class ApprovalWorkflow extends Model
         return $this->belongsTo(User::class, 'approver_id');
     }
 
-    public function isOverdue(): bool {
-        return $this->status === 'pending' && $this->due_at && $this->due_at->isPast();
+    public function isOverdue(): bool
+    {
+        return $this->status === 'pending' && $this->due_at !== null && $this->due_at->isPast();
+    }
+
+    public function isEscalated(): bool
+    {
+        return $this->escalated_at !== null;
+    }
+
+    public function slaBadgeClass(): string
+    {
+        if ($this->status !== 'pending' || $this->due_at === null) {
+            return 'text-muted';
+        }
+        if ($this->due_at->isPast()) {
+            return 'text-danger fw-semibold';
+        }
+        if ($this->due_at->diffInHours(now()) < 4) {
+            return 'text-warning fw-semibold';
+        }
+        return 'text-success';
     }
 
     public function getStatusBadgeAttribute(): string
