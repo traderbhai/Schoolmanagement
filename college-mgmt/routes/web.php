@@ -523,6 +523,36 @@ Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|ad
     // Profile
     Route::get('profile', [Teacher\ProfileController::class, 'show'])->name('profile');
     Route::put('profile', [Teacher\ProfileController::class, 'update'])->name('profile.update');
+
+    // Timetable
+    Route::get('timetable', [Teacher\TimetableController::class, 'index'])->name('timetable.index');
+
+    // Study Materials
+    Route::get('materials',          [Teacher\MaterialController::class, 'index'])->name('materials.index');
+    Route::get('materials/create',   [Teacher\MaterialController::class, 'create'])->name('materials.create');
+    Route::post('materials',         [Teacher\MaterialController::class, 'store'])->name('materials.store');
+    Route::delete('materials/{material}', [Teacher\MaterialController::class, 'destroy'])->name('materials.destroy');
+
+    // Assignments
+    Route::get('assignments',               [Teacher\AssignmentController::class, 'index'])->name('assignments.index');
+    Route::get('assignments/create',        [Teacher\AssignmentController::class, 'create'])->name('assignments.create');
+    Route::post('assignments',              [Teacher\AssignmentController::class, 'store'])->name('assignments.store');
+    Route::get('assignments/{assignment}/submissions', [Teacher\AssignmentController::class, 'submissions'])->name('assignments.submissions');
+    Route::post('assignments/submissions/{submission}/grade', [Teacher\AssignmentController::class, 'grade'])->name('assignments.grade');
+
+    // Mentor dashboard
+    Route::get('mentor',                        [Teacher\MentorController::class, 'index'])->name('mentor.index');
+    Route::get('mentor/{student}',              [Teacher\MentorController::class, 'mentee'])->name('mentor.mentee');
+    Route::post('mentor/{student}/message',     [Teacher\MentorController::class, 'sendMessage'])->name('mentor.message');
+    Route::post('mentor/{student}/meeting',     [Teacher\MentorController::class, 'scheduleMeeting'])->name('mentor.meeting');
+
+    // Subject Announcements
+    Route::get('announcements',              [Teacher\AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::post('announcements',             [Teacher\AnnouncementController::class, 'store'])->name('announcements.store');
+    Route::delete('announcements/{announcement}', [Teacher\AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+    // Course Feedback (read-only view)
+    Route::get('feedback', [Teacher\FeedbackViewController::class, 'index'])->name('feedback.index');
 });
 
 // ── Student routes ──────────────────────────────────────────────────────────
