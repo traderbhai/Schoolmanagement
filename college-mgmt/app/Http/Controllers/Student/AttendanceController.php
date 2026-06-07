@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, Semester, TimetableSlot};
+use App\Models\{Attendance, Semester, Subject, TimetableSlot};
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
@@ -42,5 +42,31 @@ class AttendanceController extends Controller
         }
 
         return view('student.attendance', compact('semesters', 'semesterId', 'report', 'currentSemester'));
+    }
+
+    public function sessions(Subject $subject, Request $request)
+    {
+        $student = auth()->user()->student;
+        abort_unless($student, 403);
+
+        $semesterId = $request->semester_id;
+
+        $query = Attendance::with(['timetableEntry.slot'])
+            ->where('student_id', $student->id)
+            ->whereHas('timetableEntry', fn($q) => $q->where('subject_id', $subject->id));
+
+        if ($semesterId) {
+            $query->whereHas('timetableEntry', fn($q) => $q->where('semester_id', $semesterId));
+        }
+
+        $sessions = $query->orderByDesc('date')->paginate(30);
+
+        $total   = $sessions->total();
+        $present = Attendance::where('student_id', $student->id)
+            ->whereHas('timetableEntry', fn($q) => $q->where('subject_id', $subject->id))
+            ->whereIn('status', ['present', 'late'])->count();
+        $pct = $total > 0 ? round(($present / $total) * 100, 1) : 0;
+
+        return view('student.attendance-sessions', compact('subject', 'sessions', 'total', 'present', 'pct'));
     }
 }

@@ -568,6 +568,39 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // Notification Preferences
     Route::get('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'update'])->name('notifications.update');
+
+    // Sprint 1: Attendance drill-down
+    Route::get('attendance/{subject}/sessions', [\App\Http\Controllers\Student\AttendanceController::class, 'sessions'])->name('attendance.sessions');
+
+    // Sprint 1: Study Materials
+    Route::get('courses/{subject}/materials', [\App\Http\Controllers\Student\StudyMaterialController::class, 'index'])->name('materials.index');
+
+    // Sprint 1: Assignments
+    Route::get('assignments', [\App\Http\Controllers\Student\AssignmentController::class, 'index'])->name('assignments.index');
+    Route::get('assignments/{assignment}', [\App\Http\Controllers\Student\AssignmentController::class, 'show'])->name('assignments.show');
+    Route::post('assignments/{assignment}/submit', [\App\Http\Controllers\Student\AssignmentController::class, 'submit'])->name('assignments.submit');
+
+    // Sprint 1: Quizzes
+    Route::get('quizzes', [\App\Http\Controllers\Student\QuizController::class, 'index'])->name('quizzes.index');
+    Route::get('quizzes/{quiz}', [\App\Http\Controllers\Student\QuizController::class, 'show'])->name('quizzes.show');
+    Route::post('quizzes/{quiz}/start', [\App\Http\Controllers\Student\QuizController::class, 'start'])->name('quizzes.start');
+    Route::post('quizzes/{quiz}/submit', [\App\Http\Controllers\Student\QuizController::class, 'submitAttempt'])->name('quizzes.submit');
+    Route::get('quizzes/{quiz}/result', [\App\Http\Controllers\Student\QuizController::class, 'result'])->name('quizzes.result');
+
+    // Sprint 1: Leave Applications
+    Route::get('leave', [\App\Http\Controllers\Student\LeaveController::class, 'index'])->name('leave.index');
+    Route::get('leave/create', [\App\Http\Controllers\Student\LeaveController::class, 'create'])->name('leave.create');
+    Route::post('leave', [\App\Http\Controllers\Student\LeaveController::class, 'store'])->name('leave.store');
+
+    // Sprint 1: Academic Calendar
+    Route::get('calendar', [\App\Http\Controllers\Student\AcademicCalendarController::class, 'index'])->name('calendar.index');
+
+    // Sprint 1: Subject Announcements (per subject)
+    Route::get('courses/{subject}/announcements', [\App\Http\Controllers\Student\SubjectAnnouncementController::class, 'index'])->name('announcements.index');
+
+    // Sprint 1: Course Content Hub (materials + announcements overview)
+    Route::get('courses', [\App\Http\Controllers\Student\CourseHubController::class, 'index'])->name('courses.index');
+    Route::get('courses/{subject}', [\App\Http\Controllers\Student\CourseHubController::class, 'show'])->name('courses.show');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

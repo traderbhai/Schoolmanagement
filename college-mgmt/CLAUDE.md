@@ -288,155 +288,346 @@ GUIDE.md                                          — full user & developer guid
 
 ---
 
-### Sprint 1 — High Impact, Daily Use (BUILD NEXT)
+### Data Model Gaps — Fix These First (Foundational)
 
-These are things a student touches every single day or week.
+These are missing from the schema and block multiple features. Build before any sprint feature.
 
-#### S1-1: Dashboard Redesign (Upgrade existing)
-**Problem:** Current dashboard shows 4 KPIs + timetable + notices. Missing: upcoming deadlines, academic progress, low-attendance warnings, quick actions.
-**Add to dashboard controller + view:**
-- Academic Progress Bar — credits earned vs. total required for program
-- Upcoming Deadlines widget — exams (next 7 days) + assignment due dates + fee due dates, unified sorted list
-- Low Attendance Alert — red banner if any subject < 75% attendance
-- Quick Actions row — "Pay Fees", "Download Transcript", "Submit Assignment", "Apply for Leave"
-- Recent Activity feed — last 5 events (result published, notice added, grievance update, payment received)
-- Today's class schedule highlight (pull from timetable, show next class)
+#### Gap 1: Compulsory vs Elective — `program_subjects` table
+Currently subjects are linked to programs directly on the `subjects` table (`program_id`). There is no way to say "this subject is compulsory for all students" vs "students pick 2 from this elective pool". Need a proper curriculum mapping table.
 
-#### S1-2: Assignment Management
-**Problem:** Teachers assign homework/projects but students have no portal to view or submit them.
-**New models:** `Assignment` (subject_id, teacher_id, title, description, due_date, max_marks, attachment_path, term_id), `AssignmentSubmission` (assignment_id, student_id, file_path, submitted_at, marks_obtained, feedback, graded_at, graded_by)
-**Student routes:**
-- `GET student/assignments` — list all assignments for enrolled subjects, filter by status (pending/submitted/graded), due date
-- `GET student/assignments/{assignment}` — view details + submission form
-- `POST student/assignments/{assignment}/submit` — upload file or text submission
-- `GET student/assignments/{assignment}/submission` — view own submission + grade/feedback
-**Teacher routes (in teacher sprint, scaffold now):**
-- `POST teacher/assignments` — create assignment for a subject
-- `GET teacher/assignments/{assignment}/submissions` — view all submissions
-- `POST teacher/assignments/submissions/{submission}/grade` — enter marks + feedback
-**Migration:** `assignments` table + `assignment_submissions` table
+```php
+// New migration: create_program_subjects_table
+Schema::create('program_subjects', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('program_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('subject_id')->constrained()->cascadeOnDelete();
+    $table->unsignedTinyInteger('term_number');          // which semester/term this subject belongs to
+    $table->enum('category', ['core','elective','open_elective','audit','lab','project'])
+          ->default('core');
+    $table->boolean('is_mandatory')->default(true);      // false = student opts in
+    $table->unsignedTinyInteger('elective_group')->nullable(); // students pick N from same group
+    $table->unsignedTinyInteger('credits_override')->nullable(); // overrides subject.credits if set
+    $table->unsignedSmallInteger('sort_order')->default(0);
+    $table->unique(['program_id', 'subject_id', 'term_number']);
+    $table->timestamps();
+});
+```
 
-#### S1-3: Study Materials / Resources
-**Problem:** Students have no way to download lecture notes, syllabuses, or reference materials from within the portal. Everything is on WhatsApp.
-**New model:** `StudyMaterial` (subject_id, teacher_id, title, description, file_path, file_type, term_id, is_published)
-**Student routes:**
-- `GET student/materials` — list materials for enrolled subjects, filter by subject
-- `GET student/materials/{material}/download` — download file
-**Teacher routes (scaffold now):**
-- `POST teacher/materials` — upload material for a subject
-- `GET/PATCH/DELETE teacher/materials/{material}` — manage
-**Migration:** `study_materials` table
+**Model:** `ProgramSubject` with `program()`, `subject()` relationships.  
+**Update:** `Subject::$fillable` — remove `program_id` (managed via junction), keep `department_id`.  
+**Update:** `Enrollment` — add `program_subject_id` nullable FK so we know which curriculum slot was filled.  
+**Seeders:** When creating subjects, also seed `program_subjects` records.
 
-#### S1-4: Academic Calendar
-**Problem:** Students don't know important dates — exam windows, fee deadlines, holiday schedule, registration periods. They rely on notice board, WhatsApp, word of mouth.
-**Use existing `AcademicCalendar` model if present, else create:**
-**New model:** `AcademicEvent` (title, event_type [exam_window/holiday/fee_deadline/registration/result/cultural/other], start_date, end_date, description, is_public, program_id nullable)
-**Student route:**
-- `GET student/calendar` — monthly/list view of events for their program + institution-wide
-**Admin route:** `GET/POST/PATCH/DELETE admin/academic-events` — CRUD for events
-**Migration:** `academic_events` table
+#### Gap 2: Per-Session Attendance Drill-Down (model is fine, view is incomplete)
+The `Attendance` model correctly stores `(student_id, timetable_entry_id, date)` — session-level granularity is there. But `StudentAttendanceController` only shows **subject-level aggregates** (total sessions, present %, etc). Students need to see **exactly which sessions they missed** — date, time slot, subject — to plan condonation requests or dispute errors.
 
-#### S1-5: Leave Application
-**Problem:** Students need to apply for leave (sick/personal/event) but currently have to physically visit the office or WhatsApp the faculty. No tracking exists.
-**New model:** `LeaveApplication` (student_id, leave_type [sick/casual/event/exam_duty], from_date, to_date, reason, status [pending/approved/rejected], reviewed_by, review_note, attachment_path)
-**Student routes:**
-- `GET student/leaves` — list my leave applications with status
-- `GET student/leaves/create` — apply form
-- `POST student/leaves` — submit application
-- `GET student/leaves/{leave}` — view detail + approval status
-**HOD/Teacher routes (scaffold now):**
-- `GET hod/leaves` — list pending leave applications for department students
-- `POST hod/leaves/{leave}/approve` / `/reject` — action
-**Migration:** `leave_applications` table
+Fix: Add `->with(['timetableEntry.slot', 'timetableEntry.subject'])` to the attendance query and show a session-by-session breakdown view accessible from the subject aggregate row.
+
+#### Gap 3: Session-linked Course Content (Pre-read / Post-read)
+Currently study materials would be attached to a subject. But pre-reads and post-reads are tied to a **specific class session** ("before Monday's 10am Data Structures class"). Need an optional `timetable_entry_id + date` on `StudyMaterial` so teachers can push pre-read to students before a specific class and post-read/recording after.
 
 ---
 
-### Sprint 2 — Important, Weekly Use (PLAN NEXT)
+### Complete Student Feature Master List
 
-#### S2-1: Backlog / Arrear Management
-- View failed subjects across all semesters in one place
-- Re-exam eligibility check (attendance + prior attempt count)
-- Apply for supplementary/back exam registration
-- Track arrear clearance progress toward degree completion
-
-#### S2-2: Document Requests
-- Request bonafide certificate (for bank, visa, scholarship purposes)
-- Request fee paid confirmation letter
-- Request character certificate
-- ID card reprint request
-- Admin fulfils request, student downloads approved document PDF
-- `document_requests` table: student_id, document_type, purpose, status, fulfilled_by, document_path
-
-#### S2-3: Scholarship Management (Student side)
-- View available scholarships (government, institutional, merit)
-- Apply for scholarship with supporting documents
-- Track application status and disbursement
-- `scholarships` table + `scholarship_applications` table
-
-#### S2-4: Attendance Condonation Request
-- When attendance < 75% in a subject, student can submit condonation request with reason (medical/sports/event)
-- Attach supporting document (medical certificate, participation certificate)
-- HOD/faculty reviews and approves/rejects
-- `attendance_condonations` table
-
-#### S2-5: Fee Payment (Online)
-- Currently: only VIEW fee status. Students cannot pay.
-- Add manual payment recording (student logs payment reference/UTR, accounts verifies)
-- Prepare for payment gateway (Razorpay/PayU) integration — create payment session structure
-- `fee_payment_requests` table: student_id, fee_demand_id, amount, payment_method, transaction_ref, proof_path, status
+Legend: ✅ EXISTS | 🔧 EXISTS BUT NEEDS FIX | 🆕 NEW | 🔗 CROSS-ROLE (shared with teacher/PMC/admin)
 
 ---
 
-### Sprint 3 — High Value, Less Frequent
+#### ACADEMICS — Daily Interaction
 
-#### S3-1: Faculty Mentor Interaction
-- Each student has an assigned faculty mentor (`mentor_id` on students table)
-- Student can send messages to mentor, view conversation history
-- Mentor can schedule 1:1 meetings
-- `mentor_messages` table + `mentor_meetings` table
-
-#### S3-2: Course / Teacher Feedback
-- At end of each semester, student rates each subject teacher (1-5 stars + text)
-- Anonymous by default (admin can de-anonymise)
-- Results visible only to HOD and Dean
-- `course_feedback` table: student_id, subject_id, teacher_id, term_id, ratings (JSON), comments, submitted_at
-
-#### S3-3: Library Module
-- View books issued to me
-- Due date and fine status
-- Request to renew online
-- Search catalogue (books available/checked out)
-- `library_books` table + `library_issues` table
-
-#### S3-4: Event Registration
-- View upcoming college events (technical fest, cultural, workshops, seminars)
-- Register for events (seat-limited)
-- View registered events, download participation certificate
-- `events` table + `event_registrations` table
-
-#### S3-5: Resume / CV Management (for Placement)
-- Build resume within portal (education auto-filled, add skills/projects/achievements)
-- Upload custom resume PDF (replaces builder output)
-- Resume used automatically when applying for placement drives
-- `student_resumes` table: student_id, headline, skills, projects, achievements, resume_pdf_path
+| # | Feature | Status | Cross-role? | Notes |
+|---|---------|--------|-------------|-------|
+| A1 | Dashboard (KPIs + widgets) | 🔧 | — | Needs: deadlines widget, low-att alert, quick actions, credit progress |
+| A2 | Personal Timetable (weekly grid) | 🔧 | 🔗 Teacher sees own schedule | Compulsory + elective subjects combined; needs elective awareness |
+| A3 | Attendance — subject aggregate view | ✅ | — | Shows % per subject; low-attendance flag |
+| A4 | Attendance — session drill-down | 🆕 | — | Show WHICH date/slot was absent/late; link to condonation request |
+| A5 | Subject Registration (elective selection) | 🔧 | 🔗 PMC/HOD sets elective pool | Currently no compulsory/elective distinction; needs `ProgramSubject` table |
+| A6 | Results — component-wise marks view | 🔧 | — | IA1, IA2, End-Sem breakdown already in DB (AssessmentComponent); not shown to student |
+| A7 | Results — cumulative across all terms | ✅ | — | SGPA/CGPA calculated; works |
+| A8 | Backlog / Arrear tracker | 🆕 | 🔗 Exam Cell manages | Show all failed subjects, attempt count, eligibility for supplementary |
+| A9 | Exam registration (end-sem) | 🆕 | 🔗 Exam Cell approves | Student formally registers; eligibility check: attendance ≥75% + no dues |
+| A10 | Admit cards (PDF) | ✅ | — | Exists; works |
+| A11 | Official Transcript (PDF) | ✅ | — | Exists; works |
+| A12 | Grade card per term (PDF) | ✅ | — | Exists; works |
+| A13 | Grade / Marks appeal | 🆕 | 🔗 Teacher/Exam Cell reviews | Student disputes a result with reason; teacher/exam cell can revise |
+| A14 | Academic calendar | 🆕 | 🔗 Admin/Dean creates | Exam windows, holidays, fee deadlines, registration periods, results dates |
+| A15 | Leave application | 🆕 | 🔗 HOD/Mentor approves | Sick/casual/event leave; attach proof; track approval |
+| A16 | Attendance condonation request | 🆕 | 🔗 HOD reviews | When <75% in a subject; attach medical/event certificate |
+| A17 | Term promotion status | 🆕 | 🔗 Exam Cell/Admin manages | See if promoted to next term, conditions if any |
 
 ---
 
-### Known Issues to Fix in Student Portal
+#### COURSE CONTENT — Multi-role Feature Set 🔗
 
-1. **Timetable source mismatch** — Dashboard uses `TimetableSlot` model; `student.timetable` view uses old `TimetableEntry` model. Unify to `TimetableSlot`.
-2. **Grievance — no update/close** — Students can't add follow-up comments or close a resolved grievance.
-3. **Subject Registration** — `term_id`→`semester_id` mapping may show wrong subjects if mapping is missing.
-4. **Fee balance logic** — Uses `max()` of two sources which can be inconsistent; consolidate to FeeDemand as single source of truth.
-5. **Sidebar duplicate** — Grievances appears twice in `layouts/student.blade.php` sidebar.
+All of these involve at least Student + Teacher, and visibility for PMC/HOD.
+
+| # | Feature | Student side | Teacher side | PMC/HOD side |
+|---|---------|-------------|-------------|-------------|
+| C1 | **Study Materials** | Browse/download per subject | Upload PDFs/slides/links | View what's been shared |
+| C2 | **Pre-read** (before class) | Listed on session day in timetable | Attach to specific class session | — |
+| C3 | **Post-read / Session notes** (after class) | Available after class date | Upload recording/notes after session | — |
+| C4 | **Assignments** | View, submit file/text, see grade+feedback | Create, set due date, grade submissions | View completion rate per subject |
+| C5 | **Quizzes** (online MCQ/short answer) | Attempt within window, see score | Create, set window, view results | View score distribution |
+| C6 | **Coursework / Lab reports** | Submit, track marks | Grade per student | — |
+| C7 | **Syllabus / Course outline** | View term syllabus for each subject | Upload/update | Approve curriculum |
+| C8 | **Subject Announcements** | Receive per-subject alerts | Post to enrolled students | — |
+| C9 | **Discussion / Q&A board** | Ask questions, reply | Answer student questions | Moderation |
+
+**New models needed for C1–C9:**
+
+```
+study_materials: id, subject_id, teacher_id, term_id, timetable_entry_id (nullable),
+                 session_date (nullable), material_type [pre_read/post_read/notes/reference/syllabus],
+                 title, description, file_path, file_size, is_published, published_at
+
+assignments: id, subject_id, teacher_id, term_id, title, description, instructions,
+             due_date, max_marks, submission_type [file/text/both], allowed_file_types,
+             max_file_size_mb, is_published, late_submission_allowed, late_penalty_pct
+
+assignment_submissions: id, assignment_id, student_id, file_path, text_content,
+                        submitted_at, is_late, marks_obtained, feedback,
+                        graded_at, graded_by, status [draft/submitted/graded/returned]
+
+quizzes: id, subject_id, teacher_id, term_id, title, description, duration_minutes,
+         start_at, end_at, total_marks, passing_marks, max_attempts, shuffle_questions,
+         show_result_immediately, is_published
+
+quiz_questions: id, quiz_id, question_text, question_type [mcq/true_false/short_answer],
+                marks, sort_order, explanation (for post-quiz review)
+
+quiz_options: id, question_id, option_text, is_correct, sort_order
+
+quiz_attempts: id, quiz_id, student_id, started_at, submitted_at, score,
+               is_completed, attempt_number
+
+quiz_answers: id, attempt_id, question_id, selected_option_id, text_answer, is_correct, marks_awarded
+
+subject_announcements: id, subject_id, teacher_id, term_id, title, body,
+                       is_pinned, published_at
+```
+
+---
+
+#### FINANCE
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| F1 | Fee status — view demands + payments | ✅ | Works; FeeDemand is source of truth |
+| F2 | Fee payment — manual UTR/proof submission | 🆕 | Student submits payment proof; Accounts verifies |
+| F3 | Fee receipt download (PDF) | ✅ | Works |
+| F4 | Fee structure breakdown | 🔧 | Show what each component (tuition/exam/library) costs |
+| F5 | Scholarship — view available | 🆕 | 🔗 Admin/Dean manages scholarships |
+| F6 | Scholarship — apply + track | 🆕 | 🔗 Accounts processes, Dean approves |
+| F7 | Fine / penalty details | 🔧 | Show late fee, library fines in one place |
+| F8 | Payment history — all transactions | ✅ | Works |
+
+```
+fee_payment_requests: id, student_id, fee_demand_id, amount, payment_method,
+                      bank_name, transaction_ref, proof_path, submitted_at,
+                      verified_by, verified_at, status [pending/verified/rejected], notes
+
+scholarships: id, name, type [merit/need/government/institutional/sports],
+              program_id (nullable), amount, description, eligibility_criteria,
+              application_deadline, max_recipients, is_active
+
+scholarship_applications: id, scholarship_id, student_id, term_id,
+                          cgpa_at_application, reason, documents_path,
+                          status [pending/shortlisted/approved/rejected/disbursed],
+                          reviewed_by, review_note, disbursed_at, disbursed_amount
+```
+
+---
+
+#### CAREER
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| CR1 | Placement drives — browse + apply | ✅ | Works |
+| CR2 | My placement applications — track | ✅ | Works |
+| CR3 | Internship — view assigned/active | 🔧 | InternshipController exists (CMC creates); student view missing |
+| CR4 | Resume / CV builder | 🆕 | Auto-fill education from DB; add skills/experience/projects |
+| CR5 | Alumni — browse same-program alumni | 🆕 | Filter by graduation year, company; request connection |
+| CR6 | Career events / workshops | 🆕 | Register for seminars, mock interviews |
+
+```
+student_resumes: id, student_id, headline, objective, skills (JSON array), 
+                 languages (JSON), projects (JSON), certifications (JSON),
+                 custom_resume_path, is_complete, last_updated_at
+
+career_events: id, title, event_type [seminar/mock_interview/workshop/company_visit],
+               organizer_id, date, venue, description, seats, registration_deadline
+
+career_event_registrations: id, event_id, student_id, registered_at, attended (bool)
+```
+
+---
+
+#### WELLBEING & SUPPORT
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| W1 | Grievances — create/track | ✅ | Works |
+| W2 | Grievances — add follow-up / close | 🔧 | Currently read-only after submit; add comment/close |
+| W3 | Mentor — view assigned faculty mentor | 🆕 | 🔗 Mentor is a teacher; assigned by HOD |
+| W4 | Mentor — request meeting | 🆕 | 🔗 Teacher confirms/declines meeting request |
+| W5 | Mentor — message thread | 🆕 | Simple text thread between student and mentor |
+| W6 | Course / Teacher feedback | 🆕 | 🔗 At term-end; anonymous; HOD/Dean sees results |
+| W7 | Health / medical record access | 🆕 | (Low priority, Phase 3 or later) |
+
+```
+mentor_assignments: id, student_id, teacher_id (mentor), assigned_by, assigned_at, is_active
+  (add mentor_id FK to students table for quick access)
+
+mentor_meetings: id, mentor_assignment_id, student_id, teacher_id, 
+                 requested_at, scheduled_at, duration_minutes, agenda,
+                 status [requested/confirmed/completed/cancelled], notes
+
+mentor_messages: id, mentor_assignment_id, sender_id (user_id), body, 
+                 sent_at, read_at
+
+course_feedback: id, student_id, subject_id, teacher_id, term_id,
+                 teaching_rating (1-5), content_rating (1-5), engagement_rating (1-5),
+                 overall_rating (1-5), comments, is_anonymous, submitted_at
+  (unique: student_id + subject_id + term_id — one per subject per term)
+```
+
+---
+
+#### DOCUMENTS
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| D1 | Request bonafide certificate | 🆕 | Admin generates PDF, student downloads |
+| D2 | Request fee paid letter | 🆕 | Admin generates, includes term-wise paid amounts |
+| D3 | Request character certificate | 🆕 | Requires HOD approval before admin generates |
+| D4 | ID card download (digital) | 🆕 | Auto-generated PDF with photo, enrollment number, QR code |
+| D5 | My uploaded documents vault | 🆕 | Personal docs: Aadhar, 10th/12th marksheets, etc. |
+
+```
+document_requests: id, student_id, document_type [bonafide/fee_letter/character/migration/noc],
+                   purpose, additional_info, status [pending/approved/rejected/ready],
+                   requested_at, reviewed_by, fulfilled_at, output_path, notes
+
+student_documents: id, student_id, document_name, document_type, file_path,
+                   uploaded_at, is_verified, verified_by
+```
+
+---
+
+#### PROFILE & ACCOUNT
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| P1 | Profile — view + edit name/phone | ✅ | Works |
+| P2 | Profile — photo upload | 🔧 | `photo` field exists on Student model; no upload UI |
+| P3 | Profile — guardian/emergency contacts | 🔧 | Fields exist (guardian_name, guardian_phone); no edit UI |
+| P4 | Notification preferences | ✅ | 4 email toggles; works |
+| P5 | Change password | ✅ | Works via profile edit |
+| P6 | Academic summary card | 🆕 | One-page view: program, batch, term, CGPA, credits, mentor name |
+
+---
+
+### Cross-Role Feature Matrix
+
+Features that span multiple portals — must be designed consistently from day one.
+
+| Feature | Student | Teacher | PMC/Chair | HOD | Exam Cell | Admin |
+|---------|---------|---------|-----------|-----|-----------|-------|
+| Timetable | View personal | View personal schedule | View program timetable | View dept timetable | — | Create/manage |
+| Attendance | View own sessions | Mark for each class | View program-level stats | View dept alerts | Export | Override/audit |
+| Assignments | Submit + view grade | Create + grade | View completion % | View dept summary | — | Audit |
+| Study Materials | Download | Upload/manage | Approve syllabus | Monitor | — | Audit |
+| Quizzes | Attempt | Create/grade | View analytics | — | — | Audit |
+| Leave | Apply | Approve (for mentees) | View program absences | Approve (dept) | — | Override |
+| Grievances | Raise | — | — | Resolve/escalate | — | Final escalation |
+| Academic Calendar | View | View | View + suggest | View + suggest | Manage exam dates | Create/manage |
+| Results | View own | Enter marks | View program stats | View dept stats | Publish/audit | Override |
+| Course Feedback | Submit | View own ratings | View program ratings | View dept ratings | — | View all |
+| Scholarships | Apply | — | — | Recommend | — | Approve/disburse |
+| Documents | Request | — | — | Approve character cert | — | Fulfil + generate |
+| Mentor | View mentor | See mentees + messages | — | Assign mentors | — | — |
+| Placements | Apply to drives | — | Track students | — | — | Manage drives (CMC) |
+
+---
+
+### Build Sequence (Student Sprint Plan)
+
+**Foundation first (no UI, just schema + models):**
+- [ ] `program_subjects` table + `ProgramSubject` model + seeder
+- [ ] `study_materials` table + model
+- [ ] `assignments` + `assignment_submissions` tables + models
+- [ ] `quizzes` + `quiz_questions` + `quiz_options` + `quiz_attempts` + `quiz_answers` tables + models
+- [ ] `leave_applications` table + model
+- [ ] `academic_events` table + model
+- [ ] `attendance_condonations` table + model
+- [ ] `document_requests` + `student_documents` tables + models
+- [ ] `mentor_assignments` + `mentor_meetings` + `mentor_messages` tables + models
+- [ ] `course_feedback` table + model
+- [ ] `fee_payment_requests` table + model
+- [ ] `scholarships` + `scholarship_applications` tables + models
+- [ ] `student_resumes` table + model
+- [ ] Add `mentor_id` FK to `students` table
+
+**Sprint 1 — Daily use (what a student opens every day):**
+- [ ] S1-1: Dashboard redesign — deadlines widget, credit progress, low-att banner, quick actions
+- [ ] S1-2: Timetable — fix to show compulsory vs elective labels; today's-classes widget
+- [ ] S1-3: Attendance drill-down — session-by-session missed classes view
+- [ ] S1-4: Course content hub — study materials (pre-read / post-read / notes) per subject
+- [ ] S1-5: Assignments — view + submit + see grade/feedback
+- [ ] S1-6: Academic calendar — monthly view of all important dates
+- [ ] S1-7: Leave application — submit + track status
+- [ ] S1-8: Subject announcements — per-subject teacher announcements visible to enrolled students
+
+**Sprint 2 — Weekly use:**
+- [ ] S2-1: Component-wise marks (IA1/IA2/End-Sem) visible in Results page
+- [ ] S2-2: Backlog / arrear tracker — failed subjects across all terms
+- [ ] S2-3: Attendance condonation request
+- [ ] S2-4: Fee payment proof submission (manual UTR) + status tracking
+- [ ] S2-5: Document requests — bonafide, fee letter
+- [ ] S2-6: Digital ID card download
+- [ ] S2-7: Profile — photo upload + guardian contact edit
+- [ ] S2-8: Grievances — add follow-up message + close resolved
+
+**Sprint 3 — High value, less frequent:**
+- [ ] S3-1: Online quizzes — attempt, see score, review answers
+- [ ] S3-2: Exam registration with eligibility check
+- [ ] S3-3: Grade / marks appeal
+- [ ] S3-4: Scholarship — view + apply + track
+- [ ] S3-5: Mentor — view assignment, message thread, request meeting
+- [ ] S3-6: Course / teacher feedback at term-end
+- [ ] S3-7: Resume / CV builder for placements
+- [ ] S3-8: Career events — browse + register
+
+**Sprint 4 — Nice to have:**
+- [ ] S4-1: Discussion / Q&A board per subject
+- [ ] S4-2: Character certificate request (requires HOD approval)
+- [ ] S4-3: Internship view (student sees own internship records)
+- [ ] S4-4: Alumni browse + connect
+- [ ] S4-5: Term promotion status view
+- [ ] S4-6: Academic summary card (one-page printable student card)
+
+---
+
+### Known Bugs to Fix (Do Before Sprint 1)
+
+1. **Sidebar duplicate** — Grievances appears twice in `layouts/student.blade.php`
+2. **Fee balance inconsistency** — Dashboard uses `max(fee_due, demands)` which can mislead; consolidate to `FeeDemand` as single source
+3. **Subject registration** — `term_id→semester_id` fallback shows all subjects if no mapping; fix after `ProgramSubject` table added
+4. **Attendance view** — Queries attendance without `timetableEntry` eager load; causes N+1 queries at scale
+5. **Results page** — `AssessmentComponent` data exists in DB but is not shown to students; surface IA1/IA2/End-Sem breakdown
 
 ---
 
 ### Student Portal — File Locations
 
 ```
-app/Http/Controllers/Student/          — all student controllers
-resources/views/student/               — all student views
-resources/views/layouts/student.blade.php — student layout + sidebar
-routes/web.php                         — student routes (search "student." prefix, ~line 490-580)
+app/Http/Controllers/Student/          — all student controllers (14 files)
+resources/views/student/               — all student views (18 templates)
+resources/views/layouts/student.blade.php — student layout + sidebar nav
+routes/web.php                         — student routes (~line 490-580, student. prefix)
+app/Models/                            — Enrollment, Attendance, Exam, ExamResult, AssessmentComponent
+app/Services/GradeService.php          — SGPA/CGPA calculation
+app/Services/TimetableService.php      — timetable grid builder
+database/migrations/                   — see Gap 1 above for ProgramSubject migration
 ```
