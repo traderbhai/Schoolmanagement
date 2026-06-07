@@ -255,10 +255,11 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     // B3: Scholarships
     Route::resource('scholarships', Academic\ScholarshipController::class);
 
-    // B3: Fee Demands
+    // B3: Fee Demands — static routes BEFORE resource wildcard
+    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('academic.fee-demands.generate');
+    Route::post('fee-demands/apply-penalties', [Academic\FeeDemandController::class, 'applyPenalties'])->name('academic.fee-demands.apply-penalties');
     Route::resource('fee-demands', Academic\FeeDemandController::class);
     Route::post('fee-demands/{feeDemand}/mark-paid', [Academic\FeeDemandController::class, 'markAsPaid'])->name('fee-demands.mark-paid');
-    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
 
     // B5: Academic Calendar
     Route::resource('academic-calendars', Academic\AcademicCalendarController::class);

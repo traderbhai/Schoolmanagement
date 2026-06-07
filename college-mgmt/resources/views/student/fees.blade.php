@@ -70,6 +70,66 @@
     </div>
 </div>
 
+{{-- Outstanding Fee Demands Summary --}}
+@if($feeDemands->isNotEmpty())
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark-text text-primary"></i> Fee Demands
+        @if($outstandingTotal > 0)
+            <span class="badge bg-danger ms-auto">Outstanding: ₹{{ number_format($outstandingTotal, 2) }}</span>
+        @endif
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Term</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Penalty</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($feeDemands as $demand)
+                    @php
+                        $isOverdue = $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending';
+                    @endphp
+                    <tr>
+                        <td>{{ $demand->term->name ?? '—' }}</td>
+                        <td class="text-end">₹{{ number_format($demand->final_amount, 2) }}</td>
+                        <td class="text-end">
+                            @if(($demand->penalty_amount ?? 0) > 0)
+                                <span class="text-danger fw-semibold">₹{{ number_format($demand->penalty_amount, 2) }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td class="{{ $isOverdue ? 'text-danger fw-semibold' : '' }}">
+                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '—' }}
+                            @if($isOverdue) <i class="bi bi-exclamation-circle-fill ms-1"></i> @endif
+                        </td>
+                        <td>
+                            @if($demand->status === 'fully_paid')
+                                <span class="badge bg-success">Paid</span>
+                            @elseif($isOverdue)
+                                <span class="badge bg-danger">Overdue</span>
+                            @elseif($demand->status === 'partially_paid')
+                                <span class="badge bg-info">Partial</span>
+                            @else
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- How to Pay Info Box --}}
 <div class="alert alert-info d-flex gap-2 align-items-start mb-4" role="alert">
     <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>

@@ -77,6 +77,37 @@
     </div>
 </div>
 
+{{-- Phase 6: Fee Demand KPIs --}}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-primary">₹{{ number_format($totalDemanded, 0) }}</div>
+            <div class="text-muted small">Total Demanded</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-success">{{ $collectionRate }}%</div>
+            <div class="text-muted small">Collection Rate</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3 {{ $overdueCount > 0 ? 'border-danger' : '' }}">
+            <div class="fs-3 fw-bold {{ $overdueCount > 0 ? 'text-danger' : 'text-muted' }}">{{ $overdueCount }}</div>
+            <div class="text-muted small">Overdue Demands</div>
+            @if($overdueCount > 0)
+                <div class="mt-1"><a href="{{ route('academic.fee-demands.index') }}" class="btn btn-sm btn-outline-danger">View</a></div>
+            @endif
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-warning">₹{{ number_format($totalPenalty, 0) }}</div>
+            <div class="text-muted small">Pending Penalties</div>
+        </div>
+    </div>
+</div>
+
 @if($totalBilled > 0)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
