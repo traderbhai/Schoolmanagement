@@ -83,6 +83,20 @@ class SubjectRegistrationController extends Controller
             return back()->with('error', 'You are already enrolled in this subject.');
         }
 
+        // Check credit limit (max 24 credits per term)
+        $maxCredits = 24;
+        $currentCredits = Enrollment::where('student_id', $student->id)
+            ->where('term_id', $currentTerm->id)
+            ->with('subject')
+            ->get()
+            ->sum(fn($e) => $e->subject?->credit_hours ?? 3);
+
+        $newSubjectCredits = Subject::find($request->subject_id)?->credit_hours ?? 3;
+
+        if ($currentCredits + $newSubjectCredits > $maxCredits) {
+            return back()->with('error', "Credit limit exceeded. Current: {$currentCredits}, Requested: {$newSubjectCredits}, Max: {$maxCredits}.");
+        }
+
         Enrollment::create([
             'student_id' => $student->id,
             'term_id'    => $currentTerm->id,

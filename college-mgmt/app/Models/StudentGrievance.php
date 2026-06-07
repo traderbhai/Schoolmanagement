@@ -1,40 +1,16 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class StudentGrievance extends Model
-{
-    protected $fillable = [
-        'student_id', 'category', 'subject', 'description',
-        'status', 'priority', 'assigned_to', 'resolution', 'resolved_at',
-    ];
-
-    protected $casts = ['resolved_at' => 'datetime'];
-
-    public function student()    { return $this->belongsTo(Student::class); }
-    public function assignedTo() { return $this->belongsTo(User::class, 'assigned_to'); }
-
-    public function getStatusBadgeAttribute(): string
-    {
-        return match($this->status) {
-            'open'        => '<span class="badge bg-danger">Open</span>',
-            'in_progress' => '<span class="badge bg-warning text-dark">In Progress</span>',
-            'resolved'    => '<span class="badge bg-success">Resolved</span>',
-            'closed'      => '<span class="badge bg-secondary">Closed</span>',
-            default       => '<span class="badge bg-secondary">' . ucfirst($this->status) . '</span>',
-        };
-    }
-
-    public function getPriorityBadgeAttribute(): string
-    {
-        return match($this->priority) {
-            'urgent' => '<span class="badge bg-danger">Urgent</span>',
-            'high'   => '<span class="badge bg-warning text-dark">High</span>',
-            'normal' => '<span class="badge bg-primary">Normal</span>',
-            'low'    => '<span class="badge bg-secondary">Low</span>',
-            default  => '<span class="badge bg-secondary">' . ucfirst($this->priority) . '</span>',
-        };
-    }
+class StudentGrievance extends Model {
+    protected $fillable = ['student_id','program_id','category','title','description',
+        'status','priority','assigned_to','resolved_by','resolution_notes','resolved_at'];
+    protected $casts = ['resolved_at'=>'datetime'];
+    public function student(): BelongsTo { return $this->belongsTo(Student::class); }
+    public function program(): BelongsTo { return $this->belongsTo(Program::class); }
+    public function assignedTo(): BelongsTo { return $this->belongsTo(User::class,'assigned_to'); }
+    public function resolvedBy(): BelongsTo { return $this->belongsTo(User::class,'resolved_by'); }
+    public function isOpen(): bool { return in_array($this->status,['open','under_review','escalated']); }
+    public function isOverdue(): bool { return $this->isOpen() && $this->created_at->lt(now()->subDays(7)); }
 }

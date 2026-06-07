@@ -277,6 +277,82 @@
     </div>
 </div>
 
+{{-- Reports & Analytics Quick Links --}}
+<div class="card mb-4">
+    <div class="card-header">
+        <span class="fw-600 text-sm"><i class="bi bi-bar-chart-line me-2 text-success"></i>Reports &amp; Analytics</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ route('admin.institutional-kpi') }}" class="card text-decoration-none quick-action-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div style="width:40px;height:40px;background:rgba(79,70,229,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-speedometer2 text-primary fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-sm">Institutional KPI</div>
+                            <div class="text-xs text-muted">Director dashboard</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ route('admin.aicte-report') }}" class="card text-decoration-none quick-action-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div style="width:40px;height:40px;background:rgba(16,185,129,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-file-earmark-bar-graph text-success fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-sm">AICTE Compliance</div>
+                            <div class="text-xs text-muted">Compliance report + PDF</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ route('cmc.placement-stats') }}" class="card text-decoration-none quick-action-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div style="width:40px;height:40px;background:rgba(245,158,11,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-briefcase text-warning fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-sm">Placement Stats</div>
+                            <div class="text-xs text-muted">Drives &amp; outcomes</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ route('academic.transcripts.index') }}" class="card text-decoration-none quick-action-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div style="width:40px;height:40px;background:rgba(6,182,212,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-journal-text text-info fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-sm">Academic Transcripts</div>
+                            <div class="text-xs text-muted">Student grade records</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ route('admin.audit.index') }}" class="card text-decoration-none quick-action-card h-100">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div style="width:40px;height:40px;background:rgba(139,92,246,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-shield-check text-purple fs-5" style="color:#8b5cf6 !important;"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold text-sm">Audit Log</div>
+                            <div class="text-xs text-muted">System activity trail</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- E1) Recent Students + Upcoming Exams --}}
 <div class="row g-3 mb-4">
     <div class="col-lg-7">

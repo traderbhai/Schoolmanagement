@@ -11,23 +11,63 @@ class ExamCellController extends Controller
 {
     public function dashboard()
     {
-        $upcoming = Exam::where('exam_date', '>=', now()->toDateString())->count();
         $total    = Exam::count();
+        $upcoming = Exam::where('exam_date', '>', now())->count();
+        $past     = Exam::where('exam_date', '<=', now())->count();
 
-        // Exams that have at least one result
-        $withResults = Exam::has('results')->count();
-        $pending = $total - $withResults;
+        // Exams needing result entry (past exams with zero results)
+        $examsNeedingResults = Exam::where('exam_date', '<=', now())
+            ->withCount('results')
+            ->get()
+            ->filter(fn($e) => $e->results_count === 0);
+        $pending = $examsNeedingResults->count();
+        $withResults = $past - $pending;
 
-        $programs = Program::where('is_active', true)->withCount('students')->get();
+        // Result entry completion %
+        $completionPct = $past > 0 ? round((($past - $pending) / $past) * 100, 1) : 100;
 
-        $upcomingList = Exam::where('exam_date', '>=', now()->toDateString())
-            ->with(['program', 'subject'])
-            ->orderBy('exam_date')
+        // Published results count (column may not exist)
+        $published = 0;
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('exams', 'is_results_published')) {
+                $published = Exam::where('is_results_published', true)->count();
+            }
+        } catch (\Exception $e) { $published = 0; }
+
+        // Recent exams with their result stats
+        $recentExams = Exam::with(['subject', 'program'])
+            ->latest('exam_date')
             ->take(10)
+            ->get()
+            ->map(function($exam) {
+                $results = ExamResult::where('exam_id', $exam->id)->get();
+                $exam->result_count = $results->count();
+                if ($results->count() > 0) {
+                    $exam->avg_marks = round($results->avg('marks_obtained'), 1);
+                    $exam->pass_count = $results->where('marks_obtained', '>=', ($exam->passing_marks ?? 40))->count();
+                    $exam->pass_pct = round(($exam->pass_count / $results->count()) * 100, 1);
+                } else {
+                    $exam->avg_marks = null;
+                    $exam->pass_count = null;
+                    $exam->pass_pct = null;
+                }
+                return $exam;
+            });
+
+        // Upcoming exams list
+        $upcomingExams = Exam::with(['subject', 'program'])
+            ->where('exam_date', '>', now())
+            ->orderBy('exam_date')
+            ->take(5)
             ->get();
 
+        try {
+            $anomalyCount = \App\Models\ExamAnomalyLog::whereNull('resolved_at')->count();
+        } catch (\Exception $e) { $anomalyCount = 0; }
+
         return view('departmental.exam-cell.dashboard', compact(
-            'upcoming', 'total', 'withResults', 'pending', 'programs', 'upcomingList'
+            'total', 'upcoming', 'pending', 'withResults',
+            'completionPct', 'published', 'recentExams', 'upcomingExams', 'anomalyCount'
         ));
     }
 

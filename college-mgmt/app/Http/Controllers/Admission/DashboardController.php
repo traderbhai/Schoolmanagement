@@ -8,6 +8,8 @@ use App\Models\ApplicantDocument;
 use App\Models\AdmissionPayment;
 use App\Models\CounsellingLog;
 use App\Models\SelectionSession;
+use App\Models\Lead;
+use App\Models\Student;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -54,6 +56,14 @@ class DashboardController extends Controller
             ->limit(3)
             ->get();
 
-        return view('admission.dashboard', compact('kpis', 'pipeline', 'pipelineMax', 'followups', 'recentLogs', 'upcomingSessions'));
+        $funnelData = [
+            'leads'       => Lead::count(),
+            'applied'     => Applicant::count(),
+            'shortlisted' => Applicant::where('status', 'shortlisted')->count(),
+            'selected'    => Applicant::whereIn('status', ['selected', 'enrolled'])->count(),
+            'enrolled'    => Student::count(),
+        ];
+
+        return view('admission.dashboard', compact('kpis', 'pipeline', 'pipelineMax', 'followups', 'recentLogs', 'upcomingSessions', 'funnelData'));
     }
 }

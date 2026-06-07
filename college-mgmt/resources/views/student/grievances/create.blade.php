@@ -1,69 +1,57 @@
 @extends('layouts.student')
 @section('title', 'Submit Grievance')
-@section('page-title', 'Submit a Grievance')
-
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('student.dashboard') }}">Dashboard</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('student.grievances.index') }}">Grievances</a></li>
-    <li class="breadcrumb-item active">Submit</li>
-@endsection
 
 @section('content')
-<div class="card" style="box-shadow:var(--shadow-sm);max-width:700px">
-    <div class="card-header bg-transparent border-0 pt-3 pb-0">
-        <h6 class="fw-semibold mb-0">Grievance Form</h6>
-        <p class="text-muted small mb-0">Provide accurate details so we can address your concern promptly.</p>
-    </div>
+<div class="mb-4">
+    <a href="{{ route('student.grievances.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <h4 class="mt-2 mb-0"><i class="bi bi-chat-square-dots me-2 text-primary"></i>Submit Grievance</h4>
+</div>
+
+<div class="card border-0 shadow-sm" style="max-width:650px">
     <div class="card-body">
         <form method="POST" action="{{ route('student.grievances.store') }}">
             @csrf
 
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold">Category <span class="text-danger">*</span></label>
-                    <select name="category" class="form-select form-select-sm @error('category') is-invalid @enderror" required>
-                        <option value="">Select a category</option>
-                        @foreach($categories as $cat)
-                        <option value="{{ $cat }}" @selected(old('category') === $cat)>{{ ucfirst($cat) }}</option>
-                        @endforeach
-                    </select>
-                    @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold">Priority <span class="text-danger">*</span></label>
-                    <select name="priority" class="form-select form-select-sm @error('priority') is-invalid @enderror" required>
-                        <option value="low"    @selected(old('priority') === 'low')>Low</option>
-                        <option value="normal" @selected(old('priority', 'normal') === 'normal')>Normal</option>
-                        <option value="high"   @selected(old('priority') === 'high')>High</option>
-                        <option value="urgent" @selected(old('priority') === 'urgent')>Urgent</option>
-                    </select>
-                    @error('priority')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label small fw-semibold">Subject <span class="text-danger">*</span></label>
-                    <input type="text" name="subject" class="form-control form-control-sm @error('subject') is-invalid @enderror"
-                           value="{{ old('subject') }}" placeholder="Brief summary of the issue" maxlength="255" required>
-                    @error('subject')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label small fw-semibold">Description <span class="text-danger">*</span></label>
-                    <textarea name="description" rows="6"
-                              class="form-control form-control-sm @error('description') is-invalid @enderror"
-                              placeholder="Describe your grievance in detail. Include dates, events, and any supporting context..."
-                              maxlength="3000" required>{{ old('description') }}</textarea>
-                    @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    <div class="form-text text-muted" style="font-size:.75rem">Max 3000 characters.</div>
-                </div>
+            <div class="mb-3">
+                <label class="form-label">Category <span class="text-danger">*</span></label>
+                <select name="category" class="form-select @error('category') is-invalid @enderror" required>
+                    <option value="">— Select Category —</option>
+                    @foreach(['academic'=>'Academic','financial'=>'Financial','facility'=>'Facility','faculty'=>'Faculty','administrative'=>'Administrative','other'=>'Other'] as $val=>$label)
+                        <option value="{{ $val }}" @selected(old('category') === $val)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
-            <div class="d-flex gap-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-sm px-4">
-                    <i class="bi bi-send me-1"></i>Submit Grievance
-                </button>
-                <a href="{{ route('student.grievances.index') }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+            <div class="mb-3">
+                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
+                    <option value="">— Select Priority —</option>
+                    @foreach(['low'=>'Low','normal'=>'Normal','high'=>'High','urgent'=>'Urgent'] as $val=>$label)
+                        <option value="{{ $val }}" @selected(old('priority') === $val)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('priority')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Title <span class="text-danger">*</span></label>
+                <input type="text" name="title" class="form-control @error('title') is-invalid @enderror"
+                    value="{{ old('title') }}" required maxlength="255">
+                @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description <span class="text-danger">*</span></label>
+                <textarea name="description" rows="5" class="form-control @error('description') is-invalid @enderror" required>{{ old('description') }}</textarea>
+                @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Submit Grievance</button>
+                <a href="{{ route('student.grievances.index') }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>
     </div>

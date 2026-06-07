@@ -352,6 +352,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call([DemoDataSeeder::class]);
+        $this->call([RoleFeatureAccessSeeder::class]);
+
         $this->command->info('College Management System seeded successfully!');
         $this->command->info('Admin: admin@college.com / password');
         $this->command->info('Teacher: ravi@college.com / password');

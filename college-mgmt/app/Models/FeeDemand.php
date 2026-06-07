@@ -11,7 +11,7 @@ class FeeDemand extends Model
 
     protected $fillable = [
         'student_id', 'term_id', 'total_amount', 'scholarship_deduction',
-        'final_amount', 'due_date', 'last_reminder_sent', 'status',
+        'final_amount', 'due_date', 'penalty_amount', 'last_reminder_sent', 'status',
     ];
 
     protected $casts = [
@@ -19,6 +19,7 @@ class FeeDemand extends Model
         'scholarship_deduction' => 'decimal:2',
         'final_amount' => 'decimal:2',
         'due_date' => 'date',
+        'penalty_amount' => 'decimal:2',
         'last_reminder_sent' => 'datetime',
     ];
 

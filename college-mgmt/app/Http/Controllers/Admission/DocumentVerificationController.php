@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
+use App\Mail\DocumentRejected;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\Batch;
 use App\Models\DocumentVerificationRequest;
 use App\Models\Program;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -85,6 +87,18 @@ class DocumentVerificationController extends Controller
             'message'      => $request->rejection_reason,
             'status'       => 'pending',
         ]);
+
+        // Send email notification
+        $document->load(['applicant.user', 'requiredDocument']);
+        $applicant = $document->applicant;
+        if ($applicant && $applicant->user) {
+            NotificationService::send(DocumentRejected::class, $applicant->user, [
+                'applicant'       => $applicant,
+                'document'        => $document,
+                'documentName'    => $document->requiredDocument?->name ?? 'Document',
+                'rejectionReason' => $request->rejection_reason,
+            ]);
+        }
 
         return back()->with('success', 'Document rejected and applicant notified.');
     }

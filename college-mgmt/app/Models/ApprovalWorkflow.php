@@ -17,19 +17,16 @@ class ApprovalWorkflow extends Model
         'remarks',
         'approver_id',
         'approved_at',
-        'step_order',
-        'workflow_type',
-        'sla_hours',
+        'sla_days',
         'due_at',
-        'escalated_at',
         'escalated_to_role',
-        'parent_approval_id',
+        'escalated_at',
     ];
 
     protected $casts = [
-        'approved_at'   => 'datetime',
-        'due_at'        => 'datetime',
-        'escalated_at'  => 'datetime',
+        'approved_at' => 'datetime',
+        'due_at' => 'datetime',
+        'escalated_at' => 'datetime',
     ];
 
     public function approvable()
@@ -42,21 +39,9 @@ class ApprovalWorkflow extends Model
         return $this->belongsTo(User::class, 'approver_id');
     }
 
-    public function parent()
-    {
-        return $this->belongsTo(self::class, 'parent_approval_id');
-    }
-
-    public function children()
-    {
-        return $this->hasMany(self::class, 'parent_approval_id');
-    }
-
     public function isOverdue(): bool
     {
-        return $this->status === 'pending'
-            && $this->due_at !== null
-            && $this->due_at->isPast();
+        return $this->status === 'pending' && $this->due_at !== null && $this->due_at->isPast();
     }
 
     public function isEscalated(): bool
@@ -96,17 +81,5 @@ class ApprovalWorkflow extends Model
             'rejected' => 'Rejected',
             default    => ucfirst($this->status),
         };
-    }
-
-    public function scopePendingForRole($query, string $role)
-    {
-        return $query->where('approver_role', $role)->where('status', 'pending');
-    }
-
-    public function scopeOverdue($query)
-    {
-        return $query->where('status', 'pending')
-            ->whereNotNull('due_at')
-            ->where('due_at', '<', now());
     }
 }

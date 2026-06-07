@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{FeeStructure, FeePayment, AcademicYear};
+use App\Models\{FeeStructure, FeePayment, AcademicYear, FeeDemand};
 use Illuminate\Http\Request;
 
 class FeeController extends Controller
@@ -40,9 +40,20 @@ class FeeController extends Controller
         });
         $nextDueAmount = $unpaidStructures->first()?->amount ?? 0;
 
+        // Fee demands for this student
+        $feeDemands = FeeDemand::with('term')
+            ->where('student_id', $student->id)
+            ->latest()
+            ->get();
+
+        $totalPendingDemands = $feeDemands->where('status', 'pending')->sum('final_amount');
+        $totalPenalties = $feeDemands->sum('penalty_amount');
+        $outstandingTotal = $totalPendingDemands + $totalPenalties;
+
         return view('student.fees', compact(
             'feeStructures', 'payments', 'totalDue', 'totalPaid', 'balance',
-            'currentYear', 'paymentsByType', 'nextDueAmount'
+            'currentYear', 'paymentsByType', 'nextDueAmount',
+            'feeDemands', 'outstandingTotal', 'totalPenalties'
         ));
     }
 }

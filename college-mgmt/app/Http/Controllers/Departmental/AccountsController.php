@@ -44,11 +44,20 @@ class AccountsController extends Controller
         $overdueDemandsCount = FeeDemand::where('status', 'overdue')->count();
         $overdueDemandsAmount = FeeDemand::where('status', 'overdue')->sum('final_amount');
 
+        // Phase 6: Enhanced fee management KPIs
+        $totalDemanded  = FeeDemand::sum('final_amount');
+        $totalPenalty   = FeeDemand::sum('penalty_amount');
+        $overdueCount   = FeeDemand::where('status', 'pending')
+            ->whereNotNull('due_date')->where('due_date', '<', now()->toDateString())->count();
+        $paidDemands    = FeeDemand::where('status', 'fully_paid')->sum('final_amount');
+        $collectionRate = $totalDemanded > 0 ? round(($paidDemands / $totalDemanded) * 100, 1) : 0;
+
         return view('departmental.accounts.dashboard', compact(
             'totalBilled', 'totalCollected', 'outstanding', 'overdue', 'recentPayments', 'programs',
             'totalAdmissionCollected', 'pendingAdmissionVerification',
             'pendingScholarshipDisbursements', 'pendingScholarshipAmount',
-            'overdueDemandsCount', 'overdueDemandsAmount'
+            'overdueDemandsCount', 'overdueDemandsAmount',
+            'totalDemanded', 'totalPenalty', 'overdueCount', 'collectionRate'
         ));
     }
 

@@ -8,6 +8,61 @@
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    {{-- Generate Demands Panel --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-semibold">Generate Semester Fee Demands</div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('academic.fee-demands.generate') }}">
+                @csrf
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-4">
+                        <label class="form-label small">Batch</label>
+                        <select name="batch_id" class="form-select form-select-sm" required>
+                            <option value="">Select Batch</option>
+                            @foreach($batches ?? [] as $b)
+                            <option value="{{ $b->id }}">{{ $b->name }} ({{ $b->program->name ?? '' }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small">Term</label>
+                        <select name="term_id" class="form-select form-select-sm" required>
+                            <option value="">Select Term</option>
+                            @foreach($terms ?? [] as $t)
+                            <option value="{{ $t->id }}">{{ $t->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <button type="submit" class="btn btn-primary btn-sm"
+                            onclick="return confirm('Generate fee demands for all active students in this batch/term?')">
+                            <i class="bi bi-lightning me-1"></i>Generate Demands
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- Apply Penalties Panel --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent fw-semibold">Late Fee / Penalty</div>
+        <div class="card-body d-flex align-items-center gap-3">
+            <p class="mb-0 text-muted small">Apply a 2% per-month penalty to all overdue pending demands that have not yet been penalised.</p>
+            <form method="POST" action="{{ route('academic.fee-demands.apply-penalties') }}" class="ms-auto">
+                @csrf
+                <button type="submit" class="btn btn-warning btn-sm"
+                    onclick="return confirm('Apply penalties to all overdue demands?')">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Apply Penalties
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div class="mb-3">
         <a href="{{ route('academic.fee-demands.create') }}" class="btn btn-primary">Add Fee Demand</a>
     </div>
@@ -15,20 +70,44 @@
         <div class="card-body">
             <table class="table table-hover">
                 <thead>
-                    <tr><th>Student</th><th>Term</th><th>Total</th><th>Final Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr>
+                    <tr>
+                        <th>Student</th>
+                        <th>Term</th>
+                        <th>Total</th>
+                        <th>Final Amount</th>
+                        <th>Penalty</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    @foreach($feeDemands as $demand)
+                    @forelse($feeDemands as $demand)
                     <tr>
                         <td>{{ $demand->student->enrollment_number ?? 'N/A' }}</td>
                         <td>{{ $demand->term->name ?? 'N/A' }}</td>
                         <td>₹{{ number_format($demand->total_amount) }}</td>
                         <td>₹{{ number_format($demand->final_amount) }}</td>
-                        <td>{{ $demand->due_date->format('d M Y') }}</td>
-                        <td><span class="badge bg-{{ $demand->status === 'fully_paid' ? 'success' : ($demand->isOverdue() ? 'danger' : 'warning') }}">{{ ucfirst(str_replace('_',' ',$demand->status)) }}</span></td>
+                        <td>
+                            @if(($demand->penalty_amount ?? 0) > 0)
+                                <span class="text-danger fw-semibold">₹{{ number_format($demand->penalty_amount, 2) }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td class="{{ $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending' ? 'text-danger fw-semibold' : '' }}">
+                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '—' }}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ $demand->status === 'fully_paid' ? 'success' : ($demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending' ? 'danger' : 'warning') }}">
+                                {{ ucfirst(str_replace('_',' ',$demand->status)) }}
+                            </span>
+                        </td>
                         <td><a href="{{ route('academic.fee-demands.show', $demand) }}" class="btn btn-sm btn-primary">View</a></td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr><td colspan="8" class="text-center text-muted">No fee demands found.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
             {{ $feeDemands->links() }}

@@ -14,7 +14,9 @@ class FeeDemandController extends Controller
     public function index()
     {
         $feeDemands = FeeDemand::with(['student', 'term'])->paginate(15);
-        return view('academic.fee-demands.index', compact('feeDemands'));
+        $batches = \App\Models\Batch::with('program')->where('is_active', true)->get();
+        $terms   = \App\Models\Term::orderBy('term_number')->get();
+        return view('academic.fee-demands.index', compact('feeDemands', 'batches', 'terms'));
     }
 
     public function create()
@@ -46,8 +48,9 @@ class FeeDemandController extends Controller
 
     public function show(FeeDemand $feeDemand)
     {
-        $feeDemand->load(['student', 'term']);
-        return view('academic.fee-demands.show', compact('feeDemand'));
+        $feeDemand->load(['student.user', 'student.program', 'term']);
+        $payments = \App\Models\FeePayment::where('student_id', $feeDemand->student_id)->latest()->take(10)->get();
+        return view('academic.fee-demands.show', compact('feeDemand', 'payments'));
     }
 
     public function edit(FeeDemand $feeDemand)
@@ -83,35 +86,86 @@ class FeeDemandController extends Controller
 
     public function generateDemands(Request $request)
     {
-        $termId = $request->get('term_id');
-        $totalFee = $request->get('total_fee', 100000);
-        $dueDate = $request->get('due_date');
+        $request->validate([
+            'batch_id' => 'required|exists:batches,id',
+            'term_id'  => 'required|exists:terms,id',
+        ]);
 
-        $students = Student::where('current_term_id', $termId)->get();
-        $demandsGenerated = 0;
+        $batch = \App\Models\Batch::with('program')->findOrFail($request->batch_id);
+        $term  = \App\Models\Term::findOrFail($request->term_id);
 
-        foreach ($students as $student) {
-            $scholarshipDeduction = $student->scholarships()
-                ->where('status', 'active')
-                ->sum(\DB::raw('CASE WHEN fixed_amount IS NOT NULL THEN fixed_amount ELSE 0 END'))
-                + ($totalFee * $student->scholarships()
-                    ->where('status', 'active')
-                    ->avg('percentage') / 100);
+        // Get fee structure for this program
+        $feeStructures = \App\Models\FeeStructure::where('program_id', $batch->program_id)->get();
+        $totalFee = $feeStructures->sum('amount');
 
-            FeeDemand::create([
-                'student_id' => $student->id,
-                'term_id' => $termId,
-                'total_amount' => $totalFee,
-                'scholarship_deduction' => $scholarshipDeduction,
-                'final_amount' => $totalFee - $scholarshipDeduction,
-                'due_date' => $dueDate,
-                'status' => 'pending',
-            ]);
-
-            $demandsGenerated++;
+        if ($totalFee <= 0) {
+            return back()->with('error', 'No fee structure defined for this program. Please set up fee structures first.');
         }
 
-        return back()->with('success', "$demandsGenerated fee demands generated");
+        // Get all active students in this batch
+        $students = \App\Models\Student::where('batch_id', $batch->id)
+            ->where('status', 'active')->get();
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($students as $student) {
+            // Skip if demand already exists for this student+term
+            if (\App\Models\FeeDemand::where('student_id', $student->id)->where('term_id', $term->id)->exists()) {
+                $skipped++;
+                continue;
+            }
+
+            // Check for scholarship discount
+            $scholarship = \App\Models\ApplicantScholarship::whereHas('applicant', fn($q) =>
+                $q->whereHas('enrollments', fn($eq) => $eq->where('student_id', $student->id))
+            )->where('status', 'awarded')->first();
+
+            $discount = 0;
+            if ($scholarship && $scholarship->scheme) {
+                $pct = $scholarship->scheme->discount_percentage ?? 0;
+                $maxDiscount = $scholarship->scheme->max_amount ?? 0;
+                $discountByPct = ($totalFee * $pct) / 100;
+                $discount = $maxDiscount > 0 ? min($discountByPct, $maxDiscount) : $discountByPct;
+            }
+
+            $finalAmount = max(0, $totalFee - $discount);
+
+            \App\Models\FeeDemand::create([
+                'student_id'   => $student->id,
+                'term_id'      => $term->id,
+                'total_amount' => $totalFee,
+                'scholarship_deduction' => $discount,
+                'final_amount' => $finalAmount,
+                'due_date'     => now()->addDays(30)->toDateString(),
+                'status'       => 'pending',
+            ]);
+            $created++;
+        }
+
+        return back()->with('success', "Fee demands generated: {$created} created, {$skipped} already existed.");
+    }
+
+    public function applyPenalties()
+    {
+        // Apply 2% penalty per month on overdue demands
+        $penaltyRate = 0.02;
+        $overdue = \App\Models\FeeDemand::where('status', 'pending')
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now()->toDateString())
+            ->where('penalty_amount', 0) // only apply once
+            ->get();
+
+        $count = 0;
+        foreach ($overdue as $demand) {
+            $daysOverdue = now()->diffInDays($demand->due_date);
+            $monthsOverdue = max(1, ceil($daysOverdue / 30));
+            $penalty = round($demand->final_amount * $penaltyRate * $monthsOverdue, 2);
+            $demand->update(['penalty_amount' => $penalty]);
+            $count++;
+        }
+
+        return back()->with('success', "Penalties applied to {$count} overdue demands.");
     }
 
     public function destroy(FeeDemand $feeDemand)

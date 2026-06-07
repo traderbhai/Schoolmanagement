@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, ExamResult};
+use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam};
 use App\Services\TimetableService;
 
 class DashboardController extends Controller
@@ -43,14 +43,50 @@ class DashboardController extends Controller
             }
         }
 
+        // CGPA — avg across all semesters
+        $cgpa = null;
+        try {
+            $allResults = ExamResult::with('exam')
+                ->where('student_id', $student->id)
+                ->where('is_absent', false)
+                ->get()
+                ->filter(fn($r) => $r->exam && $r->exam->total_marks > 0);
+            if ($allResults->count() > 0) {
+                $totalGp = $allResults->sum(fn($r) => ($r->marks_obtained / $r->exam->total_marks) * 10);
+                $cgpa = round($totalGp / $allResults->count(), 2);
+            }
+        } catch (\Exception $e) { $cgpa = null; }
+
         // Fee balance due
         $feeDue = FeeStructure::where('course_id', $student->course_id)->sum('amount');
         $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
         $balanceDue = max(0, $feeDue - $feePaid);
 
+        // Fee outstanding from FeeDemand
+        $feeOutstanding = 0;
+        try {
+            $feeOutstanding = FeeDemand::where('student_id', $student->id)
+                ->where('status', '!=', 'paid')
+                ->sum('amount');
+            $balanceDue = max($balanceDue, $feeOutstanding);
+        } catch (\Exception $e) {}
+
+        // Upcoming exams
+        $upcomingExams = [];
+        try {
+            if ($student->program_id) {
+                $upcomingExams = Exam::where('program_id', $student->program_id)
+                    ->where('exam_date', '>', now())
+                    ->with('subject')
+                    ->orderBy('exam_date')
+                    ->take(5)
+                    ->get();
+            }
+        } catch (\Exception $e) { $upcomingExams = collect(); }
+
         return view('student.dashboard', compact(
             'student', 'currentSemester', 'notices', 'slots', 'grid', 'todayClasses',
-            'attendanceOverall', 'sgpa', 'balanceDue'
+            'attendanceOverall', 'sgpa', 'cgpa', 'balanceDue', 'upcomingExams'
         ));
     }
 }

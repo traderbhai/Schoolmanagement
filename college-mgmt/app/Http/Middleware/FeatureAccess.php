@@ -3,22 +3,28 @@
 namespace App\Http\Middleware;
 
 use App\Models\RoleFeatureAccess;
+use App\Services\RoleHierarchyService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class FeatureAccess
 {
+    public function __construct(private RoleHierarchyService $hierarchy)
+    {
+    }
+
     /**
      * Check that the authenticated user's role has the required access level
-     * for a given feature.
+     * for a given feature. Uses role hierarchy inheritance so higher-level
+     * roles automatically inherit lower-level role permissions.
      *
      * Usage on routes:
      *   ->middleware('feature.access:exam.enter_marks,edit')
      *   ->middleware('feature.access:placement.create_drive,create')
      *
      * Admins always pass. When multiple roles are active, the highest
-     * access level across all role IDs wins.
+     * access level across all inherited role IDs wins.
      */
     public function handle(Request $request, Closure $next, string $featureCode, string $requiredLevel = 'view'): Response
     {
@@ -32,10 +38,9 @@ class FeatureAccess
             return $next($request);
         }
 
-        // Collect all role IDs the user currently holds via Spatie
-        $roleIds = $user->roles->pluck('id')->toArray();
+        $userRoleNames = $user->roles->pluck('name')->toArray();
 
-        if (empty($roleIds)) {
+        if (empty($userRoleNames)) {
             abort(403, 'No roles assigned to your account.');
         }
 
@@ -46,16 +51,16 @@ class FeatureAccess
             abort(500, "Unknown access level: $requiredLevel");
         }
 
-        // Check if any of the user's roles has sufficient access
-        $hasAccess = RoleFeatureAccess::whereIn('role_id', $roleIds)
-            ->where('feature_code', $featureCode)
-            ->get()
-            ->contains(function ($record) use ($levels, $requiredIndex) {
-                $grantedIndex = array_search($record->access_level, $levels);
-                return $grantedIndex !== false && $grantedIndex >= $requiredIndex;
-            });
+        // Use hierarchy-aware effective access level
+        $effectiveLevel = $this->hierarchy->getEffectiveAccessLevel($userRoleNames, $featureCode);
 
-        if (!$hasAccess) {
+        if ($effectiveLevel === null) {
+            abort(403, "Access denied: '$featureCode' requires '$requiredLevel' level.");
+        }
+
+        $grantedIndex = array_search($effectiveLevel, $levels);
+
+        if ($grantedIndex === false || $grantedIndex < $requiredIndex) {
             abort(403, "Access denied: '$featureCode' requires '$requiredLevel' level.");
         }
 

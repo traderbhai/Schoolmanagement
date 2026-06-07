@@ -29,7 +29,7 @@
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     {{-- Attendance KPI --}}
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="kpi-card {{ $attendanceOverall !== null ? ($attendanceOverall >= 75 ? 'kpi-green' : 'kpi-red') : 'kpi-green' }}">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
@@ -52,7 +52,7 @@
     </div>
 
     {{-- SGPA KPI --}}
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="kpi-card kpi-blue">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
@@ -74,8 +74,31 @@
         </div>
     </div>
 
+    {{-- CGPA KPI --}}
+    <div class="col-md-3">
+        <div class="kpi-card kpi-blue">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="kpi-label">CGPA (Overall)</div>
+                    <div class="kpi-value">
+                        @if(isset($cgpa) && $cgpa !== null)
+                            {{ number_format($cgpa, 2) }}
+                        @else
+                            <span style="font-size:1.2rem">—</span>
+                        @endif
+                    </div>
+                    <div class="kpi-trend">
+                        <i class="bi bi-award me-1"></i>
+                        <span class="text-white opacity-75" style="font-size:.78rem">Cumulative GPA</span>
+                    </div>
+                </div>
+                <div class="kpi-icon"><i class="bi bi-award-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
     {{-- Fee Balance KPI --}}
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="kpi-card {{ $balanceDue > 0 ? 'kpi-amber' : 'kpi-green' }}">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
@@ -196,5 +219,43 @@
         </div>
     </div>
 </div>
+
+{{-- Upcoming Exams --}}
+@if(isset($upcomingExams) && count($upcomingExams) > 0)
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-calendar-event text-danger"></i>
+                <span class="fw-semibold">Upcoming Exams</span>
+                <span class="badge bg-danger bg-opacity-10 text-danger ms-1">{{ count($upcomingExams) }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Exam</th><th>Subject</th><th>Date</th><th>Type</th></tr>
+                        </thead>
+                        <tbody>
+                        @foreach($upcomingExams as $exam)
+                            <tr>
+                                <td class="fw-semibold small">{{ $exam->name }}</td>
+                                <td class="small text-muted">{{ $exam->subject?->name ?? '—' }}</td>
+                                <td class="small">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ $exam->exam_date->format('d M Y') }}
+                                    </span>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ ucfirst($exam->type ?? 'exam') }}</span></td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 @endsection

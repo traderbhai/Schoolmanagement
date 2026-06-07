@@ -198,6 +198,16 @@
 
         {{-- ACADEMICS --}}
         <div class="section-label">Academics</div>
+        @hasrole('dean_academics|program_chair|hod|admin')
+        <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
+            <i class="bi bi-journal-text"></i> Curriculum Changes
+        </a>
+        @endhasrole
+        @hasrole('hod|admin')
+        <a href="{{ route('hod.grievances.index') }}" class="nav-link @if(request()->routeIs('hod.grievances.*')) active @endif">
+            <i class="bi bi-chat-square-text"></i> Student Grievances
+        </a>
+        @endhasrole
         <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
             <i class="bi bi-calendar-x"></i> Leave Mgmt
         </a>
@@ -216,6 +226,11 @@
         <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif">
             <i class="bi bi-award"></i> Grade Reports
         </a>
+        @hasrole('dean_academics|exam_cell|admin')
+        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
+            <i class="bi bi-file-earmark-text"></i> Transcripts
+        </a>
+        @endhasrole
 
         <div class="sidebar-divider"></div>
 
@@ -248,6 +263,19 @@
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif">
             <i class="bi bi-briefcase"></i> Drives
         </a>
+        @hasanyrole('admin|cmc|dean_academics')
+        <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif">
+            <i class="bi bi-laptop"></i> Internships
+        </a>
+        <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif">
+            <i class="bi bi-people-fill"></i> Alumni Database
+        </a>
+        @endhasanyrole
+        @hasanyrole('admin|cmc|dean_academics|program_chair')
+        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
+            <i class="bi bi-bar-chart-line"></i> Placement Stats
+        </a>
+        @endhasanyrole
 
         <div class="sidebar-divider"></div>
 
@@ -306,6 +334,11 @@
             <i class="bi bi-mortarboard-fill"></i> Dean Academics
         </a>
         @endhasrole
+        @hasrole('hod|admin')
+        <a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.*')) active @endif">
+            <i class="bi bi-building"></i> HOD
+        </a>
+        @endhasrole
         @hasrole('program_chair|hod|dean_academics|admin')
         <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.*')) active @endif">
             <i class="bi bi-diagram-3-fill"></i> Program Chair
@@ -317,8 +350,11 @@
         </a>
         @endhasrole
         @hasrole('exam_cell|dean_academics|admin')
-        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.*')) active @endif">
+        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.dashboard')) active @endif">
             <i class="bi bi-file-earmark-check"></i> Exam Cell
+        </a>
+        <a href="{{ route('exam-cell.anomalies.index') }}" class="nav-link @if(request()->routeIs('exam-cell.anomalies.*')) active @endif">
+            <i class="bi bi-exclamation-triangle"></i> Anomaly Log
         </a>
         @endhasrole
         @hasrole('accounts_officer|admin')
@@ -448,6 +484,13 @@
         <div class="section-label">Placement</div>
         <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
         <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
+        @hasanyrole('admin|cmc|dean_academics')
+        <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif"><i class="bi bi-laptop"></i> Internships</a>
+        <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif"><i class="bi bi-people-fill"></i> Alumni Database</a>
+        @endhasanyrole
+        @hasanyrole('admin|cmc|dean_academics|program_chair')
+        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif"><i class="bi bi-bar-chart-line"></i> Placement Stats</a>
+        @endhasanyrole
         <div class="sidebar-divider"></div>
         <div class="section-label">Approvals</div>
         <a href="{{ route('approvals.inbox') }}" class="nav-link @if(request()->routeIs('approvals.*')) active @endif"><i class="bi bi-check2-circle"></i> My Approvals</a>
@@ -473,12 +516,25 @@
         @hasrole('cmc|admin')<a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.*')) active @endif"><i class="bi bi-briefcase-fill"></i> CMC</a>@endhasrole
         @hasrole('director|admin')<a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.*')) active @endif"><i class="bi bi-bank"></i> Director</a>@endhasrole
         <div class="sidebar-divider"></div>
+        <div class="section-label">Communications</div>
+        <a href="{{ route('admin.bulk-mail.index') }}" class="nav-link @if(request()->routeIs('admin.bulk-mail.*')) active @endif"><i class="bi bi-envelope-paper"></i> Bulk Mail</a>
+        <a href="{{ route('admin.email-logs.index') }}" class="nav-link @if(request()->routeIs('admin.email-logs.*')) active @endif"><i class="bi bi-journal-text"></i> Email Logs</a>
+
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         @hasrole('admin|dean_academics|director')
         <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
         @endhasrole
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Reports & Analytics</div>
+        @hasanyrole('admin')
+        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
+        @endhasanyrole
+        @hasanyrole('admin|dean_academics')
+        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif"><i class="bi bi-file-earmark-bar-graph"></i> AICTE Report</a>
+        @endhasanyrole
     </div>
 </div>
 

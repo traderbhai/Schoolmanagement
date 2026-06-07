@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SessionScheduled;
 use App\Models\Applicant;
 use App\Models\Batch;
 use App\Models\Program;
 use App\Models\SelectionProcessStep;
 use App\Models\SelectionSession;
 use App\Models\SessionApplicant;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class SelectionSessionController extends Controller
@@ -170,11 +172,22 @@ class SelectionSessionController extends Controller
             'applicant_ids.*' => 'exists:applicants,id',
         ]);
 
+        $session->load(['step']);
         foreach ($request->applicant_ids as $applicantId) {
-            SessionApplicant::firstOrCreate([
+            $created = SessionApplicant::firstOrCreate([
                 'selection_session_id' => $session->id,
                 'applicant_id'         => $applicantId,
             ], ['assigned_at' => now()]);
+
+            if ($created->wasRecentlyCreated) {
+                $applicant = Applicant::with('user')->find($applicantId);
+                if ($applicant && $applicant->user) {
+                    NotificationService::send(SessionScheduled::class, $applicant->user, [
+                        'applicant' => $applicant,
+                        'session'   => $session,
+                    ]);
+                }
+            }
         }
 
         return back()->with('success', count($request->applicant_ids) . ' candidate(s) assigned to session.');

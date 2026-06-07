@@ -95,6 +95,43 @@
     </div>
 </div>
 
+{{-- Seat Matrix Section --}}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3-gap me-2"></i>Seat Matrix (Reservation)</h6>
+        <a href="{{ route('admin.seat-matrix.index', $program) }}" class="btn btn-sm btn-outline-primary">
+            Manage Seat Matrix
+        </a>
+    </div>
+    <div class="card-body">
+        @php $seatMatrix = $program->seatMatrices()->whereNull('batch_id')->first(); @endphp
+        @if($seatMatrix)
+        <div class="row g-2 text-center">
+            @foreach(['general_seats' => 'General', 'obc_seats' => 'OBC', 'obc_nc_seats' => 'OBC-NC', 'sc_seats' => 'SC', 'st_seats' => 'ST', 'ews_seats' => 'EWS', 'pwd_seats' => 'PWD*', 'nri_seats' => 'NRI*', 'management_quota_seats' => 'Mgmt'] as $col => $lbl)
+            <div class="col-4 col-sm-3 col-md-2 col-lg-1">
+                <div class="border rounded p-1">
+                    <div class="fw-bold text-primary">{{ $seatMatrix->$col }}</div>
+                    <small class="text-muted" style="font-size:.7rem">{{ $lbl }}</small>
+                </div>
+            </div>
+            @endforeach
+            <div class="col-4 col-sm-3 col-md-2 col-lg-1">
+                <div class="border rounded p-1 bg-light">
+                    <div class="fw-bold">{{ $seatMatrix->total_seats }}</div>
+                    <small class="text-muted" style="font-size:.7rem">Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="mt-2" style="font-size:.7rem" class="text-muted">* Supernumerary seats</div>
+        @else
+        <p class="text-muted small mb-2">No seat matrix configured for this program.</p>
+        <a href="{{ route('admin.seat-matrix.create', $program) }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Set Up Seat Matrix
+        </a>
+        @endif
+    </div>
+</div>
+
 {{-- Specializations Section --}}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">

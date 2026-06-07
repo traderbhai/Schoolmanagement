@@ -49,7 +49,8 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
-
+    Route::get('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 // ── Notifications (all authenticated users) ────────────────────────────────
@@ -209,6 +210,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
     Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
 
+    // Bulk Mail
+    Route::get('bulk-mail', [Admin\BulkMailController::class, 'index'])->name('bulk-mail.index');
+    Route::get('bulk-mail/count', [Admin\BulkMailController::class, 'previewCount'])->name('bulk-mail.count');
+    Route::post('bulk-mail/send', [Admin\BulkMailController::class, 'send'])->name('bulk-mail.send');
+
+    // Email Logs
+    Route::get('email-logs', [Admin\EmailLogController::class, 'index'])->name('email-logs.index');
+
     // Settings
     Route::get('settings', [Admin\SettingsController::class, 'index'])->name('settings');
     Route::get('settings/branding', [Admin\SettingsController::class, 'branding'])->name('settings.branding');
@@ -254,6 +263,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::delete('users/roles/{userRole}', [Admin\UserRoleController::class, 'destroy'])->name('users.roles.destroy');
     Route::post('users/{user}/roles/expire-all', [Admin\UserRoleController::class, 'expireAll'])->name('users.roles.expire-all');
 
+    // Reporting & Analytics
+    Route::get('institutional-kpi', [Admin\InstitutionalKpiController::class, 'index'])->name('institutional-kpi');
+    Route::get('aicte-report', [Admin\AicteReportController::class, 'index'])->name('aicte-report');
+    Route::get('aicte-report/export-pdf', [Admin\AicteReportController::class, 'exportPdf'])->name('aicte-report.pdf');
+
     // Audit Log (static routes before wildcards)
     Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
     Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');
@@ -262,6 +276,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 
 // ── Academic routes ─────────────────────────────────────────────────────────
 Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|accounts_officer|admin'])->prefix('academic')->name('academic.')->group(function () {
+    // Phase 5: Academic Transcripts
+    Route::get('transcripts', [Academic\TranscriptController::class, 'index'])->name('transcripts.index');
+    Route::get('transcripts/{student}/pdf', [Academic\TranscriptController::class, 'generatePdf'])->name('transcripts.pdf');
+    Route::get('transcripts/{student}', [Academic\TranscriptController::class, 'show'])->name('transcripts.show');
+
     // B2: Term Promotions
     Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
     Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
@@ -273,14 +292,23 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     // B3: Scholarships
     Route::resource('scholarships', Academic\ScholarshipController::class);
 
-    // B3: Fee Demands
+    // B3: Fee Demands — static routes BEFORE resource wildcard
+    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('academic.fee-demands.generate');
+    Route::post('fee-demands/apply-penalties', [Academic\FeeDemandController::class, 'applyPenalties'])->name('academic.fee-demands.apply-penalties');
     Route::resource('fee-demands', Academic\FeeDemandController::class);
     Route::post('fee-demands/{feeDemand}/mark-paid', [Academic\FeeDemandController::class, 'markAsPaid'])->name('fee-demands.mark-paid');
-    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
 
     // B5: Academic Calendar
     Route::resource('academic-calendars', Academic\AcademicCalendarController::class);
     Route::get('academic-calendars-events', [Academic\AcademicCalendarController::class, 'getEvents'])->name('academic-calendars.events');
+
+    // Phase 3: Curriculum Changes
+    Route::get('curriculum-changes', [Academic\CurriculumChangeController::class, 'index'])->name('curriculum-changes.index');
+    Route::get('curriculum-changes/create', [Academic\CurriculumChangeController::class, 'create'])->name('curriculum-changes.create');
+    Route::post('curriculum-changes', [Academic\CurriculumChangeController::class, 'store'])->name('curriculum-changes.store');
+    Route::get('curriculum-changes/{curriculumChange}', [Academic\CurriculumChangeController::class, 'show'])->name('curriculum-changes.show');
+    Route::post('curriculum-changes/{curriculumChange}/approve', [Academic\CurriculumChangeController::class, 'approve'])->name('curriculum-changes.approve');
+    Route::post('curriculum-changes/{curriculumChange}/reject', [Academic\CurriculumChangeController::class, 'reject'])->name('curriculum-changes.reject');
 });
 
 // ── Admission Team routes ───────────────────────────────────────────────────
@@ -355,6 +383,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('merit-list/entries/{entry}/decide', [Admission\MeritListController::class, 'updateDecision'])->name('merit-list.decide');
 
     // Offer Letters (static routes before {offerLetter} parameter)
+    Route::post('offer-letters/bulk-generate', [Admission\OfferLetterController::class, 'bulkGenerateFromMeritList'])->name('admission.offer-letters.bulk-generate');
     Route::get('offer-letters/{program}', [Admission\OfferLetterController::class, 'index'])->name('offer-letters.index');
     Route::post('offer-letters/{program}/generate', [Admission\OfferLetterController::class, 'generate'])->name('offer-letters.generate');
     Route::post('offer-letters/{program}/bulk-generate', [Admission\OfferLetterController::class, 'bulkGenerate'])->name('offer-letters.bulk-generate');
@@ -530,11 +559,15 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('admit-cards', [\App\Http\Controllers\Student\AdmitCardController::class, 'index'])->name('admit-cards.index');
     Route::get('admit-cards/{exam}/download', [\App\Http\Controllers\Student\AdmitCardController::class, 'download'])->name('admit-cards.download');
 
-    // Phase 5: Student Grievances (student side)
-    Route::get('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'index'])->name('grievances.index');
-    Route::get('grievances/create', [\App\Http\Controllers\Student\GrievanceController::class, 'create'])->name('grievances.create');
-    Route::post('grievances', [\App\Http\Controllers\Student\GrievanceController::class, 'store'])->name('grievances.store');
-    Route::get('grievances/{grievance}', [\App\Http\Controllers\Student\GrievanceController::class, 'show'])->name('grievances.show');
+    // Phase 3: Student Grievances (static routes before wildcard)
+    Route::get('grievances/create', [Student\GrievanceController::class, 'create'])->name('grievances.create');
+    Route::post('grievances', [Student\GrievanceController::class, 'store'])->name('grievances.store');
+    Route::get('grievances', [Student\GrievanceController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Student\GrievanceController::class, 'show'])->name('grievances.show');
+
+    // Notification Preferences
+    Route::get('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
+    Route::put('notifications', [\App\Http\Controllers\Student\NotificationPreferenceController::class, 'update'])->name('notifications.update');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
@@ -580,6 +613,11 @@ Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->grou
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
     Route::post('approvals/{approval}/reject', [Departmental\HodController::class, 'reject'])->name('reject');
+    // Phase 3: Grievance Management
+    Route::get('grievances', [Departmental\GrievanceManagementController::class, 'index'])->name('grievances.index');
+    Route::get('grievances/{grievance}', [Departmental\GrievanceManagementController::class, 'show'])->name('grievances.show');
+    Route::post('grievances/{grievance}/resolve', [Departmental\GrievanceManagementController::class, 'resolve'])->name('grievances.resolve');
+    Route::post('grievances/{grievance}/escalate', [Departmental\GrievanceManagementController::class, 'escalate'])->name('grievances.escalate');
 });
 
 // ── Exam Cell ────────────────────────────────────────────────────────────────
@@ -589,6 +627,13 @@ Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam
     Route::get('results',                            [Departmental\ExamCellController::class, 'results'])->name('results');
     Route::get('results/{exam}/grade-sheet',         [Departmental\ExamCellController::class, 'gradeSheet'])->name('grade-sheet');
     Route::post('results/{exam}/publish',            [Departmental\ExamCellController::class, 'publishResults'])->name('publish');
+
+    // Phase 5: Exam Anomaly Log
+    Route::get('anomalies', [Departmental\ExamAnomalyController::class, 'index'])->name('anomalies.index');
+    Route::get('anomalies/create', [Departmental\ExamAnomalyController::class, 'create'])->name('anomalies.create');
+    Route::post('anomalies', [Departmental\ExamAnomalyController::class, 'store'])->name('anomalies.store');
+    Route::get('anomalies/{anomalyLog}', [Departmental\ExamAnomalyController::class, 'show'])->name('anomalies.show');
+    Route::post('anomalies/{anomalyLog}/resolve', [Departmental\ExamAnomalyController::class, 'resolve'])->name('anomalies.resolve');
 });
 
 // ── Accounts ─────────────────────────────────────────────────────────────────
@@ -613,12 +658,20 @@ Route::middleware('auth')->prefix('approvals')->name('approvals.')->group(functi
     Route::post('{approval}/reject', [ApprovalController::class, 'reject'])->name('reject');
 });
 
-// ── CMC / Placement ──────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:cmc|admin'])->prefix('cmc')->name('cmc.')->group(function () {
-    Route::get('dashboard',  [Departmental\CmcController::class, 'dashboard'])->name('dashboard');
-    Route::get('drives',     [Departmental\CmcController::class, 'drives'])->name('drives');
-    Route::get('placements', [Departmental\CmcController::class, 'placements'])->name('placements');
-    Route::get('analytics',  [Departmental\CmcController::class, 'analytics'])->name('analytics');
+// ── CMC / Placement routes (Phase 7) ─────────────────────────────────────────
+Route::middleware(['auth', 'role:admin|cmc|dean_academics|program_chair'])->prefix('cmc')->name('cmc.')->group(function () {
+    Route::get('internships', [Departmental\InternshipController::class, 'index'])->name('internships.index');
+    Route::get('internships/create', [Departmental\InternshipController::class, 'create'])->name('internships.create');
+    Route::post('internships', [Departmental\InternshipController::class, 'store'])->name('internships.store');
+    Route::get('internships/{internship}', [Departmental\InternshipController::class, 'show'])->name('internships.show');
+    Route::post('internships/{internship}/complete', [Departmental\InternshipController::class, 'complete'])->name('internships.complete');
+
+    Route::get('alumni', [Departmental\AlumniController::class, 'index'])->name('alumni.index');
+    Route::get('alumni/create', [Departmental\AlumniController::class, 'create'])->name('alumni.create');
+    Route::post('alumni', [Departmental\AlumniController::class, 'store'])->name('alumni.store');
+    Route::post('alumni/{alumniProfile}/verify', [Departmental\AlumniController::class, 'verify'])->name('alumni.verify');
+
+    Route::get('placement-stats', [Departmental\PlacementStatsController::class, 'index'])->name('placement-stats');
 });
 
 // ── Director ─────────────────────────────────────────────────────────────────

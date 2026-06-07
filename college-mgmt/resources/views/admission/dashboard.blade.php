@@ -245,4 +245,42 @@
     </div>
     @endif
 </div>
+
+{{-- Admission Funnel Section --}}
+<div class="card mb-4">
+    <div class="card-header">
+        <span class="fw-600"><i class="bi bi-funnel-fill me-2 text-primary"></i>Admission Funnel</span>
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            @php
+                $funnelStages = [
+                    ['label' => 'Leads',       'value' => $funnelData['leads'],       'icon' => 'bi-telephone',           'color' => 'primary'],
+                    ['label' => 'Applied',      'value' => $funnelData['applied'],     'icon' => 'bi-file-earmark-person', 'color' => 'info'],
+                    ['label' => 'Shortlisted',  'value' => $funnelData['shortlisted'], 'icon' => 'bi-list-check',          'color' => 'warning'],
+                    ['label' => 'Selected',     'value' => $funnelData['selected'],    'icon' => 'bi-person-check',        'color' => 'success'],
+                    ['label' => 'Enrolled',     'value' => $funnelData['enrolled'],    'icon' => 'bi-mortarboard',         'color' => 'purple'],
+                ];
+            @endphp
+            @foreach($funnelStages as $i => $stage)
+                <div class="text-center flex-fill">
+                    <div class="rounded-3 p-3 border border-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} bg-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} bg-opacity-10">
+                        <i class="bi {{ $stage['icon'] }} fs-3 text-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }}"></i>
+                        <div class="fw-bold fs-4 mt-1">{{ number_format($stage['value']) }}</div>
+                        <div class="text-muted small">{{ $stage['label'] }}</div>
+                        @if($i > 0 && $funnelStages[$i-1]['value'] > 0)
+                            <div class="badge bg-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} mt-1">
+                                {{ round(($stage['value'] / $funnelStages[$i-1]['value']) * 100, 1) }}% from prev.
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                @if($i < count($funnelStages) - 1)
+                    <div class="text-muted fs-4 d-none d-md-block"><i class="bi bi-arrow-right"></i></div>
+                @endif
+            @endforeach
+        </div>
+    </div>
+</div>
+
 @endsection
