@@ -44,7 +44,9 @@
             </div>
             <div class="kpi-trend {{ $pending > 0 ? 'up' : '' }}">
                 @if($pending > 0)<i class="bi bi-exclamation-circle me-1"></i>Needs entry
-                @else<i class="bi bi-check me-1"></i>Up to date@endif
+                @else
+                <i class="bi bi-check me-1"></i>Up to date
+                @endif
             </div>
         </div>
     </div>
@@ -98,7 +100,9 @@
                 </div>
                 <div class="kpi-trend {{ ($anomalyCount ?? 0) > 0 ? 'up' : '' }}">
                     @if(($anomalyCount ?? 0) > 0)<i class="bi bi-exclamation-triangle me-1"></i>Requires action
-                    @else<i class="bi bi-check-all me-1"></i>None flagged@endif
+                    @else
+                    <i class="bi bi-check-all me-1"></i>None flagged
+                    @endif
                 </div>
             </div>
         </a>

@@ -42,9 +42,9 @@
                                 @foreach($entries[$day] as $entry)
                                 <tr>
                                     <td class="font-monospace small fw-semibold">
-                                        {{ \Carbon\Carbon::parse($entry->start_time)->format('h:i A') }}
+                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') : '—' }}
                                         &mdash;
-                                        {{ \Carbon\Carbon::parse($entry->end_time)->format('h:i A') }}
+                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') : '—' }}
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ $entry->subject->name ?? '—' }}</div>

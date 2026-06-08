@@ -55,7 +55,9 @@
             </div>
             <div class="kpi-trend {{ $overdue > 0 ? 'up' : '' }}">
                 @if($overdue > 0)<i class="bi bi-exclamation-triangle me-1"></i>Requires follow-up
-                @else<i class="bi bi-check me-1"></i>None overdue@endif
+                @else
+                <i class="bi bi-check me-1"></i>None overdue
+                @endif
             </div>
         </div>
     </div>
@@ -87,7 +89,9 @@
                 </div>
                 <div class="kpi-trend {{ $pendingAdmissionVerification > 0 ? 'up' : '' }}">
                     @if($pendingAdmissionVerification > 0)<i class="bi bi-clock me-1"></i>View queue
-                    @else<i class="bi bi-check me-1"></i>Queue clear@endif
+                    @else
+                    <i class="bi bi-check me-1"></i>Queue clear
+                    @endif
                 </div>
             </div>
         </a>
@@ -162,7 +166,9 @@
                 </div>
                 <div class="kpi-trend {{ $overdueCount > 0 ? 'down' : '' }}">
                     @if($overdueCount > 0)<i class="bi bi-eye me-1"></i>View demands
-                    @else<i class="bi bi-check me-1"></i>None overdue@endif
+                    @else
+                <i class="bi bi-check me-1"></i>None overdue
+                @endif
                 </div>
             </div>
         </a>
@@ -178,7 +184,9 @@
             </div>
             <div class="kpi-trend {{ $totalPenalty > 0 ? 'up' : '' }}">
                 @if($totalPenalty > 0)<i class="bi bi-hourglass me-1"></i>Late fees accrued
-                @else<i class="bi bi-check me-1"></i>No penalties@endif
+                @else
+                <i class="bi bi-check me-1"></i>No penalties
+                @endif
             </div>
         </div>
     </div>

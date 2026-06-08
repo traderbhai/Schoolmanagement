@@ -66,7 +66,9 @@
                 </div>
                 <div class="kpi-trend {{ $pendingApprovals > 0 ? 'up' : '' }}">
                     @if($pendingApprovals > 0)<i class="bi bi-exclamation-circle me-1"></i>Needs attention
-                    @else<i class="bi bi-check-all me-1"></i>All clear@endif
+                    @else
+                    <i class="bi bi-check-all me-1"></i>All clear
+                    @endif
                 </div>
             </div>
         </a>
@@ -96,7 +98,9 @@
             </div>
             <div class="kpi-trend {{ $pendingLeaves > 0 ? 'up' : '' }}">
                 @if($pendingLeaves > 0)<i class="bi bi-hourglass-split me-1"></i>Awaiting review
-                @else<i class="bi bi-check me-1"></i>None pending@endif
+                @else
+                <i class="bi bi-check me-1"></i>None pending
+                @endif
             </div>
         </div>
     </div>

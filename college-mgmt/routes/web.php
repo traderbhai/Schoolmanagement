@@ -796,6 +796,7 @@ Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->grou
     Route::post('grievances/{grievance}/escalate', [Departmental\GrievanceManagementController::class, 'escalate'])->name('grievances.escalate');
     // Faculty management
     Route::get('faculty', [Departmental\HodController::class, 'facultyRoster'])->name('faculty.roster');
+    Route::get('faculty/roster', [Departmental\HodController::class, 'facultyRoster'])->name('faculty.roster.alias');
     Route::get('faculty/workload', [Departmental\HodController::class, 'facultyWorkload'])->name('faculty.workload');
     Route::get('leaves', [Departmental\HodController::class, 'leaves'])->name('leaves');
     Route::post('leaves/{leave}/review', [Departmental\HodController::class, 'reviewLeave'])->name('leaves.review');
