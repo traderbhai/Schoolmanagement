@@ -17,6 +17,7 @@ use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StatusTrackerController;
 use App\Http\Controllers\ApprovalController;
+use App\Http\Controllers\ClaudeAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Status Tracker ─────────────────────────────────────
@@ -892,6 +893,13 @@ Route::middleware(['auth', 'role:director|admin'])->prefix('director')->name('di
     Route::get('dashboard', [Departmental\DirectorController::class, 'dashboard'])->name('dashboard');
     Route::get('programs',  [Departmental\DirectorController::class, 'programs'])->name('programs');
     Route::get('reports',   [Departmental\DirectorController::class, 'reports'])->name('reports');
+});
+
+// ── Claude Analysis (with prompt caching) ───────────────────────────────────
+Route::middleware(['auth', 'role:admin|dean_academics|program_chair'])->prefix('api')->group(function () {
+    Route::get('claude/student/{studentId}/analyze', [ClaudeAnalysisController::class, 'analyzeStudent'])->name('claude.analyze-student');
+    Route::get('claude/applicant/{applicantId}/evaluate', [ClaudeAnalysisController::class, 'evaluateAdmission'])->name('claude.evaluate-applicant');
+    Route::post('claude/curriculum/{programId}/recommend', [ClaudeAnalysisController::class, 'recommendCurriculum'])->name('claude.recommend-curriculum');
 });
 
 // ── Auth (Breeze) ───────────────────────────────────────────────────────────
