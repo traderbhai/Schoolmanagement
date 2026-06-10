@@ -116,9 +116,8 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <form method="POST" action="{{ route('teacher.assignments.grade') }}">
+                                        <form method="POST" action="{{ route('teacher.assignments.grade', $submission) }}">
                                             @csrf
-                                            <input type="hidden" name="submission_id" value="{{ $submission->id }}">
                                             <input type="number" name="marks" value="{{ $submission->marks }}"
                                                    class="form-control form-control-sm"
                                                    min="0" max="{{ $assignment->max_marks }}"

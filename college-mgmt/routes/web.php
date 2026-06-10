@@ -150,21 +150,21 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('results', [Admin\ResultController::class, 'index'])->name('results.index');
 
     // Admission Configuration (per-program setup)
-    Route::get('admission-config/{program}', [Admin\AdmissionConfigController::class, 'index'])->name('admin.admission-config.index');
-    Route::get('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'editFormConfig'])->name('admin.admission-config.form');
-    Route::post('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'updateFormConfig'])->name('admin.admission-config.form.update');
-    Route::post('admission-config/{program}/documents', [Admin\AdmissionConfigController::class, 'storeDocument'])->name('admin.admission-config.documents.store');
-    Route::put('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'updateDocument'])->name('admin.admission-config.documents.update');
-    Route::delete('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'destroyDocument'])->name('admin.admission-config.documents.destroy');
-    Route::post('admission-config/{program}/documents/seed-defaults', [Admin\AdmissionConfigController::class, 'seedDefaultDocuments'])->name('admin.admission-config.documents.seed');
-    Route::post('admission-config/{program}/steps', [Admin\AdmissionConfigController::class, 'storeStep'])->name('admin.admission-config.steps.store');
-    Route::put('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'updateStep'])->name('admin.admission-config.steps.update');
-    Route::delete('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'destroyStep'])->name('admin.admission-config.steps.destroy');
-    Route::post('admission-config/steps/{step}/parameters', [Admin\AdmissionConfigController::class, 'storeParameter'])->name('admin.admission-config.parameters.store');
-    Route::delete('admission-config/parameters/{parameter}', [Admin\AdmissionConfigController::class, 'destroyParameter'])->name('admin.admission-config.parameters.destroy');
-    Route::post('admission-config/{program}/fee-installments', [Admin\AdmissionConfigController::class, 'storeFeeInstallment'])->name('admin.admission-config.fee.store');
-    Route::put('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'updateFeeInstallment'])->name('admin.admission-config.fee.update');
-    Route::delete('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'destroyFeeInstallment'])->name('admin.admission-config.fee.destroy');
+    Route::get('admission-config/{program}', [Admin\AdmissionConfigController::class, 'index'])->name('admission-config.index');
+    Route::get('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'editFormConfig'])->name('admission-config.form');
+    Route::post('admission-config/{program}/form', [Admin\AdmissionConfigController::class, 'updateFormConfig'])->name('admission-config.form.update');
+    Route::post('admission-config/{program}/documents', [Admin\AdmissionConfigController::class, 'storeDocument'])->name('admission-config.documents.store');
+    Route::put('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'updateDocument'])->name('admission-config.documents.update');
+    Route::delete('admission-config/documents/{document}', [Admin\AdmissionConfigController::class, 'destroyDocument'])->name('admission-config.documents.destroy');
+    Route::post('admission-config/{program}/documents/seed-defaults', [Admin\AdmissionConfigController::class, 'seedDefaultDocuments'])->name('admission-config.documents.seed');
+    Route::post('admission-config/{program}/steps', [Admin\AdmissionConfigController::class, 'storeStep'])->name('admission-config.steps.store');
+    Route::put('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'updateStep'])->name('admission-config.steps.update');
+    Route::delete('admission-config/steps/{step}', [Admin\AdmissionConfigController::class, 'destroyStep'])->name('admission-config.steps.destroy');
+    Route::post('admission-config/steps/{step}/parameters', [Admin\AdmissionConfigController::class, 'storeParameter'])->name('admission-config.parameters.store');
+    Route::delete('admission-config/parameters/{parameter}', [Admin\AdmissionConfigController::class, 'destroyParameter'])->name('admission-config.parameters.destroy');
+    Route::post('admission-config/{program}/fee-installments', [Admin\AdmissionConfigController::class, 'storeFeeInstallment'])->name('admission-config.fee.store');
+    Route::put('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'updateFeeInstallment'])->name('admission-config.fee.update');
+    Route::delete('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'destroyFeeInstallment'])->name('admission-config.fee.destroy');
 
     // Applicants (P2 portal)
     Route::get('applicants', [Admin\ApplicantController::class, 'index'])->name('applicants.index');
@@ -269,6 +269,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('aicte-report', [Admin\AicteReportController::class, 'index'])->name('aicte-report');
     Route::get('aicte-report/export-pdf', [Admin\AicteReportController::class, 'exportPdf'])->name('aicte-report.pdf');
 
+    // Org Hierarchy Config
+    Route::prefix('org-hierarchy')->name('org-hierarchy.')->group(function () {
+        Route::get('/', [Admin\OrgHierarchyController::class, 'index'])->name('index');
+        Route::post('/', [Admin\OrgHierarchyController::class, 'store'])->name('store');
+        Route::patch('/{line}', [Admin\OrgHierarchyController::class, 'update'])->name('update');
+        Route::delete('/{line}', [Admin\OrgHierarchyController::class, 'destroy'])->name('destroy');
+    });
+
     // Audit Log (static routes before wildcards)
     Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
     Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');
@@ -286,6 +294,8 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     Route::get('term-promotions', [Academic\TermPromotionController::class, 'index'])->name('term-promotions.index');
     Route::post('term-promotions/generate', [Academic\TermPromotionController::class, 'generate'])->name('term-promotions.generate');
     Route::get('term-promotions/{termPromotion}', [Academic\TermPromotionController::class, 'show'])->name('term-promotions.show');
+    Route::get('term-promotions/{termPromotion}/edit', [Academic\TermPromotionController::class, 'edit'])->name('term-promotions.edit');
+    Route::put('term-promotions/{termPromotion}', [Academic\TermPromotionController::class, 'update'])->name('term-promotions.update');
     Route::post('term-promotions/{termPromotion}/approve', [Academic\TermPromotionController::class, 'approve'])->name('term-promotions.approve');
     Route::post('term-promotions/{termPromotion}/reject', [Academic\TermPromotionController::class, 'reject'])->name('term-promotions.reject');
     Route::post('term-promotions/bulk-approve', [Academic\TermPromotionController::class, 'bulkApprove'])->name('term-promotions.bulk-approve');
@@ -294,8 +304,8 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     Route::resource('scholarships', Academic\ScholarshipController::class);
 
     // B3: Fee Demands — static routes BEFORE resource wildcard
-    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('academic.fee-demands.generate');
-    Route::post('fee-demands/apply-penalties', [Academic\FeeDemandController::class, 'applyPenalties'])->name('academic.fee-demands.apply-penalties');
+    Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
+    Route::post('fee-demands/apply-penalties', [Academic\FeeDemandController::class, 'applyPenalties'])->name('fee-demands.apply-penalties');
     Route::resource('fee-demands', Academic\FeeDemandController::class);
     Route::post('fee-demands/{feeDemand}/mark-paid', [Academic\FeeDemandController::class, 'markAsPaid'])->name('fee-demands.mark-paid');
 
@@ -438,6 +448,7 @@ Route::middleware(['auth', 'role:admission_officer|admission_head|admin'])->pref
     Route::post('seat-matrices/{program}', [Admission\SeatMatrixController::class, 'store'])->name('seat-matrices.store');
     Route::get('seat-matrices/{seatMatrix}/edit', [Admission\SeatMatrixController::class, 'edit'])->name('seat-matrices.edit');
     Route::put('seat-matrices/{seatMatrix}', [Admission\SeatMatrixController::class, 'update'])->name('seat-matrices.update');
+    Route::delete('seat-matrices/{seatMatrix}', [Admission\SeatMatrixController::class, 'destroy'])->name('seat-matrices.destroy');
 
     // P1-1 and P1-2 lead routes moved to static-before-parameterized section above
 
@@ -749,7 +760,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/publish',                         [Departmental\PmcTimetableController::class, 'publish'])->name('timetable.publish');
     Route::post('timetable/check-conflict',                  [Departmental\PmcTimetableController::class, 'checkConflict'])->name('timetable.check-conflict');
     Route::get('timetable/substitutions',                    [Departmental\PmcTimetableController::class, 'substitutions'])->name('timetable.substitutions');
-    Route::post('timetable/substitutions',                   [Departmental\PmcTimetableController::class, 'createSubstitution'])->name('timetable.substitutions.create');
+    Route::post('timetable/substitutions',                   [Departmental\PmcTimetableController::class, 'createSubstitution'])->name('timetable.substitutions.store');
     Route::get('timetable/availability',                     [Departmental\PmcTimetableController::class, 'teacherAvailability'])->name('timetable.availability');
     Route::post('timetable/availability',                    [Departmental\PmcTimetableController::class, 'saveAvailability'])->name('timetable.availability.save');
 
@@ -783,7 +794,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
 });
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
-Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+Route::middleware(['auth', 'role:hod|admin|director|dean_academics'])->prefix('hod')->name('hod.')->group(function () {
     Route::get('dashboard', [Departmental\HodController::class, 'dashboard'])->name('dashboard');
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
@@ -794,6 +805,7 @@ Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->grou
     Route::post('grievances/{grievance}/escalate', [Departmental\GrievanceManagementController::class, 'escalate'])->name('grievances.escalate');
     // Faculty management
     Route::get('faculty', [Departmental\HodController::class, 'facultyRoster'])->name('faculty.roster');
+    Route::get('faculty/roster', [Departmental\HodController::class, 'facultyRoster'])->name('faculty.roster.alias');
     Route::get('faculty/workload', [Departmental\HodController::class, 'facultyWorkload'])->name('faculty.workload');
     Route::get('leaves', [Departmental\HodController::class, 'leaves'])->name('leaves');
     Route::post('leaves/{leave}/review', [Departmental\HodController::class, 'reviewLeave'])->name('leaves.review');
@@ -825,7 +837,7 @@ Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam
 });
 
 // ── Accounts ─────────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->name('accounts.')->group(function () {
+Route::middleware(['auth', 'role:accounts_officer|admin|director'])->prefix('accounts')->name('accounts.')->group(function () {
     Route::get('dashboard',          [Departmental\AccountsController::class, 'dashboard'])->name('dashboard');
     Route::get('fee-collections',    [Departmental\AccountsController::class, 'feeCollections'])->name('fee-collections');
     Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');

@@ -8,7 +8,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent fw-semibold">New Parameter — {{ $step->name }}</div>
         <div class="card-body">
-            <form action="{{ route('admission.selection-process.store-parameter', $step) }}" method="POST">
+            <form action="{{ route('admission.selection-process.parameters.store', $step) }}" method="POST">
                 @csrf
                 @include('admission.selection-process._parameter-form', ['parameter' => null])
                 <div class="d-flex gap-2 mt-4">

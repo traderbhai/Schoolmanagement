@@ -224,4 +224,44 @@
         <a href="{{ route('dean.academics') }}" class="btn btn-sm btn-outline-success"><i class="bi bi-mortarboard me-1"></i>Academics</a>
     </div>
 </div>
+
+{{-- Academic Unit Overviews (from Org Hierarchy) --}}
+@if(!empty($academicOverview))
+<div class="mt-4">
+    <h6 class="fw-semibold text-muted text-uppercase mb-3" style="font-size:.72rem;letter-spacing:.08em">
+        <i class="bi bi-diagram-3 me-1"></i>Academic Unit Overviews
+    </h6>
+    <div class="row g-3">
+        @foreach($academicOverview as $unit)
+        <div class="col-sm-6 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent d-flex align-items-center gap-2 py-2">
+                    <span class="rounded-circle d-flex align-items-center justify-content-center text-white"
+                        style="width:28px;height:28px;background:var(--clr-{{ $unit['color'] }},var(--clr-primary));font-size:.8rem;flex-shrink:0">
+                        <i class="bi {{ $unit['icon'] }}"></i>
+                    </span>
+                    <span class="fw-semibold small">{{ $unit['label'] }}</span>
+                </div>
+                <div class="card-body py-2 px-3">
+                    @foreach($unit['metrics'] as $m)
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-color:var(--clr-border,#e5e7eb)!important">
+                        <span class="text-muted" style="font-size:.78rem">{{ $m['label'] }}</span>
+                        <span class="fw-bold small">{{ $m['value'] }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                @if($unit['can_full'])
+                <div class="card-footer bg-transparent py-2 text-end">
+                    <a href="{{ route($unit['route']) }}" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.75rem">
+                        {{ $unit['route_label'] }} <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
 @endsection

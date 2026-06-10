@@ -19,52 +19,88 @@
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-2">
-        <div class="card text-center border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold text-info">{{ $facultyCount }}</div>
-                <div class="text-muted small">Faculty Members</div>
+        <div class="kpi-card kpi-cyan">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $facultyCount }}</div>
+                    <div class="kpi-label">Faculty Members</div>
+                </div>
             </div>
+            <div class="kpi-trend"><i class="bi bi-people me-1"></i>Department staff</div>
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="card text-center border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold text-success">{{ $studentCount }}</div>
-                <div class="text-muted small">Active Students</div>
+        <div class="kpi-card kpi-green">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $studentCount }}</div>
+                    <div class="kpi-label">Active Students</div>
+                </div>
             </div>
+            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Enrolled</div>
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="card text-center border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold text-primary">{{ $subjectCount }}</div>
-                <div class="text-muted small">Subjects</div>
+        <div class="kpi-card kpi-blue">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-book-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $subjectCount }}</div>
+                    <div class="kpi-label">Subjects</div>
+                </div>
             </div>
+            <div class="kpi-trend"><i class="bi bi-collection me-1"></i>This term</div>
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
         <a href="{{ route('hod.approvals') }}" class="text-decoration-none">
-            <div class="card text-center border-0 shadow-sm h-100 {{ $pendingApprovals > 0 ? 'border-danger border' : '' }}">
-                <div class="card-body">
-                    <div class="fs-2 fw-bold {{ $pendingApprovals > 0 ? 'text-danger' : 'text-secondary' }}">{{ $pendingApprovals }}</div>
-                    <div class="text-muted small">Pending Approvals</div>
+            <div class="kpi-card {{ $pendingApprovals > 0 ? 'kpi-red' : 'kpi-blue' }}">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-check2-circle"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $pendingApprovals }}</div>
+                        <div class="kpi-label">Pending Approvals</div>
+                    </div>
+                </div>
+                <div class="kpi-trend {{ $pendingApprovals > 0 ? 'up' : '' }}">
+                    @if($pendingApprovals > 0)<i class="bi bi-exclamation-circle me-1"></i>Needs attention
+                    @else
+                    <i class="bi bi-check-all me-1"></i>All clear
+                    @endif
                 </div>
             </div>
         </a>
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="card text-center border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="fs-2 fw-bold {{ $attendancePct < 75 ? 'text-danger' : 'text-success' }}">{{ $attendancePct }}%</div>
-                <div class="text-muted small">Dept. Attendance (30d)</div>
+        <div class="kpi-card {{ $attendancePct < 75 ? 'kpi-red' : 'kpi-green' }}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-calendar-check-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $attendancePct }}%</div>
+                    <div class="kpi-label">Dept. Attendance</div>
+                </div>
+            </div>
+            <div class="kpi-trend {{ $attendancePct >= 75 ? 'up' : 'down' }}">
+                <i class="bi bi-arrow-{{ $attendancePct >= 75 ? 'up' : 'down' }} me-1"></i>Last 30 days
             </div>
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="card text-center border-0 shadow-sm h-100 {{ $pendingLeaves > 0 ? 'border-warning border' : '' }}">
-            <div class="card-body">
-                <div class="fs-2 fw-bold text-warning">{{ $pendingLeaves }}</div>
-                <div class="text-muted small">Pending Leaves</div>
+        <div class="kpi-card {{ $pendingLeaves > 0 ? 'kpi-amber' : 'kpi-blue' }}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-calendar2-minus-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $pendingLeaves }}</div>
+                    <div class="kpi-label">Pending Leaves</div>
+                </div>
+            </div>
+            <div class="kpi-trend {{ $pendingLeaves > 0 ? 'up' : '' }}">
+                @if($pendingLeaves > 0)<i class="bi bi-hourglass-split me-1"></i>Awaiting review
+                @else
+                <i class="bi bi-check me-1"></i>None pending
+                @endif
             </div>
         </div>
     </div>
@@ -135,13 +171,24 @@
 
         {{-- Quick Actions --}}
         <div class="card border-0 shadow-sm mt-3">
-            <div class="card-header bg-transparent fw-semibold"><i class="bi bi-lightning me-2 text-warning"></i>Quick Actions</div>
-            <div class="card-body d-flex flex-wrap gap-2">
-                <a href="{{ route('hod.approvals') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-check2-circle me-1"></i>View Approvals
+            <div class="card-header bg-transparent fw-semibold"><i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Quick Actions</div>
+            <div class="card-body d-flex flex-column gap-2">
+                <a href="{{ route('hod.faculty.roster') }}" class="btn btn-sm btn-outline-cyan text-start">
+                    <i class="bi bi-person-lines-fill me-2"></i>Faculty Roster
                 </a>
-                <a href="{{ route('academic.subjects') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-book me-1"></i>Department Subjects
+                <a href="{{ route('hod.leaves') }}" class="btn btn-sm btn-outline-warning text-start">
+                    <i class="bi bi-calendar2-minus me-2"></i>Leave Requests
+                    @if($pendingLeaves > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingLeaves }}</span>@endif
+                </a>
+                <a href="{{ route('hod.department-performance') }}" class="btn btn-sm btn-outline-success text-start">
+                    <i class="bi bi-bar-chart-line me-2"></i>Dept. Performance
+                </a>
+                <a href="{{ route('hod.grievances.index') }}" class="btn btn-sm btn-outline-danger text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Grievances
+                </a>
+                <a href="{{ route('hod.approvals') }}" class="btn btn-sm btn-outline-primary text-start">
+                    <i class="bi bi-check2-circle me-2"></i>Approvals
+                    @if($pendingApprovals > 0)<span class="badge bg-danger ms-1">{{ $pendingApprovals }}</span>@endif
                 </a>
             </div>
         </div>

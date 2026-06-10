@@ -2,13 +2,13 @@
 @section('title', 'Edit Seat Matrix — ' . $program->name)
 @section('content')
 <div class="mb-4">
-    <a href="{{ route('admin.seat-matrix.index', $program) }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Seat Matrix</a>
+    <a href="{{ route('admission.seat-matrices.index', $program) }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Seat Matrix</a>
     <h2 class="fw-bold mb-0 mt-1">Edit Seat Matrix — {{ $program->name }}</h2>
 </div>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body">
-        <form method="POST" action="{{ route('admin.seat-matrix.update', $matrix) }}">
+        <form method="POST" action="{{ route('admission.seat-matrices.update', $matrix) }}">
             @csrf @method('PUT')
 
             <div class="mb-3">
@@ -54,7 +54,7 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i> Update Seat Matrix
                 </button>
-                <a href="{{ route('admin.seat-matrix.index', $program) }}" class="btn btn-outline-secondary">Cancel</a>
+                <a href="{{ route('admission.seat-matrices.index', $program) }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>
     </div>

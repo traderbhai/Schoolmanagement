@@ -23,13 +23,13 @@ class TimetableController extends Controller
 
         // Get timetable entries for those subjects
         $entries = TimetableEntry::whereIn('subject_id', $enrolledSubjectIds)
-            ->with(['subject', 'classroom', 'teacher.user'])
+            ->with(['subject', 'classroom', 'teacher.user', 'slot'])
             ->orderByRaw("CASE day_of_week
                 WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3
                 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6
                 ELSE 7 END")
-            ->orderBy('start_time')
             ->get()
+            ->sortBy(fn($e) => optional($e->slot)->sort_order ?? 0)
             ->groupBy('day_of_week');
 
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

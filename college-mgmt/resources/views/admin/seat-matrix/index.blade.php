@@ -6,7 +6,7 @@
         <a href="{{ route('admin.programs.show', $program) }}" class="text-muted small"><i class="bi bi-arrow-left"></i> {{ $program->name }}</a>
         <h2 class="fw-bold mb-0 mt-1"><i class="bi bi-grid-3x3-gap me-2"></i>Seat Matrix</h2>
     </div>
-    <a href="{{ route('admin.seat-matrix.create', $program) }}" class="btn btn-primary btn-sm">
+    <a href="{{ route('admission.seat-matrices.create', $program) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg me-1"></i> Add Seat Matrix
     </a>
 </div>
@@ -33,10 +33,10 @@
             @endif
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.seat-matrix.edit', $matrix) }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ route('admission.seat-matrices.edit', $matrix) }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <form method="POST" action="{{ route('admin.seat-matrix.destroy', $matrix) }}" onsubmit="return confirm('Delete this seat matrix?')">
+            <form method="POST" action="{{ route('admission.seat-matrices.destroy', $matrix) }}" onsubmit="return confirm('Delete this seat matrix?')">
                 @csrf @method('DELETE')
                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
             </form>
@@ -83,7 +83,7 @@
     <div class="card-body text-center py-5">
         <i class="bi bi-grid-3x3-gap fs-1 text-muted"></i>
         <p class="mt-3 text-muted">No seat matrix configured yet.</p>
-        <a href="{{ route('admin.seat-matrix.create', $program) }}" class="btn btn-primary">
+        <a href="{{ route('admission.seat-matrices.create', $program) }}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Create Seat Matrix
         </a>
     </div>

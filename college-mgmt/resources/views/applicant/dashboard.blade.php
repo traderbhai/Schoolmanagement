@@ -206,7 +206,7 @@
                             <div class="flex-grow-1">
                                 <span class="{{ $uploadedDocs >= 1 ? 'text-decoration-line-through text-muted' : 'fw-semibold' }}">Upload Required Documents</span>
                             </div>
-                            <a href="{{ route('applicant.documents') }}" class="btn btn-sm btn-outline-primary">Upload</a>
+                            <a href="{{ route('applicant.documents.index') }}" class="btn btn-sm btn-outline-primary">Upload</a>
                         </li>
                         <li class="list-group-item d-flex align-items-center gap-3">
                             <i class="bi {{ $applicant->status !== 'draft' ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted' }} fs-5"></i>
