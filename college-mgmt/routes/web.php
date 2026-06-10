@@ -268,6 +268,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('aicte-report', [Admin\AicteReportController::class, 'index'])->name('aicte-report');
     Route::get('aicte-report/export-pdf', [Admin\AicteReportController::class, 'exportPdf'])->name('aicte-report.pdf');
 
+    // Org Hierarchy Config
+    Route::prefix('org-hierarchy')->name('org-hierarchy.')->group(function () {
+        Route::get('/', [Admin\OrgHierarchyController::class, 'index'])->name('index');
+        Route::post('/', [Admin\OrgHierarchyController::class, 'store'])->name('store');
+        Route::patch('/{line}', [Admin\OrgHierarchyController::class, 'update'])->name('update');
+        Route::delete('/{line}', [Admin\OrgHierarchyController::class, 'destroy'])->name('destroy');
+    });
+
     // Audit Log (static routes before wildcards)
     Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
     Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');
@@ -785,7 +793,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
 });
 
 // ── HOD (Head of Department) ─────────────────────────────────────────────────
-Route::middleware(['auth', 'role:hod|admin'])->prefix('hod')->name('hod.')->group(function () {
+Route::middleware(['auth', 'role:hod|admin|director|dean_academics'])->prefix('hod')->name('hod.')->group(function () {
     Route::get('dashboard', [Departmental\HodController::class, 'dashboard'])->name('dashboard');
     Route::get('approvals', [Departmental\HodController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\HodController::class, 'approve'])->name('approve');
@@ -828,7 +836,7 @@ Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam
 });
 
 // ── Accounts ─────────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:accounts_officer|admin'])->prefix('accounts')->name('accounts.')->group(function () {
+Route::middleware(['auth', 'role:accounts_officer|admin|director'])->prefix('accounts')->name('accounts.')->group(function () {
     Route::get('dashboard',          [Departmental\AccountsController::class, 'dashboard'])->name('dashboard');
     Route::get('fee-collections',    [Departmental\AccountsController::class, 'feeCollections'])->name('fee-collections');
     Route::get('outstanding',        [Departmental\AccountsController::class, 'outstanding'])->name('outstanding');

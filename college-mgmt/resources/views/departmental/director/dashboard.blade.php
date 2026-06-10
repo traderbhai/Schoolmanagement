@@ -1,125 +1,176 @@
 @extends('layouts.admin')
 @section('title', 'Director Dashboard')
+@section('page-title', "Director's Dashboard")
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-0">Institute Director</h4>
-            <span class="text-muted small">Institution-wide overview — enrollment, academics, placements</span>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('director.reports') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-file-earmark-bar-graph me-1"></i> Reports
-            </a>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-1 fw-bold"><i class="bi bi-bank me-2 text-primary"></i>Director's Dashboard</h4>
+        <p class="text-muted mb-0 small">Institute-wide overview &mdash; {{ now()->format('l, d F Y') }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('director.reports') }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-file-earmark-bar-graph me-1"></i>Full Reports
+        </a>
+        <a href="{{ route('admin.org-hierarchy.index') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-diagram-3 me-1"></i>Org Hierarchy
+        </a>
+    </div>
+</div>
+
+{{-- KPI Row --}}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card kpi-blue">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+                <div><div class="kpi-value">{{ $totalStudents }}</div><div class="kpi-label">Total Students</div></div>
+            </div>
+            <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>All programs</div>
         </div>
     </div>
-
-    {{-- KPI Cards --}}
-    <div class="row g-3 mb-4">
-        <div class="col-md-2 col-sm-4">
-            <div class="card border-0 shadow-sm h-100 text-center">
-                <div class="card-body py-3">
-                    <div class="fw-bold fs-3 text-primary">{{ $totalStudents }}</div>
-                    <div class="text-muted small">Total Students</div>
-                </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card kpi-cyan">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
+                <div><div class="kpi-value">{{ $totalFaculty }}</div><div class="kpi-label">Faculty</div></div>
             </div>
-        </div>
-        <div class="col-md-2 col-sm-4">
-            <div class="card border-0 shadow-sm h-100 text-center">
-                <div class="card-body py-3">
-                    <div class="fw-bold fs-3 text-success">{{ $totalPrograms }}</div>
-                    <div class="text-muted small">Active Programs</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2 col-sm-4">
-            <div class="card border-0 shadow-sm h-100 text-center">
-                <div class="card-body py-3">
-                    <div class="fw-bold fs-3 text-info">{{ $totalFaculty }}</div>
-                    <div class="text-muted small">Faculty Members</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2 col-sm-4">
-            <div class="card border-0 shadow-sm h-100 text-center">
-                <div class="card-body py-3">
-                    <div class="fw-bold fs-3 text-warning">{{ $activeDrives }}</div>
-                    <div class="text-muted small">Active Drives</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 col-sm-4">
-            <div class="card border-0 shadow-sm h-100 text-center">
-                <div class="card-body py-3">
-                    <div class="fw-bold fs-3 text-success">{{ $placedThisYear }}</div>
-                    <div class="text-muted small">Placed {{ now()->year }}</div>
-                </div>
-            </div>
+            <div class="kpi-trend"><i class="bi bi-building me-1"></i>Active staff</div>
         </div>
     </div>
-
-    {{-- Program Enrollment --}}
-    <div class="row g-4">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between">
-                    <h6 class="fw-semibold mb-0">Enrollment by Program</h6>
-                    <a href="{{ route('director.programs') }}" class="btn btn-sm btn-outline-secondary">All Programs</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="ps-3">Program</th>
-                                    <th>Code</th>
-                                    <th class="text-end pe-3">Students</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($programs as $program)
-                                <tr>
-                                    <td class="ps-3 fw-medium">{{ $program->name }}</td>
-                                    <td><span class="badge bg-primary-subtle text-primary">{{ $program->code ?? '—' }}</span></td>
-                                    <td class="text-end pe-3">{{ $program->students_count }}</td>
-                                </tr>
-                                @empty
-                                <tr><td colspan="3" class="text-center text-muted py-3">No programs.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card kpi-green">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <div><div class="kpi-value">{{ $totalPrograms }}</div><div class="kpi-label">Programs</div></div>
             </div>
+            <div class="kpi-trend"><i class="bi bi-journal me-1"></i>Active programs</div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pt-3 pb-0">
-                    <h6 class="fw-semibold mb-0">Director Quick Links</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-column gap-2">
-                        <a href="{{ route('dean.dashboard') }}" class="btn btn-outline-primary text-start btn-sm">
-                            <i class="bi bi-mortarboard me-2"></i>Dean Academic View
-                        </a>
-                        <a href="{{ route('accounts.dashboard') }}" class="btn btn-outline-secondary text-start btn-sm">
-                            <i class="bi bi-cash-stack me-2"></i>Accounts View
-                        </a>
-                        <a href="{{ route('cmc.dashboard') }}" class="btn btn-outline-success text-start btn-sm">
-                            <i class="bi bi-briefcase me-2"></i>Placement / CMC View
-                        </a>
-                        <a href="{{ route('admin.audit.index') }}" class="btn btn-outline-dark text-start btn-sm">
-                            <i class="bi bi-journal-text me-2"></i>Audit Log
-                        </a>
-                        <a href="{{ route('director.reports') }}" class="btn btn-outline-info text-start btn-sm">
-                            <i class="bi bi-file-earmark-bar-graph me-2"></i>Institutional Reports
-                        </a>
-                    </div>
-                </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card kpi-purple">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
+                <div><div class="kpi-value">{{ $placedThisYear }}</div><div class="kpi-label">Placed {{ now()->year }}</div></div>
+            </div>
+            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Placement count</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card kpi-amber">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+                <div><div class="kpi-value">{{ $activeDrives }}</div><div class="kpi-label">Active Drives</div></div>
+            </div>
+            <div class="kpi-trend"><i class="bi bi-buildings me-1"></i>Open to students</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-4 col-xl-2">
+        <div class="kpi-card {{ $overallAttendance >= 75 ? 'kpi-green' : 'kpi-red' }}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
+                <div><div class="kpi-value">{{ $overallAttendance }}%</div><div class="kpi-label">Attendance</div></div>
+            </div>
+            <div class="kpi-trend {{ $overallAttendance >= 75 ? 'up' : 'down' }}">
+                <i class="bi bi-arrow-{{ $overallAttendance >= 75 ? 'up' : 'down' }} me-1"></i>Institute-wide
             </div>
         </div>
     </div>
 </div>
+
+{{-- Portal Summaries (from Org Hierarchy) --}}
+@if(!empty($portalSummaries))
+<div class="mb-4">
+    <h6 class="fw-semibold text-muted text-uppercase mb-3" style="font-size:.72rem;letter-spacing:.08em">
+        <i class="bi bi-grid me-1"></i>Department Portal Overviews
+        <a href="{{ route('admin.org-hierarchy.index') }}" class="text-muted ms-2 small fw-normal">Configure &rsaquo;</a>
+    </h6>
+    <div class="row g-3">
+        @foreach($portalSummaries as $portal)
+        @php
+            $colorMap = ['primary'=>'primary','success'=>'success','info'=>'info','warning'=>'warning','purple'=>'purple','dark'=>'dark'];
+            $clr = $colorMap[$portal['color']] ?? 'secondary';
+        @endphp
+        <div class="col-sm-6 col-md-4 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent d-flex align-items-center gap-2 py-2">
+                    <span class="rounded-circle d-flex align-items-center justify-content-center text-white"
+                        style="width:30px;height:30px;background:var(--bs-{{ $clr }},var(--clr-primary));font-size:.9rem;flex-shrink:0">
+                        <i class="bi {{ $portal['icon'] }}"></i>
+                    </span>
+                    <span class="fw-semibold small">{{ $portal['label'] }}</span>
+                </div>
+                <div class="card-body py-2 px-3">
+                    @foreach($portal['metrics'] as $m)
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-color:var(--clr-border,#e5e7eb)!important">
+                        <span class="text-muted" style="font-size:.78rem">{{ $m['label'] }}</span>
+                        <span class="fw-bold small">{{ $m['value'] }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                <div class="card-footer bg-transparent py-2 text-end">
+                    <a href="{{ route($portal['route']) }}" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.75rem">
+                        Open Portal <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
+{{-- Program Enrollment --}}
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <span class="fw-semibold"><i class="bi bi-mortarboard me-2"></i>Program Enrollment</span>
+                <a href="{{ route('director.programs') }}" class="btn btn-sm btn-outline-primary">All Programs</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Program</th><th>Code</th><th class="text-end">Students</th></tr></thead>
+                    <tbody>
+                        @forelse($programs as $prog)
+                        <tr>
+                            <td class="fw-semibold">{{ $prog->name }}</td>
+                            <td class="font-monospace text-muted">{{ $prog->code }}</td>
+                            <td class="text-end">
+                                <span class="badge bg-primary rounded-pill">{{ $prog->students_count }}</span>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3" class="text-center text-muted py-3">No programs found</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent fw-semibold"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Access</div>
+            <div class="card-body d-flex flex-column gap-2 p-3">
+                <a href="{{ route('admin.analytics') }}" class="btn btn-sm btn-outline-primary text-start">
+                    <i class="bi bi-graph-up-arrow me-2"></i>Institute Analytics
+                </a>
+                <a href="{{ route('admin.institutional-kpi') }}" class="btn btn-sm btn-outline-info text-start">
+                    <i class="bi bi-speedometer2 me-2"></i>Institutional KPI
+                </a>
+                <a href="{{ route('admin.aicte-report') }}" class="btn btn-sm btn-outline-secondary text-start">
+                    <i class="bi bi-file-earmark-bar-graph me-2"></i>AICTE Report
+                </a>
+                <a href="{{ route('cmc.placement-stats') }}" class="btn btn-sm btn-outline-success text-start">
+                    <i class="bi bi-briefcase me-2"></i>Placement Statistics
+                </a>
+                <a href="{{ route('admin.org-hierarchy.index') }}" class="btn btn-sm btn-outline-dark text-start">
+                    <i class="bi bi-diagram-3 me-2"></i>Configure Org Hierarchy
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection

@@ -77,11 +77,60 @@ class DeanController extends Controller
         $overdueApprovals = ApprovalWorkflow::where('status','pending')
             ->whereNotNull('due_at')->where('due_at','<',now())->count();
 
+        // Academic unit overviews from org hierarchy
+        $academicOverview = [];
+        try {
+            $childLines = \App\Models\OrgReportingLine::getChildRoles('dean_academics');
+            foreach ($childLines as $line) {
+                $summary = match($line->child_role) {
+                    'program_chair' => [
+                        'label'       => 'Program Chair / PMC',
+                        'icon'        => 'bi-diagram-3-fill',
+                        'color'       => 'primary',
+                        'route'       => 'chair.dashboard',
+                        'route_label' => 'View PMC',
+                        'can_full'    => $line->can_view_full,
+                        'metrics'     => [
+                            ['label' => 'Active Students',    'value' => Student::where('status','active')->count()],
+                            ['label' => 'Pending Approvals',  'value' => ApprovalWorkflow::where('approver_role','program_chair')->where('status','pending')->count()],
+                            ['label' => 'Open Grievances',    'value' => $openGrievances],
+                        ],
+                    ],
+                    'hod' => [
+                        'label'       => 'Head of Department',
+                        'icon'        => 'bi-building',
+                        'color'       => 'success',
+                        'route'       => 'hod.dashboard',
+                        'route_label' => 'View HOD',
+                        'can_full'    => $line->can_view_full,
+                        'metrics'     => [
+                            ['label' => 'Active Faculty',   'value' => $totalFaculty],
+                            ['label' => 'Pending Leaves',   'value' => \App\Models\LeaveApplication::where('status','pending')->count()],
+                        ],
+                    ],
+                    'exam_cell' => [
+                        'label'       => 'Exam Cell',
+                        'icon'        => 'bi-file-earmark-check',
+                        'color'       => 'warning',
+                        'route'       => 'exam-cell.dashboard',
+                        'route_label' => 'View Exam Cell',
+                        'can_full'    => $line->can_view_full,
+                        'metrics'     => [
+                            ['label' => 'Exams This Year',  'value' => $totalExams],
+                            ['label' => 'Pending Appeals',  'value' => \App\Models\MarksAppeal::where('status','pending')->count()],
+                        ],
+                    ],
+                    default => null,
+                };
+                if ($summary) $academicOverview[] = $summary;
+            }
+        } catch (\Throwable $e) {}
+
         return view('departmental.dean.dashboard', compact(
             'totalPrograms', 'totalStudents', 'totalFaculty',
             'totalExams', 'attendancePct', 'programs', 'recentResults',
             'pendingApprovals', 'atRiskStudents', 'recentApprovals',
-            'openGrievances', 'overdueApprovals'
+            'openGrievances', 'overdueApprovals', 'academicOverview'
         ));
     }
 

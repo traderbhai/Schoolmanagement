@@ -333,6 +333,9 @@
         <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
             <i class="bi bi-shield-lock"></i> Legacy Assignments
         </a>
+        <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif">
+            <i class="bi bi-diagram-3-fill"></i> Org Hierarchy
+        </a>
         <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif">
             <i class="bi bi-journal-text"></i> Audit Log
         </a>
@@ -837,6 +840,7 @@
         <a href="{{ route('admin.roles.hierarchy') }}" class="nav-link @if(request()->routeIs('admin.roles.hierarchy')) active @endif"><i class="bi bi-diagram-3"></i> Role Hierarchy</a>
         <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif"><i class="bi bi-key"></i> Permissions</a>
         <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif"><i class="bi bi-person-badge"></i> Role Assignments</a>
+        <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Org Hierarchy</a>
         <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif"><i class="bi bi-journal-text"></i> Audit Log</a>
         <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif"><i class="bi bi-shield-exclamation"></i> Grievances</a>
         <div class="sidebar-divider"></div>
