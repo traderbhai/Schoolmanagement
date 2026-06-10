@@ -1,0 +1,40 @@
+name: Auto-Update Graphify
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'college-mgmt/**/*.php'
+      - 'college-mgmt/**/*.blade.php'
+  workflow_dispatch:
+
+jobs:
+  update-graphify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install graphify
+        run: |
+          pip install graphify --quiet
+
+      - name: Update graphify cache
+        run: |
+          cd college-mgmt
+          graphify update .
+
+      - name: Commit graphify updates
+        run: |
+          git config user.name "Auto-Graphify Bot"
+          git config user.email "bot@example.com"
+          git add college-mgmt/graphify-out/ 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "chore: auto-update graphify cache" || true
+
+      - name: Push changes
+        run: |
+          git push origin main || true
