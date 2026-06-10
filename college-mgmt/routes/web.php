@@ -752,6 +752,10 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/substitutions',                   [Departmental\PmcTimetableController::class, 'createSubstitution'])->name('timetable.substitutions.create');
     Route::get('timetable/availability',                     [Departmental\PmcTimetableController::class, 'teacherAvailability'])->name('timetable.availability');
     Route::post('timetable/availability',                    [Departmental\PmcTimetableController::class, 'saveAvailability'])->name('timetable.availability.save');
+    Route::get('timetable/import',                           [Departmental\PmcTimetableController::class, 'importForm'])->name('timetable.import');
+    Route::post('timetable/validate-import',                 [Departmental\PmcTimetableController::class, 'validateImport'])->name('timetable.validate-import');
+    Route::post('timetable/do-import',                       [Departmental\PmcTimetableController::class, 'doImport'])->name('timetable.do-import');
+    Route::get('timetable/download-sample',                  [Departmental\PmcTimetableController::class, 'downloadSample'])->name('timetable.download-sample');
 
     // PMC Sprint — Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');

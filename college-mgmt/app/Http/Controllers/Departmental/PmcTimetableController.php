@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\TimetableConflictService;
+use App\Services\{TimetableConflictService, TimetableImportService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -281,5 +281,81 @@ class PmcTimetableController extends Controller {
         }
 
         return back()->with('success', 'Availability saved.');
+    }
+
+    // ── Bulk Import from CSV ──────────────────────────────────────────────────
+    public function importForm(Request $request) {
+        $programIds = $this->programIds();
+        $programs   = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms      = Term::orderBy('start_date', 'desc')->take(8)->get();
+        $batches    = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        return view('departmental.program-chair.timetable.import', compact(
+            'programs', 'terms', 'batches', 'selectedProgram', 'selectedTerm', 'selectedBatch'
+        ));
+    }
+
+    public function validateImport(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+            'file'       => 'required|mimes:csv,txt|max:5120',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $result = $service->validateCSV(
+            $request->file('file'),
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        return response()->json($result);
+    }
+
+    public function doImport(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+            'file'       => 'required|mimes:csv,txt|max:5120',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $result = $service->importCSV(
+            $request->file('file'),
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        if ($result['success']) {
+            return back()->with('success', "Imported {$result['imported']} timetable entries.");
+        } else {
+            return back()->with('error', 'Import failed: ' . implode('; ', array_slice($result['errors'], 0, 3)));
+        }
+    }
+
+    public function downloadSample(Request $request) {
+        $request->validate([
+            'batch_id' => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $csv = $service->getSampleCSV($request->batch_id);
+
+        return response($csv, 200)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="timetable_import_sample.csv"');
     }
 }
