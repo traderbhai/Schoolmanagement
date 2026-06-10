@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
-use App\Services\FacultyWorkloadService;
+use App\Services\{FacultyWorkloadService, ClassroomCapacityService};
 use Illuminate\Http\Request;
 
 class ProgramChairController extends Controller
@@ -321,5 +321,35 @@ class ProgramChairController extends Controller
         return response($csv, 200)
             ->header('Content-Type', 'text/csv; charset=utf-8')
             ->header('Content-Disposition', 'attachment; filename="faculty_workload_' . date('Y-m-d') . '.csv"');
+    }
+
+    // ── Classroom Capacity Validation ─────────────────────────────────────────
+    public function capacityReport(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $utilization = [];
+        $violations = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(ClassroomCapacityService::class);
+            $utilization = $service->getUtilizationReport($selectedProgram->id, $selectedTerm->id);
+            $violations = $service->findCapacityViolations($selectedProgram->id, $selectedTerm->id);
+            $summary = $service->getSummary($violations);
+        }
+
+        return view('departmental.program-chair.capacity', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm',
+            'utilization', 'violations', 'summary'
+        ));
     }
 }

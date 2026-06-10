@@ -116,4 +116,22 @@ class TimetableConflictService {
 
         return array_unique($conflicts);
     }
+
+    /**
+     * Check if classroom has sufficient capacity for batch.
+     */
+    public function checkCapacity(int $classroomId, int $batchId): array
+    {
+        $classroom = \App\Models\Classroom::find($classroomId);
+        $batch = \App\Models\Batch::find($batchId);
+
+        $conflicts = [];
+
+        if ($classroom && $batch && $classroom->capacity < $batch->student_count) {
+            $shortage = $batch->student_count - $classroom->capacity;
+            $conflicts[] = "Capacity warning: Room {$classroom->room_number} (capacity {$classroom->capacity}) is too small for {$batch->name} ({$batch->student_count} students, shortage: {$shortage}).";
+        }
+
+        return $conflicts;
+    }
 }
