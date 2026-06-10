@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
+use App\Services\FacultyWorkloadService;
 use Illuminate\Http\Request;
 
 class ProgramChairController extends Controller
@@ -278,5 +279,47 @@ class ProgramChairController extends Controller
         ]);
 
         return back()->with('error', 'Approval rejected.');
+    }
+
+    // ── Faculty Workload Report ───────────────────────────────────────────────
+    public function workloadReport(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $report = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(FacultyWorkloadService::class);
+            $report = $service->getWorkloadReport($selectedProgram->id, $selectedTerm->id);
+            $summary = $service->getSummary($report);
+        }
+
+        return view('departmental.program-chair.workload', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm', 'report', 'summary'
+        ));
+    }
+
+    public function workloadExport(Request $request)
+    {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+        ]);
+
+        $service = app(FacultyWorkloadService::class);
+        $csv = $service->exportAsCSV($request->program_id, $request->term_id);
+
+        return response($csv, 200)
+            ->header('Content-Type', 'text/csv; charset=utf-8')
+            ->header('Content-Disposition', 'attachment; filename="faculty_workload_' . date('Y-m-d') . '.csv"');
     }
 }
