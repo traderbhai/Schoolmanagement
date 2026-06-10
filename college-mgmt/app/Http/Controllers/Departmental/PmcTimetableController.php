@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService};
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -606,5 +606,66 @@ class PmcTimetableController extends Controller {
         );
 
         return response()->json(['suggestions' => $suggestions]);
+    }
+
+    // ── Auto-Scheduling Algorithm ─────────────────────────────────────────────
+    public function suggestAutoSchedule(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(AutoSchedulingService::class);
+        $result = $service->suggestSchedule(
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        return response()->json($result);
+    }
+
+    public function acceptAutoScheduleSuggestions(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'suggestions' => 'required|array',
+            'suggestions.*.subject_id' => 'required|exists:subjects,id',
+            'suggestions.*.batch_id' => 'required|exists:batches,id',
+            'suggestions.*.teacher_id' => 'required|exists:teachers,id',
+            'suggestions.*.classroom_id' => 'required|exists:classrooms,id',
+            'suggestions.*.day_of_week' => 'required|integer|between:1,6',
+            'suggestions.*.timetable_slot_id' => 'required|exists:timetable_slots,id',
+        ]);
+
+        $created = 0;
+        $errors = [];
+
+        foreach ($request->suggestions as $suggestion) {
+            try {
+                TimetableEntry::create([
+                    'program_id' => $request->program_id,
+                    'term_id' => $request->term_id,
+                    'batch_id' => $suggestion['batch_id'],
+                    'subject_id' => $suggestion['subject_id'],
+                    'teacher_id' => $suggestion['teacher_id'],
+                    'classroom_id' => $suggestion['classroom_id'],
+                    'day_of_week' => $suggestion['day_of_week'],
+                    'timetable_slot_id' => $suggestion['timetable_slot_id'],
+                    'is_active' => true,
+                    'status' => 'draft',
+                ]);
+                $created++;
+            } catch (\Exception $e) {
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        if ($created > 0) {
+            return back()->with('success', "Auto-scheduled {$created} entries. Review and adjust as needed.");
+        } else {
+            return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
+        }
     }
 }
