@@ -1,15 +1,16 @@
-# Graph Report - .  (2026-06-10)
+# Graph Report - college-mgmt  (2026-06-10)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 986 files · ~263,631 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3562 nodes · 5242 edges · 789 communities (679 shown, 110 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 127 edges (avg confidence: 0.8)
+- 3994 nodes · 5900 edges · 827 communities (717 shown, 110 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 143 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5aaf5461`
+- Built from commit: `0eb194df`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -59,6 +60,7 @@
 - [[_COMMUNITY_Community 42|Community 42]]
 - [[_COMMUNITY_Community 43|Community 43]]
 - [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
 - [[_COMMUNITY_Community 46|Community 46]]
 - [[_COMMUNITY_Community 47|Community 47]]
 - [[_COMMUNITY_Community 48|Community 48]]
@@ -105,6 +107,7 @@
 - [[_COMMUNITY_Community 89|Community 89]]
 - [[_COMMUNITY_Community 90|Community 90]]
 - [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
 - [[_COMMUNITY_Community 93|Community 93]]
 - [[_COMMUNITY_Community 94|Community 94]]
 - [[_COMMUNITY_Community 95|Community 95]]
@@ -159,6 +162,8 @@
 - [[_COMMUNITY_Community 144|Community 144]]
 - [[_COMMUNITY_Community 145|Community 145]]
 - [[_COMMUNITY_Community 146|Community 146]]
+- [[_COMMUNITY_Community 147|Community 147]]
+- [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
 - [[_COMMUNITY_Community 150|Community 150]]
 - [[_COMMUNITY_Community 151|Community 151]]
@@ -208,6 +213,10 @@
 - [[_COMMUNITY_Community 195|Community 195]]
 - [[_COMMUNITY_Community 196|Community 196]]
 - [[_COMMUNITY_Community 197|Community 197]]
+- [[_COMMUNITY_Community 198|Community 198]]
+- [[_COMMUNITY_Community 199|Community 199]]
+- [[_COMMUNITY_Community 200|Community 200]]
+- [[_COMMUNITY_Community 201|Community 201]]
 - [[_COMMUNITY_Community 202|Community 202]]
 - [[_COMMUNITY_Community 203|Community 203]]
 - [[_COMMUNITY_Community 204|Community 204]]
@@ -252,17 +261,44 @@
 - [[_COMMUNITY_Community 343|Community 343]]
 - [[_COMMUNITY_Community 344|Community 344]]
 - [[_COMMUNITY_Community 345|Community 345]]
+- [[_COMMUNITY_Community 789|Community 789]]
+- [[_COMMUNITY_Community 790|Community 790]]
+- [[_COMMUNITY_Community 791|Community 791]]
+- [[_COMMUNITY_Community 792|Community 792]]
+- [[_COMMUNITY_Community 793|Community 793]]
+- [[_COMMUNITY_Community 794|Community 794]]
+- [[_COMMUNITY_Community 795|Community 795]]
+- [[_COMMUNITY_Community 796|Community 796]]
+- [[_COMMUNITY_Community 797|Community 797]]
+- [[_COMMUNITY_Community 798|Community 798]]
+- [[_COMMUNITY_Community 799|Community 799]]
+- [[_COMMUNITY_Community 800|Community 800]]
+- [[_COMMUNITY_Community 801|Community 801]]
+- [[_COMMUNITY_Community 802|Community 802]]
+- [[_COMMUNITY_Community 803|Community 803]]
+- [[_COMMUNITY_Community 804|Community 804]]
+- [[_COMMUNITY_Community 805|Community 805]]
+- [[_COMMUNITY_Community 806|Community 806]]
+- [[_COMMUNITY_Community 807|Community 807]]
+- [[_COMMUNITY_Community 808|Community 808]]
+- [[_COMMUNITY_Community 809|Community 809]]
+- [[_COMMUNITY_Community 810|Community 810]]
+- [[_COMMUNITY_Community 811|Community 811]]
+- [[_COMMUNITY_Community 812|Community 812]]
+- [[_COMMUNITY_Community 813|Community 813]]
+- [[_COMMUNITY_Community 816|Community 816]]
+- [[_COMMUNITY_Community 817|Community 817]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Controller` - 325 edges
-2. `TestCase` - 49 edges
-3. `Batch` - 36 edges
-4. `Term` - 33 edges
-5. `Applicant` - 28 edges
-6. `AdmissionController` - 26 edges
-7. `Student` - 26 edges
-8. `Teacher` - 25 edges
-9. `CmcController` - 25 edges
+1. `Controller` - 336 edges
+2. `TestCase` - 60 edges
+3. `Batch` - 40 edges
+4. `Term` - 35 edges
+5. `Applicant` - 30 edges
+6. `Teacher` - 27 edges
+7. `Student` - 27 edges
+8. `AdmissionController` - 26 edges
+9. `CmcController` - 26 edges
 10. `Department` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -280,15 +316,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (789 total, 110 thin omitted)
+## Communities (827 total, 110 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (16): HasFactory, AcademicEvent, AdmissionPayment, AdmissionTeamNote, CounsellingLog, Course, GrievanceComment, Notification (+8 more)
+Nodes (16): AssignmentSubmission, HasFactory, AdmissionTeamNote, Assignment, AttendanceCondonation, CounsellingLog, Course, GrievanceComment (+8 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.07
-Nodes (18): TeacherController, Request, Request, Request, LeaveApplication, Request, StudentGrievance, Request (+10 more)
+Nodes (20): Request, Request, LeaveApplication, Request, StudentGrievance, Request, Request, Student (+12 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.05
@@ -296,19 +332,19 @@ Nodes (20): RoleAssignmentController, Student, User, Request, Request, ApprovalW
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
-Nodes (18): BelongsTo, Model, AcademicYear, AdmissionFormConfig, AlumniProfile, Attendance, Classroom, Company (+10 more)
+Nodes (15): Model, AdmissionFormConfig, Attendance, Classroom, Company, DocumentVerificationRequest, FeePayment, MeritListEntry (+7 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (20): TimetableSlotController, ScoringController, SelectionSessionController, Request, Applicant, Request, SelectionSession, Applicant (+12 more)
+Cohesion: 0.19
+Nodes (5): ScoringController, Applicant, Request, SelectionSession, ApplicantScore
 
 ### Community 5 - "Community 5"
 Cohesion: 0.05
-Nodes (21): RoleFeatureAccessController, Request, Role, ApprovalWorkflow, Request, BelongsTo, Program, Role (+13 more)
+Nodes (22): RoleFeatureAccessController, Request, Role, ApprovalWorkflow, Request, BelongsTo, Program, Role (+14 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.07
-Nodes (15): CareerEvent, Company, Placement, PlacementDrive, Request, CareerEvent, Request, AuthorizesRequests (+7 more)
+Cohesion: 0.10
+Nodes (11): CareerEvent, Company, Placement, PlacementDrive, Request, Request, AuthorizesRequests, CmcController (+3 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
@@ -316,83 +352,87 @@ Nodes (14): FeeController, FeePayment, Request, FeeDemand, Request, ParentProfil
 
 ### Community 8 - "Community 8"
 Cohesion: 0.05
-Nodes (16): AnalyticsController, FacultyReportController, DashboardController, Request, DashboardController, StatusController, Controller, DirectorController (+8 more)
+Nodes (21): AnalyticsController, FacultyReportController, ApplicationPdfController, DashboardController, LeadImportController, ReportingController, Applicant, Request (+13 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.08
-Nodes (17): ApplicationWindowController, LeadFollowUpController, Program, Request, Lead, Request, Program, Request (+9 more)
+Cohesion: 0.17
+Nodes (6): Command, CheckApprovalSla, CloseExpiredApplicationWindows, MarkOverdueFeedemands, SendApplicationDeadlineReminders, SendFollowUpReminders
 
 ### Community 10 - "Community 10"
-Cohesion: 0.09
-Nodes (14): BulkMailController, ApplicationPdfController, DocumentVerificationController, Collection, Request, Applicant, ApplicantDocument, Request (+6 more)
+Cohesion: 0.08
+Nodes (14): BulkMailController, DocumentVerificationController, SelectionSessionController, Collection, Request, ApplicantDocument, Request, Applicant (+6 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.11
-Nodes (8): AdmissionController, Admission, Program, Request, RequiredDocument, ScoringParameter, SelectionProcessStep, Request
+Cohesion: 0.12
+Nodes (12): AdmissionConfigController, AdmissionController, Admission, AdmissionFeeInstallment, Program, Request, RequiredDocument, ScoringParameter (+4 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (9): ClassroomController, ExamController, TimetableController, Request, Exam, Request, Request, Classroom (+1 more)
+Cohesion: 0.31
+Nodes (3): ExamController, Exam, Request
 
 ### Community 13 - "Community 13"
 Cohesion: 0.09
 Nodes (16): AuditController, RolePermissionController, UserRoleController, Request, Request, Role, Request, User (+8 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.09
-Nodes (13): Subject, Subject, Subject, Request, Request, CourseHubController, DashboardController, StudyMaterialController (+5 more)
+Cohesion: 0.17
+Nodes (7): Subject, Subject, Request, CourseHubController, StudyMaterialController, StudyMaterial, MaterialController
 
 ### Community 15 - "Community 15"
 Cohesion: 0.09
 Nodes (14): RedirectResponse, Request, View, RedirectResponse, Request, View, RedirectResponse, LoginRequest (+6 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.09
-Nodes (11): BatchFactory, DepartmentFactory, ExamFactory, ExamResultFactory, LeadFactory, NotificationFactory, ScholarshipFactory, SubjectFactory (+3 more)
+Cohesion: 0.07
+Nodes (13): AcademicYearFactory, ApplicantFactory, DepartmentFactory, ExamFactory, ExamResultFactory, LeadFactory, NotificationFactory, ProgramFactory (+5 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.11
-Nodes (13): ReportController, ReportingController, SeatMatrixController, WaitlistController, FeePayment, Semester, Student, Program (+5 more)
+Cohesion: 0.12
+Nodes (12): ReportController, SeatMatrixController, WaitlistController, FeePayment, Semester, Student, Program, Request (+4 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (7): Exam, Request, Student, Request, ExamCellController, MarksAppeal, MarksAppealController
 
 ### Community 19 - "Community 19"
-Cohesion: 0.14
-Nodes (9): StudentController, PaymentVerificationController, Request, Student, AdmissionPayment, Applicant, Program, Request (+1 more)
+Cohesion: 0.10
+Nodes (14): ActivityLogController, StudentController, PaymentVerificationController, Request, Request, Student, AdmissionPayment, Applicant (+6 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.18
 Nodes (8): SeatMatrixController, MeritListController, Program, Request, MeritListEntry, Program, Request, ProgramSeatMatrix
 
 ### Community 21 - "Community 21"
-Cohesion: 0.10
-Nodes (6): AuthenticationTest, EmailVerificationTest, PasswordResetTest, PasswordUpdateTest, RegistrationTest, RefreshDatabase
+Cohesion: 0.11
+Nodes (5): AuthenticationTest, EmailVerificationTest, PasswordUpdateTest, ProfileTest, RefreshDatabase
 
 ### Community 23 - "Community 23"
 Cohesion: 0.16
 Nodes (7): Request, Request, Student, MentorMeeting, MentorMessage, MentorController, MentorController
 
 ### Community 24 - "Community 24"
-Cohesion: 0.20
-Nodes (5): LeaveController, LeaveApplication, Request, Lead, Request
+Cohesion: 0.23
+Nodes (6): LeaveController, LeadController, LeaveApplication, Request, Lead, Request
+
+### Community 25 - "Community 25"
+Cohesion: 0.15
+Nodes (3): AssessmentComponentTest, AssessmentComponent, ExamResult
 
 ### Community 26 - "Community 26"
-Cohesion: 0.09
+Cohesion: 0.08
 Nodes (3): Program, SelectionProcessStep, Specialization
 
 ### Community 27 - "Community 27"
-Cohesion: 0.11
-Nodes (6): BaseTestCase, AttendanceFeatureTest, ExampleTest, ProfileTest, TestCase, ExampleTest
+Cohesion: 0.10
+Nodes (7): PasswordConfirmationTest, RegistrationTest, BaseTestCase, AttendanceFeatureTest, ExampleTest, TestCase, ExampleTest
 
 ### Community 29 - "Community 29"
-Cohesion: 0.22
+Cohesion: 0.21
 Nodes (7): ApplicantController, ApplicantCrmController, Applicant, Request, Applicant, ApplicantDocument, Request
 
 ### Community 30 - "Community 30"
-Cohesion: 0.21
-Nodes (7): Dispatchable, InteractsWithQueue, SendBulkNoticeEmail, SendExamResultsEmail, SendFeeReceiptEmail, SendWelcomeEmail, SerializesModels
+Cohesion: 0.23
+Nodes (8): Dispatchable, InteractsWithQueue, SendBulkNoticeEmail, SendExamResultsEmail, SendFeeReceiptEmail, SendWelcomeEmail, SerializesModels, ShouldQueue
 
 ### Community 32 - "Community 32"
 Cohesion: 0.15
@@ -411,8 +451,8 @@ Cohesion: 0.12
 Nodes (16): devDependencies, alpinejs, autoprefixer, concurrently, laravel-vite-plugin, postcss, tailwindcss, @tailwindcss/forms (+8 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.21
-Nodes (5): TermPromotionController, Request, AcademicSummaryController, PromotionStatusController, TermPromotion
+Cohesion: 0.36
+Nodes (3): TermPromotionController, Request, TermPromotion
 
 ### Community 37 - "Community 37"
 Cohesion: 0.18
@@ -426,37 +466,37 @@ Nodes (4): PlacementDriveController, Placement, PlacementDrive, Request
 Cohesion: 0.30
 Nodes (4): ApprovalWorkflow, LeaveApplication, Request, HodController
 
+### Community 41 - "Community 41"
+Cohesion: 0.08
+Nodes (5): BelongsTo, BelongsTo, ExamAnomalyLog, SubjectFacultyAssignment, TimetableEntry
+
 ### Community 42 - "Community 42"
 Cohesion: 0.26
 Nodes (3): FeeDemandController, FeeDemand, Request
 
 ### Community 43 - "Community 43"
 Cohesion: 0.24
-Nodes (4): AcademicYear, AcademicYearController, Request, AcademicYearFactory
+Nodes (4): AcademicYear, AcademicYearController, Request, SemesterFactory
 
 ### Community 44 - "Community 44"
-Cohesion: 0.33
-Nodes (4): OfferLetterController, OfferLetter, Program, Request
+Cohesion: 0.16
+Nodes (8): FeeInstallmentController, OfferLetterController, AdmissionFeeInstallment, Program, Request, OfferLetter, Program, Request
 
 ### Community 46 - "Community 46"
-Cohesion: 0.35
-Nodes (4): FeeInstallmentController, AdmissionFeeInstallment, Program, Request
+Cohesion: 0.05
+Nodes (37): 1. Sprint Planning (Day 1), 2. Feature Design (Day 1-2), 3. Implementation (Day 2-4), 4. Code Review (Day 4-5), At Sprint End, Before Committing, Before Each AI Interaction:, Before Major Refactors (+29 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.21
-Nodes (5): Request, Request, NotificationPreferenceController, NotificationPreference, NotificationPreferenceController
+Cohesion: 0.13
+Nodes (8): EmailLogController, Request, Request, Request, NotificationPreferenceController, EmailLog, NotificationPreference, NotificationPreferenceController
 
 ### Community 49 - "Community 49"
-Cohesion: 0.33
-Nodes (3): AcademicCalendarController, AcademicCalendar, Request
-
-### Community 50 - "Community 50"
-Cohesion: 0.27
-Nodes (4): TranscriptController, Request, Student, BelongsTo
+Cohesion: 0.24
+Nodes (4): AcademicCalendarController, AcademicCalendar, Request, AcademicCalendarFactory
 
 ### Community 51 - "Community 51"
-Cohesion: 0.30
-Nodes (3): BatchController, Request, Batch
+Cohesion: 0.22
+Nodes (4): BatchController, Request, Batch, BatchFactory
 
 ### Community 52 - "Community 52"
 Cohesion: 0.38
@@ -483,12 +523,12 @@ Cohesion: 0.33
 Nodes (3): ScholarshipController, Request, Scholarship
 
 ### Community 62 - "Community 62"
-Cohesion: 0.33
-Nodes (3): CourseController, Request, Course
+Cohesion: 0.23
+Nodes (4): CourseController, Request, Course, CourseFactory
 
 ### Community 63 - "Community 63"
-Cohesion: 0.33
-Nodes (3): DepartmentController, Request, Department
+Cohesion: 0.23
+Nodes (4): DashboardController, DepartmentController, Request, Department
 
 ### Community 64 - "Community 64"
 Cohesion: 0.33
@@ -511,44 +551,36 @@ Cohesion: 0.33
 Nodes (3): SubjectController, Request, Subject
 
 ### Community 69 - "Community 69"
-Cohesion: 0.31
+Cohesion: 0.30
 Nodes (4): Request, InternshipController, Internship, InternshipViewController
 
 ### Community 70 - "Community 70"
-Cohesion: 0.49
-Nodes (4): Request, Subject, DiscussionController, SubjectDiscussion
-
-### Community 71 - "Community 71"
-Cohesion: 0.22
-Nodes (3): Request, DocumentRequest, DocumentRequestController
-
-### Community 72 - "Community 72"
-Cohesion: 0.22
-Nodes (3): Request, FeePaymentRequest, FeePaymentRequestController
+Cohesion: 0.06
+Nodes (33): A. Role Hierarchy, Acceptance Criteria (Definition of Done), B. Program Scoping, Blockers & Risks, C. Feature Access, Code Patterns, D. Audit Logging, Day 10: Documentation & Handoff (+25 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.42
-Nodes (3): Request, StudentGrievance, GrievanceController
+Cohesion: 0.38
+Nodes (4): Request, Student, StudentGrievance, GrievanceController
 
 ### Community 74 - "Community 74"
-Cohesion: 0.25
-Nodes (4): Request, ScholarshipScheme, StudentScholarshipApplication, ScholarshipController
+Cohesion: 0.06
+Nodes (32): 1-Hour Cache (Longer TTL), 1. Install Dependencies, 2. Configure Environment, 3. Service Configuration, 5-Minute (Default) Cache, After Caching (with prompt caching), API Errors, API Key Security (+24 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.35
 Nodes (4): Assignment, AssignmentSubmission, Request, AssignmentController
 
 ### Community 76 - "Community 76"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, ApplicationRejected
 
 ### Community 77 - "Community 77"
-Cohesion: 0.29
-Nodes (7): Content, Envelope, Content, Envelope, ExamResultsMail, NoticeMail, Mailable
+Cohesion: 0.43
+Nodes (4): Content, Envelope, ExamResultsMail, Queueable
 
 ### Community 78 - "Community 78"
-Cohesion: 0.29
-Nodes (7): Content, Envelope, Content, Envelope, FeeReceiptMail, WelcomeStudentMail, Queueable
+Cohesion: 0.48
+Nodes (3): Content, Envelope, FeeReceiptMail
 
 ### Community 81 - "Community 81"
 Cohesion: 0.40
@@ -559,8 +591,8 @@ Cohesion: 0.38
 Nodes (3): CompanyController, Company, Request
 
 ### Community 84 - "Community 84"
-Cohesion: 0.36
-Nodes (4): EnrollmentController, Applicant, EnrollmentConfirmation, Request
+Cohesion: 0.19
+Nodes (8): SpecializationController, EnrollmentController, Program, Request, Applicant, EnrollmentConfirmation, Request, Specialization
 
 ### Community 85 - "Community 85"
 Cohesion: 0.38
@@ -571,8 +603,8 @@ Cohesion: 0.40
 Nodes (3): OfferLetter, Request, OfferLetterController
 
 ### Community 88 - "Community 88"
-Cohesion: 0.27
-Nodes (3): Exam, ExamRegistration, ExamRegistrationController
+Cohesion: 0.09
+Nodes (7): BelongsTo, CareerEventRegistration, ExamRegistration, FeePaymentRequest, StudentResume, SubjectDiscussionReply, MasterDataSeeder
 
 ### Community 90 - "Community 90"
 Cohesion: 0.33
@@ -603,8 +635,8 @@ Cohesion: 0.39
 Nodes (5): RedirectResponse, Request, View, ProfileController, ProfileUpdateRequest
 
 ### Community 101 - "Community 101"
-Cohesion: 0.31
-Nodes (3): Request, StudentResume, ResumeController
+Cohesion: 0.10
+Nodes (20): 17. Academic Phase Implementation Roadmap, 8 Phases (Detailed Roadmaps Available), Critical Success Factors, Database Impact, Middleware / Role Gates, Next Steps, Offer Letter Auto-Generation, Overview (+12 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.44
@@ -613,6 +645,14 @@ Nodes (4): Enrollment, Request, Student, SubjectRegistrationController
 ### Community 103 - "Community 103"
 Cohesion: 0.39
 Nodes (3): LeaveApplication, Request, LeaveController
+
+### Community 104 - "Community 104"
+Cohesion: 0.16
+Nodes (5): TimetableSlotController, Request, DashboardController, TimetableController, TimetableSlot
+
+### Community 105 - "Community 105"
+Cohesion: 0.11
+Nodes (17): Admission Status Flow, Approval Chain (Offer Letters), College Management System — Developer Context, Critical SQLite Rules (DO NOT FORGET), Current Test Status (last run 2026-06-06), Dev Commands, Development Strategy: Department-by-Department Feature Sprints, Enrollment Number Format (+9 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.33
@@ -626,9 +666,17 @@ Nodes (8): description, keywords, license, minimum-stability, name, prefer-stabl
 Cohesion: 0.22
 Nodes (9): scripts, dev, post-autoload-dump, post-create-project-cmd, post-root-package-install, post-update-cmd, pre-package-uninstall, setup (+1 more)
 
+### Community 109 - "Community 109"
+Cohesion: 0.07
+Nodes (14): TranscriptController, ResultController, Request, Student, Request, Request, Request, Request (+6 more)
+
+### Community 113 - "Community 113"
+Cohesion: 0.23
+Nodes (3): TimetableService, TimetableService, TimetableServiceTest
+
 ### Community 115 - "Community 115"
-Cohesion: 0.50
-Nodes (3): TermController, Request, Term
+Cohesion: 0.22
+Nodes (5): TermController, Request, FeeDemandFactory, TermPromotionFactory, Term
 
 ### Community 117 - "Community 117"
 Cohesion: 0.43
@@ -654,13 +702,17 @@ Nodes (8): require, barryvdh/laravel-dompdf, laravel/breeze, laravel/framework, 
 Cohesion: 0.25
 Nodes (8): require-dev, fakerphp/faker, laravel/pail, laravel/pao, laravel/pint, mockery/mockery, nunomaduro/collision, phpunit/phpunit
 
+### Community 128 - "Community 128"
+Cohesion: 0.17
+Nodes (6): Subject, Request, DashboardController, SubjectAnnouncementController, SubjectAnnouncement, AnnouncementController
+
 ### Community 130 - "Community 130"
 Cohesion: 0.52
 Nodes (3): GrievanceController, Request, StudentGrievance
 
 ### Community 131 - "Community 131"
-Cohesion: 0.43
-Nodes (4): SpecializationController, Program, Request, Specialization
+Cohesion: 0.22
+Nodes (4): OrgHierarchyController, Request, DirectorController, OrgReportingLine
 
 ### Community 132 - "Community 132"
 Cohesion: 0.43
@@ -682,6 +734,10 @@ Nodes (3): FeePayment, Semester, ReportController
 Cohesion: 0.48
 Nodes (3): Exam, Request, ExamController
 
+### Community 141 - "Community 141"
+Cohesion: 0.14
+Nodes (14): 4. Admin Panel, Academic Years, Admissions Config (via Admin), Batches (`/admin/batches`), Classrooms, Departments, Fee Structures, Notices (`/admin/notices`) (+6 more)
+
 ### Community 144 - "Community 144"
 Cohesion: 0.57
 Nodes (3): Notification, User, NotificationPolicy
@@ -693,6 +749,14 @@ Nodes (3): ApprovalWorkflow, Collection, ApprovalWorkflowService
 ### Community 146 - "Community 146"
 Cohesion: 0.29
 Nodes (7): pestphp/pest-plugin, php-http/discovery, config, allow-plugins, optimize-autoloader, preferred-install, sort-packages
+
+### Community 147 - "Community 147"
+Cohesion: 0.28
+Nodes (4): down(), up(), down(), up()
+
+### Community 148 - "Community 148"
+Cohesion: 0.28
+Nodes (4): down(), up(), down(), up()
 
 ### Community 154 - "Community 154"
 Cohesion: 0.53
@@ -712,79 +776,115 @@ Nodes (4): RedirectResponse, Request, View, EmailVerificationPromptController
 
 ### Community 159 - "Community 159"
 Cohesion: 0.33
-Nodes (6): autoload, autoload-dev, psr-4, App\\, Database\\Factories\\, Tests\\
+Nodes (7): autoload, autoload-dev, psr-4, psr-4, App\\, Database\\Factories\\, Tests\\
+
+### Community 162 - "Community 162"
+Cohesion: 0.27
+Nodes (3): TeacherController, Request, Teacher
+
+### Community 165 - "Community 165"
+Cohesion: 0.29
+Nodes (3): ClassroomController, Request, Classroom
+
+### Community 169 - "Community 169"
+Cohesion: 0.35
+Nodes (4): ApplicationWindowController, Program, Request, ApplicationWindow
+
+### Community 170 - "Community 170"
+Cohesion: 0.26
+Nodes (5): Database\\Seeders\\, Seeder, DatabaseSeeder, DemoDataSeeder, RoleFeatureAccessSeeder
 
 ### Community 172 - "Community 172"
-Cohesion: 0.60
-Nodes (3): RedirectResponse, Request, EmailVerificationNotificationController
+Cohesion: 0.17
+Nodes (11): 13. Applicant Self-Service Portal, 1. System Overview, 2. User Roles & Demo Credentials, 5. Admission Head Portal, 8. HOD Portal, After Registration (applicant role login), Application Form Sections, Approvals (`/hod/approvals`) (+3 more)
 
 ### Community 173 - "Community 173"
 Cohesion: 0.60
 Nodes (3): RedirectResponse, Request, PasswordController
 
 ### Community 179 - "Community 179"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, ApplicationReceived
 
 ### Community 180 - "Community 180"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, ApplicationSelected
 
 ### Community 181 - "Community 181"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, ApplicationShortlisted
 
 ### Community 182 - "Community 182"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, DocumentRejected
 
 ### Community 183 - "Community 183"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, EnrollmentConfirmed
 
 ### Community 184 - "Community 184"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, ExamResultPublished
 
 ### Community 185 - "Community 185"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, FeeDueReminder
 
 ### Community 186 - "Community 186"
-Cohesion: 0.29
-Nodes (7): Content, Envelope, Content, Envelope, FeePaymentReceipt, NoticePublished, ShouldQueue
+Cohesion: 0.48
+Nodes (3): Content, Envelope, FeePaymentReceipt
 
 ### Community 187 - "Community 187"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, FollowUpReminder
 
 ### Community 188 - "Community 188"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, LowAttendanceAlert
 
 ### Community 189 - "Community 189"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, NewApplicationAlert
 
 ### Community 191 - "Community 191"
-Cohesion: 0.60
-Nodes (3): Content, Envelope, OfferLetterMail
+Cohesion: 0.43
+Nodes (4): Content, Envelope, OfferLetterMail, Mailable
 
 ### Community 192 - "Community 192"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, PaymentRejected
 
 ### Community 193 - "Community 193"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, PaymentVerified
 
 ### Community 194 - "Community 194"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, SessionScheduled
 
+### Community 195 - "Community 195"
+Cohesion: 0.35
+Nodes (10): analyze(), before_chat(), create_prompt_template(), generate_grep_patterns(), generate_queries(), init_context(), main(), run_graphify_queries() (+2 more)
+
+### Community 196 - "Community 196"
+Cohesion: 0.18
+Nodes (11): 15. Route Map, Academic Routes (`/academic/*`), Accounts Routes (`/accounts/*`), Admin Routes (`/admin/*`), Admission Routes (`/admission/*`), Departmental Routes, Exam Cell Routes (`/exam-cell/*`), Parent Routes (`/parent/*`) (+3 more)
+
 ### Community 197 - "Community 197"
-Cohesion: 0.60
+Cohesion: 0.48
 Nodes (3): Content, Envelope, GenericBulkMail
+
+### Community 206 - "Community 206"
+Cohesion: 0.42
+Nodes (4): LeadFollowUpController, Lead, Request, LeadFollowUp
+
+### Community 208 - "Community 208"
+Cohesion: 0.22
+Nodes (9): ACADEMIC CALENDAR MANAGEMENT, ASSESSMENT & MARKS MANAGEMENT, CURRICULUM MANAGEMENT, ELECTIVE MANAGEMENT (Unique to PMC), FACULTY COORDINATION, PMC Feature Master List, REPORTING & ANALYTICS, STUDENT MANAGEMENT (PMC's Central Responsibility) (+1 more)
+
+### Community 209 - "Community 209"
+Cohesion: 0.22
+Nodes (9): 11. Student Portal, Attendance (`/student/attendance`), Dashboard (`/student/dashboard`), Fees (`/student/fees`), Notices (`/student/notices`), Profile (`/student/profile`), Results (`/student/results`), Subject Registration (`/student/subjects`) (+1 more)
 
 ### Community 214 - "Community 214"
 Cohesion: 0.50
@@ -794,25 +894,101 @@ Nodes (3): profile.partials.delete-user-form, profile.partials.update-password-f
 Cohesion: 0.67
 Nodes (3): extra, laravel, dont-discover
 
+### Community 218 - "Community 218"
+Cohesion: 0.25
+Nodes (7): About Laravel, Agentic Development, Code of Conduct, Contributing, Learning Laravel, License, Security Vulnerabilities
+
+### Community 219 - "Community 219"
+Cohesion: 0.48
+Nodes (3): Program, Request, ApplyController
+
+### Community 220 - "Community 220"
+Cohesion: 0.48
+Nodes (3): Content, Envelope, NoticeMail
+
+### Community 221 - "Community 221"
+Cohesion: 0.48
+Nodes (3): Content, Envelope, NoticePublished
+
+### Community 222 - "Community 222"
+Cohesion: 0.48
+Nodes (3): Content, Envelope, WelcomeStudentMail
+
+### Community 223 - "Community 223"
+Cohesion: 0.29
+Nodes (7): 3. Teacher / Faculty Portal, 4. Exam Cell Portal, 5. Accounts / Finance Portal, 6. HOD Portal, 7. CMC / Placement Portal, 8. Admin Portal, Future Sprints (After PMC)
+
+### Community 224 - "Community 224"
+Cohesion: 0.29
+Nodes (7): Cross-Role Interactions (PMC ↔ others), Existing Schema (understand before adding), File Locations for PMC Sprint, Key Design Decisions for Implementation, NEXT SPRINT: PMC (Program Management Cell) Portal — Feature Depth, PMC Role — Who They Are & What They Do Daily, What Already Exists (Do NOT re-implement)
+
+### Community 789 - "Community 789"
+Cohesion: 0.29
+Nodes (7): 12b. Parent Portal, Children (`/parent/children`), Dashboard (`/parent/dashboard`), Notices (`/parent/notices`), Per-Child: Attendance (`/parent/children/{student}/attendance`), Per-Child: Fees (`/parent/children/{student}/fees`), Per-Child: Results (`/parent/children/{student}/results`)
+
+### Community 790 - "Community 790"
+Cohesion: 0.29
+Nodes (7): 7. Dean Academics Portal, Academics (`/dean/academics`), Approvals (`/dean/approvals`), Attendance (`/dean/attendance`), Dashboard (`/dean/dashboard`), Programs (`/dean/programs`), Students (`/dean/students`)
+
+### Community 793 - "Community 793"
+Cohesion: 0.53
+Nodes (3): Request, Subject, AttendanceController
+
+### Community 796 - "Community 796"
+Cohesion: 0.33
+Nodes (6): Build Sequence (PMC Sprint Plan), Foundation (schema + models — build first, no UI), Sprint 1 — Dashboard + Curriculum Management, Sprint 2 — Timetable Builder, Sprint 3 — Student Oversight, Sprint 4 — Faculty Oversight + Reporting
+
+### Community 797 - "Community 797"
+Cohesion: 0.33
+Nodes (6): 10. Teacher Portal, Dashboard (`/teacher/dashboard`), Exams (`/teacher/exams`), Mark Attendance (`/teacher/attendance/mark`), Profile (`/teacher/profile`), Students (`/teacher/students`)
+
+### Community 798 - "Community 798"
+Cohesion: 0.33
+Nodes (6): 12. Exam Cell Portal, Dashboard (`/exam-cell/dashboard`), Exams (`/exam-cell/exams`), Grade Sheet (`/exam-cell/results/{exam}/grade-sheet`), Publish Results (`/exam-cell/results/{exam}/publish`), Results (`/exam-cell/results`)
+
+### Community 799 - "Community 799"
+Cohesion: 0.33
+Nodes (6): 14. Data Models Reference, Academic Models, Admission Models, Core Models, Key Relationships, Key Services
+
+### Community 800 - "Community 800"
+Cohesion: 0.33
+Nodes (6): 6. Accounts Officer Portal, Admission Payments (`/accounts/admission-payments`), Dashboard (`/accounts/dashboard`), Fee Collections (`/accounts/fee-collections`), Outstanding Fees (`/accounts/outstanding`), Reconciliation (`/accounts/reconciliation`)
+
+### Community 805 - "Community 805"
+Cohesion: 0.40
+Nodes (5): 13. Academic Management (Shared), Academic Calendars (`/academic/academic-calendars`), Fee Demands (`/academic/fee-demands`), Scholarships (`/academic/scholarships`), Term Promotions (`/academic/term-promotions`)
+
+### Community 806 - "Community 806"
+Cohesion: 0.40
+Nodes (5): 3.1 Overview, 3.2 Admission Head — Detailed Feature List, 3.3 Applicant Status Flow, 3.4 Approval Chain (Offer Letter), 3. Admission Workflow — End-to-End
+
+### Community 812 - "Community 812"
+Cohesion: 0.50
+Nodes (4): 9. Program Chair Portal, Approvals (`/program-chair/approvals`), Curriculum (`/program-chair/curriculum`), Dashboard (`/program-chair/dashboard`)
+
+### Community 813 - "Community 813"
+Cohesion: 0.67
+Nodes (3): COMPLETED: Student Portal (Sprints 1–4) — merged to main, New Tables Added (Student sprints), What Was Built
+
 ## Knowledge Gaps
-- **81 isolated node(s):** `Program`, `Collection`, `Collection`, `Collection`, `$schema` (+76 more)
+- **310 isolated node(s):** `initialize.sh script`, `setup-aliases.sh script`, `Program`, `Collection`, `Collection` (+305 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **110 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Controller` connect `Community 8` to `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 9`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 17`, `Community 18`, `Community 19`, `Community 20`, `Community 23`, `Community 24`, `Community 29`, `Community 32`, `Community 33`, `Community 36`, `Community 38`, `Community 39`, `Community 42`, `Community 43`, `Community 44`, `Community 46`, `Community 47`, `Community 49`, `Community 50`, `Community 51`, `Community 52`, `Community 53`, `Community 54`, `Community 61`, `Community 62`, `Community 63`, `Community 64`, `Community 65`, `Community 66`, `Community 67`, `Community 68`, `Community 69`, `Community 70`, `Community 71`, `Community 72`, `Community 73`, `Community 74`, `Community 75`, `Community 81`, `Community 82`, `Community 83`, `Community 84`, `Community 85`, `Community 87`, `Community 88`, `Community 94`, `Community 95`, `Community 96`, `Community 97`, `Community 98`, `Community 99`, `Community 100`, `Community 101`, `Community 102`, `Community 103`, `Community 114`, `Community 115`, `Community 116`, `Community 117`, `Community 118`, `Community 119`, `Community 130`, `Community 131`, `Community 132`, `Community 133`, `Community 134`, `Community 135`, `Community 136`, `Community 137`, `Community 138`, `Community 139`, `Community 154`, `Community 155`, `Community 156`, `Community 157`, `Community 158`, `Community 168`, `Community 169`, `Community 170`, `Community 171`, `Community 172`, `Community 173`, `Community 174`, `Community 175`, `Community 176`, `Community 177`, `Community 178`, `Community 190`, `Community 208`, `Community 209`, `Community 210`, `Community 211`, `Community 212`, `Community 213`, `Community 216`?**
-  _High betweenness centrality (0.352) - this node is a cross-community bridge._
-- **Why does `ActivityLog` connect `Community 19` to `Community 3`, `Community 7`, `Community 10`, `Community 11`, `Community 208`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `Controller` connect `Community 8` to `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 17`, `Community 18`, `Community 19`, `Community 20`, `Community 23`, `Community 24`, `Community 29`, `Community 32`, `Community 33`, `Community 36`, `Community 38`, `Community 39`, `Community 42`, `Community 43`, `Community 44`, `Community 47`, `Community 49`, `Community 51`, `Community 52`, `Community 53`, `Community 54`, `Community 61`, `Community 62`, `Community 63`, `Community 64`, `Community 65`, `Community 66`, `Community 67`, `Community 68`, `Community 69`, `Community 71`, `Community 72`, `Community 73`, `Community 75`, `Community 81`, `Community 82`, `Community 83`, `Community 84`, `Community 85`, `Community 87`, `Community 94`, `Community 95`, `Community 96`, `Community 97`, `Community 98`, `Community 99`, `Community 100`, `Community 102`, `Community 103`, `Community 104`, `Community 109`, `Community 114`, `Community 115`, `Community 116`, `Community 117`, `Community 118`, `Community 119`, `Community 128`, `Community 130`, `Community 131`, `Community 132`, `Community 133`, `Community 134`, `Community 135`, `Community 136`, `Community 137`, `Community 138`, `Community 139`, `Community 154`, `Community 155`, `Community 156`, `Community 157`, `Community 158`, `Community 162`, `Community 165`, `Community 166`, `Community 168`, `Community 169`, `Community 171`, `Community 173`, `Community 174`, `Community 175`, `Community 176`, `Community 177`, `Community 178`, `Community 190`, `Community 206`, `Community 210`, `Community 211`, `Community 212`, `Community 213`, `Community 219`, `Community 793`, `Community 803`, `Community 804`?**
+  _High betweenness centrality (0.325) - this node is a cross-community bridge._
 - **Why does `ExamCellController` connect `Community 18` to `Community 8`?**
   _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **What connects `Program`, `Collection`, `Collection` to the rest of the system?**
-  _81 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `Batch` connect `Community 51` to `Community 1`, `Community 2`, `Community 7`, `Community 8`, `Community 135`, `Community 10`, `Community 11`, `Community 17`, `Community 18`, `Community 20`, `Community 155`, `Community 29`, `Community 32`, `Community 168`, `Community 170`, `Community 44`, `Community 45`, `Community 53`, `Community 57`, `Community 80`, `Community 84`, `Community 115`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **What connects `initialize.sh script`, `setup-aliases.sh script`, `Program` to the rest of the system?**
+  _310 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.030636030636030636 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0334855403348554 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.06558118498417007 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0697980684811238 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.05336538461538461 - nodes in this community are weakly interconnected._
