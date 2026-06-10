@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\{TimetableConflictService, TimetableImportService};
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -357,5 +357,96 @@ class PmcTimetableController extends Controller {
         return response($csv, 200)
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', 'attachment; filename="timetable_import_sample.csv"');
+    }
+
+    // ── Copy Timetable from Previous Term ──────────────────────────────────────
+    public function copyForm(Request $request) {
+        $programIds = $this->programIds();
+        $programs   = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $batches    = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTargetTerm = $request->filled('target_term_id')
+            ? Term::find($request->target_term_id) : Term::latest('start_date')->first();
+
+        $selectedSourceTerm = $request->filled('source_term_id')
+            ? Term::find($request->source_term_id) : null;
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        $service = app(TimetableCopyService::class);
+        $availableSourceTerms = $selectedProgram
+            ? $service->getAvailableSourceTerms($selectedProgram->id)
+            : [];
+
+        $preview = null;
+        if ($selectedProgram && $selectedSourceTerm && $selectedTargetTerm) {
+            $preview = $service->previewCopy(
+                $selectedSourceTerm->id,
+                $selectedTargetTerm->id,
+                $selectedProgram->id,
+                $selectedBatch?->id
+            );
+        }
+
+        $allTerms = Term::orderBy('start_date', 'desc')->take(12)->get();
+
+        return view('departmental.program-chair.timetable.copy', compact(
+            'programs', 'batches', 'allTerms', 'selectedProgram', 'selectedSourceTerm',
+            'selectedTargetTerm', 'selectedBatch', 'availableSourceTerms', 'preview'
+        ));
+    }
+
+    public function previewCopy(Request $request) {
+        $request->validate([
+            'program_id'       => 'required|exists:programs,id',
+            'source_term_id'   => 'required|exists:terms,id',
+            'target_term_id'   => 'required|exists:terms,id',
+            'batch_id'         => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(TimetableCopyService::class);
+        $preview = $service->previewCopy(
+            $request->source_term_id,
+            $request->target_term_id,
+            $request->program_id,
+            $request->batch_id
+        );
+
+        return response()->json($preview);
+    }
+
+    public function executeCopy(Request $request) {
+        $request->validate([
+            'program_id'        => 'required|exists:programs,id',
+            'source_term_id'    => 'required|exists:terms,id',
+            'target_term_id'    => 'required|exists:terms,id',
+            'batch_id'          => 'nullable|exists:batches,id',
+            'replace_existing'  => 'sometimes|boolean',
+            'reassign_teachers' => 'sometimes|boolean',
+            'reassign_classrooms' => 'sometimes|boolean',
+        ]);
+
+        $service = app(TimetableCopyService::class);
+        $result = $service->executeCopy(
+            $request->source_term_id,
+            $request->target_term_id,
+            $request->program_id,
+            $request->batch_id,
+            [
+                'replace_existing'  => $request->boolean('replace_existing'),
+                'reassign_teachers' => $request->boolean('reassign_teachers'),
+                'reassign_classrooms' => $request->boolean('reassign_classrooms'),
+            ]
+        );
+
+        if ($result['success']) {
+            return back()->with('success', $result['message']);
+        } else {
+            return back()->with('error', $result['message'] . ' ' . implode('; ', array_slice($result['errors'], 0, 2)));
+        }
     }
 }
