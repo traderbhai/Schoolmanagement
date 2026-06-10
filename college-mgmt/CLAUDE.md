@@ -164,7 +164,44 @@ php artisan serve --port=8000             # Dev server
 php artisan route:clear                   # Clear route cache
 php artisan route:list --name=<prefix>    # List routes
 php artisan migrate --force               # Run new migrations (production mode)
+
+# Graphify (for architecture analysis)
+graphify update .                          # Update graph cache (no API cost)
+graphify query "Show Model A relationships"  # Query architecture
+open graphify-out/graph.html              # Open interactive visualization
 ```
+
+---
+
+## Graphify Architecture Analysis Tool
+
+**REQUIRED for all development.** Graphify transforms the codebase into a queryable knowledge graph, reducing AI chat token usage by 50-70%.
+
+**Setup:**
+```bash
+uv tool install graphifyy
+graphify install
+```
+
+**Daily usage:**
+```bash
+# Update graph after code changes
+graphify update .
+
+# Query architecture before implementing features
+graphify query "What models handle [domain]?"
+
+# View communities in browser
+open graphify-out/graph.html
+```
+
+**Why it matters:**
+- Replaces 100+ tokens of "describe your architecture" explanation
+- Makes better design decisions with graph context
+- Identifies import cycles and weak dependencies
+- Tracks architecture evolution over sprints
+
+**See:** `GRAPHIFY_WORKFLOW.md` for detailed protocol on using graphify in Claude chats.
 
 ---
 
