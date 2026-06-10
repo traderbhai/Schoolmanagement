@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService};
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -524,6 +524,85 @@ class PmcTimetableController extends Controller {
             $request->term_id,
             $request->teacher_id,
             $request->department_id
+        );
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    // ── Conflict Prevention Mode ──────────────────────────────────────────────
+    public function checkSlotAvailability(Request $request) {
+        $request->validate([
+            'day_of_week'       => 'required|integer|between:1,6',
+            'slot_id'           => 'required|exists:timetable_slots,id',
+            'teacher_id'        => 'required|exists:teachers,id',
+            'classroom_id'      => 'required|exists:classrooms,id',
+            'batch_id'          => 'required|exists:batches,id',
+            'term_id'           => 'required|exists:terms,id',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+        $availability = $service->isSlotAvailable(
+            $request->day_of_week,
+            $request->slot_id,
+            $request->teacher_id,
+            $request->classroom_id,
+            $request->batch_id,
+            $request->term_id
+        );
+
+        if (!$availability['available']) {
+            $suggestions = $service->getSuggestions(
+                $request->day_of_week,
+                $request->slot_id,
+                $request->teacher_id,
+                $request->classroom_id,
+                $request->batch_id,
+                $request->term_id
+            );
+            $availability['suggestions'] = $suggestions;
+        }
+
+        return response()->json($availability);
+    }
+
+    public function getAvailableSlots(Request $request) {
+        $request->validate([
+            'day_of_week'  => 'required|integer|between:1,6',
+            'term_id'      => 'required|exists:terms,id',
+            'type'         => 'required|in:teacher,classroom,batch',
+            'entity_id'    => 'required|integer',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+
+        $slots = match ($request->type) {
+            'teacher' => $service->getAvailableTeacherSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            'classroom' => $service->getAvailableClassroomSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            'batch' => $service->getAvailableBatchSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            default => [],
+        };
+
+        return response()->json(['slots' => $slots]);
+    }
+
+    public function getSuggestions(Request $request) {
+        $request->validate([
+            'day_of_week'   => 'required|integer|between:1,6',
+            'slot_id'       => 'required|exists:timetable_slots,id',
+            'teacher_id'    => 'required|exists:teachers,id',
+            'classroom_id'  => 'required|exists:classrooms,id',
+            'batch_id'      => 'required|exists:batches,id',
+            'term_id'       => 'required|exists:terms,id',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+        $suggestions = $service->getSuggestions(
+            $request->day_of_week,
+            $request->slot_id,
+            $request->teacher_id,
+            $request->classroom_id,
+            $request->batch_id,
+            $request->term_id
         );
 
         return response()->json(['suggestions' => $suggestions]);

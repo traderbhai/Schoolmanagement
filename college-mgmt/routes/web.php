@@ -768,6 +768,9 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/check-teacher-workload',          [Departmental\PmcTimetableController::class, 'checkTeacherWorkload'])->name('timetable.check-teacher-workload');
     Route::get('timetable/teacher-workload-list',            [Departmental\PmcTimetableController::class, 'teacherWorkloadList'])->name('timetable.teacher-workload-list');
     Route::post('timetable/suggest-teachers',                [Departmental\PmcTimetableController::class, 'suggestTeachers'])->name('timetable.suggest-teachers');
+    Route::post('timetable/check-slot-availability',         [Departmental\PmcTimetableController::class, 'checkSlotAvailability'])->name('timetable.check-slot-availability');
+    Route::get('timetable/available-slots',                  [Departmental\PmcTimetableController::class, 'getAvailableSlots'])->name('timetable.available-slots');
+    Route::post('timetable/slot-suggestions',                [Departmental\PmcTimetableController::class, 'getSuggestions'])->name('timetable.slot-suggestions');
 
     // PMC Sprint — Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');
