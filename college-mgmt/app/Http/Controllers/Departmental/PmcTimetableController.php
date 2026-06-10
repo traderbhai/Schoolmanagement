@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService};
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -476,5 +476,56 @@ class PmcTimetableController extends Controller {
         $pdf = $service->generateTeacherPdf($request->term_id, $request->teacher_id);
 
         return $pdf->download('timetable_' . \Illuminate\Support\Str::slug($teacher->user->name) . '.pdf');
+    }
+
+    // ── Teacher Workload Warnings ─────────────────────────────────────────────
+    public function checkTeacherWorkload(Request $request) {
+        $request->validate([
+            'teacher_id'       => 'required|exists:teachers,id',
+            'term_id'          => 'required|exists:terms,id',
+            'timetable_slot_id' => 'required|exists:timetable_slots,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $warning = $service->getAssignmentWarning(
+            $request->teacher_id,
+            $request->term_id,
+            $request->timetable_slot_id
+        );
+
+        return response()->json($warning);
+    }
+
+    public function teacherWorkloadList(Request $request) {
+        $request->validate([
+            'term_id' => 'required|exists:terms,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $warnings = $service->getTeachersWithWarnings($request->term_id);
+
+        return response()->json([
+            'warnings' => $warnings,
+            'total' => count($warnings),
+            'overloaded' => count(array_filter($warnings, fn($w) => $w['warning_type'] === 'overload')),
+            'approaching' => count(array_filter($warnings, fn($w) => $w['warning_type'] === 'approaching')),
+        ]);
+    }
+
+    public function suggestTeachers(Request $request) {
+        $request->validate([
+            'term_id'       => 'required|exists:terms,id',
+            'teacher_id'    => 'required|exists:teachers,id',
+            'department_id' => 'required|exists:departments,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $suggestions = $service->suggestAlternativeTeachers(
+            $request->term_id,
+            $request->teacher_id,
+            $request->department_id
+        );
+
+        return response()->json(['suggestions' => $suggestions]);
     }
 }

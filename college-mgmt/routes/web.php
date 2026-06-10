@@ -764,6 +764,9 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/execute-copy',                    [Departmental\PmcTimetableController::class, 'executeCopy'])->name('timetable.execute-copy');
     Route::post('timetable/export-batch-pdf',                [Departmental\PmcTimetableController::class, 'exportBatchPdf'])->name('timetable.export-batch-pdf');
     Route::post('timetable/export-teacher-pdf',              [Departmental\PmcTimetableController::class, 'exportTeacherPdf'])->name('timetable.export-teacher-pdf');
+    Route::post('timetable/check-teacher-workload',          [Departmental\PmcTimetableController::class, 'checkTeacherWorkload'])->name('timetable.check-teacher-workload');
+    Route::get('timetable/teacher-workload-list',            [Departmental\PmcTimetableController::class, 'teacherWorkloadList'])->name('timetable.teacher-workload-list');
+    Route::post('timetable/suggest-teachers',                [Departmental\PmcTimetableController::class, 'suggestTeachers'])->name('timetable.suggest-teachers');
 
     // PMC Sprint — Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');
