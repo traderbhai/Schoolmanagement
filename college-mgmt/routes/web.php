@@ -728,6 +728,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('workload',   [Departmental\ProgramChairController::class, 'workloadReport'])->name('workload');
     Route::get('workload/export', [Departmental\ProgramChairController::class, 'workloadExport'])->name('workload.export');
     Route::get('capacity',   [Departmental\ProgramChairController::class, 'capacityReport'])->name('capacity');
+    Route::get('rooms',      [Departmental\ProgramChairController::class, 'roomUtilization'])->name('rooms');
     // P5-5: Approval Workflow Routes for Program Chair
     Route::get('approvals', [Departmental\ProgramChairController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');

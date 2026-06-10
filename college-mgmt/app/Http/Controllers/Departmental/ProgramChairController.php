@@ -7,6 +7,7 @@ use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, 
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
 use App\Services\{FacultyWorkloadService, ClassroomCapacityService};
+use App\Models\Classroom;
 use Illuminate\Http\Request;
 
 class ProgramChairController extends Controller
@@ -350,6 +351,53 @@ class ProgramChairController extends Controller
         return view('departmental.program-chair.capacity', compact(
             'programs', 'terms', 'selectedProgram', 'selectedTerm',
             'utilization', 'violations', 'summary'
+        ));
+    }
+
+    // ── Room Utilization Report ──────────────────────────────────────────────
+    public function roomUtilization(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $roomStats = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(ClassroomCapacityService::class);
+            $roomStats = $service->getUtilizationReport($selectedProgram->id, $selectedTerm->id);
+
+            // Calculate summary
+            $totalRooms = count($roomStats);
+            $fullyUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'fully-utilized'));
+            $wellUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'well-utilized'));
+            $underUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'under-utilized'));
+            $overCapacity = count(array_filter($roomStats, fn($r) => $r['has_issues']));
+
+            $avgUtilization = $totalRooms > 0
+                ? round(array_sum(array_column($roomStats, 'max_utilization')) / $totalRooms, 1)
+                : 0;
+
+            $summary = [
+                'total_rooms' => $totalRooms,
+                'fully_utilized' => $fullyUtilized,
+                'well_utilized' => $wellUtilized,
+                'under_utilized' => $underUtilized,
+                'over_capacity' => $overCapacity,
+                'avg_utilization' => $avgUtilization,
+            ];
+        }
+
+        return view('departmental.program-chair.room-utilization', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm',
+            'roomStats', 'summary'
         ));
     }
 }
