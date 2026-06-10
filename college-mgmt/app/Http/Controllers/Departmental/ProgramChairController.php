@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
-use App\Services\{FacultyWorkloadService, ClassroomCapacityService};
+use App\Services\{FacultyWorkloadService, ClassroomCapacityService, SoftConstraintService};
 use App\Models\Classroom;
 use Illuminate\Http\Request;
 
@@ -398,6 +398,43 @@ class ProgramChairController extends Controller
         return view('departmental.program-chair.room-utilization', compact(
             'programs', 'terms', 'selectedProgram', 'selectedTerm',
             'roomStats', 'summary'
+        ));
+    }
+
+    // ── Soft Constraint Audit ────────────────────────────────────────────────
+    public function softConstraints(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        $batches = $selectedProgram
+            ? Batch::where('program_id', $selectedProgram->id)->orderBy('name')->get()
+            : [];
+
+        $auditResult = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(SoftConstraintService::class);
+            $auditResult = $service->auditTermConstraints(
+                $selectedTerm->id,
+                $selectedProgram->id,
+                $selectedBatch?->id
+            );
+        }
+
+        return view('departmental.program-chair.soft-constraints', compact(
+            'programs', 'terms', 'batches', 'selectedProgram', 'selectedTerm',
+            'selectedBatch', 'auditResult'
         ));
     }
 }
