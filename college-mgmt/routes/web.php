@@ -761,6 +761,8 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('timetable/copy',                             [Departmental\PmcTimetableController::class, 'copyForm'])->name('timetable.copy');
     Route::post('timetable/preview-copy',                    [Departmental\PmcTimetableController::class, 'previewCopy'])->name('timetable.preview-copy');
     Route::post('timetable/execute-copy',                    [Departmental\PmcTimetableController::class, 'executeCopy'])->name('timetable.execute-copy');
+    Route::post('timetable/export-batch-pdf',                [Departmental\PmcTimetableController::class, 'exportBatchPdf'])->name('timetable.export-batch-pdf');
+    Route::post('timetable/export-teacher-pdf',              [Departmental\PmcTimetableController::class, 'exportTeacherPdf'])->name('timetable.export-teacher-pdf');
 
     // PMC Sprint — Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');

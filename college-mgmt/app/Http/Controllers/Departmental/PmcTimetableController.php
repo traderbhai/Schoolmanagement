@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService};
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -448,5 +448,33 @@ class PmcTimetableController extends Controller {
         } else {
             return back()->with('error', $result['message'] . ' ' . implode('; ', array_slice($result['errors'], 0, 2)));
         }
+    }
+
+    // ── PDF Export ────────────────────────────────────────────────────────────
+    public function exportBatchPdf(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'required|exists:batches,id',
+        ]);
+
+        $batch = Batch::find($request->batch_id);
+        $service = app(TimetablePdfService::class);
+        $pdf = $service->generateBatchPdf($request->program_id, $request->term_id, $request->batch_id);
+
+        return $pdf->download('timetable_' . $batch->name . '.pdf');
+    }
+
+    public function exportTeacherPdf(Request $request) {
+        $request->validate([
+            'term_id'    => 'required|exists:terms,id',
+            'teacher_id' => 'required|exists:teachers,id',
+        ]);
+
+        $teacher = Teacher::with('user')->find($request->teacher_id);
+        $service = app(TimetablePdfService::class);
+        $pdf = $service->generateTeacherPdf($request->term_id, $request->teacher_id);
+
+        return $pdf->download('timetable_' . \Illuminate\Support\Str::slug($teacher->user->name) . '.pdf');
     }
 }
