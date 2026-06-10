@@ -736,6 +736,13 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::get('curriculum', [Departmental\ProgramChairController::class, 'curriculum'])->name('curriculum');
     Route::get('timetable',  [Departmental\ProgramChairController::class, 'timetable'])->name('timetable');
     Route::get('exams',      [Departmental\ProgramChairController::class, 'exams'])->name('exams');
+    Route::get('workload',   [Departmental\ProgramChairController::class, 'workloadReport'])->name('workload');
+    Route::get('workload/export', [Departmental\ProgramChairController::class, 'workloadExport'])->name('workload.export');
+    Route::get('capacity',   [Departmental\ProgramChairController::class, 'capacityReport'])->name('capacity');
+    Route::get('rooms',      [Departmental\ProgramChairController::class, 'roomUtilization'])->name('rooms');
+    Route::get('constraints', [Departmental\ProgramChairController::class, 'softConstraints'])->name('constraints');
+    Route::get('load-balance', [Departmental\ProgramChairController::class, 'loadBalance'])->name('load-balance');
+    Route::get('analytics', [Departmental\ProgramChairController::class, 'analytics'])->name('analytics');
     // P5-5: Approval Workflow Routes for Program Chair
     Route::get('approvals', [Departmental\ProgramChairController::class, 'approvals'])->name('approvals');
     Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');
@@ -763,6 +770,23 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/substitutions',                   [Departmental\PmcTimetableController::class, 'createSubstitution'])->name('timetable.substitutions.store');
     Route::get('timetable/availability',                     [Departmental\PmcTimetableController::class, 'teacherAvailability'])->name('timetable.availability');
     Route::post('timetable/availability',                    [Departmental\PmcTimetableController::class, 'saveAvailability'])->name('timetable.availability.save');
+    Route::get('timetable/import',                           [Departmental\PmcTimetableController::class, 'importForm'])->name('timetable.import');
+    Route::post('timetable/validate-import',                 [Departmental\PmcTimetableController::class, 'validateImport'])->name('timetable.validate-import');
+    Route::post('timetable/do-import',                       [Departmental\PmcTimetableController::class, 'doImport'])->name('timetable.do-import');
+    Route::get('timetable/download-sample',                  [Departmental\PmcTimetableController::class, 'downloadSample'])->name('timetable.download-sample');
+    Route::get('timetable/copy',                             [Departmental\PmcTimetableController::class, 'copyForm'])->name('timetable.copy');
+    Route::post('timetable/preview-copy',                    [Departmental\PmcTimetableController::class, 'previewCopy'])->name('timetable.preview-copy');
+    Route::post('timetable/execute-copy',                    [Departmental\PmcTimetableController::class, 'executeCopy'])->name('timetable.execute-copy');
+    Route::post('timetable/export-batch-pdf',                [Departmental\PmcTimetableController::class, 'exportBatchPdf'])->name('timetable.export-batch-pdf');
+    Route::post('timetable/export-teacher-pdf',              [Departmental\PmcTimetableController::class, 'exportTeacherPdf'])->name('timetable.export-teacher-pdf');
+    Route::post('timetable/check-teacher-workload',          [Departmental\PmcTimetableController::class, 'checkTeacherWorkload'])->name('timetable.check-teacher-workload');
+    Route::get('timetable/teacher-workload-list',            [Departmental\PmcTimetableController::class, 'teacherWorkloadList'])->name('timetable.teacher-workload-list');
+    Route::post('timetable/suggest-teachers',                [Departmental\PmcTimetableController::class, 'suggestTeachers'])->name('timetable.suggest-teachers');
+    Route::post('timetable/check-slot-availability',         [Departmental\PmcTimetableController::class, 'checkSlotAvailability'])->name('timetable.check-slot-availability');
+    Route::get('timetable/available-slots',                  [Departmental\PmcTimetableController::class, 'getAvailableSlots'])->name('timetable.available-slots');
+    Route::post('timetable/slot-suggestions',                [Departmental\PmcTimetableController::class, 'getSuggestions'])->name('timetable.slot-suggestions');
+    Route::post('timetable/auto-schedule',                   [Departmental\PmcTimetableController::class, 'suggestAutoSchedule'])->name('timetable.auto-schedule');
+    Route::post('timetable/accept-auto-schedule',            [Departmental\PmcTimetableController::class, 'acceptAutoScheduleSuggestions'])->name('timetable.accept-auto-schedule');
 
     // PMC Sprint — Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');

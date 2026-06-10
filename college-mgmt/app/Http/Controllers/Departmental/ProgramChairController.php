@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
+use App\Services\{FacultyWorkloadService, ClassroomCapacityService, SoftConstraintService, LoadBalancingService};
+use App\Models\Classroom;
 use Illuminate\Http\Request;
 
 class ProgramChairController extends Controller
@@ -278,5 +280,220 @@ class ProgramChairController extends Controller
         ]);
 
         return back()->with('error', 'Approval rejected.');
+    }
+
+    // ── Faculty Workload Report ───────────────────────────────────────────────
+    public function workloadReport(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $report = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(FacultyWorkloadService::class);
+            $report = $service->getWorkloadReport($selectedProgram->id, $selectedTerm->id);
+            $summary = $service->getSummary($report);
+        }
+
+        return view('departmental.program-chair.workload', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm', 'report', 'summary'
+        ));
+    }
+
+    public function workloadExport(Request $request)
+    {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+        ]);
+
+        $service = app(FacultyWorkloadService::class);
+        $csv = $service->exportAsCSV($request->program_id, $request->term_id);
+
+        return response($csv, 200)
+            ->header('Content-Type', 'text/csv; charset=utf-8')
+            ->header('Content-Disposition', 'attachment; filename="faculty_workload_' . date('Y-m-d') . '.csv"');
+    }
+
+    // ── Classroom Capacity Validation ─────────────────────────────────────────
+    public function capacityReport(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $utilization = [];
+        $violations = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(ClassroomCapacityService::class);
+            $utilization = $service->getUtilizationReport($selectedProgram->id, $selectedTerm->id);
+            $violations = $service->findCapacityViolations($selectedProgram->id, $selectedTerm->id);
+            $summary = $service->getSummary($violations);
+        }
+
+        return view('departmental.program-chair.capacity', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm',
+            'utilization', 'violations', 'summary'
+        ));
+    }
+
+    // ── Room Utilization Report ──────────────────────────────────────────────
+    public function roomUtilization(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $roomStats = [];
+        $summary = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(ClassroomCapacityService::class);
+            $roomStats = $service->getUtilizationReport($selectedProgram->id, $selectedTerm->id);
+
+            // Calculate summary
+            $totalRooms = count($roomStats);
+            $fullyUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'fully-utilized'));
+            $wellUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'well-utilized'));
+            $underUtilized = count(array_filter($roomStats, fn($r) => $r['status'] === 'under-utilized'));
+            $overCapacity = count(array_filter($roomStats, fn($r) => $r['has_issues']));
+
+            $avgUtilization = $totalRooms > 0
+                ? round(array_sum(array_column($roomStats, 'max_utilization')) / $totalRooms, 1)
+                : 0;
+
+            $summary = [
+                'total_rooms' => $totalRooms,
+                'fully_utilized' => $fullyUtilized,
+                'well_utilized' => $wellUtilized,
+                'under_utilized' => $underUtilized,
+                'over_capacity' => $overCapacity,
+                'avg_utilization' => $avgUtilization,
+            ];
+        }
+
+        return view('departmental.program-chair.room-utilization', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm',
+            'roomStats', 'summary'
+        ));
+    }
+
+    // ── Soft Constraint Audit ────────────────────────────────────────────────
+    public function softConstraints(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        $batches = $selectedProgram
+            ? Batch::where('program_id', $selectedProgram->id)->orderBy('name')->get()
+            : [];
+
+        $auditResult = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(SoftConstraintService::class);
+            $auditResult = $service->auditTermConstraints(
+                $selectedTerm->id,
+                $selectedProgram->id,
+                $selectedBatch?->id
+            );
+        }
+
+        return view('departmental.program-chair.soft-constraints', compact(
+            'programs', 'terms', 'batches', 'selectedProgram', 'selectedTerm',
+            'selectedBatch', 'auditResult'
+        ));
+    }
+
+    // ── Load Balancing & Analytics ───────────────────────────────────────────
+    public function loadBalance(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $analysis = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $service = app(LoadBalancingService::class);
+            $analysis = $service->analyzeLoadBalance($selectedTerm->id, $selectedProgram->id);
+        }
+
+        return view('departmental.program-chair.load-balance', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm', 'analysis'
+        ));
+    }
+
+    public function analytics(Request $request)
+    {
+        $programIds = $this->getAssignedProgramIds();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms = Term::orderBy('start_date', 'desc')->take(8)->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $dashboardData = [];
+
+        if ($selectedProgram && $selectedTerm) {
+            $dashboardData = [
+                'workload' => app(FacultyWorkloadService::class)->getSummary(
+                    app(FacultyWorkloadService::class)->getWorkloadReport($selectedProgram->id, $selectedTerm->id)
+                ),
+                'capacity' => app(ClassroomCapacityService::class)->getSummary(
+                    app(ClassroomCapacityService::class)->findCapacityViolations($selectedProgram->id, $selectedTerm->id)
+                ),
+                'loadBalance' => app(LoadBalancingService::class)->analyzeLoadBalance($selectedTerm->id, $selectedProgram->id)['stats'],
+                'totalEntries' => TimetableEntry::where('program_id', $selectedProgram->id)
+                    ->where('term_id', $selectedTerm->id)
+                    ->count(),
+            ];
+        }
+
+        return view('departmental.program-chair.analytics', compact(
+            'programs', 'terms', 'selectedProgram', 'selectedTerm', 'dashboardData'
+        ));
     }
 }

@@ -31,3 +31,5 @@ graphify-out/cache/
 graphify-out/.graphify_analysis.json
 graphify-out/.graphify_labels.json
 graphify-out/manifest.json
+
+.dev-context/

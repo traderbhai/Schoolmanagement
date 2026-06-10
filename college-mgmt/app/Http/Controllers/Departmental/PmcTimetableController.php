@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment};
-use App\Services\TimetableConflictService;
+use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -281,5 +281,391 @@ class PmcTimetableController extends Controller {
         }
 
         return back()->with('success', 'Availability saved.');
+    }
+
+    // ── Bulk Import from CSV ──────────────────────────────────────────────────
+    public function importForm(Request $request) {
+        $programIds = $this->programIds();
+        $programs   = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $terms      = Term::orderBy('start_date', 'desc')->take(8)->get();
+        $batches    = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTerm = $request->filled('term_id')
+            ? Term::find($request->term_id) : Term::latest('start_date')->first();
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        return view('departmental.program-chair.timetable.import', compact(
+            'programs', 'terms', 'batches', 'selectedProgram', 'selectedTerm', 'selectedBatch'
+        ));
+    }
+
+    public function validateImport(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+            'file'       => 'required|mimes:csv,txt|max:5120',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $result = $service->validateCSV(
+            $request->file('file'),
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        return response()->json($result);
+    }
+
+    public function doImport(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+            'file'       => 'required|mimes:csv,txt|max:5120',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $result = $service->importCSV(
+            $request->file('file'),
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        if ($result['success']) {
+            return back()->with('success', "Imported {$result['imported']} timetable entries.");
+        } else {
+            return back()->with('error', 'Import failed: ' . implode('; ', array_slice($result['errors'], 0, 3)));
+        }
+    }
+
+    public function downloadSample(Request $request) {
+        $request->validate([
+            'batch_id' => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(TimetableImportService::class);
+        $csv = $service->getSampleCSV($request->batch_id);
+
+        return response($csv, 200)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="timetable_import_sample.csv"');
+    }
+
+    // ── Copy Timetable from Previous Term ──────────────────────────────────────
+    public function copyForm(Request $request) {
+        $programIds = $this->programIds();
+        $programs   = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $batches    = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
+
+        $selectedProgram = $request->filled('program_id')
+            ? Program::find($request->program_id) : $programs->first();
+
+        $selectedTargetTerm = $request->filled('target_term_id')
+            ? Term::find($request->target_term_id) : Term::latest('start_date')->first();
+
+        $selectedSourceTerm = $request->filled('source_term_id')
+            ? Term::find($request->source_term_id) : null;
+
+        $selectedBatch = $request->filled('batch_id')
+            ? Batch::find($request->batch_id) : null;
+
+        $service = app(TimetableCopyService::class);
+        $availableSourceTerms = $selectedProgram
+            ? $service->getAvailableSourceTerms($selectedProgram->id)
+            : [];
+
+        $preview = null;
+        if ($selectedProgram && $selectedSourceTerm && $selectedTargetTerm) {
+            $preview = $service->previewCopy(
+                $selectedSourceTerm->id,
+                $selectedTargetTerm->id,
+                $selectedProgram->id,
+                $selectedBatch?->id
+            );
+        }
+
+        $allTerms = Term::orderBy('start_date', 'desc')->take(12)->get();
+
+        return view('departmental.program-chair.timetable.copy', compact(
+            'programs', 'batches', 'allTerms', 'selectedProgram', 'selectedSourceTerm',
+            'selectedTargetTerm', 'selectedBatch', 'availableSourceTerms', 'preview'
+        ));
+    }
+
+    public function previewCopy(Request $request) {
+        $request->validate([
+            'program_id'       => 'required|exists:programs,id',
+            'source_term_id'   => 'required|exists:terms,id',
+            'target_term_id'   => 'required|exists:terms,id',
+            'batch_id'         => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(TimetableCopyService::class);
+        $preview = $service->previewCopy(
+            $request->source_term_id,
+            $request->target_term_id,
+            $request->program_id,
+            $request->batch_id
+        );
+
+        return response()->json($preview);
+    }
+
+    public function executeCopy(Request $request) {
+        $request->validate([
+            'program_id'        => 'required|exists:programs,id',
+            'source_term_id'    => 'required|exists:terms,id',
+            'target_term_id'    => 'required|exists:terms,id',
+            'batch_id'          => 'nullable|exists:batches,id',
+            'replace_existing'  => 'sometimes|boolean',
+            'reassign_teachers' => 'sometimes|boolean',
+            'reassign_classrooms' => 'sometimes|boolean',
+        ]);
+
+        $service = app(TimetableCopyService::class);
+        $result = $service->executeCopy(
+            $request->source_term_id,
+            $request->target_term_id,
+            $request->program_id,
+            $request->batch_id,
+            [
+                'replace_existing'  => $request->boolean('replace_existing'),
+                'reassign_teachers' => $request->boolean('reassign_teachers'),
+                'reassign_classrooms' => $request->boolean('reassign_classrooms'),
+            ]
+        );
+
+        if ($result['success']) {
+            return back()->with('success', $result['message']);
+        } else {
+            return back()->with('error', $result['message'] . ' ' . implode('; ', array_slice($result['errors'], 0, 2)));
+        }
+    }
+
+    // ── PDF Export ────────────────────────────────────────────────────────────
+    public function exportBatchPdf(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'required|exists:batches,id',
+        ]);
+
+        $batch = Batch::find($request->batch_id);
+        $service = app(TimetablePdfService::class);
+        $pdf = $service->generateBatchPdf($request->program_id, $request->term_id, $request->batch_id);
+
+        return $pdf->download('timetable_' . $batch->name . '.pdf');
+    }
+
+    public function exportTeacherPdf(Request $request) {
+        $request->validate([
+            'term_id'    => 'required|exists:terms,id',
+            'teacher_id' => 'required|exists:teachers,id',
+        ]);
+
+        $teacher = Teacher::with('user')->find($request->teacher_id);
+        $service = app(TimetablePdfService::class);
+        $pdf = $service->generateTeacherPdf($request->term_id, $request->teacher_id);
+
+        return $pdf->download('timetable_' . \Illuminate\Support\Str::slug($teacher->user->name) . '.pdf');
+    }
+
+    // ── Teacher Workload Warnings ─────────────────────────────────────────────
+    public function checkTeacherWorkload(Request $request) {
+        $request->validate([
+            'teacher_id'       => 'required|exists:teachers,id',
+            'term_id'          => 'required|exists:terms,id',
+            'timetable_slot_id' => 'required|exists:timetable_slots,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $warning = $service->getAssignmentWarning(
+            $request->teacher_id,
+            $request->term_id,
+            $request->timetable_slot_id
+        );
+
+        return response()->json($warning);
+    }
+
+    public function teacherWorkloadList(Request $request) {
+        $request->validate([
+            'term_id' => 'required|exists:terms,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $warnings = $service->getTeachersWithWarnings($request->term_id);
+
+        return response()->json([
+            'warnings' => $warnings,
+            'total' => count($warnings),
+            'overloaded' => count(array_filter($warnings, fn($w) => $w['warning_type'] === 'overload')),
+            'approaching' => count(array_filter($warnings, fn($w) => $w['warning_type'] === 'approaching')),
+        ]);
+    }
+
+    public function suggestTeachers(Request $request) {
+        $request->validate([
+            'term_id'       => 'required|exists:terms,id',
+            'teacher_id'    => 'required|exists:teachers,id',
+            'department_id' => 'required|exists:departments,id',
+        ]);
+
+        $service = app(TeacherWorkloadWarningService::class);
+        $suggestions = $service->suggestAlternativeTeachers(
+            $request->term_id,
+            $request->teacher_id,
+            $request->department_id
+        );
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    // ── Conflict Prevention Mode ──────────────────────────────────────────────
+    public function checkSlotAvailability(Request $request) {
+        $request->validate([
+            'day_of_week'       => 'required|integer|between:1,6',
+            'slot_id'           => 'required|exists:timetable_slots,id',
+            'teacher_id'        => 'required|exists:teachers,id',
+            'classroom_id'      => 'required|exists:classrooms,id',
+            'batch_id'          => 'required|exists:batches,id',
+            'term_id'           => 'required|exists:terms,id',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+        $availability = $service->isSlotAvailable(
+            $request->day_of_week,
+            $request->slot_id,
+            $request->teacher_id,
+            $request->classroom_id,
+            $request->batch_id,
+            $request->term_id
+        );
+
+        if (!$availability['available']) {
+            $suggestions = $service->getSuggestions(
+                $request->day_of_week,
+                $request->slot_id,
+                $request->teacher_id,
+                $request->classroom_id,
+                $request->batch_id,
+                $request->term_id
+            );
+            $availability['suggestions'] = $suggestions;
+        }
+
+        return response()->json($availability);
+    }
+
+    public function getAvailableSlots(Request $request) {
+        $request->validate([
+            'day_of_week'  => 'required|integer|between:1,6',
+            'term_id'      => 'required|exists:terms,id',
+            'type'         => 'required|in:teacher,classroom,batch',
+            'entity_id'    => 'required|integer',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+
+        $slots = match ($request->type) {
+            'teacher' => $service->getAvailableTeacherSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            'classroom' => $service->getAvailableClassroomSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            'batch' => $service->getAvailableBatchSlots($request->entity_id, $request->day_of_week, $request->term_id),
+            default => [],
+        };
+
+        return response()->json(['slots' => $slots]);
+    }
+
+    public function getSuggestions(Request $request) {
+        $request->validate([
+            'day_of_week'   => 'required|integer|between:1,6',
+            'slot_id'       => 'required|exists:timetable_slots,id',
+            'teacher_id'    => 'required|exists:teachers,id',
+            'classroom_id'  => 'required|exists:classrooms,id',
+            'batch_id'      => 'required|exists:batches,id',
+            'term_id'       => 'required|exists:terms,id',
+        ]);
+
+        $service = app(ConflictPreventionService::class);
+        $suggestions = $service->getSuggestions(
+            $request->day_of_week,
+            $request->slot_id,
+            $request->teacher_id,
+            $request->classroom_id,
+            $request->batch_id,
+            $request->term_id
+        );
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    // ── Auto-Scheduling Algorithm ─────────────────────────────────────────────
+    public function suggestAutoSchedule(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'batch_id'   => 'nullable|exists:batches,id',
+        ]);
+
+        $service = app(AutoSchedulingService::class);
+        $result = $service->suggestSchedule(
+            $request->program_id,
+            $request->term_id,
+            $request->batch_id
+        );
+
+        return response()->json($result);
+    }
+
+    public function acceptAutoScheduleSuggestions(Request $request) {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'term_id'    => 'required|exists:terms,id',
+            'suggestions' => 'required|array',
+            'suggestions.*.subject_id' => 'required|exists:subjects,id',
+            'suggestions.*.batch_id' => 'required|exists:batches,id',
+            'suggestions.*.teacher_id' => 'required|exists:teachers,id',
+            'suggestions.*.classroom_id' => 'required|exists:classrooms,id',
+            'suggestions.*.day_of_week' => 'required|integer|between:1,6',
+            'suggestions.*.timetable_slot_id' => 'required|exists:timetable_slots,id',
+        ]);
+
+        $created = 0;
+        $errors = [];
+
+        foreach ($request->suggestions as $suggestion) {
+            try {
+                TimetableEntry::create([
+                    'program_id' => $request->program_id,
+                    'term_id' => $request->term_id,
+                    'batch_id' => $suggestion['batch_id'],
+                    'subject_id' => $suggestion['subject_id'],
+                    'teacher_id' => $suggestion['teacher_id'],
+                    'classroom_id' => $suggestion['classroom_id'],
+                    'day_of_week' => $suggestion['day_of_week'],
+                    'timetable_slot_id' => $suggestion['timetable_slot_id'],
+                    'is_active' => true,
+                    'status' => 'draft',
+                ]);
+                $created++;
+            } catch (\Exception $e) {
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        if ($created > 0) {
+            return back()->with('success', "Auto-scheduled {$created} entries. Review and adjust as needed.");
+        } else {
+            return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
+        }
     }
 }
