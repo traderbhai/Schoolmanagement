@@ -1021,6 +1021,21 @@ class DemoDataSeeder extends Seeder
         );
         $directorUser->syncRoles(['director']);
 
+        // ── Parent user ───────────────────────────────────────────────────────
+        $parentUser = User::firstOrCreate(
+            ['email' => 'parent@demo.edu'],
+            ['name' => 'Ramesh Kumar', 'password' => Hash::make('password')]
+        );
+        $parentUser->syncRoles(['parent']);
+        $parentProfile = \App\Models\ParentProfile::firstOrCreate(
+            ['user_id' => $parentUser->id],
+            ['relation' => 'father', 'phone' => '9876500000']
+        );
+        $parentChild = \App\Models\Student::whereHas('user', fn($q) => $q->where('email', 'arjun.k@demo.edu'))->first();
+        if ($parentChild && !$parentProfile->students()->where('students.id', $parentChild->id)->exists()) {
+            $parentProfile->students()->attach($parentChild->id);
+        }
+
         // ── Feature Access Matrix ─────────────────────────────────────────────
         $this->seedFeatureAccessMatrix();
 
@@ -1038,6 +1053,7 @@ class DemoDataSeeder extends Seeder
         $this->command->info('  Accounts Officer: accounts@college.com / password');
         $this->command->info('  CMC Officer: cmc@college.com / password');
         $this->command->info('  Director: director@college.com / password');
+        $this->command->info('  Parent: parent@demo.edu / password');
     }
 
     private function seedFeatureAccessMatrix(): void

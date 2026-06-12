@@ -47,6 +47,8 @@
 | exam_cell | exam@college.com |
 | teacher | anjali@demo.edu |
 | student | arjun.k@demo.edu |
+| parent | parent@demo.edu |
+| applicant | priya.sharma@applicant.demo |
 
 ---
 

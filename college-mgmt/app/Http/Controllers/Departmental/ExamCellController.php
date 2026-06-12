@@ -20,7 +20,8 @@ class ExamCellController extends Controller
             ->filter(fn($e) => $e->results_count === 0);
         $pending = $examsNeedingResults->count();
 
-        $completionPct = $past > 0 ? round((($past - $pending) / $past) * 100, 1) : 100;
+        $withResults = $past - $pending;
+        $completionPct = $past > 0 ? round(($withResults / $past) * 100, 1) : 100;
 
         $published = 0;
         try {
@@ -50,7 +51,7 @@ class ExamCellController extends Controller
         catch (\Exception $e) { $anomalyCount = 0; }
 
         return view('departmental.exam-cell.dashboard', compact(
-            'total', 'upcoming', 'pending', 'completionPct', 'published',
+            'total', 'upcoming', 'pending', 'withResults', 'completionPct', 'published',
             'recentExams', 'upcomingExams', 'anomalyCount'
         ));
     }
