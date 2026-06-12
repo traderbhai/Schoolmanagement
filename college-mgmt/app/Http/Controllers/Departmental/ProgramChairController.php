@@ -65,9 +65,10 @@ class ProgramChairController extends Controller
                 return $exam;
             });
 
-        // Pre-aggregate attendance per subject
-        $subjectAttData = \App\Models\Attendance::selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
-            ->groupBy('subject_id')
+        // Pre-aggregate attendance per subject (join through timetable_entries)
+        $subjectAttData = \App\Models\Attendance::join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+            ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('timetable_entries.subject_id')
             ->get()
             ->keyBy('subject_id');
 
@@ -91,9 +92,10 @@ class ProgramChairController extends Controller
         try {
             $studentIds = Student::whereIn('program_id', $programIds)->where('status', 'active')->take(100)->pluck('id');
 
-            $studentAttBySubject = \App\Models\Attendance::whereIn('student_id', $studentIds)
-                ->selectRaw('student_id, subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
-                ->groupBy('student_id', 'subject_id')
+            $studentAttBySubject = \App\Models\Attendance::whereIn('attendances.student_id', $studentIds)
+                ->join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+                ->selectRaw('attendances.student_id, timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
+                ->groupBy('attendances.student_id', 'timetable_entries.subject_id')
                 ->get()
                 ->groupBy('student_id');
 

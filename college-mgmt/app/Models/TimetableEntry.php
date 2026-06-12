@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TimetableEntry extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'semester_id', 'course_id', 'program_id', 'term_id', 'batch_id', 'subject_id', 'teacher_id',
         'classroom_id', 'timetable_slot_id', 'day_of_week', 'is_active', 'status', 'timetable_version_id',

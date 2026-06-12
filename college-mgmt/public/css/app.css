@@ -587,3 +587,87 @@ h6 { font-size: .9rem; font-weight: 600; }
 @media (min-width: 992px) {
   .sidebar-mobile-toggle { display: none !important; }
 }
+
+/* ============================================================
+   MOBILE IMPROVEMENTS
+   ============================================================ */
+
+/* Reduce padding on small screens */
+@media (max-width: 575.98px) {
+  .page-body { padding: 1rem .75rem; }
+  .kpi-card { padding: 1rem 1.1rem; }
+  .kpi-card .kpi-value { font-size: 1.6rem; }
+  .kpi-card .kpi-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+  .topbar { padding: 0 .75rem; }
+  .topbar-search { display: none !important; }
+  .card-header { padding: .7rem 1rem; }
+  .table th, .table td { padding: .6rem .75rem; }
+  h1 { font-size: 1.25rem; }
+}
+
+/* Tablet adjustments */
+@media (max-width: 767.98px) {
+  .kpi-card .kpi-value { font-size: 1.75rem; }
+  .page-body { padding: 1.25rem 1rem; }
+}
+
+/* Always wrap overflow tables */
+.card .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Timetable on mobile: compact cells */
+@media (max-width: 767.98px) {
+  .timetable-grid th, .timetable-grid td { min-width: 90px; font-size: .7rem; padding: .35rem; }
+  .timetable-cell .subj { font-size: .68rem; }
+  .timetable-cell .tchr { font-size: .62rem; }
+}
+
+/* Topbar breadcrumb — hide on xs */
+@media (max-width: 575.98px) {
+  .topbar .breadcrumb { display: none !important; }
+  .topbar .page-heading h6 { font-size: .85rem; }
+}
+
+/* Action button groups — wrap on mobile */
+@media (max-width: 575.98px) {
+  .d-flex.gap-1.flex-wrap .btn { padding: .25rem .5rem; font-size: .72rem; }
+}
+
+/* Form columns — full width on mobile */
+@media (max-width: 575.98px) {
+  .row.g-3 > [class*="col-sm-"] { flex: 0 0 100%; max-width: 100%; }
+}
+
+/* KPI card hover effect — disable on touch to prevent stuck state */
+@media (hover: none) {
+  .kpi-card:hover { transform: none; box-shadow: var(--shadow-sm); }
+}
+
+/* Pagination — smaller on mobile */
+@media (max-width: 575.98px) {
+  .pagination .page-link { padding: .3rem .6rem; font-size: .75rem; }
+}
+
+/* Modal full-screen on mobile */
+@media (max-width: 575.98px) {
+  .modal-dialog { margin: .5rem; }
+  .modal-content { border-radius: var(--radius-md); }
+}
+
+/* Section labels — tighter on mobile */
+@media (max-width: 575.98px) {
+  .section-label { padding: .6rem 1rem .2rem; }
+}
+
+/* Make sure topbar toggle button is always visible */
+.sidebar-mobile-toggle {
+  background: transparent;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  padding: .3rem .5rem;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+}
+.sidebar-mobile-toggle:hover { background: var(--clr-body-bg); color: var(--clr-text); }

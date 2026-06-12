@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Classroom extends Model
 {
+    use HasFactory;
     protected $fillable = ['name', 'room_number', 'capacity', 'type', 'building', 'floor', 'has_projector', 'has_lab', 'is_active'];
     protected $casts = ['has_projector' => 'boolean', 'has_lab' => 'boolean', 'is_active' => 'boolean'];
 

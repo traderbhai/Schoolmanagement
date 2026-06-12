@@ -248,8 +248,8 @@ class DeanController extends Controller
     {
         // Single JOIN query instead of 3 queries per program
         $attendanceByProgram = Attendance::selectRaw(
-            'students.program_id, COUNT(*) as total, SUM(CASE WHEN attendance.status="present" THEN 1 ELSE 0 END) as present_count'
-        )->join('students', 'attendance.student_id', '=', 'students.id')
+            'students.program_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count'
+        )->join('students', 'attendances.student_id', '=', 'students.id')
          ->groupBy('students.program_id')
          ->get()
          ->keyBy('program_id');
