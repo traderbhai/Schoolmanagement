@@ -54,24 +54,31 @@ class ProgramChairController extends Controller
 
         // Recent exams
         $recentExams = Exam::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
-            ->with('subject')
+            ->with(['subject', 'examResults'])
             ->latest('exam_date')
             ->take(6)
             ->get()
             ->map(function($exam) {
-                $results = ExamResult::where('exam_id', $exam->id)->get();
+                $results = $exam->examResults;
                 $exam->result_count = $results->count();
                 $exam->pass_count = $results->where('marks_obtained', '>=', ($exam->passing_marks ?? 40))->count();
                 return $exam;
             });
 
+        // Pre-aggregate attendance per subject
+        $subjectAttData = \App\Models\Attendance::selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('subject_id')
+            ->get()
+            ->keyBy('subject_id');
+
         // Subjects with attendance < 75%
         $lowAttSubjects = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
             ->with('program')
             ->take(20)->get()
-            ->map(function($subject) {
-                $total = Attendance::where('subject_id', $subject->id)->count();
-                $present = Attendance::where('subject_id', $subject->id)->where('status', 'present')->count();
+            ->map(function($subject) use ($subjectAttData) {
+                $att = $subjectAttData->get($subject->id);
+                $total = $att?->total ?? 0;
+                $present = $att?->present_count ?? 0;
                 $subject->attendance_pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
                 return $subject;
             })
@@ -82,17 +89,24 @@ class ProgramChairController extends Controller
         // At-risk students (attendance < 75% in any subject, quick approximation)
         $atRiskStudents = collect();
         try {
-            $pmcStudentCtrl = new \App\Http\Controllers\Departmental\PmcStudentController();
-            // Use a lightweight in-line approach for the dashboard
-            $allStudents = Student::whereIn('program_id', $programIds)
-                ->where('status', 'active')->with(['user','batch'])->take(100)->get();
-            $atRiskStudents = $allStudents->filter(function ($student) {
-                $attBySubject = Attendance::where('student_id', $student->id)
-                    ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present')
-                    ->groupBy('subject_id')->get();
+            $studentIds = Student::whereIn('program_id', $programIds)->where('status', 'active')->take(100)->pluck('id');
+
+            $studentAttBySubject = \App\Models\Attendance::whereIn('student_id', $studentIds)
+                ->selectRaw('student_id, subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
+                ->groupBy('student_id', 'subject_id')
+                ->get()
+                ->groupBy('student_id');
+
+            $studentResults = \App\Models\ExamResult::whereIn('student_id', $studentIds)
+                ->get()
+                ->groupBy('student_id');
+
+            $allStudents = Student::whereIn('id', $studentIds)->with(['user','batch'])->get();
+            $atRiskStudents = $allStudents->filter(function ($student) use ($studentAttBySubject, $studentResults) {
+                $attBySubject = $studentAttBySubject->get($student->id, collect());
                 $risks = [];
-                if ($attBySubject->filter(fn($r) => $r->total > 0 && ($r->present/$r->total) < 0.75)->isNotEmpty()) $risks[] = 'attendance';
-                $results = ExamResult::where('student_id', $student->id)->get();
+                if ($attBySubject->filter(fn($r) => $r->total > 0 && ($r->present_count/$r->total) < 0.75)->isNotEmpty()) $risks[] = 'attendance';
+                $results = $studentResults->get($student->id, collect());
                 if ($results->isNotEmpty()) {
                     $arrears = $results->filter(fn($r) => $r->exam && ($r->marks_obtained / max($r->exam->total_marks??100,1))*100 < 35);
                     if ($arrears->isNotEmpty()) $risks[] = 'arrear';
@@ -240,6 +254,20 @@ class ProgramChairController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
+        // Check seat capacity before approving
+        $applicant = $approval->approvable;
+        $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
+
+        if ($seatMatrix) {
+            $filledSeats = Applicant::where('program_id', $applicant->program_id)
+                ->whereIn('status', ['offer_accepted', 'enrolled'])
+                ->count();
+
+            if ($filledSeats >= $seatMatrix->total_seats) {
+                return back()->with('error', 'Program capacity is full. Cannot approve additional applicants.');
+            }
+        }
+
         $approval->update([
             'status'      => 'approved',
             'approver_id' => auth()->id(),
@@ -247,41 +275,7 @@ class ProgramChairController extends Controller
             'approved_at' => now(),
         ]);
 
-        // If approvable is an Applicant, check seat capacity and finalize
-        if ($approval->approvable instanceof Applicant) {
-            $applicant  = $approval->approvable;
-            $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
-
-            if ($seatMatrix) {
-                $filledSeats = Applicant::where('program_id', $applicant->program_id)
-                    ->whereIn('status', ['offer_accepted', 'enrolled'])
-                    ->count();
-
-                if ($filledSeats >= $seatMatrix->total_seats) {
-                    // Revert — over capacity
-                    $approval->update(['status' => 'pending', 'approver_id' => null, 'approved_at' => null]);
-                    return back()->with('error', 'Program capacity is full. Cannot approve additional applicants.');
-                }
-            }
-
-            // Create offer letter if not already issued
-            if (!$applicant->offerLetter) {
-                \App\Models\OfferLetter::create([
-                    'applicant_id'        => $applicant->id,
-                    'program_id'          => $applicant->program_id,
-                    'batch_id'            => $applicant->batch_id,
-                    'status'              => 'issued',
-                    'issued_at'           => now(),
-                    'issued_by'           => auth()->id(),
-                    'acceptance_deadline' => now()->addDays(14)->toDateString(),
-                ]);
-            }
-
-            // Update applicant status
-            $applicant->update(['status' => 'selected']);
-        }
-
-        return back()->with('success', 'Approval granted successfully.');
+        return back()->with('success', 'Approval granted. All approvals complete.');
     }
 
     public function reject(Request $request, ApprovalWorkflow $approval)

@@ -66,11 +66,20 @@ class DashboardController extends Controller
             ->get();
 
         // Attendance trend — last 14 days
+        $cutoff = now()->subDays(13)->toDateString();
+        $today = now()->toDateString();
+        $attTrendData = \App\Models\Attendance::whereBetween('date', [$cutoff, $today])
+            ->selectRaw('DATE(date) as day, COUNT(*) as total, SUM(CASE WHEN status IN ("present","late") THEN 1 ELSE 0 END) as present_count')
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(date)'))
+            ->get()
+            ->keyBy('day');
+
         $attendanceTrend = [];
         for ($i = 13; $i >= 0; $i--) {
-            $date    = now()->subDays($i)->toDateString();
-            $total   = Attendance::whereDate('date', $date)->count();
-            $present = Attendance::whereDate('date', $date)->whereIn('status', ['present','late'])->count();
+            $date = now()->subDays($i)->toDateString();
+            $data = $attTrendData->get($date);
+            $total = $data?->total ?? 0;
+            $present = $data?->present_count ?? 0;
             $attendanceTrend[] = [
                 'date'    => now()->subDays($i)->format('d M'),
                 'total'   => $total,
@@ -80,16 +89,23 @@ class DashboardController extends Controller
         }
 
         // Fee collection — last 6 months
+        $feeStart = now()->subMonths(5)->startOfMonth()->toDateString();
+        $feeEnd = now()->endOfMonth()->toDateString();
+        $feeTrendData = \App\Models\FeePayment::where('status', 'paid')
+            ->whereBetween('payment_date', [$feeStart, $feeEnd])
+            ->selectRaw('strftime("%Y", payment_date) as yr, strftime("%m", payment_date) as mo, SUM(amount_paid) as amount')
+            ->groupBy(\Illuminate\Support\Facades\DB::raw('strftime("%Y", payment_date), strftime("%m", payment_date)'))
+            ->get()
+            ->keyBy(fn($r) => $r->yr . '-' . $r->mo);
+
         $feeCollection = [];
         $feeMonthly    = [];
         for ($i = 5; $i >= 0; $i--) {
-            $month  = now()->subMonths($i);
-            $amount = FeePayment::whereYear('payment_date', $month->year)
-                ->whereMonth('payment_date', $month->month)
-                ->where('status', 'paid')
-                ->sum('amount_paid');
-            $feeCollection[] = ['month' => $month->format('M Y'), 'amount' => (int) $amount];
-            $feeMonthly[]    = ['month' => $month->format('M Y'), 'amount' => (int) $amount];
+            $month = now()->subMonths($i);
+            $key = $month->format('Y') . '-' . $month->format('m');
+            $entry = ['month' => $month->format('M Y'), 'amount' => (int) ($feeTrendData->get($key)?->amount ?? 0)];
+            $feeCollection[] = $entry;
+            $feeMonthly[]    = $entry;
         }
 
         // Enrollment by department

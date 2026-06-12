@@ -25,10 +25,17 @@ class AccountsController extends Controller
             ->take(10)
             ->get();
 
-        $programs = Program::where('is_active', true)->get()->map(function ($p) {
-            $studentIds = Student::where('program_id', $p->id)->pluck('id');
-            $p->collected = FeePayment::whereIn('student_id', $studentIds)->where('status', 'paid')->sum('amount_paid');
-            $p->student_count = $studentIds->count();
+        $feeByProgram = \App\Models\FeePayment::join('students', 'fee_payments.student_id', '=', 'students.id')
+            ->where('fee_payments.status', 'paid')
+            ->selectRaw('students.program_id, SUM(fee_payments.amount_paid) as collected, COUNT(DISTINCT fee_payments.student_id) as student_count')
+            ->groupBy('students.program_id')
+            ->get()
+            ->keyBy('program_id');
+
+        $programs = Program::where('is_active', true)->get()->map(function ($p) use ($feeByProgram) {
+            $data = $feeByProgram->get($p->id);
+            $p->collected = $data?->collected ?? 0;
+            $p->student_count = $data?->student_count ?? 0;
             return $p;
         });
 
@@ -86,17 +93,28 @@ class AccountsController extends Controller
 
     public function outstanding()
     {
-        $programs = Program::where('is_active', true)->get()->map(function ($p) {
+        $feeStructureByProgram = \App\Models\FeeStructure::selectRaw('program_id, SUM(amount) as due_amount')
+            ->groupBy('program_id')
+            ->get()
+            ->keyBy('program_id');
+
+        $paidByStudent = \App\Models\FeePayment::selectRaw('student_id, SUM(amount_paid) as paid, MAX(payment_date) as last_payment')
+            ->where('status', 'paid')
+            ->groupBy('student_id')
+            ->get()
+            ->keyBy('student_id');
+
+        $programs = Program::where('is_active', true)->get()->map(function ($p) use ($feeStructureByProgram, $paidByStudent) {
+            $due = $feeStructureByProgram->get($p->id)?->due_amount ?? 0;
             $students = Student::where('program_id', $p->id)
                 ->where('status', 'active')
                 ->with(['user'])
                 ->get()
-                ->map(function ($s) {
-                    $due   = FeeStructure::where('program_id', $s->program_id)->sum('amount');
-                    $paid  = $s->feePayments()->where('status', 'paid')->sum('amount_paid');
+                ->map(function ($s) use ($due, $paidByStudent) {
+                    $studentData = $paidByStudent->get($s->id);
+                    $paid  = $studentData?->paid ?? 0;
                     $s->amount_due = max(0, $due - $paid);
-                    $lastPayment = $s->feePayments()->latest('payment_date')->first();
-                    $s->last_payment_date = $lastPayment?->payment_date;
+                    $s->last_payment_date = $studentData?->last_payment;
                     return $s;
                 })
                 ->filter(fn($s) => $s->amount_due > 0);
@@ -259,12 +277,23 @@ class AccountsController extends Controller
 
     public function exportOutstanding(Request $request)
     {
+        $feeStructureByProgram = \App\Models\FeeStructure::selectRaw('program_id, SUM(amount) as due_amount')
+            ->groupBy('program_id')
+            ->get()
+            ->keyBy('program_id');
+
+        $paidByStudent = \App\Models\FeePayment::selectRaw('student_id, SUM(amount_paid) as paid')
+            ->where('status', 'paid')
+            ->groupBy('student_id')
+            ->get()
+            ->keyBy('student_id');
+
         $students = Student::where('status', 'active')
             ->with(['user', 'program', 'batch'])
             ->get()
-            ->map(function ($s) {
-                $due  = \App\Models\FeeStructure::where('program_id', $s->program_id)->sum('amount');
-                $paid = $s->feePayments()->where('status', 'paid')->sum('amount_paid');
+            ->map(function ($s) use ($feeStructureByProgram, $paidByStudent) {
+                $due  = $feeStructureByProgram->get($s->program_id)?->due_amount ?? 0;
+                $paid = $paidByStudent->get($s->id)?->paid ?? 0;
                 $s->amount_due = max(0, $due - $paid);
                 return $s;
             })

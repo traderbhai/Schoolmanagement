@@ -35,12 +35,28 @@ class DirectorController extends Controller
         $attPresent = \App\Models\Attendance::where('status','present')->count();
         $overallAttendance = $attTotal > 0 ? round(($attPresent/$attTotal)*100,1) : 0;
 
+        // Pre-calculate all portal metrics in bulk (avoids N+1 inside buildPortalSummary loop)
+        $preCalc = [
+            'active_students'      => Student::where('status', 'active')->count(),
+            'active_programs'      => $totalPrograms,
+            'active_faculty'       => Teacher::where('status', 'active')->count(),
+            'pending_dean'         => ApprovalWorkflow::where('approver_role', 'dean_academics')->where('status', 'pending')->count(),
+            'pending_chair'        => ApprovalWorkflow::where('approver_role', 'program_chair')->where('status', 'pending')->count(),
+            'pending_leaves'       => LeaveApplication::where('status', 'pending')->count(),
+            'exams_this_year'      => Exam::whereYear('exam_date', now()->year)->count(),
+            'placed_this_year'     => $placedThisYear,
+            'active_drives'        => $activeDrives,
+            'fee_this_year'        => Schema::hasTable('fee_payments')
+                ? '₹' . number_format(\App\Models\FeePayment::where('status', 'paid')->whereYear('payment_date', now()->year)->sum('amount_paid'), 0)
+                : '—',
+        ];
+
         // Build portal summaries from org hierarchy
         $childLines = OrgReportingLine::getChildRoles('director');
         $portalSummaries = [];
         foreach ($childLines as $line) {
             try {
-                $summary = $this->buildPortalSummary($line->child_role, $line->can_view_full);
+                $summary = $this->buildPortalSummary($line->child_role, $line->can_view_full, $preCalc);
                 if ($summary) $portalSummaries[] = $summary;
             } catch (\Throwable $e) {}
         }
@@ -51,7 +67,7 @@ class DirectorController extends Controller
         ));
     }
 
-    private function buildPortalSummary(string $role, bool $canFull): ?array
+    private function buildPortalSummary(string $role, bool $canFull, array $pre = []): ?array
     {
         $config = [
             'dean_academics'   => ['label'=>'Dean Academics','icon'=>'bi-mortarboard-fill','color'=>'primary','route'=>'dean.dashboard'],
@@ -70,29 +86,27 @@ class DirectorController extends Controller
 
         $base['metrics'] = match($role) {
             'dean_academics'   => [
-                ['label'=>'Active Students', 'value'=> Student::where('status','active')->count()],
-                ['label'=>'Programs',        'value'=> Program::where('is_active',true)->count()],
-                ['label'=>'Pending Approvals','value'=> ApprovalWorkflow::where('approver_role','dean_academics')->where('status','pending')->count()],
+                ['label'=>'Active Students',  'value'=> $pre['active_students'] ?? 0],
+                ['label'=>'Programs',         'value'=> $pre['active_programs'] ?? 0],
+                ['label'=>'Pending Approvals','value'=> $pre['pending_dean'] ?? 0],
             ],
             'hod'              => [
-                ['label'=>'Active Faculty',  'value'=> Teacher::where('status','active')->count()],
-                ['label'=>'Pending Leaves',  'value'=> LeaveApplication::where('status','pending')->count()],
+                ['label'=>'Active Faculty', 'value'=> $pre['active_faculty'] ?? 0],
+                ['label'=>'Pending Leaves', 'value'=> $pre['pending_leaves'] ?? 0],
             ],
             'program_chair'    => [
-                ['label'=>'Students', 'value'=> Student::where('status','active')->count()],
-                ['label'=>'Pending Approvals','value'=> ApprovalWorkflow::where('approver_role','program_chair')->where('status','pending')->count()],
+                ['label'=>'Students',         'value'=> $pre['active_students'] ?? 0],
+                ['label'=>'Pending Approvals','value'=> $pre['pending_chair'] ?? 0],
             ],
             'exam_cell'        => [
-                ['label'=>'Exams This Year', 'value'=> Exam::whereYear('exam_date',now()->year)->count()],
+                ['label'=>'Exams This Year', 'value'=> $pre['exams_this_year'] ?? 0],
             ],
             'accounts_officer' => [
-                ['label'=>'Fee Collections This Year', 'value'=> Schema::hasTable('fee_payments')
-                    ? '₹'.number_format(\App\Models\FeePayment::where('status','paid')->whereYear('payment_date',now()->year)->sum('amount_paid'),0)
-                    : '—'],
+                ['label'=>'Fee Collections This Year', 'value'=> $pre['fee_this_year'] ?? '—'],
             ],
             'cmc'              => [
-                ['label'=>'Placed This Year','value'=> Placement::where('application_status','selected')->whereYear('created_at',now()->year)->count()],
-                ['label'=>'Active Drives',   'value'=> PlacementDrive::whereIn('status',['open','active'])->count()],
+                ['label'=>'Placed This Year','value'=> $pre['placed_this_year'] ?? 0],
+                ['label'=>'Active Drives',   'value'=> $pre['active_drives'] ?? 0],
             ],
             default => [],
         };
