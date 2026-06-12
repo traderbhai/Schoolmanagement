@@ -26,6 +26,17 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'actor_id');
     }
 
+    public static function log(string $action, Model $target, ?array $changes = null, ?int $actorId = null): self
+    {
+        return self::create([
+            'actor_id'    => $actorId ?? auth()->id(),
+            'action'      => $action,
+            'target_type' => get_class($target),
+            'target_id'   => $target->getKey(),
+            'changes'     => $changes,
+        ]);
+    }
+
     public static function logRoleAssignment(User $actor, User $targetUser, Role $role, ?Program $program = null, ?array $changes = null): self
     {
         return self::create([

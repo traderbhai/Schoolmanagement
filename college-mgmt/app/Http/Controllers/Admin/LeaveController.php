@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\LeaveApplication;
-use App\Models\Teacher;
+use App\Models\{LeaveApplication, Teacher, AuditLog};
 use Illuminate\Http\Request;
 
 class LeaveController extends Controller
@@ -50,6 +49,7 @@ class LeaveController extends Controller
             'approved_at'   => now(),
         ]);
 
+        AuditLog::log('leave_approved', $leave, ['teacher' => $leave->teacher?->user?->name, 'remarks' => $request->admin_remarks]);
         return back()->with('success', 'Leave approved successfully.');
     }
 
@@ -64,6 +64,7 @@ class LeaveController extends Controller
             'approved_at'   => now(),
         ]);
 
+        AuditLog::log('leave_rejected', $leave, ['teacher' => $leave->teacher?->user?->name, 'remarks' => $request->admin_remarks]);
         return back()->with('success', 'Leave rejected.');
     }
 
