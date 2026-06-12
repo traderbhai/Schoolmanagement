@@ -240,20 +240,6 @@ class ProgramChairController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
-        // Check seat capacity before approving
-        $applicant = $approval->approvable;
-        $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
-
-        if ($seatMatrix) {
-            $filledSeats = Applicant::where('program_id', $applicant->program_id)
-                ->whereIn('status', ['offer_accepted', 'enrolled'])
-                ->count();
-
-            if ($filledSeats >= $seatMatrix->total_seats) {
-                return back()->with('error', 'Program capacity is full. Cannot approve additional applicants.');
-            }
-        }
-
         $approval->update([
             'status'      => 'approved',
             'approver_id' => auth()->id(),
@@ -261,7 +247,41 @@ class ProgramChairController extends Controller
             'approved_at' => now(),
         ]);
 
-        return back()->with('success', 'Approval granted. All approvals complete.');
+        // If approvable is an Applicant, check seat capacity and finalize
+        if ($approval->approvable instanceof Applicant) {
+            $applicant  = $approval->approvable;
+            $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
+
+            if ($seatMatrix) {
+                $filledSeats = Applicant::where('program_id', $applicant->program_id)
+                    ->whereIn('status', ['offer_accepted', 'enrolled'])
+                    ->count();
+
+                if ($filledSeats >= $seatMatrix->total_seats) {
+                    // Revert — over capacity
+                    $approval->update(['status' => 'pending', 'approver_id' => null, 'approved_at' => null]);
+                    return back()->with('error', 'Program capacity is full. Cannot approve additional applicants.');
+                }
+            }
+
+            // Create offer letter if not already issued
+            if (!$applicant->offerLetter) {
+                \App\Models\OfferLetter::create([
+                    'applicant_id'        => $applicant->id,
+                    'program_id'          => $applicant->program_id,
+                    'batch_id'            => $applicant->batch_id,
+                    'status'              => 'issued',
+                    'issued_at'           => now(),
+                    'issued_by'           => auth()->id(),
+                    'acceptance_deadline' => now()->addDays(14)->toDateString(),
+                ]);
+            }
+
+            // Update applicant status
+            $applicant->update(['status' => 'selected']);
+        }
+
+        return back()->with('success', 'Approval granted successfully.');
     }
 
     public function reject(Request $request, ApprovalWorkflow $approval)

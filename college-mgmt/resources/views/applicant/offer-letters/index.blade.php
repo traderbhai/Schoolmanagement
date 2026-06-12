@@ -78,13 +78,13 @@
                             @elseif($offer->isAccepted())
                                 <div class="alert alert-success mb-3">
                                     <small>
-                                        ✓ Accepted on {{ $offer->accepted_at->format('d M Y') }}
+                                        ✓ Accepted on {{ $offer->accepted_at?->format('d M Y') ?? '—' }}
                                     </small>
                                 </div>
                             @elseif($offer->isDeclined())
                                 <div class="alert alert-danger mb-3">
                                     <small>
-                                        ✗ Declined on {{ $offer->declined_at->format('d M Y') }}
+                                        ✗ Declined on {{ $offer->declined_at?->format('d M Y') ?? '—' }}
                                         @if($offer->declined_reason)
                                             <br>Reason: {{ $offer->declined_reason }}
                                         @endif

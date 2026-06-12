@@ -15,10 +15,10 @@
             @endif
             <p><strong>Status:</strong> {{ ucfirst($scholarship->status) }}</p>
             @if($scholarship->valid_from)
-                <p><strong>Valid From:</strong> {{ $scholarship->valid_from->format('d M Y') }}</p>
+                <p><strong>Valid From:</strong> {{ $scholarship->valid_from?->format('d M Y') ?? '—' }}</p>
             @endif
             @if($scholarship->valid_to)
-                <p><strong>Valid To:</strong> {{ $scholarship->valid_to->format('d M Y') }}</p>
+                <p><strong>Valid To:</strong> {{ $scholarship->valid_to?->format('d M Y') ?? '—' }}</p>
             @endif
             <div class="mt-3">
                 <a href="{{ route('academic.scholarships.edit', $scholarship) }}" class="btn btn-warning">Edit</a>

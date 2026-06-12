@@ -27,7 +27,7 @@
                     <p><strong>Due Date:</strong>
                         @if($feeDemand->due_date)
                             <span class="{{ $feeDemand->due_date->isPast() && !$feeDemand->isPaid() ? 'text-danger fw-semibold' : '' }}">
-                                {{ $feeDemand->due_date->format('d M Y') }}
+                                {{ $feeDemand->due_date?->format('d M Y') ?? '—' }}
                                 @if($feeDemand->due_date->isPast() && !$feeDemand->isPaid())
                                     <i class="bi bi-exclamation-circle-fill ms-1"></i>
                                 @endif

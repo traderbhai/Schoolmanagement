@@ -38,7 +38,8 @@ class PmcFacultyController extends Controller
 
         // Compute hours/week per teacher
         $workload = $entries->groupBy('teacher_id')->map(function ($teacherEntries) use ($slots) {
-            $teacher = $teacherEntries->first()->teacher;
+            $teacher = $teacherEntries->first()?->teacher;
+            if (!$teacher) return null;
             $hours = $teacherEntries->sum(function ($e) use ($slots) {
                 $slot = $slots[$e->timetable_slot_id] ?? null;
                 if (!$slot) return 0;
@@ -54,7 +55,7 @@ class PmcFacultyController extends Controller
                 'batches'  => $teacherEntries->pluck('batch.name')->unique()->filter()->values(),
                 'overload' => $hours > 18,
             ];
-        })->sortByDesc('hours')->values();
+        })->filter()->sortByDesc('hours')->values();
 
         $terms = Term::orderByDesc('start_date')->take(8)->get();
 
@@ -149,7 +150,8 @@ class PmcFacultyController extends Controller
             ->get()
             ->groupBy('subject_id')
             ->map(function ($rows, $subjectId) {
-                $subject  = $rows->first()->subject;
+                $subject  = $rows->first()?->subject;
+                if (!$subject) return null;
                 $avg_teaching = $rows->whereNotNull('teaching_rating')->avg('teaching_rating');
                 $avg_content  = $rows->whereNotNull('content_rating')->avg('content_rating');
                 $avg_overall  = $rows->whereNotNull('overall_rating')->avg('overall_rating');
@@ -160,7 +162,7 @@ class PmcFacultyController extends Controller
                     'avg_content'  => $avg_content  ? round($avg_content, 1) : null,
                     'avg_overall'  => $avg_overall  ? round($avg_overall, 1) : null,
                 ];
-            })->values();
+            })->filter()->values();
 
         // Map feedback to teacher assignments
         $assignments = SubjectFacultyAssignment::whereIn('program_id', $programIds)

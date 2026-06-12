@@ -23,7 +23,7 @@
                     </div>
                     <p class="text-muted small mb-0">Application Status</p>
                     @if($applicant->applied_at)
-                        <p class="text-muted small mt-1">Submitted: {{ $applicant->applied_at->format('d M Y') }}</p>
+                        <p class="text-muted small mt-1">Submitted: {{ $applicant->applied_at ? $applicant->applied_at->format('d M Y') : '—' }}</p>
                     @endif
                 </div>
             </div>
@@ -92,7 +92,7 @@
                     <i class="bi bi-{{ $feePaid ? 'check-circle-fill text-success' : 'circle text-warning' }} fs-5"></i>
                     <div class="flex-grow-1">
                         <div class="fw-semibold small">Registration Fee</div>
-                        <div class="text-muted smaller">{{ $feePaid ? 'Paid on ' . $applicant->registration_fee_paid_at->format('d M Y') : 'Not yet paid' }}</div>
+                        <div class="text-muted smaller">{{ $feePaid ? 'Paid on ' . ($applicant->registration_fee_paid_at?->format('d M Y') ?? '—') : 'Not yet paid' }}</div>
                     </div>
                     @if(!$feePaid)<a href="{{ route('admission.applicants.registration-fee.show', $applicant) }}" class="btn btn-xs btn-outline-warning btn-sm">Pay Now</a>@endif
                 </li>

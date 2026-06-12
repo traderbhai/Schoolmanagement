@@ -28,7 +28,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Due Date</label>
-                        <input type="date" name="due_date" class="form-control" value="{{ old('due_date', $feeDemand->due_date->format('Y-m-d')) }}" required>
+                        <input type="date" name="due_date" class="form-control" value="{{ old('due_date', $feeDemand->due_date?->format('Y-m-d')) }}" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
