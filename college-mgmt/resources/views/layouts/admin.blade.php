@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="manifest" href="/manifest.json">
     <title>@yield('title', 'EduManage - Portal')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -892,7 +894,18 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Admission CRM</div>
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
+        <a href="{{ route('admission.command-center.index') }}" class="nav-link @if(request()->routeIs('admission.command-center.*')) active @endif"><i class="bi bi-command"></i> Command Center</a>
         <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
+        <a href="{{ route('admission.call-queue.index') }}" class="nav-link @if(request()->routeIs('admission.call-queue.*')) active @endif"><i class="bi bi-telephone-outbound"></i> Call Queue</a>
+        <a href="{{ route('admission.pipeline.index') }}" class="nav-link @if(request()->routeIs('admission.pipeline.*')) active @endif"><i class="bi bi-columns-gap"></i> Pipeline</a>
+        <a href="{{ route('admission.communication.index') }}" class="nav-link @if(request()->routeIs('admission.communication.*')) active @endif"><i class="bi bi-chat-dots"></i> Communication Hub</a>
+        <a href="{{ route('admission.automations.index') }}" class="nav-link @if(request()->routeIs('admission.automations.*')) active @endif"><i class="bi bi-lightning-charge"></i> Automations</a>
+        <a href="{{ route('admission.scoring.index') }}" class="nav-link @if(request()->routeIs('admission.scoring.*')) active @endif"><i class="bi bi-stars"></i> Lead Scoring</a>
+        <a href="{{ route('admission.journeys.index') }}" class="nav-link @if(request()->routeIs('admission.journeys.*')) active @endif"><i class="bi bi-map"></i> Journeys</a>
+        <a href="{{ route('admission.partners.index') }}" class="nav-link @if(request()->routeIs('admission.partners.*')) active @endif"><i class="bi bi-people-fill"></i> Partners</a>
+        <a href="{{ route('admission.data-quality.index') }}" class="nav-link @if(request()->routeIs('admission.data-quality.*')) active @endif"><i class="bi bi-shield-check"></i> Data Quality</a>
+        <a href="{{ route('admission.forecasting.index') }}" class="nav-link @if(request()->routeIs('admission.forecasting.*')) active @endif"><i class="bi bi-graph-up-arrow"></i> Forecasting</a>
+        <a href="{{ route('admission.approvals.index') }}" class="nav-link @if(request()->routeIs('admission.approvals.*')) active @endif"><i class="bi bi-patch-check"></i> Approvals</a>
         <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif"><i class="bi bi-diagram-3"></i> Process Templates</a>
         <a href="{{ route('admission.assignment-rules.index') }}" class="nav-link @if(request()->routeIs('admission.assignment-rules.*')) active @endif"><i class="bi bi-shuffle"></i> Assignment Rules</a>
         <a href="{{ route('admission.workflow-config.index') }}" class="nav-link @if(request()->routeIs('admission.workflow-config.*')) active @endif"><i class="bi bi-sliders"></i> Workflow Config</a>

@@ -514,6 +514,41 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-command me-2"></i>v0.03 Operating Timeline</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <h6>Communications</h6>
+                @forelse($applicant->communicationLogs()->limit(5)->get() as $log)
+                    <div class="border rounded p-2 mb-2 small">{{ strtoupper($log->channel) }} - {{ $log->status }}<div class="text-muted">{{ Str::limit($log->body, 80) }}</div></div>
+                @empty
+                    <p class="text-muted small">No communication history.</p>
+                @endforelse
+            </div>
+            <div class="col-md-4">
+                <h6>Calls</h6>
+                @forelse($applicant->callLogs()->limit(5)->get() as $call)
+                    <div class="border rounded p-2 mb-2 small">{{ ucfirst(str_replace('_', ' ', $call->disposition)) }}<div class="text-muted">{{ $call->notes }}</div></div>
+                @empty
+                    <p class="text-muted small">No calls logged.</p>
+                @endforelse
+            </div>
+            <div class="col-md-4">
+                <h6>Journey And Quality</h6>
+                <div class="small mb-2">Journey version: {{ $applicant->journeyVersion?->version ?? 'Not assigned' }}</div>
+                @forelse($applicant->dataQualityFlags()->where('status', 'open')->limit(5)->get() as $flag)
+                    <div class="badge bg-warning text-dark me-1 mb-1">{{ $flag->flag_type }}</div>
+                @empty
+                    <p class="text-muted small">No open quality flags.</p>
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 // Wire up reject modal from show page

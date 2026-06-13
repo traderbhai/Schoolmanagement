@@ -207,6 +207,33 @@
                     @endforelse
                 </div>
             </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-transparent fw-semibold">v0.03 Operating Timeline</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6>Communications</h6>
+                            @forelse($lead->communicationLogs()->limit(5)->get() as $log)
+                                <div class="border rounded p-2 mb-2 small">{{ strtoupper($log->channel) }} via {{ $log->provider }} - {{ $log->status }}<div class="text-muted">{{ Str::limit($log->body, 80) }}</div></div>
+                            @empty
+                                <p class="text-muted small">No communication history.</p>
+                            @endforelse
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Calls And Quality</h6>
+                            @forelse($lead->callLogs()->limit(3)->get() as $call)
+                                <div class="border rounded p-2 mb-2 small">{{ ucfirst(str_replace('_', ' ', $call->disposition)) }} by {{ $call->caller?->name ?? 'Staff' }}<div class="text-muted">{{ $call->notes }}</div></div>
+                            @empty
+                                <p class="text-muted small">No calls logged.</p>
+                            @endforelse
+                            @foreach($lead->dataQualityFlags()->where('status', 'open')->limit(3)->get() as $flag)
+                                <span class="badge bg-warning text-dark me-1">{{ $flag->flag_type }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

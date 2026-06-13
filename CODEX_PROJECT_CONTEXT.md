@@ -12,11 +12,11 @@
 ## Current Product Phase
 
 - Treat earlier commercial-readiness work as the completed v0.00 baseline.
-- Current active development phase: v0.01.
+- Current active development phase: v0.03.
 - Previous v0.00 tasks are considered complete unless the user explicitly reopens a specific item.
 - Do not use `COMMERCIAL_READINESS_AUDIT.md` as the active task source for new work unless the user explicitly asks for it.
-- Do not update `COMMERCIAL_READINESS_AUDIT.md` during normal v0.01 development.
-- For v0.01, use the current worktree and this context file as the operational baseline, then inspect the relevant code before making changes.
+- Do not update `COMMERCIAL_READINESS_AUDIT.md` during normal v0.03 development.
+- For v0.03+, use the current worktree and this context file as the operational baseline, then inspect the relevant code before making changes.
 
 ## Runtime
 
@@ -24,6 +24,12 @@ The system XAMPP PHP is `8.2.12`, but this project requires newer PHP. Use the p
 
 ```powershell
 C:\tmp\php-8.5.7\php.exe
+```
+
+Use this PHPRC when running the verified test command path:
+
+```powershell
+$env:PHPRC='C:\tmp\php-8.5.7-codex-ini'
 ```
 
 Composer should be run through that PHP binary:
@@ -142,12 +148,28 @@ Last verified setup:
 - npm dependencies installed.
 - `.env` exists.
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
-- Migrations completed.
+- Migrations completed, including Admission OS v0.03 additive tables.
 - `npm run build` passed.
-- `C:\tmp\php-8.5.7\php.exe -d memory_limit=512M vendor\phpunit\phpunit\phpunit` passed: 382 tests, 1355 assertions.
-- `C:\tmp\php-8.5.7\php.exe artisan test` can exhaust the local 128 MB CLI memory ceiling late in the suite; use the direct PHPUnit command above for full-suite verification unless the local PHP memory limit is raised globally.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 389 tests, 1406 assertions.
+- Admission regression gate passed: 109 tests, 465 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
+
+## Admission OS Baseline
+
+- v0.01 and v0.02 are treated as complete baselines.
+- v0.03 implemented additive operations for command center, communication hub, telecaller call queue, pipeline boards, automation engine, deterministic lead scoring, applicant journey versions, partner/channel admissions, forecasting snapshots, data-quality flags, and admission approvals.
+- v0.03 key files:
+  - Migration: `college-mgmt/database/migrations/2026_06_13_900001_add_admission_os_v003_operations.php`
+  - Demo seeder: `college-mgmt/database/seeders/AdmissionOperatingDemoSeeder.php`, called from `DemoDataSeeder`
+  - Services: `AdmissionCommunicationService`, `AdmissionCallService`, `AdmissionPipelineService`, `AdmissionAutomationService`, `AdmissionLeadScoringService`, `AdmissionJourneyService`, `AdmissionPartnerService`, `AdmissionForecastingService`, `AdmissionDataQualityService`, `AdmissionApprovalService`, `AdmissionCommandCenterService`
+  - Test: `college-mgmt/tests/Feature/AdmissionOsV003Test.php`
+- New v0.03 route groups live under `/admission/command-center`, `/admission/communication`, `/admission/call-queue`, `/admission/pipeline`, `/admission/automations`, `/admission/lead-scoring`, `/admission/journeys`, `/admission/partners`, `/admission/data-quality`, `/admission/forecasting`, and `/admission/approvals`.
+- Communication uses email/internal/mock SMS/mock WhatsApp abstractions by default. No live SMS/WhatsApp provider credentials are required.
+- Forecasting is deterministic and explainable, not ML-based.
+- PWA/offline sync is not implemented; v0.03 UI is responsive/PWA-ready direction only.
+- Demo localhost should run with `APP_DEBUG=false`; branded `errors/404.blade.php` and `errors/500.blade.php` hide Laravel traces while preserving recovery copy covered by `ErrorPageTest`.
+- After adding migrations or demo features, run `php artisan migrate --force` and `php artisan db:seed --class=DemoDataSeeder --force` on the local SQLite database so localhost pages use database-backed demo data instead of empty states.
 
 ## Known Local Notes
 

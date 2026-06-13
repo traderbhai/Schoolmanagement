@@ -11,7 +11,8 @@ class Applicant extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'program_id', 'batch_id', 'application_number', 'status',
+        'user_id', 'program_id', 'batch_id', 'admission_partner_id',
+        'partner_reference', 'journey_version_id', 'application_number', 'status',
         'personal_data', 'academic_data', 'family_data', 'additional_data',
         'applied_at', 'reviewed_at', 'reviewed_by', 'assigned_to', 'assigned_at',
         'priority', 'sla_due_at', 'next_action', 'notes',
@@ -72,9 +73,15 @@ class Applicant extends Model
     public function currentHandler() { return $this->belongsTo(User::class, 'current_handler_user_id'); }
     public function assignedBy()     { return $this->belongsTo(User::class, 'assigned_by'); }
     public function escalatedTo()    { return $this->belongsTo(User::class, 'escalated_to'); }
+    public function admissionPartner(){ return $this->belongsTo(AdmissionPartner::class); }
+    public function journeyVersion() { return $this->belongsTo(AdmissionJourneyVersion::class, 'journey_version_id'); }
     public function assignmentEvents(){ return $this->morphMany(AdmissionAssignmentEvent::class, 'subject')->latest(); }
     public function tags()           { return $this->morphToMany(AdmissionTag::class, 'taggable', 'admission_taggables')->withTimestamps(); }
     public function counsellingLogs(){ return $this->hasMany(CounsellingLog::class); }
+    public function communicationLogs(){ return $this->morphMany(AdmissionCommunicationLog::class, 'subject')->latest(); }
+    public function callLogs()       { return $this->morphMany(AdmissionCallLog::class, 'subject')->latest(); }
+    public function dataQualityFlags(){ return $this->morphMany(AdmissionDataQualityFlag::class, 'subject')->latest(); }
+    public function admissionApprovals(){ return $this->morphMany(AdmissionApproval::class, 'approvable')->latest(); }
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }
     public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }

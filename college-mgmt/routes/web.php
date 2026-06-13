@@ -464,6 +464,36 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('attention', [Admission\AttentionController::class, 'index'])
         ->middleware('department.feature:ADM,admission.workbench')
         ->name('attention.index');
+    Route::get('command-center', Admission\CommandCenterController::class)->name('command-center.index');
+    Route::get('communication', [Admission\CommunicationController::class, 'index'])->name('communication.index');
+    Route::post('communication/templates', [Admission\CommunicationController::class, 'storeTemplate'])->name('communication.templates.store');
+    Route::post('communication/send', [Admission\CommunicationController::class, 'send'])->name('communication.send');
+    Route::post('communication/dispatch', [Admission\CommunicationController::class, 'dispatch'])->name('communication.dispatch');
+    Route::get('call-queue', [Admission\CallQueueController::class, 'index'])->name('call-queue.index');
+    Route::post('call-queue/log', [Admission\CallQueueController::class, 'log'])->name('call-queue.log');
+    Route::get('pipeline', [Admission\PipelineController::class, 'index'])->name('pipeline.index');
+    Route::post('pipeline/move', [Admission\PipelineController::class, 'move'])->name('pipeline.move');
+    Route::get('automations', [Admission\AutomationController::class, 'index'])->name('automations.index');
+    Route::post('automations', [Admission\AutomationController::class, 'store'])->name('automations.store');
+    Route::post('automations/run', [Admission\AutomationController::class, 'run'])->name('automations.run');
+    Route::get('lead-scoring', [Admission\LeadScoringController::class, 'index'])->name('scoring.index');
+    Route::post('lead-scoring/recalculate', [Admission\LeadScoringController::class, 'recalculate'])->name('scoring.recalculate');
+    Route::get('journeys', [Admission\JourneyController::class, 'index'])->name('journeys.index');
+    Route::post('journeys', [Admission\JourneyController::class, 'store'])->name('journeys.store');
+    Route::get('journeys/applicants/{applicant}/preview', [Admission\JourneyController::class, 'preview'])->name('journeys.applicants.preview');
+    Route::get('partners', [Admission\PartnerController::class, 'index'])->name('partners.index');
+    Route::post('partners', [Admission\PartnerController::class, 'store'])->name('partners.store');
+    Route::patch('partners/{partner}/approve', [Admission\PartnerController::class, 'approve'])->name('partners.approve');
+    Route::post('partners/{partner}/leads', [Admission\PartnerController::class, 'submitLead'])->name('partners.leads.store');
+    Route::get('data-quality', [Admission\DataQualityController::class, 'index'])->name('data-quality.index');
+    Route::post('data-quality/scan', [Admission\DataQualityController::class, 'scan'])->name('data-quality.scan');
+    Route::patch('data-quality/{flag}/resolve', [Admission\DataQualityController::class, 'resolve'])->name('data-quality.resolve');
+    Route::get('forecasting', [Admission\ForecastingController::class, 'index'])->name('forecasting.index');
+    Route::post('forecasting/snapshot', [Admission\ForecastingController::class, 'snapshot'])->name('forecasting.snapshot');
+    Route::get('approvals', [Admission\ApprovalController::class, 'index'])->name('approvals.index');
+    Route::post('approvals/request', [Admission\ApprovalController::class, 'request'])->name('approvals.request');
+    Route::patch('approvals/{approval}/approve', [Admission\ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::patch('approvals/{approval}/reject', [Admission\ApprovalController::class, 'reject'])->name('approvals.reject');
     Route::get('assignment-rules', [Admission\AssignmentRuleController::class, 'index'])->name('assignment-rules.index');
     Route::post('assignment-rules', [Admission\AssignmentRuleController::class, 'store'])->name('assignment-rules.store');
     Route::patch('assignment-rules/{rule}/toggle', [Admission\AssignmentRuleController::class, 'toggle'])->name('assignment-rules.toggle');

@@ -62,6 +62,60 @@ return [
                 'description' => 'Admission funnel exports, filtered reports, and CSV downloads.',
                 'default_enabled' => true,
             ],
+            'admission.command_center' => [
+                'name' => 'Admission Command Center',
+                'category' => 'Staff Operations',
+                'description' => 'Role-specific operating center for attention queues, KPIs, calls, forecasts, and quick actions.',
+                'default_enabled' => true,
+            ],
+            'admission.communication_hub' => [
+                'name' => 'Communication Hub',
+                'category' => 'Communication',
+                'description' => 'Template-based email, internal, mock SMS, and mock WhatsApp communication logs.',
+                'default_enabled' => true,
+            ],
+            'admission.telecaller_queue' => [
+                'name' => 'Telecaller Call Queue',
+                'category' => 'Staff Operations',
+                'description' => 'Prioritized call queues, dispositions, call logs, and productivity KPIs.',
+                'default_enabled' => true,
+            ],
+            'admission.pipeline_boards' => [
+                'name' => 'Admission Pipeline Boards',
+                'category' => 'Staff Operations',
+                'description' => 'Configurable lead and applicant pipeline boards with service-backed status movement.',
+                'default_enabled' => true,
+            ],
+            'admission.automation_engine' => [
+                'name' => 'Admission Automation Engine',
+                'category' => 'Automation',
+                'description' => 'Rule-based triggers, conditions, actions, execution logs, and idempotency.',
+                'default_enabled' => true,
+            ],
+            'admission.partner_channels' => [
+                'name' => 'Partner And Channel Admissions',
+                'category' => 'Channels',
+                'description' => 'Partner profiles, approved lead submission, and partner performance tracking.',
+                'default_enabled' => true,
+            ],
+            'admission.forecasting' => [
+                'name' => 'Admission Forecasting',
+                'category' => 'Reporting',
+                'description' => 'Deterministic forecast snapshots for seats, leads, applications, offers, enrollments, and gaps.',
+                'default_enabled' => true,
+            ],
+            'admission.data_quality' => [
+                'name' => 'Admission Data Quality',
+                'category' => 'Compliance',
+                'description' => 'Duplicate, missing data, stale owner, and enrollment blocker quality flags.',
+                'default_enabled' => true,
+            ],
+            'admission.approvals' => [
+                'name' => 'Admission Approvals',
+                'category' => 'Compliance',
+                'description' => 'Approval requests and audit trail for sensitive admission actions.',
+                'default_enabled' => true,
+            ],
         ],
         'ACAD' => [
             'academic.dashboard' => [

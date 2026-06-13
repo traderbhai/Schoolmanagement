@@ -1,0 +1,15 @@
+{
+  "name": "EduManage Admission OS",
+  "short_name": "Admission OS",
+  "start_url": "/admission/command-center",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

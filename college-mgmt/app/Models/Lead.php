@@ -10,7 +10,8 @@ class Lead extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'program_id', 'source', 'status', 'priority',
+        'name', 'email', 'phone', 'program_id', 'source', 'admission_partner_id',
+        'partner_reference', 'status', 'priority', 'score_band',
         'notes', 'last_contacted_at', 'converted_applicant_id', 'converted_at',
         'assigned_to', 'assigned_at', 'sla_due_at', 'next_action', 'team', 'region',
         'owner_user_id', 'current_handler_user_id', 'assigned_by', 'assignment_reason',
@@ -35,9 +36,15 @@ class Lead extends Model
     public function currentHandler()      { return $this->belongsTo(User::class, 'current_handler_user_id'); }
     public function assignedBy()          { return $this->belongsTo(User::class, 'assigned_by'); }
     public function escalatedTo()         { return $this->belongsTo(User::class, 'escalated_to'); }
+    public function admissionPartner()    { return $this->belongsTo(AdmissionPartner::class); }
     public function assignmentEvents()    { return $this->morphMany(AdmissionAssignmentEvent::class, 'subject')->latest(); }
     public function tags()                { return $this->morphToMany(AdmissionTag::class, 'taggable', 'admission_taggables')->withTimestamps(); }
     public function followUps()           { return $this->hasMany(\App\Models\LeadFollowUp::class); }
+    public function communicationLogs()   { return $this->morphMany(AdmissionCommunicationLog::class, 'subject')->latest(); }
+    public function callLogs()            { return $this->morphMany(AdmissionCallLog::class, 'subject')->latest(); }
+    public function scoreRecords()        { return $this->hasMany(AdmissionLeadScore::class); }
+    public function dataQualityFlags()    { return $this->morphMany(AdmissionDataQualityFlag::class, 'subject')->latest(); }
+    public function admissionApprovals()  { return $this->morphMany(AdmissionApproval::class, 'approvable')->latest(); }
 
     public function isConverted(): bool   { return $this->status === 'converted'; }
     public function isContacted(): bool   { return in_array($this->status, ['contacted', 'interested', 'converted']); }
