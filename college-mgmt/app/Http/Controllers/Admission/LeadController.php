@@ -19,10 +19,18 @@ class LeadController extends Controller
         $status = request('status');
         $source = request('source');
         $programId = request('program_id');
+        $search = request('search');
 
         $query = Lead::query();
         $this->hierarchy->applyLeadVisibility($query, $request->user(), 'ADM');
 
+        if ($search) {
+            $query->where(function ($scope) use ($search) {
+                $scope->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
         if ($status) {
             $query->where('status', $status);
         }
@@ -32,10 +40,28 @@ class LeadController extends Controller
         if ($programId) {
             $query->where('program_id', $programId);
         }
+        if ($request->counsellor_id) {
+            $query->where('assigned_to', $request->counsellor_id);
+        }
 
-        $leads = $query->with(['program', 'convertedApplicant'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
+        $sort = request('sort', 'created_at');
+        $direction = request('direction', 'desc') === 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'name' => 'name',
+            'source' => 'source',
+            'status' => 'status',
+            'priority' => 'priority',
+            'last_contacted_at' => 'last_contacted_at',
+            'created_at' => 'created_at',
+            'sla_due_at' => 'sla_due_at',
+        ];
+
+        $perPage = min(100, max(10, (int) request('per_page', 25)));
+        $leads = $query->with(['program', 'convertedApplicant', 'assignedTo'])
+            ->orderBy($sortMap[$sort] ?? 'created_at', $direction)
+            ->orderBy('id', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $statsQuery = Lead::query();
         $this->hierarchy->applyLeadVisibility($statsQuery, $request->user(), 'ADM');
@@ -50,7 +76,7 @@ class LeadController extends Controller
             'conversion_rate' => $totalLeads > 0 ? round(($convertedLeads / $totalLeads) * 100, 2) : 0,
         ];
 
-        return view('admission.leads.index', compact('leads', 'stats', 'programs', 'status', 'source', 'programId'));
+        return view('admission.leads.index', compact('leads', 'stats', 'programs', 'status', 'source', 'programId', 'search', 'sort', 'direction'));
     }
 
     public function show(Lead $lead)

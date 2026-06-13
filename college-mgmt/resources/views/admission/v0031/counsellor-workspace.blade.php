@@ -2,7 +2,18 @@
 
 @section('title', 'Counsellor Workspace')
 
+@push('styles')
+<style>
+    .admission-compact .card { border-radius: 6px; }
+    .admission-compact .card-body { padding: .75rem; }
+    .admission-compact .table > :not(caption) > * > * { padding: .45rem .6rem; }
+    .admission-compact .metric-link { display:block; color:inherit; text-decoration:none; }
+    .admission-compact .metric-link:hover .card { border-color:#0d6efd; box-shadow:0 .125rem .45rem rgba(13,110,253,.18); }
+</style>
+@endpush
+
 @section('content')
+<div class="admission-compact">
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h3 class="fw-bold mb-1">Counsellor Workspace</h3>
@@ -16,16 +27,16 @@
 
 <div class="row g-3 mb-4">
     @foreach([
-        ['Workload', $kpi['workload'] ?? 0, 'primary'],
-        ['SLA Breaches', $kpi['sla_breaches'] ?? 0, 'danger'],
-        ['Stale Leads', $kpi['stale_leads'] ?? 0, 'warning'],
-        ['Calls Today', $callProductivity['calls_completed'] ?? 0, 'success'],
-    ] as [$label, $value, $color])
+        ['Workload', $kpi['workload'] ?? 0, 'primary', route('admission.applicants.index', ['counsellor_id' => auth()->id()])],
+        ['SLA Breaches', $kpi['sla_breaches'] ?? 0, 'danger', route('admission.attention.index')],
+        ['Stale Leads', $kpi['stale_leads'] ?? 0, 'warning', route('admission.leads.index', ['sort' => 'last_contacted_at', 'direction' => 'asc'])],
+        ['Calls Today', $callProductivity['calls_completed'] ?? 0, 'success', route('admission.call-queue.index')],
+    ] as [$label, $value, $color, $url])
         <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <div class="text-muted small">{{ $label }}</div>
-                <div class="fs-3 fw-bold text-{{ $color }}">{{ $value }}</div>
-            </div></div>
+            <a href="{{ $url }}" class="metric-link"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+                <div class="d-flex justify-content-between"><div class="text-muted small">{{ $label }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div>
+                <div class="fs-4 fw-bold text-{{ $color }}">{{ $value }}</div>
+            </div></div></a>
         </div>
     @endforeach
 </div>
@@ -33,7 +44,10 @@
 <div class="row g-4">
     <div class="col-xl-7">
         <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-transparent fw-bold">Assigned Leads</div>
+            <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
+                <span>Assigned Leads</span>
+                <a href="{{ route('admission.leads.index', ['counsellor_id' => auth()->id(), 'per_page' => 25]) }}" class="btn btn-sm btn-outline-primary py-0">View all</a>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Name</th><th>Program</th><th>Priority</th><th>Next Action</th><th></th></tr></thead>
@@ -53,7 +67,10 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Assigned Applicants</div>
+            <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
+                <span>Assigned Applicants</span>
+                <a href="{{ route('admission.applicants.index', ['per_page' => 20]) }}" class="btn btn-sm btn-outline-primary py-0">View all</a>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Applicant</th><th>Status</th><th>Program</th><th>Next Action</th><th></th></tr></thead>
@@ -75,7 +92,10 @@
 
     <div class="col-xl-5">
         <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-transparent fw-bold">Due Reminders</div>
+            <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
+                <span>Due Reminders</span>
+                <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-primary py-0">All</a>
+            </div>
             <div class="list-group list-group-flush">
                 @foreach($reminders as $reminder)
                     <div class="list-group-item d-flex justify-content-between gap-3">
@@ -102,5 +122,6 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection

@@ -2,10 +2,23 @@
 
 @section('title', 'Admission Dashboard')
 
+@push('styles')
+<style>
+    .admission-compact .card { border-radius: 6px; }
+    .admission-compact .card-body { padding: .75rem; }
+    .admission-compact .table > :not(caption) > * > * { padding: .45rem .6rem; }
+    .admission-compact .metric-link { display:block; color:inherit; text-decoration:none; }
+    .admission-compact .metric-link:hover .card,
+    .admission-compact .funnel-link:hover { border-color:#0d6efd !important; box-shadow:0 .125rem .45rem rgba(13,110,253,.18); }
+    .admission-compact .metric-value { font-size:1.55rem; line-height:1.1; }
+</style>
+@endpush
+
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="admission-compact">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h2 class="mb-0 fw-bold">Admission CRM Dashboard</h2>
+        <h3 class="mb-0 fw-bold">Admission CRM Dashboard</h3>
         <small class="text-muted">{{ now()->format('l, d F Y') }}</small>
     </div>
     <div>
@@ -18,83 +31,39 @@
 </div>
 
 {{-- KPI Cards --}}
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-primary">{{ $kpis['total'] }}</div>
-                <div class="small text-muted">Total Applied</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-info">{{ $kpis['submitted'] }}</div>
-                <div class="small text-muted">Submitted</div>
-                @if($kpis['submitted_today'] > 0)
-                    <div class="badge bg-success mt-1">+{{ $kpis['submitted_today'] }} today</div>
-                @endif
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-warning">{{ $kpis['under_review'] }}</div>
-                <div class="small text-muted">Under Review</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-cyan">{{ $kpis['shortlisted'] }}</div>
-                <div class="small text-muted">Shortlisted</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-success">{{ $kpis['selected'] }}</div>
-                <div class="small text-muted">Selected</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-1 fw-bold text-danger">{{ $kpis['rejected'] }}</div>
-                <div class="small text-muted">Rejected</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <a href="{{ route('admission.documents.queue') }}" class="text-decoration-none">
-            <div class="card border-warning shadow-sm h-100">
-                <div class="card-body text-center py-3">
-                    <div class="fs-1 fw-bold text-warning">{{ $kpis['docs_pending'] }}</div>
-                    <div class="small text-muted">Docs Pending</div>
-                    <div class="badge bg-warning text-dark mt-1 small">Verify Now</div>
+<div class="row g-2 mb-3">
+    @foreach([
+        ['label'=>'Total Applied','value'=>$kpis['total'],'color'=>'primary','url'=>route('admission.applicants.index')],
+        ['label'=>'Submitted','value'=>$kpis['submitted'],'color'=>'info','url'=>route('admission.applicants.index', ['status' => 'submitted']), 'sub'=>$kpis['submitted_today'] > 0 ? '+' . $kpis['submitted_today'] . ' today' : null],
+        ['label'=>'Under Review','value'=>$kpis['under_review'],'color'=>'warning','url'=>route('admission.applicants.index', ['status' => 'under_review'])],
+        ['label'=>'Shortlisted','value'=>$kpis['shortlisted'],'color'=>'info','url'=>route('admission.applicants.index', ['status' => 'shortlisted'])],
+        ['label'=>'Selected','value'=>$kpis['selected'],'color'=>'success','url'=>route('admission.applicants.index', ['status' => 'selected'])],
+        ['label'=>'Rejected','value'=>$kpis['rejected'],'color'=>'danger','url'=>route('admission.applicants.index', ['status' => 'rejected'])],
+        ['label'=>'Docs Pending','value'=>$kpis['docs_pending'],'color'=>'warning','url'=>route('admission.documents.queue')],
+        ['label'=>'Payments Pending','value'=>$kpis['payments_pending'] ?? 0,'color'=>'info','url'=>route('admission.payments.queue')],
+    ] as $metric)
+        <div class="col-6 col-md-3 col-xl-2">
+            <a href="{{ $metric['url'] }}" class="metric-link">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="text-muted small">{{ $metric['label'] }}</div>
+                                <div class="metric-value fw-bold text-{{ $metric['color'] }}">{{ $metric['value'] }}</div>
+                            </div>
+                            <i class="bi bi-arrow-up-right small text-muted"></i>
+                        </div>
+                        @if(!empty($metric['sub']))
+                            <span class="badge bg-success mt-1">{{ $metric['sub'] }}</span>
+                        @endif
+                    </div>
                 </div>
-            </div>
-        </a>
-    </div>
-    <div class="col-6 col-md-4 col-lg-2">
-        <a href="{{ route('admission.payments.queue') }}" class="text-decoration-none">
-            <div class="card border-info shadow-sm h-100">
-                <div class="card-body text-center py-3">
-                    <div class="fs-1 fw-bold text-info">{{ $kpis['payments_pending'] ?? 0 }}</div>
-                    <div class="small text-muted">Payments Pending</div>
-                    <div class="badge bg-info text-dark mt-1 small">Review Now</div>
-                </div>
-            </div>
-        </a>
-    </div>
+            </a>
+        </div>
+    @endforeach
 </div>
 
-<div class="row g-4 mb-4">
+<div class="row g-3 mb-3">
     {{-- Pipeline Funnel --}}
     <div class="col-md-7">
         <div class="card border-0 shadow-sm h-100">
@@ -164,7 +133,7 @@
 
 {{-- Upcoming Sessions --}}
 @if($upcomingSessions->isNotEmpty())
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center fw-bold">
         <span><i class="bi bi-calendar-event me-1 text-primary"></i> Upcoming Sessions</span>
         <a href="{{ route('admission.sessions.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
@@ -202,7 +171,7 @@
 @endif
 
 {{-- Recent Interactions --}}
-<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-transparent border-0 fw-bold">
         <i class="bi bi-chat-dots me-1 text-info"></i> Recent Interactions
     </div>
@@ -247,7 +216,7 @@
 </div>
 
 {{-- Admission Funnel Section --}}
-<div class="card mb-4">
+<div class="card border-0 shadow-sm mb-3">
     <div class="card-header">
         <span class="fw-600"><i class="bi bi-funnel-fill me-2 text-primary"></i>Admission Funnel</span>
     </div>
@@ -255,25 +224,25 @@
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             @php
                 $funnelStages = [
-                    ['label' => 'Leads',       'value' => $funnelData['leads'],       'icon' => 'bi-telephone',           'color' => 'primary'],
-                    ['label' => 'Applied',      'value' => $funnelData['applied'],     'icon' => 'bi-file-earmark-person', 'color' => 'info'],
-                    ['label' => 'Shortlisted',  'value' => $funnelData['shortlisted'], 'icon' => 'bi-list-check',          'color' => 'warning'],
-                    ['label' => 'Selected',     'value' => $funnelData['selected'],    'icon' => 'bi-person-check',        'color' => 'success'],
-                    ['label' => 'Enrolled',     'value' => $funnelData['enrolled'],    'icon' => 'bi-mortarboard',         'color' => 'purple'],
+                    ['label' => 'Leads',       'value' => $funnelData['leads'],       'icon' => 'bi-telephone',           'color' => 'primary', 'url' => route('admission.leads.index')],
+                    ['label' => 'Applied',      'value' => $funnelData['applied'],     'icon' => 'bi-file-earmark-person', 'color' => 'info', 'url' => route('admission.applicants.index')],
+                    ['label' => 'Shortlisted',  'value' => $funnelData['shortlisted'], 'icon' => 'bi-list-check',          'color' => 'warning', 'url' => route('admission.applicants.index', ['status' => 'shortlisted'])],
+                    ['label' => 'Selected',     'value' => $funnelData['selected'],    'icon' => 'bi-person-check',        'color' => 'success', 'url' => route('admission.applicants.index', ['status' => 'selected'])],
+                    ['label' => 'Enrolled',     'value' => $funnelData['enrolled'],    'icon' => 'bi-mortarboard',         'color' => 'secondary', 'url' => route('admission.enrollment.index')],
                 ];
             @endphp
             @foreach($funnelStages as $i => $stage)
                 <div class="text-center flex-fill">
-                    <div class="rounded-3 p-3 border border-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} bg-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} bg-opacity-10">
-                        <i class="bi {{ $stage['icon'] }} fs-3 text-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }}"></i>
+                    <a href="{{ $stage['url'] }}" class="funnel-link d-block text-decoration-none text-reset rounded-2 p-2 border border-{{ $stage['color'] }} bg-{{ $stage['color'] }} bg-opacity-10">
+                        <i class="bi {{ $stage['icon'] }} fs-5 text-{{ $stage['color'] }}"></i>
                         <div class="fw-bold fs-4 mt-1">{{ number_format($stage['value']) }}</div>
                         <div class="text-muted small">{{ $stage['label'] }}</div>
                         @if($i > 0 && $funnelStages[$i-1]['value'] > 0)
-                            <div class="badge bg-{{ $stage['color'] === 'purple' ? 'secondary' : $stage['color'] }} mt-1">
+                            <div class="badge bg-{{ $stage['color'] }} mt-1">
                                 {{ round(($stage['value'] / $funnelStages[$i-1]['value']) * 100, 1) }}% from prev.
                             </div>
                         @endif
-                    </div>
+                    </a>
                 </div>
                 @if($i < count($funnelStages) - 1)
                     <div class="text-muted fs-4 d-none d-md-block"><i class="bi bi-arrow-right"></i></div>
@@ -283,4 +252,5 @@
     </div>
 </div>
 
+</div>
 @endsection

@@ -48,6 +48,9 @@ class ApplicantCrmController extends Controller
         if ($request->status) {
             $query->where('status', $request->status);
         }
+        if ($request->counsellor_id) {
+            $query->where('assigned_to', $request->counsellor_id);
+        }
         if ($request->search) {
             $search = $request->search;
             $query->where(function ($scope) use ($search) {
@@ -63,7 +66,20 @@ class ApplicantCrmController extends Controller
             $query->whereDate('applied_at', '<=', $request->date_to);
         }
 
-        $applicants = $query->latest()->paginate(20)->withQueryString();
+        $sort = $request->input('sort', 'applied_at');
+        $direction = $request->input('direction', 'desc') === 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'application_number' => 'application_number',
+            'status' => 'status',
+            'applied_at' => 'applied_at',
+            'created_at' => 'created_at',
+            'priority' => 'priority',
+            'sla_due_at' => 'sla_due_at',
+        ];
+        $query->orderBy($sortMap[$sort] ?? 'applied_at', $direction)->orderBy('id', 'desc');
+
+        $perPage = min(100, max(10, (int) $request->input('per_page', 20)));
+        $applicants = $query->paginate($perPage)->withQueryString();
         $programs = Program::where('is_active', true)->orderBy('name')->get();
         $batches = Batch::orderBy('name')->get();
         $statuses = ['draft', 'submitted', 'under_review', 'shortlisted', 'selected', 'rejected', 'withdrawn'];
@@ -81,7 +97,7 @@ class ApplicantCrmController extends Controller
             $completenessMap[$applicant->id] = min(100, $score);
         }
 
-        return view('admission.applicants.index', compact('applicants', 'programs', 'batches', 'statuses', 'completenessMap'));
+        return view('admission.applicants.index', compact('applicants', 'programs', 'batches', 'statuses', 'completenessMap', 'sort', 'direction'));
     }
 
     public function show(Applicant $applicant)

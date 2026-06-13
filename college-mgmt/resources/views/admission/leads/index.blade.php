@@ -2,164 +2,170 @@
 
 @section('title', 'Leads & Enquiries')
 
+@push('styles')
+<style>
+    .admission-compact .card { border-radius: 6px; }
+    .admission-compact .card-body { padding: .75rem; }
+    .admission-compact .table > :not(caption) > * > * { padding: .45rem .6rem; }
+    .admission-compact .metric-link { display:block; color:inherit; text-decoration:none; }
+    .admission-compact .metric-link:hover .card { border-color:#0d6efd; box-shadow:0 .125rem .45rem rgba(13,110,253,.18); }
+    .admission-compact .sort-link { color:inherit; text-decoration:none; }
+</style>
+@endpush
+
 @section('content')
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Leads & Enquiries</h1>
+@php
+    $nextDirection = fn (string $field) => ($sort === $field && $direction === 'asc') ? 'desc' : 'asc';
+    $sortIcon = fn (string $field) => $sort === $field ? ($direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
+    $sortUrl = fn (string $field) => request()->fullUrlWithQuery(['sort' => $field, 'direction' => $nextDirection($field)]);
+@endphp
+
+<div class="admission-compact">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="fw-bold mb-1">Leads & Enquiries</h3>
+            <div class="text-muted small">{{ $leads->total() }} records after filters</div>
         </div>
-        <div class="col-md-4 text-end d-flex justify-content-end gap-2">
+        <div class="d-flex gap-2">
             <a href="{{ route('admission.leads.export-csv', request()->query()) }}" class="btn btn-outline-success btn-sm">
-                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export
             </a>
-            <a href="{{ route('admission.leads.analytics') }}" class="btn btn-info">Analytics</a>
+            <a href="{{ route('admission.leads.analytics') }}" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-graph-up me-1"></i>Analytics
+            </a>
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- Statistics -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Total</h6>
-                    <h3 class="text-primary">{{ $stats['total'] }}</h3>
-                </div>
+    <div class="row g-2 mb-3">
+        @foreach([
+            ['label' => 'Total', 'value' => $stats['total'], 'color' => 'primary', 'query' => []],
+            ['label' => 'New', 'value' => $stats['new'], 'color' => 'info', 'query' => ['status' => 'new']],
+            ['label' => 'Contacted', 'value' => $stats['contacted'], 'color' => 'secondary', 'query' => ['status' => 'contacted']],
+            ['label' => 'Interested', 'value' => $stats['interested'], 'color' => 'warning', 'query' => ['status' => 'interested']],
+            ['label' => 'Converted', 'value' => $stats['converted'], 'color' => 'success', 'query' => ['status' => 'converted']],
+        ] as $metric)
+            <div class="col-6 col-md">
+                <a class="metric-link" href="{{ route('admission.leads.index', $metric['query']) }}">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="text-muted small">{{ $metric['label'] }}</div>
+                            <div class="fs-4 fw-bold text-{{ $metric['color'] }}">{{ $metric['value'] }}</div>
+                        </div>
+                    </div>
+                </a>
             </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center">
+        @endforeach
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">New</h6>
-                    <h3 class="text-info">{{ $stats['new'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Contacted</h6>
-                    <h3 class="text-secondary">{{ $stats['contacted'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Interested</h6>
-                    <h3 class="text-warning">{{ $stats['interested'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Converted</h6>
-                    <h3 class="text-success">{{ $stats['converted'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="card-title text-muted">Conversion</h6>
-                    <h3 class="text-success">{{ $stats['conversion_rate'] }}%</h3>
+                    <div class="text-muted small">Conversion</div>
+                    <div class="fs-4 fw-bold text-success">{{ $stats['conversion_rate'] }}%</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-4">
+    <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-            <form action="{{ route('admission.leads.index') }}" method="GET" class="row g-3">
+            <form action="{{ route('admission.leads.index') }}" method="GET" class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-control">
+                    <label class="form-label small mb-1">Search</label>
+                    <input name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, phone">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Status</label>
+                    <select name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
-                        <option value="new" {{ $status === 'new' ? 'selected' : '' }}>New</option>
-                        <option value="contacted" {{ $status === 'contacted' ? 'selected' : '' }}>Contacted</option>
-                        <option value="interested" {{ $status === 'interested' ? 'selected' : '' }}>Interested</option>
-                        <option value="not_interested" {{ $status === 'not_interested' ? 'selected' : '' }}>Not Interested</option>
-                        <option value="converted" {{ $status === 'converted' ? 'selected' : '' }}>Converted</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Source</label>
-                    <select name="source" class="form-control">
-                        <option value="">All Sources</option>
-                        <option value="web_form" {{ $source === 'web_form' ? 'selected' : '' }}>Web Form</option>
-                        <option value="referral" {{ $source === 'referral' ? 'selected' : '' }}>Referral</option>
-                        <option value="advertisement" {{ $source === 'advertisement' ? 'selected' : '' }}>Advertisement</option>
-                        <option value="social_media" {{ $source === 'social_media' ? 'selected' : '' }}>Social Media</option>
-                        <option value="event" {{ $source === 'event' ? 'selected' : '' }}>Event</option>
-                        <option value="agent" {{ $source === 'agent' ? 'selected' : '' }}>Agent</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Program</label>
-                    <select name="program_id" class="form-control">
-                        <option value="">All Programs</option>
-                        @foreach($programs as $program)
-                            <option value="{{ $program->id }}" {{ $programId == $program->id ? 'selected' : '' }}>
-                                {{ $program->name }}
-                            </option>
+                        @foreach(['new','contacted','interested','not_interested','converted'] as $leadStatus)
+                            <option value="{{ $leadStatus }}" @selected($status === $leadStatus)>{{ ucfirst(str_replace('_', ' ', $leadStatus)) }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Source</label>
+                    <select name="source" class="form-select form-select-sm">
+                        <option value="">All Sources</option>
+                        @foreach(['web_form','referral','advertisement','social_media','event','agent','other'] as $leadSource)
+                            <option value="{{ $leadSource }}" @selected($source === $leadSource)>{{ ucfirst(str_replace('_', ' ', $leadSource)) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Program</label>
+                    <select name="program_id" class="form-select form-select-sm">
+                        <option value="">All Programs</option>
+                        @foreach($programs as $program)
+                            <option value="{{ $program->id }}" @selected($programId == $program->id)>{{ $program->abbreviation ?? $program->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small mb-1">Rows</label>
+                    <select name="per_page" class="form-select form-select-sm">
+                        @foreach([10,25,50,100] as $size)
+                            <option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search"></i></button>
+                    <a href="{{ route('admission.leads.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Leads Table -->
-    <div class="card">
+    <div class="card border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
+                        <th><a class="sort-link" href="{{ $sortUrl('name') }}">Name <i class="bi {{ $sortIcon('name') }}"></i></a></th>
+                        <th>Email / Phone</th>
                         <th>Program</th>
-                        <th>Source</th>
-                        <th>Status</th>
-                        <th>Last Contacted</th>
-                        <th>Actions</th>
+                        <th><a class="sort-link" href="{{ $sortUrl('source') }}">Source <i class="bi {{ $sortIcon('source') }}"></i></a></th>
+                        <th><a class="sort-link" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
+                        <th><a class="sort-link" href="{{ $sortUrl('priority') }}">Priority <i class="bi {{ $sortIcon('priority') }}"></i></a></th>
+                        <th>Owner</th>
+                        <th><a class="sort-link" href="{{ $sortUrl('last_contacted_at') }}">Last Contact <i class="bi {{ $sortIcon('last_contacted_at') }}"></i></a></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($leads as $lead)
                         <tr>
-                            <td><strong>{{ $lead->name }}</strong></td>
-                            <td>{{ $lead->email }}</td>
-                            <td>{{ $lead->phone ?? '-' }}</td>
-                            <td>{{ $lead->program?->name ?? '-' }}</td>
-                            <td>{{ $lead->source_label }}</td>
+                            <td class="fw-semibold">{{ $lead->name }}</td>
+                            <td class="small">
+                                <div>{{ $lead->email }}</div>
+                                <div class="text-muted">{{ $lead->phone ?? '-' }}</div>
+                            </td>
+                            <td class="small">{{ $lead->program?->abbreviation ?? $lead->program?->name ?? '-' }}</td>
+                            <td class="small">{{ $lead->source_label }}</td>
                             <td><span class="{{ $lead->status_badge }}">{{ ucfirst(str_replace('_', ' ', $lead->status)) }}</span></td>
-                            <td>{{ $lead->last_contacted_at?->format('d M Y H:i') ?? 'Never' }}</td>
-                            <td>
-                                <a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-info">View</a>
+                            <td><span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span></td>
+                            <td class="small">{{ $lead->assignedTo->name ?? 'Unassigned' }}</td>
+                            <td class="small text-muted">{{ $lead->last_contacted_at?->format('d M H:i') ?? 'Never' }}</td>
+                            <td class="text-end">
+                                <a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Open</a>
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No leads found.</td>
-                        </tr>
+                        <tr><td colspan="9" class="text-center text-muted py-4">No leads match the current filters.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+            <div class="small text-muted">Showing {{ $leads->firstItem() ?? 0 }}-{{ $leads->lastItem() ?? 0 }} of {{ $leads->total() }}</div>
+            {{ $leads->links() }}
+        </div>
     </div>
-
-    {{ $leads->links() }}
 </div>
 @endsection

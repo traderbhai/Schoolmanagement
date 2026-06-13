@@ -150,8 +150,8 @@ Last verified setup:
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
 - Migrations completed, including Admission OS v0.031 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 392 tests, 1465 assertions.
-- Admission v0.031 regression gate passed: 86 tests, 416 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 393 tests, 1480 assertions.
+- Admission v0.032 regression gate passed: 87 tests, 431 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -170,6 +170,7 @@ Last verified setup:
 - PWA/offline sync is not implemented; v0.03 UI is responsive/PWA-ready direction only.
 - Demo localhost should run with `APP_DEBUG=false`; branded `errors/404.blade.php` and `errors/500.blade.php` hide Laravel traces while preserving recovery copy covered by `ErrorPageTest`.
 - After adding migrations or demo features, run `php artisan migrate --force` and `php artisan db:seed --class=DemoDataSeeder --force` on the local SQLite database so localhost pages use database-backed demo data instead of empty states.
+- Preferred demo seed entry point is now `php artisan db:seed --class=MasterDemoSeeder --force`; it runs `DemoDataSeeder` and `RoleFeatureAccessSeeder`.
 
 ## Admission OS v0.031 Baseline
 
@@ -184,6 +185,17 @@ Last verified setup:
 - Demo data is in `AdmissionOperatingDemoSeeder` for reminder schedules, cadence rules, assessment panels/evaluators, panel assignments, applicant scores, walk-ins, and manager review queues.
 - Existing selection sessions remain the legacy assessment backbone. New assessment variety is stored on `admission_assessment_panels.panel_type`; keep `selection_process_steps.type` within existing allowed values unless a future migration safely broadens that enum/check constraint.
 - Browser smoke verification passed on localhost for counsellor workspace, manager workspace, reminders, assessment panels, assessment operations, admission calendar, walk-ins, manager reviews, and selection sessions. Mobile viewport checks passed for counsellor workspace and walk-ins with no horizontal overflow.
+
+## Admission OS v0.032 Baseline
+
+- v0.032 is a compact display/operations usability pass, not a new schema sprint.
+- Dashboard KPI cards and funnel stages now link to their source lists/queues, for example submitted applicants, selected applicants, leads, document queue, payment queue, and enrollments.
+- Admission leads list now supports search, status/source/program filters, page-size selection, server-side sort links, compact metrics, and paginated table results.
+- Admission applicants list now supports page-size selection and server-side sort links while preserving existing search, program/status/date filters, export, bulk actions, completeness indicators, and pagination.
+- Counsellor and manager workspaces now use compact cards/tables and link metric numbers or short-list headers to the relevant detailed queues/lists.
+- New master demo seeder: `college-mgmt/database/seeders/MasterDemoSeeder.php`.
+- Test: `college-mgmt/tests/Feature/AdmissionOsV032Test.php`.
+- Browser smoke verification passed on localhost for dashboard, leads, applicants, counsellor workspace, and manager workspace. Mobile viewport checks passed for dashboard, leads, and applicants with no horizontal page overflow.
 
 ## Known Local Notes
 
