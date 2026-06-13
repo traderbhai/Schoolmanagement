@@ -465,6 +465,8 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
         ->middleware('department.feature:ADM,admission.workbench')
         ->name('attention.index');
     Route::get('command-center', Admission\CommandCenterController::class)->name('command-center.index');
+    Route::get('counsellor-workspace', Admission\CounsellorWorkspaceController::class)->name('counsellor-workspace.index');
+    Route::get('manager-workspace', Admission\ManagerWorkspaceController::class)->name('manager-workspace.index');
     Route::get('communication', [Admission\CommunicationController::class, 'index'])->name('communication.index');
     Route::post('communication/templates', [Admission\CommunicationController::class, 'storeTemplate'])->name('communication.templates.store');
     Route::post('communication/send', [Admission\CommunicationController::class, 'send'])->name('communication.send');
@@ -494,6 +496,25 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::post('approvals/request', [Admission\ApprovalController::class, 'request'])->name('approvals.request');
     Route::patch('approvals/{approval}/approve', [Admission\ApprovalController::class, 'approve'])->name('approvals.approve');
     Route::patch('approvals/{approval}/reject', [Admission\ApprovalController::class, 'reject'])->name('approvals.reject');
+    Route::get('reminders', [Admission\ReminderController::class, 'index'])->name('reminders.index');
+    Route::post('reminders', [Admission\ReminderController::class, 'store'])->name('reminders.store');
+    Route::post('reminders/cadence', [Admission\ReminderController::class, 'cadence'])->name('reminders.cadence');
+    Route::post('reminders/{reminder}/send', [Admission\ReminderController::class, 'send'])->name('reminders.send');
+    Route::post('reminders/{reminder}/complete', [Admission\ReminderController::class, 'complete'])->name('reminders.complete');
+    Route::post('reminders/{reminder}/pause', [Admission\ReminderController::class, 'pause'])->name('reminders.pause');
+    Route::post('reminders/{reminder}/resume', [Admission\ReminderController::class, 'resume'])->name('reminders.resume');
+    Route::get('assessment-panels', [Admission\AssessmentPanelController::class, 'index'])->name('assessment-panels.index');
+    Route::post('assessment-panels', [Admission\AssessmentPanelController::class, 'store'])->name('assessment-panels.store');
+    Route::get('assessment-operations', [Admission\AssessmentOperationController::class, 'index'])->name('assessment-operations.index');
+    Route::post('assessment-operations/assign', [Admission\AssessmentOperationController::class, 'assign'])->name('assessment-operations.assign');
+    Route::post('assessment-operations/scores/{score}/finalize', [Admission\AssessmentOperationController::class, 'finalize'])->name('assessment-operations.scores.finalize');
+    Route::post('assessment-operations/scores/{score}/override', [Admission\AssessmentOperationController::class, 'override'])->name('assessment-operations.scores.override');
+    Route::get('calendar', Admission\AdmissionCalendarController::class)->name('calendar.index');
+    Route::get('walk-ins', [Admission\WalkInController::class, 'index'])->name('walk-ins.index');
+    Route::post('walk-ins', [Admission\WalkInController::class, 'store'])->name('walk-ins.store');
+    Route::post('walk-ins/{walkIn}/convert', [Admission\WalkInController::class, 'convert'])->name('walk-ins.convert');
+    Route::get('manager-reviews', [Admission\ManagerReviewController::class, 'index'])->name('manager-reviews.index');
+    Route::patch('manager-reviews/{review}/resolve', [Admission\ManagerReviewController::class, 'resolve'])->name('manager-reviews.resolve');
     Route::get('assignment-rules', [Admission\AssignmentRuleController::class, 'index'])->name('assignment-rules.index');
     Route::post('assignment-rules', [Admission\AssignmentRuleController::class, 'store'])->name('assignment-rules.store');
     Route::patch('assignment-rules/{rule}/toggle', [Admission\AssignmentRuleController::class, 'toggle'])->name('assignment-rules.toggle');

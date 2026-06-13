@@ -16,10 +16,13 @@ class SelectionProcessStep extends Model
         return match($this->type) {
             'gd' => 'Group Discussion',
             'pi' => 'Personal Interview',
+            'case_analysis' => 'Case Analysis',
             'wat' => 'Written Ability Test',
             'written_test' => 'Written Test',
             'aptitude' => 'Aptitude Test',
             'presentation' => 'Presentation',
+            'portfolio_review' => 'Portfolio Review',
+            'screening_call' => 'Screening Call',
             default => ucfirst($this->type),
         };
     }

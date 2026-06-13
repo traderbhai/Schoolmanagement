@@ -42,7 +42,17 @@ class SelectionSessionController extends Controller
         $past     = $all->filter(fn($s) => !($s->scheduled_date->gte(today()) && in_array($s->status, ['scheduled', 'ongoing'])))->sortByDesc('scheduled_date');
 
         $programs  = Program::where('is_active', true)->orderBy('name')->get();
-        $stepTypes = ['gd' => 'Group Discussion', 'pi' => 'Personal Interview', 'wat' => 'Written Ability Test', 'written_test' => 'Written Test', 'aptitude' => 'Aptitude Test', 'presentation' => 'Presentation'];
+        $stepTypes = [
+            'gd' => 'Group Discussion',
+            'pi' => 'Personal Interview',
+            'case_analysis' => 'Case Analysis',
+            'wat' => 'Written Ability Test',
+            'written_test' => 'Written Test',
+            'aptitude' => 'Aptitude Test',
+            'presentation' => 'Presentation',
+            'portfolio_review' => 'Portfolio Review',
+            'screening_call' => 'Screening Call',
+        ];
 
         return view('admission.sessions.index', compact('upcoming', 'past', 'programs', 'stepTypes'));
     }
@@ -115,7 +125,9 @@ class SelectionSessionController extends Controller
             ->whereNotIn('id', $assignedIds)
             ->get();
 
-        return view('admission.sessions.show', compact('session', 'stats', 'availableApplicants'));
+        $panelSummary = app(\App\Services\AdmissionAssessmentPanelService::class)->summaryForSession($session);
+
+        return view('admission.sessions.show', compact('session', 'stats', 'availableApplicants', 'panelSummary'));
     }
 
     public function edit(SelectionSession $session)

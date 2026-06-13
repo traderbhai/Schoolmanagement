@@ -53,6 +53,16 @@ class SelectionSession extends Model
             ->withTimestamps();
     }
 
+    public function assessmentPanels()
+    {
+        return $this->hasMany(AdmissionAssessmentPanel::class, 'selection_session_id');
+    }
+
+    public function panelAssignments()
+    {
+        return $this->hasMany(AdmissionAssessmentPanelAssignment::class, 'selection_session_id');
+    }
+
     public function getStatusBadgeAttribute(): string
     {
         return match($this->status) {

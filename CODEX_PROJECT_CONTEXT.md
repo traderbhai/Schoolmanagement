@@ -148,10 +148,10 @@ Last verified setup:
 - npm dependencies installed.
 - `.env` exists.
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
-- Migrations completed, including Admission OS v0.03 additive tables.
+- Migrations completed, including Admission OS v0.031 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 389 tests, 1406 assertions.
-- Admission regression gate passed: 109 tests, 465 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 392 tests, 1465 assertions.
+- Admission v0.031 regression gate passed: 86 tests, 416 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -170,6 +170,20 @@ Last verified setup:
 - PWA/offline sync is not implemented; v0.03 UI is responsive/PWA-ready direction only.
 - Demo localhost should run with `APP_DEBUG=false`; branded `errors/404.blade.php` and `errors/500.blade.php` hide Laravel traces while preserving recovery copy covered by `ErrorPageTest`.
 - After adding migrations or demo features, run `php artisan migrate --force` and `php artisan db:seed --class=DemoDataSeeder --force` on the local SQLite database so localhost pages use database-backed demo data instead of empty states.
+
+## Admission OS v0.031 Baseline
+
+- v0.031 implemented daily operations, reminders/cadences, assessment panels, admission calendar, walk-ins, and manager reviews as additive modules over v0.03.
+- v0.031 key files:
+  - Migration: `college-mgmt/database/migrations/2026_06_13_910001_add_admission_os_v0031_operations.php`
+  - Models: `AdmissionReminderSchedule`, `AdmissionCadenceRule`, `AdmissionAssessmentPanel`, `AdmissionAssessmentPanelMember`, `AdmissionAssessmentPanelAssignment`, `AdmissionWalkIn`, `AdmissionManagerReview`
+  - Services: `AdmissionReminderService`, `AdmissionCadenceService`, `AdmissionAssessmentPanelService`, `AdmissionCalendarService`, `AdmissionWalkInService`, `AdmissionManagerReviewService`
+  - Routes: `/admission/counsellor-workspace`, `/admission/manager-workspace`, `/admission/reminders`, `/admission/assessment-panels`, `/admission/assessment-operations`, `/admission/calendar`, `/admission/walk-ins`, `/admission/manager-reviews`
+  - Views: `college-mgmt/resources/views/admission/v0031/*`
+  - Test: `college-mgmt/tests/Feature/AdmissionOsV031Test.php`
+- Demo data is in `AdmissionOperatingDemoSeeder` for reminder schedules, cadence rules, assessment panels/evaluators, panel assignments, applicant scores, walk-ins, and manager review queues.
+- Existing selection sessions remain the legacy assessment backbone. New assessment variety is stored on `admission_assessment_panels.panel_type`; keep `selection_process_steps.type` within existing allowed values unless a future migration safely broadens that enum/check constraint.
+- Browser smoke verification passed on localhost for counsellor workspace, manager workspace, reminders, assessment panels, assessment operations, admission calendar, walk-ins, manager reviews, and selection sessions. Mobile viewport checks passed for counsellor workspace and walk-ins with no horizontal overflow.
 
 ## Known Local Notes
 

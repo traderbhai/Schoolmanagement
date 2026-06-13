@@ -16,7 +16,7 @@
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
                 @php
-                    $typeColors = ['gd'=>'success','pi'=>'primary','wat'=>'warning','written_test'=>'info','aptitude'=>'secondary','presentation'=>'dark'];
+                    $typeColors = ['gd'=>'success','pi'=>'primary','case_analysis'=>'dark','wat'=>'warning','written_test'=>'info','aptitude'=>'secondary','presentation'=>'dark','portfolio_review'=>'info','screening_call'=>'secondary'];
                     $stepType = $session->step->type ?? 'gd';
                 @endphp
                 <span class="badge bg-{{ $typeColors[$stepType] ?? 'secondary' }} me-2">{{ $session->step->typeLabel ?? strtoupper($stepType) }}</span>
@@ -93,6 +93,46 @@
     </div>
     @endforeach
 </div>
+
+@if(!empty($panelSummary) && $panelSummary['panel_count'] > 0)
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0 fw-bold">
+        <i class="bi bi-people-fill me-2 text-primary"></i>Assessment Panels
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Panel</th>
+                    <th>Type</th>
+                    <th>Evaluators</th>
+                    <th>Capacity</th>
+                    <th>Candidates</th>
+                    <th>Pending Scores</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($panelSummary['panels'] as $panel)
+                    <tr>
+                        <td class="fw-semibold">{{ $panel->name }}</td>
+                        <td>{{ ucwords(str_replace('_', ' ', $panel->panel_type)) }}</td>
+                        <td class="small">{{ $panel->members->pluck('user.name')->filter()->join(', ') }}</td>
+                        <td>{{ $panel->capacity }}</td>
+                        <td>{{ $panel->assignments->count() }}</td>
+                        <td>{{ $panel->assignments->whereIn('score_status', ['pending','draft'])->count() }}</td>
+                        <td><span class="badge bg-secondary">{{ ucfirst($panel->status) }}</span></td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+        <span class="small text-muted">{{ $panelSummary['finalized_scores'] }} finalized, {{ $panelSummary['pending_scores'] }} pending score entries.</span>
+        <a href="{{ route('admission.assessment-operations.index') }}" class="btn btn-sm btn-outline-primary">Open Assessment Operations</a>
+    </div>
+</div>
+@endif
 
 <div class="row g-4">
     {{-- Main: Attendance Table --}}

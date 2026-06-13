@@ -107,7 +107,9 @@ class AdmissionOperatingDemoSeeder extends Seeder
             ]
         );
 
-        Applicant::where('program_id', $program->id)->with('user')->get()->each(function (Applicant $applicant, int $index) use ($batch, $journeyVersion, $manager, $counsellor, $officer, $admHead, $whatsAppTemplate) {
+        $demoApplicants = Applicant::where('program_id', $program->id)->with('user')->get();
+
+        $demoApplicants->each(function (Applicant $applicant, int $index) use ($batch, $journeyVersion, $manager, $counsellor, $officer, $admHead, $whatsAppTemplate) {
             $handlerId = $index % 2 === 0 ? $counsellor->id : $officer->id;
             $applicant->update([
                 'batch_id' => $applicant->batch_id ?: $batch->id,
@@ -132,6 +134,215 @@ class AdmissionOperatingDemoSeeder extends Seeder
             $this->communicationFor($applicant, $whatsAppTemplate, $officer, $applicant->personal_data['phone'] ?? null, 'mock_whatsapp', $index % 3 === 0 ? 'queued' : 'sent');
             $this->callFor($applicant, User::find($handlerId), $applicant->personal_data['phone'] ?? null, 'connected');
         });
+
+        $cadenceRule = \App\Models\AdmissionCadenceRule::updateOrCreate(
+            ['name' => 'No-response follow-up cadence'],
+            [
+                'target_type' => 'lead',
+                'reason' => 'no_response_follow_up',
+                'channel' => 'whatsapp',
+                'template_id' => $whatsAppTemplate->id,
+                'repeat_rule' => ['initial_delay_hours' => 4, 'interval_hours' => 24, 'message' => 'Repeat until candidate responds or lead is marked lost.'],
+                'max_attempts' => 4,
+                'escalate_after_attempts' => 2,
+                'is_active' => true,
+                'created_by' => $admHead->id,
+            ]
+        );
+
+        foreach ($leads->take(3) as $index => $lead) {
+            \App\Models\AdmissionReminderSchedule::updateOrCreate(
+                ['subject_type' => \App\Models\Lead::class, 'subject_id' => $lead->id, 'reason' => $index === 0 ? 'no_response_follow_up' : 'application_completion'],
+                [
+                    'cadence_rule_id' => $cadenceRule->id,
+                    'template_id' => $index === 0 ? $whatsAppTemplate->id : $emailTemplate->id,
+                    'owner_user_id' => $lead->owner_user_id,
+                    'assigned_to' => $lead->assigned_to,
+                    'target' => 'lead',
+                    'channel' => $index === 0 ? 'whatsapp' : 'email',
+                    'status' => $index === 2 ? 'escalated' : 'scheduled',
+                    'priority' => $lead->priority,
+                    'due_at' => now()->addHours($index + 2),
+                    'escalated_to' => $index === 2 ? $manager->id : null,
+                    'escalated_at' => $index === 2 ? now()->subHour() : null,
+                    'repeat_rule' => ['interval_hours' => 24, 'until' => 'blocker_cleared'],
+                    'notes' => $lead->next_action,
+                    'metadata' => ['demo' => true],
+                ]
+            );
+        }
+
+        foreach ($demoApplicants->take(3) as $index => $applicant) {
+            \App\Models\AdmissionReminderSchedule::updateOrCreate(
+                ['subject_type' => Applicant::class, 'subject_id' => $applicant->id, 'reason' => $index === 0 ? 'document_blocker' : 'offer_deadline'],
+                [
+                    'template_id' => $whatsAppTemplate->id,
+                    'owner_user_id' => $applicant->owner_user_id,
+                    'assigned_to' => $applicant->assigned_to,
+                    'target' => 'applicant',
+                    'channel' => 'whatsapp',
+                    'status' => 'scheduled',
+                    'priority' => $applicant->priority ?? 'normal',
+                    'due_at' => now()->addDays($index + 1),
+                    'repeat_rule' => ['interval_hours' => 24, 'until' => 'blocker_cleared'],
+                    'notes' => $applicant->next_action,
+                    'metadata' => ['demo' => true],
+                ]
+            );
+        }
+
+        $caseStep = \App\Models\SelectionProcessStep::updateOrCreate(
+            ['program_id' => $program->id, 'name' => 'Case Analysis'],
+            [
+                'name' => 'Case Analysis',
+                'type' => 'pi',
+                'step_order' => 20,
+                'max_score' => 50,
+                'weightage' => 25,
+                'instructions' => 'Evaluate analytical clarity, structure, communication, and recommendation quality.',
+                'is_active' => true,
+            ]
+        );
+
+        foreach ([
+            ['Analytical Structure', 20, 1],
+            ['Communication Clarity', 15, 2],
+            ['Recommendation Quality', 15, 3],
+        ] as [$name, $score, $order]) {
+            \App\Models\ScoringParameter::updateOrCreate(
+                ['selection_process_step_id' => $caseStep->id, 'name' => $name],
+                ['max_score' => $score, 'description' => 'Demo v0.031 assessment scoring parameter.', 'sort_order' => $order]
+            );
+        }
+
+        $session = \App\Models\SelectionSession::updateOrCreate(
+            ['selection_process_step_id' => $caseStep->id, 'session_name' => 'PGDM Case Analysis Panel A'],
+            [
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'scheduled_date' => today()->addDays(2),
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+                'venue' => 'Admissions Assessment Room 1',
+                'max_candidates' => 20,
+                'instructions' => 'Candidates receive a business case and present recommendations to the panel.',
+                'status' => 'scheduled',
+                'conducted_by' => $manager->id,
+                'created_by' => $admHead->id,
+            ]
+        );
+
+        $panel = \App\Models\AdmissionAssessmentPanel::updateOrCreate(
+            ['name' => 'Case Analysis Panel A', 'selection_session_id' => $session->id],
+            [
+                'panel_type' => 'case_analysis',
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'capacity' => 12,
+                'venue' => 'Admissions Assessment Room 1',
+                'scheduled_at' => now()->addDays(2)->setTime(10, 0),
+                'status' => 'scheduled',
+                'created_by' => $admHead->id,
+                'metadata' => ['demo' => true],
+            ]
+        );
+
+        foreach ([[$manager, true], [$counsellor, false], [$officer, false]] as [$evaluator, $isChair]) {
+            \App\Models\AdmissionAssessmentPanelMember::updateOrCreate(
+                ['panel_id' => $panel->id, 'user_id' => $evaluator->id],
+                ['role' => $isChair ? 'chair' : 'evaluator', 'is_chair' => $isChair]
+            );
+        }
+
+        foreach ($demoApplicants->take(4)->values() as $index => $applicant) {
+            \App\Models\SessionApplicant::updateOrCreate(
+                ['selection_session_id' => $session->id, 'applicant_id' => $applicant->id],
+                ['assigned_at' => now()->subDay(), 'attendance_status' => $index === 0 ? 'present' : 'pending', 'panel_number' => 1]
+            );
+
+            \App\Models\AdmissionAssessmentPanelAssignment::updateOrCreate(
+                ['panel_id' => $panel->id, 'applicant_id' => $applicant->id],
+                [
+                    'selection_session_id' => $session->id,
+                    'evaluator_user_id' => $index % 2 === 0 ? $counsellor->id : $officer->id,
+                    'attendance_status' => $index === 0 ? 'present' : 'pending',
+                    'score_status' => $index === 0 ? 'finalized' : 'pending',
+                    'recommendation' => $index === 0 ? 'recommended' : null,
+                    'score_locked_at' => $index === 0 ? now()->subHours(6) : null,
+                    'finalized_at' => $index === 0 ? now()->subHours(6) : null,
+                    'metadata' => ['demo' => true],
+                ]
+            );
+
+            if ($index === 0) {
+                \App\Models\ApplicantScore::updateOrCreate(
+                    ['applicant_id' => $applicant->id, 'selection_session_id' => $session->id],
+                    [
+                        'selection_process_step_id' => $caseStep->id,
+                        'scored_by' => $counsellor->id,
+                        'parameter_scores' => ['Analytical Structure' => 17, 'Communication Clarity' => 13, 'Recommendation Quality' => 12],
+                        'total_score' => 42,
+                        'max_possible_score' => 50,
+                        'percentage' => 84,
+                        'remarks' => 'Clear case framing and strong recommendation.',
+                        'is_final' => true,
+                        'score_status' => 'finalized',
+                        'locked_at' => now()->subHours(6),
+                        'locked_by' => $manager->id,
+                        'recommendation' => 'recommended',
+                    ]
+                );
+            }
+        }
+
+        foreach ([
+            ['Rahul Sharma', '9000040001', 'rahul.walkin@demo.local', $counsellor, 'converted', now()->subDays(1), now()->addDay()],
+            ['Meera Iyer', '9000040002', 'meera.walkin@demo.local', $officer, 'open', now()->subHours(5), now()->addDays(2)],
+        ] as [$name, $phone, $email, $handler, $status, $visitedAt, $followupAt]) {
+            \App\Models\AdmissionWalkIn::updateOrCreate(
+                ['visitor_email' => $email],
+                [
+                    'visitor_name' => $name,
+                    'visitor_phone' => $phone,
+                    'guardian_name' => str_contains($name, 'Rahul') ? 'Suresh Sharma' : 'Lakshmi Iyer',
+                    'guardian_phone' => '9000049999',
+                    'program_id' => $program->id,
+                    'batch_id' => $batch->id,
+                    'purpose' => 'admission_enquiry',
+                    'assigned_counsellor_id' => $handler->id,
+                    'status' => $status,
+                    'outcome' => $status === 'converted' ? 'converted_to_lead' : 'follow_up_required',
+                    'visited_at' => $visitedAt,
+                    'next_followup_at' => $followupAt,
+                    'notes' => 'Demo walk-in visit with guardian discussion and program counselling.',
+                    'created_by' => $admHead->id,
+                ]
+            );
+        }
+
+        $reviewTargets = [
+            [$leads->get(1), 'call_log_audit', 'Check call outcome quality and next action clarity.', 'Confirm the counsellor captured parent objections.'],
+            [$leads->last(), 'duplicate_review', 'Duplicate phone detected across digital and social sources.', 'Merge or mark duplicate after verification.'],
+            [$demoApplicants->first(), 'assessment_score_override_review', 'Score finalization is awaiting manager quality check.', 'Review panel scoring consistency.'],
+        ];
+
+        foreach ($reviewTargets as [$target, $type, $finding, $action]) {
+            if (!$target) {
+                continue;
+            }
+            \App\Models\AdmissionManagerReview::updateOrCreate(
+                ['reviewable_type' => get_class($target), 'reviewable_id' => $target->id, 'review_type' => $type],
+                [
+                    'status' => 'pending',
+                    'severity' => $type === 'duplicate_review' ? 'high' : 'normal',
+                    'assigned_manager_id' => $manager->id,
+                    'finding' => $finding,
+                    'action_required' => $action,
+                    'due_at' => now()->addDays(2),
+                    'metadata' => ['demo' => true],
+                ]
+            );
+        }
 
         \App\Models\AdmissionPipelineBoard::updateOrCreate(
             ['object_type' => 'lead', 'is_default' => true],
@@ -185,7 +396,7 @@ class AdmissionOperatingDemoSeeder extends Seeder
             );
         }
 
-        $this->command?->info('  Admission OS v0.03 demo operating data seeded.');
+        $this->command?->info('  Admission OS v0.03/v0.031 demo operating data seeded.');
     }
 
     private function user(string $email, string $name, ?string $role): User

@@ -42,6 +42,8 @@ class Lead extends Model
     public function followUps()           { return $this->hasMany(\App\Models\LeadFollowUp::class); }
     public function communicationLogs()   { return $this->morphMany(AdmissionCommunicationLog::class, 'subject')->latest(); }
     public function callLogs()            { return $this->morphMany(AdmissionCallLog::class, 'subject')->latest(); }
+    public function reminders()           { return $this->morphMany(AdmissionReminderSchedule::class, 'subject')->latest('due_at'); }
+    public function managerReviews()      { return $this->morphMany(AdmissionManagerReview::class, 'reviewable')->latest('due_at'); }
     public function scoreRecords()        { return $this->hasMany(AdmissionLeadScore::class); }
     public function dataQualityFlags()    { return $this->morphMany(AdmissionDataQualityFlag::class, 'subject')->latest(); }
     public function admissionApprovals()  { return $this->morphMany(AdmissionApproval::class, 'approvable')->latest(); }

@@ -116,6 +116,36 @@ return [
                 'description' => 'Approval requests and audit trail for sensitive admission actions.',
                 'default_enabled' => true,
             ],
+            'admission.v0031_daily_operations' => [
+                'name' => 'Admission Daily Operations',
+                'category' => 'Staff Operations',
+                'description' => 'Counsellor and manager workspaces for follow-ups, reminders, escalations, and daily execution.',
+                'default_enabled' => true,
+            ],
+            'admission.reminder_cadences' => [
+                'name' => 'Reminder And Cadence Engine',
+                'category' => 'Communication',
+                'description' => 'Scheduled, repeatable, pausable, and escalatable reminders backed by communication logs.',
+                'default_enabled' => true,
+            ],
+            'admission.assessment_operations' => [
+                'name' => 'Assessment Operations',
+                'category' => 'Selection',
+                'description' => 'Assessment panels, evaluator assignment, pending score queues, score locks, and overrides.',
+                'default_enabled' => true,
+            ],
+            'admission.walk_ins' => [
+                'name' => 'Walk-ins And Campus Visits',
+                'category' => 'Staff Operations',
+                'description' => 'Walk-in visitor capture, counsellor assignment, follow-up, conversion, and reporting.',
+                'default_enabled' => true,
+            ],
+            'admission.manager_reviews' => [
+                'name' => 'Manager Reviews',
+                'category' => 'Compliance',
+                'description' => 'Review queues for call quality, lost leads, duplicate decisions, and score overrides.',
+                'default_enabled' => true,
+            ],
         ],
         'ACAD' => [
             'academic.dashboard' => [
