@@ -45,13 +45,18 @@ class AdmissionReminderService
         $template = $reminder->template ?: AdmissionCommunicationTemplate::where('channel', $reminder->channel)->where('is_active', true)->first();
 
         if (($subject instanceof Lead || $subject instanceof Applicant) && $template) {
-            $log = $this->communication->queue($subject, $template, $actor, [
+            $log = app(AdmissionSafeCommunicationService::class)->queue($subject, $template, $actor, [
                 'next_action' => $reminder->notes ?: ($subject->next_action ?? ''),
                 'deadline' => optional($reminder->due_at)->format('d M Y'),
             ]);
 
             $metadata = $reminder->metadata ?? [];
-            $metadata['communication_log_id'] = $log->id;
+            if (isset($log->blocked_by_rule)) {
+                $metadata['blocked_communication_id'] = $log->id;
+                $metadata['blocked_reason'] = $log->reason;
+            } else {
+                $metadata['communication_log_id'] = $log->id;
+            }
             $reminder->metadata = $metadata;
         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Services\AdmissionSelectionCommitteeService;
+use App\Services\AdmissionSensitiveAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,7 @@ class SelectionCommitteeController extends Controller
         ]);
     }
 
-    public function decide(Request $request, AdmissionSelectionCommitteeService $service)
+    public function decide(Request $request, AdmissionSelectionCommitteeService $service, AdmissionSensitiveAuditService $audit)
     {
         $data = $request->validate([
             'applicant_id' => ['required', 'exists:applicants,id'],
@@ -29,7 +30,10 @@ class SelectionCommitteeController extends Controller
             'normalized_score' => ['nullable', 'numeric'],
         ]);
 
-        $service->decide(Applicant::findOrFail($data['applicant_id']), $data['decision'], $data['reason'], $request->user(), $data);
+        $applicant = Applicant::findOrFail($data['applicant_id']);
+        $before = $applicant->only(['status']);
+        $service->decide($applicant, $data['decision'], $data['reason'], $request->user(), $data);
+        $audit->record('committee_decision', $applicant->fresh(), $request->user(), $data['reason'], $before, $applicant->fresh()->only(['status']));
         return back()->with('success', 'Committee decision recorded.');
     }
 }

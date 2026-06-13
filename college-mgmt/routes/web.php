@@ -63,6 +63,9 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
     Route::get('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
     Route::put('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'update'])->name('notifications.update');
+    Route::get('admission-operations', [\App\Http\Controllers\Applicant\AdmissionOperationsController::class, 'index'])->name('admission-operations.index');
+    Route::post('admission-operations/reschedule', [\App\Http\Controllers\Applicant\AdmissionOperationsController::class, 'requestReschedule'])->name('admission-operations.reschedule');
+    Route::post('admission-operations/consent', [\App\Http\Controllers\Applicant\AdmissionOperationsController::class, 'consent'])->name('admission-operations.consent');
 });
 
 // ── Notifications (all authenticated users) ────────────────────────────────
@@ -551,7 +554,11 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('assessment-scheduling', [Admission\AssessmentSchedulingController::class, 'index'])->name('assessment-slots.index');
     Route::post('assessment-slots', [Admission\AssessmentSchedulingController::class, 'storeSlot'])->name('assessment-slots.store');
     Route::post('assessment-slots/assign', [Admission\AssessmentSchedulingController::class, 'assignSlot'])->name('assessment-slots.assign');
+    Route::post('assessment-slots/bulk-assign', [Admission\AssessmentSchedulingController::class, 'bulkAssignSlot'])->name('assessment-slots.bulk-assign');
+    Route::post('assessment-slots/check-in', [Admission\AssessmentSchedulingController::class, 'checkIn'])->name('assessment-slots.check-in');
+    Route::post('assessment-reschedule-requests/review', [Admission\AssessmentSchedulingController::class, 'reviewReschedule'])->name('assessment-reschedule-requests.review');
     Route::post('assessment-evaluator-invitations/respond', [Admission\AssessmentSchedulingController::class, 'evaluatorResponse'])->name('assessment-evaluator-invitations.respond');
+    Route::post('assessment-evaluator-invitations/replace', [Admission\AssessmentSchedulingController::class, 'replaceEvaluator'])->name('assessment-evaluator-invitations.replace');
     Route::post('gd-groups/build', [Admission\AssessmentSchedulingController::class, 'buildGd'])->name('gd-groups.build');
     Route::post('assessment-submissions', [Admission\AssessmentSchedulingController::class, 'submission'])->name('assessment-submissions.store');
     Route::get('selection-committee', [Admission\SelectionCommitteeController::class, 'index'])->name('selection-committee.index');
@@ -573,6 +580,11 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::post('integration-health/check', [Admission\IntegrationHealthController::class, 'check'])->name('integration-health.check');
     Route::post('integration-health/retry/{retryId}', [Admission\IntegrationHealthController::class, 'retry'])->name('integration-health.retry');
     Route::get('quick-search', [Admission\QuickSearchController::class, 'index'])->name('quick-search.index');
+    Route::get('handoff', [Admission\HandoffController::class, 'index'])->name('handoff.index');
+    Route::post('handoff/{applicantId}/refresh', [Admission\HandoffController::class, 'refresh'])->name('handoff.refresh');
+    Route::post('handoff/{handoffId}/mark-handed-off', [Admission\HandoffController::class, 'markHandedOff'])->name('handoff.mark-handed-off');
+    Route::post('handoff/{handoffId}/return', [Admission\HandoffController::class, 'returnForCorrection'])->name('handoff.return');
+    Route::get('v039-exports/{type}', Admission\V039ExportController::class)->name('v039.exports');
     Route::get('calendar', Admission\AdmissionCalendarController::class)->name('calendar.index');
     Route::get('walk-ins', [Admission\WalkInController::class, 'index'])->name('walk-ins.index');
     Route::post('walk-ins', [Admission\WalkInController::class, 'store'])->name('walk-ins.store');

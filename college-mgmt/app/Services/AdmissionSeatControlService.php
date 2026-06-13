@@ -3,18 +3,24 @@
 namespace App\Services;
 
 use App\Models\Applicant;
+use App\Models\ProgramSeatMatrix;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AdmissionSeatControlService
 {
     public function hold(Applicant $applicant, array $data, ?User $actor = null): int
     {
+        $programId = $data['program_id'] ?? $applicant->program_id;
+        $batchId = $data['batch_id'] ?? $applicant->batch_id;
+        $this->assertSeatAvailable($programId, $batchId, $data['category'] ?? null);
+
         $id = DB::table('admission_seat_holds')->insertGetId([
             'applicant_id' => $applicant->id,
             'offer_round_id' => $data['offer_round_id'] ?? null,
-            'program_id' => $data['program_id'] ?? $applicant->program_id,
-            'batch_id' => $data['batch_id'] ?? $applicant->batch_id,
+            'program_id' => $programId,
+            'batch_id' => $batchId,
             'status' => 'held',
             'held_at' => now(),
             'expires_at' => $data['expires_at'] ?? now()->addDays(7),
@@ -74,5 +80,33 @@ class AdmissionSeatControlService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function assertSeatAvailable(?int $programId, ?int $batchId, ?string $category = null): void
+    {
+        if (! $programId) {
+            return;
+        }
+
+        $matrix = ProgramSeatMatrix::where('program_id', $programId)
+            ->where(function ($query) use ($batchId) {
+                $query->whereNull('batch_id')->when($batchId, fn ($q) => $q->orWhere('batch_id', $batchId));
+            })
+            ->when($category, fn ($q) => $q->where('category', $category))
+            ->first();
+
+        if (! $matrix) {
+            return;
+        }
+
+        $held = DB::table('admission_seat_holds')
+            ->where('program_id', $programId)
+            ->when($batchId, fn ($q) => $q->where('batch_id', $batchId))
+            ->whereIn('status', ['held', 'accepted'])
+            ->count();
+
+        if ($held >= (int) $matrix->total_seats) {
+            throw ValidationException::withMessages(['seat' => 'Seat matrix capacity is exhausted for this program/batch/category.']);
+        }
     }
 }

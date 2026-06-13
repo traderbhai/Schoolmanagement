@@ -8,6 +8,7 @@ use App\Models\AdmissionCommunicationTemplate;
 use App\Models\Applicant;
 use App\Models\Lead;
 use App\Services\AdmissionCommunicationService;
+use App\Services\AdmissionSafeCommunicationService;
 use Illuminate\Http\Request;
 
 class CommunicationController extends Controller
@@ -33,7 +34,7 @@ class CommunicationController extends Controller
         return back()->with('success', 'Communication template saved.');
     }
 
-    public function send(Request $request, AdmissionCommunicationService $service)
+    public function send(Request $request, AdmissionSafeCommunicationService $service)
     {
         $data = $request->validate([
             'template_id' => ['required', 'exists:admission_communication_templates,id'],
@@ -45,6 +46,9 @@ class CommunicationController extends Controller
             : Applicant::findOrFail($data['subject_id']);
         $template = AdmissionCommunicationTemplate::findOrFail($data['template_id']);
         $log = $service->queue($subject, $template, $request->user());
+        if (isset($log->blocked_by_rule)) {
+            return back()->with('warning', "Communication blocked by safety rule: {$log->reason}.");
+        }
 
         return back()->with('success', "Communication queued as #{$log->id}.");
     }

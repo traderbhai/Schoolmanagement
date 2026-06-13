@@ -199,6 +199,9 @@
         <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*')) active @endif">
             <i class="bi bi-ui-checks-grid"></i> Seat Control
         </a>
+        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif">
+            <i class="bi bi-arrow-left-right"></i> Handoff
+        </a>
         <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*') || request()->routeIs('admission.consent-center.*') || request()->routeIs('admission.template-approvals.*')) active @endif">
             <i class="bi bi-shield-check"></i> Consent & Safety
         </a>
@@ -858,6 +861,9 @@
         <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*') || request()->routeIs('admission.deferrals.*') || request()->routeIs('admission.joining-kit.*')) active @endif">
             <i class="bi bi-ui-checks-grid"></i> Seat Control
         </a>
+        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif">
+            <i class="bi bi-arrow-left-right"></i> Handoff
+        </a>
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
             <i class="bi bi-calendar-event"></i> Sessions
         </a>
@@ -996,6 +1002,7 @@
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
         <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*')||request()->routeIs('admission.seat-control.*')||request()->routeIs('admission.waitlist.*')||request()->routeIs('admission.deferrals.*')||request()->routeIs('admission.joining-kit.*')) active @endif"><i class="bi bi-ui-checks-grid"></i> Seat Control</a>
+        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif"><i class="bi bi-arrow-left-right"></i> Handoff</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Leads</div>
         <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>

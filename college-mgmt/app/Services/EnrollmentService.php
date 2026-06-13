@@ -130,6 +130,8 @@ class EnrollmentService
                 'loginUrl'   => url('/login'),
             ]);
 
+            app(AdmissionHandoffService::class)->ensure($applicant->fresh(), $confirmation, User::find($confirmedBy));
+
             return $confirmation;
         });
     }

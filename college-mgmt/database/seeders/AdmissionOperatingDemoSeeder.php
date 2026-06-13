@@ -24,7 +24,7 @@ class AdmissionOperatingDemoSeeder extends Seeder
             return;
         }
 
-        foreach (['admission_manager', 'admission_counsellor', 'admission_telecaller'] as $role) {
+        foreach (['admission_manager', 'admission_counsellor', 'admission_telecaller', 'evaluator'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
 
@@ -348,6 +348,7 @@ class AdmissionOperatingDemoSeeder extends Seeder
         $this->seedV036AssessmentAndCounsellorOps($program, $batch, $admHead, $manager, $counsellor, $officer, $emailTemplate, $panel, $session, $demoApplicants, $leads);
         $this->seedV037Hardening($program, $batch, $admHead, $manager, $counsellor, $officer, $telecaller, $panel, $demoApplicants);
         $this->seedV038RealTeamOps($program, $batch, $admHead, $manager, $counsellor, $officer, $telecaller, $panel, $session, $demoApplicants, $leads);
+        $this->seedV039FinalClosure($program, $batch, $admHead, $manager, $counsellor, $officer, $telecaller, $panel, $session, $demoApplicants, $leads);
 
         \App\Models\AdmissionPipelineBoard::updateOrCreate(
             ['object_type' => 'lead', 'is_default' => true],
@@ -401,7 +402,7 @@ class AdmissionOperatingDemoSeeder extends Seeder
             );
         }
 
-        $this->command?->info('  Admission OS v0.03/v0.031/v0.033/v0.036/v0.037/v0.038 demo operating data seeded.');
+        $this->command?->info('  Admission OS v0.03-v0.039 demo operating data seeded.');
     }
 
     private function user(string $email, string $name, ?string $role): User
@@ -1175,5 +1176,84 @@ class AdmissionOperatingDemoSeeder extends Seeder
         }
 
         app(\App\Services\AdmissionQuickSearchService::class)->search('PGDM', $admHead);
+    }
+
+    private function seedV039FinalClosure(Program $program, Batch $batch, User $admHead, User $manager, User $counsellor, User $officer, User $telecaller, \App\Models\AdmissionAssessmentPanel $panel, \App\Models\SelectionSession $session, $applicants, $leads): void
+    {
+        $slot = \Illuminate\Support\Facades\DB::table('admission_assessment_slots')->where('panel_id', $panel->id)->first();
+        if ($slot) {
+            $existingAssignments = \Illuminate\Support\Facades\DB::table('admission_assessment_slot_assignments')->where('slot_id', $slot->id)->limit(5)->get();
+            foreach ($existingAssignments as $index => $assignment) {
+                if ($assignment) {
+                    app(\App\Services\AdmissionAssessmentSlotService::class)->checkIn($assignment->id, ['confirmed', 'checked_in', 'waiting', 'in_progress', 'completed'][$index] ?? 'confirmed', $officer);
+                }
+            }
+
+            $firstAssignment = \Illuminate\Support\Facades\DB::table('admission_assessment_slot_assignments')->where('slot_id', $slot->id)->first();
+            if ($firstAssignment) {
+                app(\App\Services\AdmissionAssessmentSlotService::class)->requestReschedule($firstAssignment->id, Applicant::find($firstAssignment->applicant_id), 'Applicant has university exam on the same day.', null);
+                $reschedule = \Illuminate\Support\Facades\DB::table('admission_assessment_reschedule_requests')->where('slot_assignment_id', $firstAssignment->id)->latest()->first();
+                if ($reschedule) {
+                    app(\App\Services\AdmissionAssessmentSlotService::class)->reviewReschedule($reschedule->id, 'approved', $manager);
+                }
+            }
+        }
+
+        $declinedInvite = \Illuminate\Support\Facades\DB::table('admission_evaluator_invitations')->where('panel_id', $panel->id)->first();
+        if ($declinedInvite) {
+            app(\App\Services\AdmissionAssessmentSlotService::class)->evaluatorResponse($declinedInvite->id, 'declined', 'Schedule conflict during PI panel.');
+            app(\App\Services\AdmissionAssessmentSlotService::class)->replaceEvaluator($declinedInvite->id, $manager->id, $admHead);
+        }
+
+        $template = \App\Models\AdmissionCommunicationTemplate::where('channel', 'whatsapp')->first() ?: \App\Models\AdmissionCommunicationTemplate::where('channel', 'email')->first();
+        if ($template && $lead = $leads->first()) {
+            app(\App\Services\AdmissionConsentService::class)->set($lead, $template->channel, 'opt_out', $officer, 'v0.039 seeded opt-out safety scenario.', 'seeded_demo');
+            app(\App\Services\AdmissionSafeCommunicationService::class)->queue($lead, $template, $officer, ['source' => 'v0.039_seed']);
+        }
+
+        foreach ($applicants->take(4) as $index => $applicant) {
+            app(\App\Services\AdmissionJoiningKitService::class)->ensure($applicant, $counsellor);
+            if ($index < 2) {
+                $taskIds = \Illuminate\Support\Facades\DB::table('admission_joining_kit_tasks')
+                    ->where('applicant_id', $applicant->id)
+                    ->limit(2)
+                    ->pluck('id');
+                \Illuminate\Support\Facades\DB::table('admission_joining_kit_tasks')
+                    ->whereIn('id', $taskIds)
+                    ->update(['status' => 'completed', 'completed_at' => now(), 'updated_at' => now()]);
+            }
+            app(\App\Services\AdmissionHandoffService::class)->ensure($applicant, $applicant->enrollmentConfirmation, $admHead);
+        }
+
+        if ($hold = \Illuminate\Support\Facades\DB::table('admission_seat_holds')->where('status', 'held')->latest()->first()) {
+            \Illuminate\Support\Facades\DB::table('admission_seat_holds')->where('id', $hold->id)->update(['expires_at' => now()->subHour(), 'updated_at' => now()]);
+            app(\App\Services\AdmissionOfferSeatSchedulerService::class)->run($admHead);
+        }
+
+        foreach (['payment_override', 'enrollment_override', 'offer_withdrawal', 'bulk_communication', 'document_rejection', 'lead_applicant_merge'] as $action) {
+            app(\App\Services\AdmissionSensitiveAuditService::class)->record($action, $applicants->first(), $admHead, 'Seeded v0.039 sensitive audit scenario.', [], ['demo' => true]);
+        }
+
+        foreach ([['handoff', 'admission_handoff'], ['communication-safety', 'admission_communication_safety'], ['route-policy', 'admission_route_policy']] as [$type, $surface]) {
+            app(\App\Services\AdmissionFinalExportService::class)->log($type, $surface, ['demo' => true], 5, $admHead);
+        }
+
+        \Illuminate\Support\Facades\DB::table('admission_high_volume_seed_runs')->updateOrInsert(
+            ['name' => 'v0.039 high-volume ready profile'],
+            [
+                'lead_count' => 10000,
+                'applicant_count' => 5000,
+                'communication_count' => 100000,
+                'status' => 'profile_available',
+                'started_at' => now(),
+                'completed_at' => now(),
+                'metadata' => json_encode(['mode' => 'deferred_high_volume_seed', 'note' => 'Counts document the supported stress profile; demo seeder keeps local runtime fast.']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        app(\App\Services\AdmissionSavedViewService::class)->save('handoff_queue', 'Ready and blocked handoffs', ['status' => ['ready_for_academics', 'blocked']], $admHead);
+        app(\App\Services\AdmissionSavedViewService::class)->save('assessment_day', 'Check-in desk active candidates', ['status' => ['confirmed', 'checked_in', 'waiting']], $manager);
     }
 }

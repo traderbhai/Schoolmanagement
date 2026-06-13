@@ -49,6 +49,24 @@ class AdmissionAssessmentSlotService
         );
     }
 
+    public function bulkAssign(int $slotId, iterable $applicants, ?User $actor = null): array
+    {
+        $assigned = 0;
+        $blocked = [];
+
+        foreach ($applicants as $applicant) {
+            try {
+                $this->assignApplicant($slotId, $applicant, $actor);
+                $assigned++;
+            } catch (\Throwable $e) {
+                $blocked[] = ['applicant_id' => $applicant->id, 'reason' => $e->getMessage()];
+                break;
+            }
+        }
+
+        return compact('assigned', 'blocked');
+    }
+
     public function requestReschedule(int $assignmentId, Applicant $applicant, string $reason, ?int $requestedSlotId = null): int
     {
         return DB::table('admission_assessment_reschedule_requests')->insertGetId([
@@ -64,12 +82,21 @@ class AdmissionAssessmentSlotService
 
     public function reviewReschedule(int $requestId, string $status, User $actor): void
     {
+        $request = DB::table('admission_assessment_reschedule_requests')->where('id', $requestId)->first();
         DB::table('admission_assessment_reschedule_requests')->where('id', $requestId)->update([
             'status' => $status,
             'reviewed_by' => $actor->id,
             'reviewed_at' => now(),
             'updated_at' => now(),
         ]);
+
+        if ($request && $status === 'approved' && $request->requested_slot_id) {
+            DB::table('admission_assessment_slot_assignments')->where('id', $request->slot_assignment_id)->update([
+                'slot_id' => $request->requested_slot_id,
+                'status' => 'rescheduled',
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     public function inviteEvaluators(AdmissionAssessmentPanel $panel): void
@@ -90,5 +117,39 @@ class AdmissionAssessmentSlotService
             'response_note' => $note,
             'updated_at' => now(),
         ]);
+    }
+
+    public function checkIn(int $assignmentId, string $status, ?User $actor = null): void
+    {
+        $allowed = ['invited', 'confirmed', 'checked_in', 'waiting', 'in_progress', 'completed', 'no_show', 'rescheduled', 'cancelled'];
+        if (! in_array($status, $allowed, true)) {
+            throw ValidationException::withMessages(['status' => 'Unknown assessment lifecycle status.']);
+        }
+
+        DB::table('admission_assessment_slot_assignments')->where('id', $assignmentId)->update([
+            'status' => $status,
+            'checked_in_at' => $status === 'checked_in' ? now() : DB::raw('checked_in_at'),
+            'metadata' => json_encode(['updated_by' => $actor?->id, 'v' => '0.039_check_in']),
+            'updated_at' => now(),
+        ]);
+    }
+
+    public function replaceEvaluator(int $invitationId, int $replacementUserId, ?User $actor = null): void
+    {
+        $invitation = DB::table('admission_evaluator_invitations')->where('id', $invitationId)->first();
+        if (! $invitation) {
+            return;
+        }
+
+        DB::table('admission_evaluator_invitations')->where('id', $invitationId)->update([
+            'status' => 'replaced',
+            'response_note' => trim(($invitation->response_note ? $invitation->response_note.'; ' : '').'Replaced by user '.$replacementUserId),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('admission_evaluator_invitations')->updateOrInsert(
+            ['panel_id' => $invitation->panel_id, 'user_id' => $replacementUserId],
+            ['status' => 'pending', 'invited_at' => now(), 'response_note' => 'Replacement evaluator', 'created_at' => now(), 'updated_at' => now()]
+        );
     }
 }

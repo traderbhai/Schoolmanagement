@@ -21,6 +21,7 @@ class CommunicationSafetyController extends Controller
             'consents' => DB::table('admission_consent_records')->latest()->limit(40)->get(),
             'approvals' => DB::table('admission_template_approvals')->latest()->limit(25)->get(),
             'previews' => DB::table('admission_bulk_send_previews')->latest()->limit(25)->get(),
+            'blocked' => DB::table('admission_blocked_communications')->latest()->limit(40)->get(),
             'quietHours' => DB::table('admission_quiet_hour_rules')->where('is_active', true)->get(),
             'audit' => DB::table('admission_sensitive_audit_events')->latest()->limit(25)->get(),
         ]);

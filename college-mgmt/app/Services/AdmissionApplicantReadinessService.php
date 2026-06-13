@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\Applicant;
 use App\Models\RequiredDocument;
+use Illuminate\Support\Facades\DB;
 
 class AdmissionApplicantReadinessService
 {
@@ -18,8 +19,12 @@ class AdmissionApplicantReadinessService
             'registration_fee' => $this->registrationFee($applicant),
             'selection' => $this->selection($applicant),
             'admission_payment' => $this->admissionPayment($applicant),
+            'assessment' => $this->assessment($applicant),
             'offer' => $this->offer($applicant),
+            'seat_hold' => $this->seatHold($applicant),
+            'joining_kit' => $this->joiningKit($applicant),
             'enrollment' => $this->enrollment($applicant),
+            'handoff' => $this->handoff($applicant),
         ];
     }
 
@@ -30,7 +35,10 @@ class AdmissionApplicantReadinessService
         return $items['documents']['ready']
             && $items['selection']['ready']
             && $items['admission_payment']['ready']
-            && $items['offer']['ready'];
+            && $items['assessment']['ready']
+            && $items['offer']['ready']
+            && $items['seat_hold']['ready']
+            && $items['joining_kit']['ready'];
     }
 
     private function profile(Applicant $applicant): array
@@ -145,6 +153,52 @@ class AdmissionApplicantReadinessService
         return $this->item('Offer', true, [], 'applicant.offer-letters.index');
     }
 
+    private function assessment(Applicant $applicant): array
+    {
+        $slot = DB::table('admission_assessment_slot_assignments')->where('applicant_id', $applicant->id)->latest()->first();
+        $pendingSubmission = DB::table('admission_assessment_submissions')
+            ->where('applicant_id', $applicant->id)
+            ->whereIn('status', ['pending', 'missing', 'late'])
+            ->exists();
+
+        $blockers = [];
+        if (! $slot && in_array($applicant->status, ['shortlisted', 'under_review'], true)) {
+            $blockers[] = 'Assessment slot is not assigned yet.';
+        }
+        if ($pendingSubmission) {
+            $blockers[] = 'Assessment submission is pending or marked for review.';
+        }
+
+        return $this->item('Assessment Slot & Submission', empty($blockers), $blockers, 'applicant.admission-operations.index');
+    }
+
+    private function seatHold(Applicant $applicant): array
+    {
+        $hold = DB::table('admission_seat_holds')->where('applicant_id', $applicant->id)->latest()->first();
+        if (! $hold && in_array($applicant->status, ['selected', 'enrolled'], true)) {
+            return $this->item('Seat Hold', false, ['Seat hold is not recorded yet.'], 'applicant.admission-operations.index');
+        }
+
+        if ($hold && $hold->status === 'held' && $hold->expires_at && now()->greaterThan($hold->expires_at)) {
+            return $this->item('Seat Hold', false, ['Seat hold has expired and needs staff review.'], 'applicant.admission-operations.index');
+        }
+
+        return $this->item('Seat Hold', true, [], 'applicant.admission-operations.index');
+    }
+
+    private function joiningKit(Applicant $applicant): array
+    {
+        $tasks = DB::table('admission_joining_kit_tasks')->where('applicant_id', $applicant->id)->get();
+        $pending = $tasks->where('status', '!=', 'completed');
+
+        return $this->item(
+            'Joining Kit',
+            $pending->isEmpty(),
+            $pending->pluck('title')->map(fn ($title) => $title . ' is pending.')->values()->all(),
+            'applicant.admission-operations.index'
+        );
+    }
+
     private function enrollment(Applicant $applicant): array
     {
         if ($applicant->isEnrolled()) {
@@ -153,10 +207,27 @@ class AdmissionApplicantReadinessService
 
         $blockers = [];
         if (!$this->isEnrollmentPrecheckReady($applicant)) {
-            $blockers[] = 'Selection, mandatory documents, admission payments, and accepted offer must be complete.';
+            $blockers[] = 'Selection, mandatory documents, admission payments, accepted offer, assessment, seat hold, and joining kit must be complete.';
         }
 
         return $this->item('Enrollment', false, $blockers, 'applicant.status');
+    }
+
+    private function handoff(Applicant $applicant): array
+    {
+        $handoff = DB::table('admission_handoff_records')->where('applicant_id', $applicant->id)->first();
+        if (! $handoff) {
+            return $this->item('Academics/PMC Handoff', false, ['Handoff has not been prepared yet.'], 'applicant.admission-operations.index');
+        }
+
+        $blockers = json_decode($handoff->blockers ?? '[]', true) ?: [];
+
+        return $this->item(
+            'Academics/PMC Handoff',
+            in_array($handoff->status, ['ready_for_academics', 'handed_off'], true),
+            $blockers ?: ['Current handoff status is ' . str_replace('_', ' ', $handoff->status) . '.'],
+            'applicant.admission-operations.index'
+        );
     }
 
     private function isEnrollmentPrecheckReady(Applicant $applicant): bool
@@ -165,7 +236,10 @@ class AdmissionApplicantReadinessService
             $this->documents($applicant),
             $this->selection($applicant),
             $this->admissionPayment($applicant),
+            $this->assessment($applicant),
             $this->offer($applicant),
+            $this->seatHold($applicant),
+            $this->joiningKit($applicant),
         ];
 
         foreach ($items as $item) {

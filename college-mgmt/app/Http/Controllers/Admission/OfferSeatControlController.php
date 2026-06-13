@@ -10,6 +10,7 @@ use App\Services\AdmissionDeferralService;
 use App\Services\AdmissionJoiningKitService;
 use App\Services\AdmissionOfferRoundService;
 use App\Services\AdmissionSeatControlService;
+use App\Services\AdmissionSensitiveAuditService;
 use App\Services\AdmissionWaitlistService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,10 +57,13 @@ class OfferSeatControlController extends Controller
         return back()->with('success', 'Applicant added to waitlist.');
     }
 
-    public function releaseSeat(int $holdId, Request $request, AdmissionSeatControlService $service)
+    public function releaseSeat(int $holdId, Request $request, AdmissionSeatControlService $service, AdmissionSensitiveAuditService $audit)
     {
         $data = $request->validate(['reason' => ['required', 'string']]);
+        $before = (array) DB::table('admission_seat_holds')->where('id', $holdId)->first();
         $service->release($holdId, $data['reason'], $request->user());
+        $after = (array) DB::table('admission_seat_holds')->where('id', $holdId)->first();
+        $audit->record('seat_release', null, $request->user(), $data['reason'], $before, $after);
         return back()->with('success', 'Seat released and waitlist promotion checked.');
     }
 
@@ -70,9 +74,12 @@ class OfferSeatControlController extends Controller
         return back()->with('success', 'Deferral request recorded.');
     }
 
-    public function approveDeferral(int $deferralId, Request $request, AdmissionDeferralService $service)
+    public function approveDeferral(int $deferralId, Request $request, AdmissionDeferralService $service, AdmissionSensitiveAuditService $audit)
     {
+        $before = (array) DB::table('admission_deferrals')->where('id', $deferralId)->first();
         $service->approve($deferralId, $request->user(), $request->input('carry_forward_notes'));
+        $after = (array) DB::table('admission_deferrals')->where('id', $deferralId)->first();
+        $audit->record('deferral_approval', null, $request->user(), $request->input('carry_forward_notes'), $before, $after);
         return back()->with('success', 'Deferral approved.');
     }
 

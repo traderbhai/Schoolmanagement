@@ -49,13 +49,35 @@ class AdmissionCommunicationSafetyService
 
     public function canSend($subject, AdmissionCommunicationTemplate $template): bool
     {
-        return app(AdmissionConsentService::class)->allowed($subject, $template->channel)
-            && $this->templateReady($template)
-            && ! $this->inQuietHours($template->channel);
+        return empty($this->blockReasons($subject, $template));
+    }
+
+    public function blockReasons($subject, AdmissionCommunicationTemplate $template): array
+    {
+        $reasons = [];
+
+        if (! app(AdmissionConsentService::class)->allowed($subject, $template->channel)) {
+            $reasons[] = 'recipient_opted_out';
+        }
+
+        if (! $this->templateReady($template)) {
+            $reasons[] = 'template_not_approved';
+        }
+
+        if ($this->inQuietHours($template->channel)) {
+            $reasons[] = 'quiet_hours';
+        }
+
+        return $reasons;
     }
 
     private function templateReady(AdmissionCommunicationTemplate $template): bool
     {
+        $hasApprovalHistory = DB::table('admission_template_approvals')->where('template_id', $template->id)->exists();
+        if (! $hasApprovalHistory) {
+            return (bool) $template->is_active;
+        }
+
         return app(AdmissionTemplateApprovalService::class)->isApproved($template);
     }
 

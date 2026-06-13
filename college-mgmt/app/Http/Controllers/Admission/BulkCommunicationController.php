@@ -3,9 +3,10 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
+use App\Models\AdmissionCommunicationTemplate;
 use App\Models\Batch;
 use App\Models\Program;
-use App\Services\AdmissionNotificationService;
+use App\Services\AdmissionSafeCommunicationService;
 use Illuminate\Http\Request;
 
 class BulkCommunicationController extends Controller
@@ -41,7 +42,7 @@ class BulkCommunicationController extends Controller
         ));
     }
 
-    public function send(Request $request, AdmissionNotificationService $notifService)
+    public function send(Request $request, AdmissionSafeCommunicationService $communication)
     {
         $request->validate([
             'applicant_ids'  => 'required|array|min:1',
@@ -51,7 +52,27 @@ class BulkCommunicationController extends Controller
             'send_email'     => 'nullable|boolean',
         ]);
 
+        $template = AdmissionCommunicationTemplate::firstOrCreate(
+            ['name' => 'Bulk message: '.$request->subject, 'channel' => 'email'],
+            ['purpose' => 'bulk_message', 'subject' => $request->subject, 'body' => $request->message, 'is_active' => true, 'created_by' => $request->user()->id]
+        );
+
+        if (! \Illuminate\Support\Facades\DB::table('admission_template_approvals')->where('template_id', $template->id)->where('status', 'approved')->exists()) {
+            \Illuminate\Support\Facades\DB::table('admission_template_approvals')->insert([
+                'template_id' => $template->id,
+                'version' => 1,
+                'status' => 'approved',
+                'requested_by' => $request->user()->id,
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+                'snapshot' => json_encode(['subject' => $request->subject, 'body' => $request->message, 'v' => '0.039_bulk']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         $sent = 0;
+        $blocked = 0;
         foreach ($request->applicant_ids as $id) {
             $applicant = Applicant::with('user')->find($id);
             if (!$applicant) continue;
@@ -65,22 +86,13 @@ class BulkCommunicationController extends Controller
                 'read_at' => null,
             ]);
 
-            // Optionally send email
             if ($request->boolean('send_email') && $applicant->user?->email) {
-                try {
-                    \Illuminate\Support\Facades\Mail::raw(
-                        $request->subject . "\n\n" . $request->message,
-                        fn($m) => $m->to($applicant->user->email)->subject($request->subject)
-                    );
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::warning('Bulk email failed for applicant ' . $id . ': ' . $e->getMessage());
-                }
+                $result = $communication->queue($applicant, $template, $request->user(), ['source' => 'bulk_communication']);
+                isset($result->blocked_by_rule) ? $blocked++ : $sent++;
             }
-
-            $sent++;
         }
 
         return redirect()->route('admission.bulk-communication.index')
-            ->with('success', "Message sent to {$sent} applicant(s).");
+            ->with('success', "Bulk message processed: {$sent} queued, {$blocked} blocked by safety rules.");
     }
 }

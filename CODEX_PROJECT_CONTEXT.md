@@ -12,7 +12,7 @@
 ## Current Product Phase
 
 - Treat earlier commercial-readiness work as the completed v0.00 baseline.
-- Current active development phase: v0.038.
+- Current active development phase: v0.039 final Admission closure baseline before Academics/PMC.
 - Previous v0.00 tasks are considered complete unless the user explicitly reopens a specific item.
 - Do not use `COMMERCIAL_READINESS_AUDIT.md` as the active task source for new work unless the user explicitly asks for it.
 - Do not update `COMMERCIAL_READINESS_AUDIT.md` during normal v0.03 development.
@@ -148,10 +148,10 @@ Last verified setup:
 - npm dependencies installed.
 - `.env` exists.
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
-- Migrations completed, including Admission OS v0.038 additive tables.
+- Migrations completed, including Admission OS v0.039 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 417 tests, 1684 assertions.
-- Admission v0.038 regression gate passed: 111 tests, 635 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 423 tests, 1707 assertions.
+- Admission v0.039 regression gate passed: 117 tests, 658 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -275,6 +275,27 @@ Last verified setup:
 - Admission regression gate passed: `AdmissionOsV038Test|AdmissionOsV037Test|AdmissionOsV036Test|AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 111 tests, 635 assertions.
 - Full suite passed: 417 tests, 1684 assertions.
 - Browser verification passed on localhost for calling desk, assessment scheduling, selection committee, offer/seat control, communication safety, integration health, and quick search. Mobile viewport checks passed for calling desk, assessment scheduling, offer/seat control, and communication safety with no document-level horizontal overflow. Browser action checks passed for calling-desk outcome creation and integration health refresh.
+
+## Admission OS v0.039 Final Closure Baseline
+
+- v0.039 is the final Admission OS closure sprint before moving to Academics and PMC.
+- Added central admission policy checks and audit logs, sensitive action audit helpers, transition-event logging, safe communication wrapper, blocked/delayed communication queue, final export logs, high-volume seed profile records, and formal Admission-to-Academics/PMC handoff records.
+- Communication Hub, bulk communication, reminders, and automations now route through `AdmissionSafeCommunicationService`; legacy templates with no approval history remain compatible, while templates in an approval workflow must be approved before sending.
+- Applicant self-service now includes `/applicant/admission-operations` with own-scope assessment slot/reschedule, assessment submissions, consent preferences, waitlist/seat-hold status, joining-kit checklist, deferral status, and handoff status.
+- Assessment scheduling now uses searchable selectors instead of raw applicant IDs, supports bulk slot assignment, check-in lifecycle updates, reschedule review, evaluator replacement, submission audit, and filtered export.
+- Offer/seat closure now enforces seat-matrix availability on holds, audits seat releases and deferral approvals, and has `admission:run-final-schedulers` for expired offers/holds and waitlist replies.
+- Handoff queue lives at `/admission/handoff` and tracks pending, blocked, ready, handed-off, and returned-for-correction records with document/fee/joining-kit summaries.
+- v0.039 key files:
+  - Migration: `college-mgmt/database/migrations/2026_06_14_110001_add_admission_os_v0039_final_closure.php`
+  - Services: `AdmissionAccessPolicyService`, `AdmissionSensitiveAuditService`, `AdmissionSafeCommunicationService`, `AdmissionTransitionService`, `AdmissionHandoffService`, `AdmissionFinalExportService`, `AdmissionOfferSeatSchedulerService`
+  - Routes: `/admission/handoff`, `/admission/v039-exports/{type}`, `/applicant/admission-operations`, plus v0.039 assessment scheduling action routes
+  - Views: `college-mgmt/resources/views/admission/v0039/handoff.blade.php`, `college-mgmt/resources/views/applicant/admission-operations.blade.php`
+  - Test: `college-mgmt/tests/Feature/AdmissionOsV039Test.php`
+- `AdmissionOperatingDemoSeeder` now seeds v0.039 final scenarios for blocked communications, assessment-day lifecycle, evaluator replacement, reschedule approval, seat expiry, handoff records, sensitive audits, export logs, high-volume readiness profile, and saved views.
+- Focused verification passed: `AdmissionOsV039Test` with 6 tests, 23 assertions.
+- Admission regression gate passed: `AdmissionOsV039Test|AdmissionOsV038Test|AdmissionOsV037Test|AdmissionOsV036Test|AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 117 tests, 658 assertions.
+- Full suite passed: 423 tests, 1707 assertions.
+- Browser verification passed on localhost for handoff, assessment scheduling, communication safety, route access audit, and applicant admission operations. Mobile viewport checks passed for applicant admission operations and admission handoff with no document-level horizontal overflow.
 
 ## Known Local Notes
 

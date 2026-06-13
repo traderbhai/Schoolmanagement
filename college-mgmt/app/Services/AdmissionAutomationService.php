@@ -107,7 +107,10 @@ class AdmissionAutomationService
     private function sendCommunication(Lead|Applicant $subject, int $templateId, ?User $actor): array
     {
         $template = AdmissionCommunicationTemplate::findOrFail($templateId);
-        $log = $this->communication->queue($subject, $template, $actor);
+        $log = app(AdmissionSafeCommunicationService::class)->queue($subject, $template, $actor, ['source' => 'automation']);
+        if (isset($log->blocked_by_rule)) {
+            return ['type' => 'send_communication', 'blocked_id' => $log->id, 'blocked_reason' => $log->reason];
+        }
 
         return ['type' => 'send_communication', 'log_id' => $log->id];
     }
