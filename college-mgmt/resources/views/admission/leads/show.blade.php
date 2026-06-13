@@ -193,6 +193,20 @@
                     @endif
                 </div>
             </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-transparent fw-semibold">Assignment Timeline</div>
+                <div class="list-group list-group-flush">
+                    @forelse($lead->assignmentEvents as $event)
+                        <div class="list-group-item">
+                            <div class="fw-semibold">{{ ucfirst(str_replace('_', ' ', $event->mode)) }} to {{ $event->toUser?->name ?? 'Unassigned' }}</div>
+                            <div class="small text-muted">By {{ $event->assignedBy?->name ?? 'System' }} {{ $event->created_at?->diffForHumans() }} {{ $event->reason ? '- ' . $event->reason : '' }}</div>
+                        </div>
+                    @empty
+                        <div class="list-group-item text-muted">No assignment events yet.</div>
+                    @endforelse
+                </div>
+            </div>
         </div>
     </div>
 </div>

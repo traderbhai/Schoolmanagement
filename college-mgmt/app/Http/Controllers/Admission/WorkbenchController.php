@@ -13,6 +13,8 @@ use App\Models\Program;
 use App\Models\SelectionSession;
 use App\Models\User;
 use App\Services\AdmissionApplicantReadinessService;
+use App\Services\AdmissionAttentionService;
+use App\Services\AdmissionKpiService;
 use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
@@ -21,6 +23,8 @@ class WorkbenchController extends Controller
     public function __construct(
         private AdmissionApplicantReadinessService $readiness,
         private DepartmentHierarchyService $hierarchy,
+        private AdmissionAttentionService $attention,
+        private AdmissionKpiService $kpis,
     ) {}
 
     public function index(Request $request)
@@ -34,6 +38,11 @@ class WorkbenchController extends Controller
         $programId = $request->integer('program_id') ?: null;
         $counsellorId = $request->integer('counsellor_id') ?: null;
         $priority = $request->get('priority');
+        $filters = array_filter([
+            'program_id' => $programId,
+            'counsellor_id' => $counsellorId,
+            'priority' => $priority,
+        ], fn ($value) => $value !== null && $value !== '');
 
         $leadScope = Lead::query();
         $applicantScope = Applicant::query();
@@ -113,12 +122,15 @@ class WorkbenchController extends Controller
             ->filter(fn (Lead $lead) => $lead->email || $lead->phone)
             ->groupBy(fn (Lead $lead) => strtolower((string) ($lead->email ?: $lead->phone)))
             ->filter(fn ($group) => $group->count() > 1);
+        $attentionQueues = $this->attention->queuesFor($user, $filters);
+        $kpiSummary = $this->kpis->summaryFor($user, $filters);
+        $kpiRollup = $this->kpis->rollupByUser($user, $filters)->take(10);
 
         return view('admission.workbench', compact(
             'programs', 'counsellors', 'programId', 'counsellorId', 'priority',
             'leads', 'applicants', 'overdueFollowUps', 'pendingDocuments',
             'pendingPayments', 'sessionsToday', 'offerExpiryRisk', 'enrollmentReady',
-            'duplicateLeads'
+            'duplicateLeads', 'attentionQueues', 'kpiSummary', 'kpiRollup'
         ));
     }
 

@@ -13,6 +13,9 @@ class Lead extends Model
         'name', 'email', 'phone', 'program_id', 'source', 'status', 'priority',
         'notes', 'last_contacted_at', 'converted_applicant_id', 'converted_at',
         'assigned_to', 'assigned_at', 'sla_due_at', 'next_action', 'team', 'region',
+        'owner_user_id', 'current_handler_user_id', 'assigned_by', 'assignment_reason',
+        'assignment_mode', 'last_activity_at', 'escalated_to', 'escalated_at',
+        'sla_paused_until', 'sla_pause_reason',
     ];
 
     protected $casts = [
@@ -20,11 +23,20 @@ class Lead extends Model
         'converted_at'      => 'datetime',
         'assigned_at'       => 'datetime',
         'sla_due_at'        => 'datetime',
+        'last_activity_at'  => 'datetime',
+        'escalated_at'      => 'datetime',
+        'sla_paused_until'  => 'datetime',
     ];
 
     public function program()              { return $this->belongsTo(Program::class); }
     public function convertedApplicant()  { return $this->belongsTo(Applicant::class, 'converted_applicant_id'); }
     public function assignedTo()          { return $this->belongsTo(\App\Models\User::class, 'assigned_to'); }
+    public function owner()               { return $this->belongsTo(User::class, 'owner_user_id'); }
+    public function currentHandler()      { return $this->belongsTo(User::class, 'current_handler_user_id'); }
+    public function assignedBy()          { return $this->belongsTo(User::class, 'assigned_by'); }
+    public function escalatedTo()         { return $this->belongsTo(User::class, 'escalated_to'); }
+    public function assignmentEvents()    { return $this->morphMany(AdmissionAssignmentEvent::class, 'subject')->latest(); }
+    public function tags()                { return $this->morphToMany(AdmissionTag::class, 'taggable', 'admission_taggables')->withTimestamps(); }
     public function followUps()           { return $this->hasMany(\App\Models\LeadFollowUp::class); }
 
     public function isConverted(): bool   { return $this->status === 'converted'; }

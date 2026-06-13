@@ -160,6 +160,12 @@
         <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif">
             <i class="bi bi-diagram-3"></i> Process Templates
         </a>
+        <a href="{{ route('admission.assignment-rules.index') }}" class="nav-link @if(request()->routeIs('admission.assignment-rules.*')) active @endif">
+            <i class="bi bi-shuffle"></i> Assignment Rules
+        </a>
+        <a href="{{ route('admission.workflow-config.index') }}" class="nav-link @if(request()->routeIs('admission.workflow-config.*')) active @endif">
+            <i class="bi bi-sliders"></i> Workflow Config
+        </a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
             <i class="bi bi-person-lines-fill"></i> Applicants CRM
         </a>
@@ -888,6 +894,8 @@
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
         <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
         <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif"><i class="bi bi-diagram-3"></i> Process Templates</a>
+        <a href="{{ route('admission.assignment-rules.index') }}" class="nav-link @if(request()->routeIs('admission.assignment-rules.*')) active @endif"><i class="bi bi-shuffle"></i> Assignment Rules</a>
+        <a href="{{ route('admission.workflow-config.index') }}" class="nav-link @if(request()->routeIs('admission.workflow-config.*')) active @endif"><i class="bi bi-sliders"></i> Workflow Config</a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants</a>
         <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif"><i class="bi bi-folder-check"></i> Document Queue</a>
         <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>

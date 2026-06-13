@@ -461,6 +461,15 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('workbench', [Admission\WorkbenchController::class, 'index'])
         ->middleware('department.feature:ADM,admission.workbench')
         ->name('workbench');
+    Route::get('attention', [Admission\AttentionController::class, 'index'])
+        ->middleware('department.feature:ADM,admission.workbench')
+        ->name('attention.index');
+    Route::get('assignment-rules', [Admission\AssignmentRuleController::class, 'index'])->name('assignment-rules.index');
+    Route::post('assignment-rules', [Admission\AssignmentRuleController::class, 'store'])->name('assignment-rules.store');
+    Route::patch('assignment-rules/{rule}/toggle', [Admission\AssignmentRuleController::class, 'toggle'])->name('assignment-rules.toggle');
+    Route::get('workflow-config', [Admission\WorkflowConfigController::class, 'index'])->name('workflow-config.index');
+    Route::post('workflow-config', [Admission\WorkflowConfigController::class, 'storeConfig'])->name('workflow-config.store');
+    Route::post('workflow-config/tags', [Admission\WorkflowConfigController::class, 'storeTag'])->name('workflow-config.tags.store');
     Route::get('process-templates', [Admission\ProcessTemplateController::class, 'index'])
         ->middleware('department.feature:ADM,admission.process_templates')
         ->name('process-templates.index');
@@ -471,6 +480,10 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
         ->middleware('department.feature:ADM,admission.process_templates')
         ->name('process-templates.stages.store');
     Route::post('applicants/bulk-action', [Admission\ApplicantCrmController::class, 'bulkAction'])->name('applicants.bulk-action');
+    Route::post('applicants/bulk/assign', [Admission\AssignmentController::class, 'bulkAssignApplicants'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('applicants.bulk-assign');
+    Route::post('applicants/bulk/tags', [Admission\TagController::class, 'bulkTagApplicants'])->name('applicants.bulk-tags');
     Route::get('applicants/export-csv', [Admission\ApplicantCrmController::class, 'exportCsv'])
         ->middleware('department.feature:ADM,admission.reporting_exports')
         ->name('applicants.export-csv');
@@ -479,6 +492,13 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::post('applicants/{applicant}/assign', [Admission\AssignmentController::class, 'assignApplicant'])
         ->middleware('department.feature:ADM,admission.assignment')
         ->name('applicants.assign');
+    Route::post('applicants/{applicant}/delegate', [Admission\AssignmentController::class, 'delegateApplicant'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('applicants.delegate');
+    Route::post('applicants/{applicant}/pause-sla', [Admission\AssignmentController::class, 'pauseApplicantSla'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('applicants.pause-sla');
+    Route::post('applicants/{applicant}/tags', [Admission\TagController::class, 'tagApplicant'])->name('applicants.tags.store');
     Route::post('applicants/{applicant}/status', [Admission\ApplicantCrmController::class, 'updateStatus'])->name('applicants.status');
     Route::post('applicants/{applicant}/counselling-log', [Admission\ApplicantCrmController::class, 'storeCounsellingLog'])->name('applicants.counselling-log');
     Route::post('applicants/{applicant}/notes', [Admission\ApplicantCrmController::class, 'storeNote'])->name('applicants.notes');
@@ -496,6 +516,10 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('leads', [Admission\LeadController::class, 'index'])->name('leads.index');
     Route::post('leads', [Admission\LeadController::class, 'store'])->name('leads.store');
     Route::post('leads/bulk/update-status', [Admission\LeadController::class, 'bulkUpdateStatus'])->name('leads.bulk-status');
+    Route::post('leads/bulk/assign', [Admission\AssignmentController::class, 'bulkAssignLeads'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('leads.bulk-assign');
+    Route::post('leads/bulk/tags', [Admission\TagController::class, 'bulkTagLeads'])->name('leads.bulk-tags');
     Route::get('leads/analytics/dashboard', [Admission\LeadController::class, 'analytics'])->name('leads.analytics');
     Route::get('leads/import', [Admission\LeadImportController::class, 'showImportForm'])->name('leads.import');
     Route::post('leads/import', [Admission\LeadImportController::class, 'import'])->name('leads.import.post');
@@ -505,6 +529,14 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('leads/follow-ups/calendar', [Admission\LeadFollowUpController::class, 'calendar'])->name('leads.follow-ups.calendar');
     Route::patch('leads/follow-ups/{followUp}/complete', [Admission\LeadFollowUpController::class, 'complete'])->name('leads.follow-ups.complete');
     Route::get('leads/{lead}', [Admission\LeadController::class, 'show'])->name('leads.show');
+    Route::post('leads/{lead}/merge', [Admission\LeadMergeController::class, 'merge'])->name('leads.merge');
+    Route::post('leads/{lead}/delegate', [Admission\AssignmentController::class, 'delegateLead'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('leads.delegate');
+    Route::post('leads/{lead}/pause-sla', [Admission\AssignmentController::class, 'pauseLeadSla'])
+        ->middleware('department.feature:ADM,admission.assignment')
+        ->name('leads.pause-sla');
+    Route::post('leads/{lead}/tags', [Admission\TagController::class, 'tagLead'])->name('leads.tags.store');
     Route::post('leads/{lead}/contact', [Admission\LeadController::class, 'contactLead'])->name('leads.contact');
     Route::post('leads/{lead}/interested', [Admission\LeadController::class, 'markInterested'])->name('leads.interested');
     Route::post('leads/{lead}/not-interested', [Admission\LeadController::class, 'markNotInterested'])->name('leads.not-interested');

@@ -59,7 +59,7 @@ class LeadController extends Controller
             abort(403);
         }
 
-        $lead->load(['program', 'convertedApplicant']);
+        $lead->load(['program', 'convertedApplicant', 'assignmentEvents.fromUser', 'assignmentEvents.toUser', 'assignmentEvents.assignedBy', 'tags']);
         return view('admission.leads.show', compact('lead'));
     }
 

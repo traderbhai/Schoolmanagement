@@ -7,9 +7,11 @@
             <h1 class="h3 mb-1">Admission Workbench</h1>
             <div class="text-muted">Priority queues across leads, applicants, documents, payments, sessions, offers, and enrollment readiness.</div>
         </div>
-        <a href="{{ route('admission.process-templates.index') }}" class="btn btn-outline-primary">
-            <i class="bi bi-diagram-3 me-1"></i> Process Templates
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admission.attention.index') }}" class="btn btn-outline-danger"><i class="bi bi-exclamation-triangle me-1"></i> Attention</a>
+            <a href="{{ route('admission.assignment-rules.index') }}" class="btn btn-outline-primary"><i class="bi bi-shuffle me-1"></i> Assignment Rules</a>
+            <a href="{{ route('admission.process-templates.index') }}" class="btn btn-outline-primary"><i class="bi bi-diagram-3 me-1"></i> Process Templates</a>
+        </div>
     </div>
 
     <form method="GET" class="card mb-4">
@@ -46,6 +48,49 @@
             </div>
         </div>
     </form>
+
+    <div class="row g-3 mb-4">
+        @isset($kpiSummary)
+            @foreach([
+                ['label' => 'Workload', 'count' => $kpiSummary['workload'] ?? 0, 'icon' => 'briefcase'],
+                ['label' => 'SLA Breaches', 'count' => $kpiSummary['sla_breaches'] ?? 0, 'icon' => 'clock-history'],
+                ['label' => 'Lead Conv. %', 'count' => ($kpiSummary['application_conversion_pct'] ?? 0) . '%', 'icon' => 'graph-up'],
+                ['label' => 'Follow-up %', 'count' => ($kpiSummary['followup_compliance_pct'] ?? 0) . '%', 'icon' => 'telephone-outbound'],
+            ] as $card)
+            <div class="col-sm-6 col-xl-3">
+                <div class="card h-100 border-primary-subtle">
+                    <div class="card-body">
+                        <div class="text-muted small">{{ $card['label'] }}</div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="display-6 fw-semibold">{{ $card['count'] }}</div>
+                            <i class="bi bi-{{ $card['icon'] }} fs-3 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        @endisset
+    </div>
+
+    @isset($attentionQueues)
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">Immediate Attention</div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach($attentionQueues as $queueName => $items)
+                    <div class="col-md-3">
+                        <a href="{{ route('admission.attention.index') }}" class="text-decoration-none">
+                            <div class="border rounded p-3 h-100">
+                                <div class="text-muted small">{{ ucwords(str_replace('_', ' ', $queueName)) }}</div>
+                                <div class="h4 mb-0">{{ count($items) }}</div>
+                            </div>
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endisset
 
     <div class="row g-3 mb-4">
         @foreach([

@@ -95,6 +95,10 @@ class ApplicantCrmController extends Controller
             'documents.requiredDocument',
             'counsellingLogs.loggedBy',
             'teamNotes.user',
+            'assignmentEvents.fromUser',
+            'assignmentEvents.toUser',
+            'assignmentEvents.assignedBy',
+            'tags',
         ]);
 
         $canChangeStatus = $this->hierarchy->canApproveAdmission(Auth::user());

@@ -8,20 +8,36 @@ use App\Models\Lead;
 use App\Models\Program;
 use App\Models\SeatMatrix;
 use App\Models\User;
+use App\Services\AdmissionKpiService;
+use App\Services\DepartmentHierarchyService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ReportingController extends Controller
 {
-    public function index()
+    public function __construct(
+        private AdmissionKpiService $kpis,
+        private DepartmentHierarchyService $hierarchy,
+    ) {}
+
+    public function index(Request $request)
     {
+        $filters = $request->only(['program_id', 'priority', 'counsellor_id']);
+        $kpiSummary = $this->kpis->summaryFor($request->user(), $filters);
+        $kpiRollup = $this->kpis->rollupByUser($request->user(), $filters);
+        $filterDescription = collect($filters)->filter()->map(fn ($value, $key) => str_replace('_', ' ', $key) . ': ' . $value)->implode(', ') ?: 'All visible admission records';
+        $scopedLeadQuery = Lead::query();
+        $this->hierarchy->applyLeadVisibility($scopedLeadQuery, $request->user(), 'ADM');
+        $scopedApplicantQuery = Applicant::query();
+        $this->hierarchy->applyApplicantVisibility($scopedApplicantQuery, $request->user(), 'ADM');
         // ── Conversion Funnel ──────────────────────────────────────────────
-        $totalLeads    = Lead::count();
-        $convertedLeads = Lead::where('status', 'converted')->count();
-        $totalApplicants = Applicant::count();
-        $submitted     = Applicant::where('status', 'submitted')->count();
-        $underReview   = Applicant::where('status', 'under_review')->count();
-        $shortlisted   = Applicant::where('status', 'shortlisted')->count();
-        $selected      = Applicant::where('status', 'selected')->count();
+        $totalLeads    = (clone $scopedLeadQuery)->count();
+        $convertedLeads = (clone $scopedLeadQuery)->where('status', 'converted')->count();
+        $totalApplicants = (clone $scopedApplicantQuery)->count();
+        $submitted     = (clone $scopedApplicantQuery)->where('status', 'submitted')->count();
+        $underReview   = (clone $scopedApplicantQuery)->where('status', 'under_review')->count();
+        $shortlisted   = (clone $scopedApplicantQuery)->where('status', 'shortlisted')->count();
+        $selected      = (clone $scopedApplicantQuery)->where('status', 'selected')->count();
         $enrolled      = EnrollmentConfirmation::where('status', 'completed')->count();
 
         $funnel = [
@@ -151,7 +167,10 @@ class ReportingController extends Controller
             'yoyData',
             'categoryCompliance',
             'counsellorStats',
-            'geoStats'
+            'geoStats',
+            'kpiSummary',
+            'kpiRollup',
+            'filterDescription'
         ));
     }
 

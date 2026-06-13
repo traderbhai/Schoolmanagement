@@ -15,6 +15,9 @@ class Applicant extends Model
         'personal_data', 'academic_data', 'family_data', 'additional_data',
         'applied_at', 'reviewed_at', 'reviewed_by', 'assigned_to', 'assigned_at',
         'priority', 'sla_due_at', 'next_action', 'notes',
+        'owner_user_id', 'current_handler_user_id', 'assigned_by', 'assignment_reason',
+        'assignment_mode', 'last_activity_at', 'escalated_to', 'escalated_at',
+        'sla_paused_until', 'sla_pause_reason',
         'category', 'sub_category', 'is_pwd', 'pwd_certificate_number',
         'entrance_exam_name', 'entrance_exam_roll_number', 'entrance_exam_score',
         'entrance_exam_rank', 'entrance_exam_date',
@@ -30,6 +33,9 @@ class Applicant extends Model
         'reviewed_at'              => 'datetime',
         'assigned_at'              => 'datetime',
         'sla_due_at'               => 'datetime',
+        'last_activity_at'         => 'datetime',
+        'escalated_at'             => 'datetime',
+        'sla_paused_until'         => 'datetime',
         'is_pwd'                   => 'boolean',
         'entrance_exam_score'      => 'float',
         'entrance_exam_rank'       => 'integer',
@@ -62,6 +68,12 @@ class Applicant extends Model
     public function documents()      { return $this->hasMany(ApplicantDocument::class); }
     public function reviewer()       { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function assignedCounsellor() { return $this->belongsTo(User::class, 'assigned_to'); }
+    public function owner()          { return $this->belongsTo(User::class, 'owner_user_id'); }
+    public function currentHandler() { return $this->belongsTo(User::class, 'current_handler_user_id'); }
+    public function assignedBy()     { return $this->belongsTo(User::class, 'assigned_by'); }
+    public function escalatedTo()    { return $this->belongsTo(User::class, 'escalated_to'); }
+    public function assignmentEvents(){ return $this->morphMany(AdmissionAssignmentEvent::class, 'subject')->latest(); }
+    public function tags()           { return $this->morphToMany(AdmissionTag::class, 'taggable', 'admission_taggables')->withTimestamps(); }
     public function counsellingLogs(){ return $this->hasMany(CounsellingLog::class); }
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }

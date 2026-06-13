@@ -83,6 +83,7 @@
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#application"><i class="bi bi-file-text me-1"></i>Application</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#documents"><i class="bi bi-folder me-1"></i>Documents <span class="badge bg-secondary">{{ $applicant->documents->count() }}</span></a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#counselling"><i class="bi bi-chat-dots me-1"></i>Counselling Log <span class="badge bg-info text-dark">{{ $applicant->counsellingLogs->count() }}</span></a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#assignment"><i class="bi bi-diagram-3 me-1"></i>Assignment <span class="badge bg-secondary">{{ $applicant->assignmentEvents->count() }}</span></a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#notes"><i class="bi bi-sticky me-1"></i>Notes <span class="badge bg-secondary">{{ $applicant->teamNotes->count() }}</span></a></li>
 </ul>
 
@@ -272,6 +273,22 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="assignment">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent fw-semibold">Assignment Timeline</div>
+            <div class="list-group list-group-flush">
+                @forelse($applicant->assignmentEvents as $event)
+                    <div class="list-group-item">
+                        <div class="fw-semibold">{{ ucfirst(str_replace('_', ' ', $event->mode)) }} to {{ $event->toUser?->name ?? 'Unassigned' }}</div>
+                        <div class="small text-muted">By {{ $event->assignedBy?->name ?? 'System' }} {{ $event->created_at?->diffForHumans() }} {{ $event->reason ? '- ' . $event->reason : '' }}</div>
+                    </div>
+                @empty
+                    <div class="list-group-item text-muted">No assignment events yet.</div>
+                @endforelse
             </div>
         </div>
     </div>
