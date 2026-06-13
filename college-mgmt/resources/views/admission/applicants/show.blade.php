@@ -18,7 +18,7 @@
             @if($applicant->category_certificate_verified)
                 <span class="badge bg-success"><i class="bi bi-patch-check me-1"></i>Certificate Verified</span>
             @elseif(in_array($applicant->category, ['obc','obc_nc','sc','st','ews','pwd']))
-                @if((auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin')))
+                @if(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
                 <form method="POST" action="{{ route('admission.applicants.category.update', $applicant) }}" class="d-inline">
                     @csrf
                     <button class="btn btn-sm btn-outline-warning py-0 px-2">

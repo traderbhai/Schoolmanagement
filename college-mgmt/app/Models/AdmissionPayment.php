@@ -13,12 +13,16 @@ class AdmissionPayment extends Model
         'applicant_id', 'admission_fee_installment_id', 'amount_paid', 'payment_date',
         'payment_mode', 'transaction_reference', 'bank_name', 'payment_proof_path',
         'status', 'verification_notes', 'verified_by', 'verified_at', 'submitted_by',
+        'provider', 'gateway_order_id', 'gateway_payment_id', 'gateway_status',
+        'gateway_payload', 'paid_via_gateway_at',
     ];
 
     protected $casts = [
         'payment_date' => 'date',
         'verified_at'  => 'datetime',
         'amount_paid'  => 'decimal:2',
+        'gateway_payload' => 'array',
+        'paid_via_gateway_at' => 'datetime',
     ];
 
     public function applicant()
@@ -58,6 +62,7 @@ class AdmissionPayment extends Model
             'rtgs'   => 'RTGS',
             'imps'   => 'IMPS',
             'upi'    => 'UPI',
+            'gateway' => 'Payment Gateway',
             'dd'     => 'Demand Draft',
             'cash'   => 'Cash',
             'cheque' => 'Cheque',

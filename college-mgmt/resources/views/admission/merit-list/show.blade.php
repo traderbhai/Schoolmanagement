@@ -3,6 +3,7 @@
 @section('title', 'Merit List — ' . $program->name)
 
 @section('content')
+@php($canApproveAdmission = app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
@@ -54,7 +55,7 @@
 </form>
 
 {{-- Bulk Decide (head only) --}}
-@if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+@if($canApproveAdmission)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
         <form method="POST" action="{{ route('admission.merit-list.bulk-decide', $program) }}" class="row g-2 align-items-end" onsubmit="return confirm('Apply bulk decisions?')">
@@ -79,7 +80,7 @@
 @endif
 
 {{-- Bulk Generate Offer Letters --}}
-@if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+@if($canApproveAdmission)
 <form method="POST" action="{{ route('admission.offer-letters.bulk-generate') }}" id="bulkOfferForm">
     @csrf
     <input type="hidden" name="program_id" value="{{ $program->id }}">
@@ -108,7 +109,7 @@
                         <th class="text-center">Academic</th>
                         <th class="text-center">Composite</th>
                         <th class="text-center">Decision</th>
-                        @if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+                        @if($canApproveAdmission)
                         <th>Action</th>
                         @endif
                     </tr>
@@ -117,7 +118,7 @@
                     @forelse($entries as $entry)
                     <tr>
                         <td>
-                            @if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+                            @if($canApproveAdmission)
                             <input type="checkbox" name="applicant_ids[]" value="{{ $entry->applicant_id }}" form="bulkOfferForm">
                             @endif
                         </td>
@@ -141,7 +142,7 @@
                         <td class="text-center">{{ $entry->academic_score !== null ? number_format($entry->academic_score, 1).'%' : '—' }}</td>
                         <td class="text-center fw-bold">{{ number_format($entry->composite_score, 2) }}</td>
                         <td class="text-center"><span class="{{ $entry->decisionBadge }}">{{ $entry->decisionLabel }}</span></td>
-                        @if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+                        @if($canApproveAdmission)
                         <td>
                             <form method="POST" action="{{ route('admission.merit-list.decide', $entry) }}" class="d-flex gap-1 align-items-center">
                                 @csrf
@@ -166,7 +167,7 @@
 
 <div class="mt-3">{{ $entries->withQueryString()->links() }}</div>
 
-@if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+@if($canApproveAdmission)
 </form>
 @endif
 

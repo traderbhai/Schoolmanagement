@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\Program;
+use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class LeadController extends Controller
 {
-    public function index()
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
+    public function index(Request $request)
     {
         $programs = Program::where('is_active', true)->get();
         $status = request('status');
@@ -18,6 +21,7 @@ class LeadController extends Controller
         $programId = request('program_id');
 
         $query = Lead::query();
+        $this->hierarchy->applyLeadVisibility($query, $request->user(), 'ADM');
 
         if ($status) {
             $query->where('status', $status);
@@ -33,13 +37,17 @@ class LeadController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(50);
 
+        $statsQuery = Lead::query();
+        $this->hierarchy->applyLeadVisibility($statsQuery, $request->user(), 'ADM');
+        $totalLeads = (clone $statsQuery)->count();
+        $convertedLeads = (clone $statsQuery)->where('status', 'converted')->count();
         $stats = [
-            'total'         => Lead::count(),
-            'new'           => Lead::where('status', 'new')->count(),
-            'contacted'     => Lead::where('status', 'contacted')->count(),
-            'interested'    => Lead::where('status', 'interested')->count(),
-            'converted'     => Lead::where('status', 'converted')->count(),
-            'conversion_rate' => Lead::count() > 0 ? round((Lead::where('status', 'converted')->count() / Lead::count()) * 100, 2) : 0,
+            'total'         => $totalLeads,
+            'new'           => (clone $statsQuery)->where('status', 'new')->count(),
+            'contacted'     => (clone $statsQuery)->where('status', 'contacted')->count(),
+            'interested'    => (clone $statsQuery)->where('status', 'interested')->count(),
+            'converted'     => $convertedLeads,
+            'conversion_rate' => $totalLeads > 0 ? round(($convertedLeads / $totalLeads) * 100, 2) : 0,
         ];
 
         return view('admission.leads.index', compact('leads', 'stats', 'programs', 'status', 'source', 'programId'));
@@ -47,6 +55,10 @@ class LeadController extends Controller
 
     public function show(Lead $lead)
     {
+        if (!$this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $lead->assigned_to, true)) {
+            abort(403);
+        }
+
         $lead->load(['program', 'convertedApplicant']);
         return view('admission.leads.show', compact('lead'));
     }

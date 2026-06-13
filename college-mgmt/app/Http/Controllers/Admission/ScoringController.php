@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\ApplicantScore;
 use App\Models\SelectionSession;
+use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class ScoringController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function sessionScoreSheet(SelectionSession $session)
     {
         $session->load(['step.scoringParameters', 'program', 'batch']);
@@ -39,7 +42,7 @@ class ScoringController extends Controller
         $session->load('step.scoringParameters');
         $parameters = $session->step->scoringParameters;
 
-        $isFinal = $request->boolean('mark_final') && (auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'));
+        $isFinal = $request->boolean('mark_final') && $this->hierarchy->canApproveAdmission($request->user());
 
         $scores = $request->input('scores', []);
 

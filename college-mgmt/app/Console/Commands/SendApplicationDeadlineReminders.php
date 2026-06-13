@@ -24,7 +24,9 @@ class SendApplicationDeadlineReminders extends Command
         }
 
         // Notify all admission officers and head
-        $recipients = User::role(['admission_officer', 'admission_head'])->get();
+        $recipients = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', \App\Services\DepartmentHierarchyService::ADMISSION_ROLE_NAMES);
+        })->get();
 
         foreach ($windowsClosingSoon as $window) {
             $hoursLeft = (int) now()->diffInHours($window->closes_at);

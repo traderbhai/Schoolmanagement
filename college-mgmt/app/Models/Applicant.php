@@ -13,7 +13,8 @@ class Applicant extends Model
     protected $fillable = [
         'user_id', 'program_id', 'batch_id', 'application_number', 'status',
         'personal_data', 'academic_data', 'family_data', 'additional_data',
-        'applied_at', 'reviewed_at', 'reviewed_by', 'notes',
+        'applied_at', 'reviewed_at', 'reviewed_by', 'assigned_to', 'assigned_at',
+        'priority', 'sla_due_at', 'next_action', 'notes',
         'category', 'sub_category', 'is_pwd', 'pwd_certificate_number',
         'entrance_exam_name', 'entrance_exam_roll_number', 'entrance_exam_score',
         'entrance_exam_rank', 'entrance_exam_date',
@@ -27,6 +28,8 @@ class Applicant extends Model
         'additional_data'          => 'array',
         'applied_at'               => 'datetime',
         'reviewed_at'              => 'datetime',
+        'assigned_at'              => 'datetime',
+        'sla_due_at'               => 'datetime',
         'is_pwd'                   => 'boolean',
         'entrance_exam_score'      => 'float',
         'entrance_exam_rank'       => 'integer',
@@ -58,6 +61,7 @@ class Applicant extends Model
     public function batch()          { return $this->belongsTo(Batch::class); }
     public function documents()      { return $this->hasMany(ApplicantDocument::class); }
     public function reviewer()       { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function assignedCounsellor() { return $this->belongsTo(User::class, 'assigned_to'); }
     public function counsellingLogs(){ return $this->hasMany(CounsellingLog::class); }
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }

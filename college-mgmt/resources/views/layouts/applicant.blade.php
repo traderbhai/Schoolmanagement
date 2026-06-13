@@ -34,6 +34,9 @@
         <a href="{{ route('applicant.application.show') }}" class="nav-link @if(request()->routeIs('applicant.application.*')) active @endif">
             <i class="bi bi-file-earmark-text"></i> My Application
         </a>
+        <a href="{{ route('applicant.checklist') }}" class="nav-link @if(request()->routeIs('applicant.checklist')) active @endif">
+            <i class="bi bi-list-check"></i> Admission Checklist
+        </a>
         <a href="{{ route('applicant.documents.index') }}" class="nav-link @if(request()->routeIs('applicant.documents')) active @endif">
             <i class="bi bi-folder2-open"></i> Documents
         </a>
@@ -96,6 +99,9 @@
             </a>
             <a href="{{ route('applicant.application.show') }}" class="nav-link @if(request()->routeIs('applicant.application.*')) active @endif">
                 <i class="bi bi-file-earmark-text"></i> My Application
+            </a>
+            <a href="{{ route('applicant.checklist') }}" class="nav-link @if(request()->routeIs('applicant.checklist')) active @endif">
+                <i class="bi bi-list-check"></i> Admission Checklist
             </a>
             <a href="{{ route('applicant.documents.index') }}" class="nav-link @if(request()->routeIs('applicant.documents')) active @endif">
                 <i class="bi bi-folder2-open"></i> Documents

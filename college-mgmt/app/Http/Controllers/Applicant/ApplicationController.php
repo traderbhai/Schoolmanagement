@@ -160,7 +160,9 @@ class ApplicationController extends Controller
             NotificationService::send(ApplicationReceived::class, $applicant->user, ['applicant' => $applicant]);
         }
         // Alert admission team
-        $admissionTeam = User::role(['admission_officer', 'admission_head'])->get();
+        $admissionTeam = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', \App\Services\DepartmentHierarchyService::ADMISSION_ROLE_NAMES);
+        })->get();
         NotificationService::sendBulk(NewApplicationAlert::class, $admissionTeam, ['applicant' => $applicant]);
 
         return redirect()->route('applicant.status')

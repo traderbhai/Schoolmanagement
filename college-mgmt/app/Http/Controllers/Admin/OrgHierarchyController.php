@@ -18,7 +18,12 @@ class OrgHierarchyController extends Controller
         'accounts_officer' => 'Accounts Officer',
         'cmc'              => 'CMC / Placement',
         'teacher'          => 'Teacher',
+        'admission_director' => 'Admission Director',
         'admission_head'   => 'Admission Head',
+        'admission_manager' => 'Admission Manager',
+        'jr_admission_manager' => 'Jr. Admission Manager',
+        'admission_counsellor' => 'Admission Counsellor',
+        'admission_telecaller' => 'Admission Telecaller',
         'admission_officer'=> 'Admission Officer',
     ];
 

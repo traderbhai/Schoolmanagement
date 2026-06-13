@@ -46,7 +46,7 @@
         $brandName  = "Director's Office";
         $brandSub   = 'Institute Management';
         $brandRoute = 'director.dashboard';
-    } elseif ($user->hasAnyRole(['admission_head', 'admission_officer'])) {
+    } elseif (app(\App\Services\DepartmentHierarchyService::class)->isAdmissionUser($user)) {
         $brandName  = 'Admissions';
         $brandSub   = 'CRM & Enrollment';
         $brandRoute = 'admission.dashboard';
@@ -57,6 +57,14 @@
     }
 
     $firstProgram = \App\Models\Program::where('is_active', true)->first();
+    $departmentHierarchyService = app(\App\Services\DepartmentHierarchyService::class);
+    $manageableDepartments = $departmentHierarchyService->manageableDepartments($user);
+    $governanceDepartments = $departmentHierarchyService->manageableGovernanceDepartments($user);
+    $showDepartmentHierarchyControl = $manageableDepartments->isNotEmpty()
+        && !$user->hasRole('admin');
+    $showDepartmentGovernanceControl = $governanceDepartments->isNotEmpty()
+        && !$user->hasRole('admin');
+    $showDepartmentControls = $showDepartmentHierarchyControl || $showDepartmentGovernanceControl;
 @endphp
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
@@ -145,6 +153,12 @@
         <div class="section-label">Admission CRM</div>
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
             <i class="bi bi-speedometer2"></i> CRM Dashboard
+        </a>
+        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
+            <i class="bi bi-kanban"></i> Workbench
+        </a>
+        <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif">
+            <i class="bi bi-diagram-3"></i> Process Templates
         </a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
             <i class="bi bi-person-lines-fill"></i> Applicants CRM
@@ -348,6 +362,12 @@
         </a>
         <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif">
             <i class="bi bi-diagram-3-fill"></i> Org Hierarchy
+        </a>
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
+            <i class="bi bi-person-workspace"></i> Department Hierarchy
+        </a>
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif">
+            <i class="bi bi-sliders"></i> Department Governance
         </a>
         <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif">
             <i class="bi bi-journal-text"></i> Audit Log
@@ -722,12 +742,23 @@
         @endhasrole
 
         {{-- ===================== ADMISSION HEAD / OFFICER ===================== --}}
-        @hasanyrole('admission_head|admission_officer')
+        @if($departmentHierarchyService->isAdmissionUser($user))
 
         <div class="section-label">Main</div>
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>
+        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
+            <i class="bi bi-kanban"></i> Workbench
+        </a>
+        @if($departmentHierarchyService->canAccessDepartmentGovernance($user, 'ADM'))
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
+            <i class="bi bi-person-workspace"></i> Department Hierarchy
+        </a>
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif">
+            <i class="bi bi-sliders"></i> Department Governance
+        </a>
+        @endif
 
         <div class="sidebar-divider"></div>
         <div class="section-label">Applications</div>
@@ -791,7 +822,22 @@
             <i class="bi bi-arrow-counterclockwise"></i> Refunds
         </a>
 
-        @endhasanyrole
+        @endif
+
+        @if($showDepartmentControls)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Department Controls</div>
+        @if($showDepartmentHierarchyControl)
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
+            <i class="bi bi-person-workspace"></i> Department Hierarchy
+        </a>
+        @endif
+        @if($showDepartmentGovernanceControl)
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif">
+            <i class="bi bi-sliders"></i> Department Governance
+        </a>
+        @endif
+        @endif
 
     </div>
 </div>
@@ -840,6 +886,8 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Admission CRM</div>
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
+        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
+        <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif"><i class="bi bi-diagram-3"></i> Process Templates</a>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants</a>
         <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif"><i class="bi bi-folder-check"></i> Document Queue</a>
         <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
@@ -885,6 +933,8 @@
         <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif"><i class="bi bi-key"></i> Permissions</a>
         <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif"><i class="bi bi-person-badge"></i> Role Assignments</a>
         <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Org Hierarchy</a>
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif"><i class="bi bi-person-workspace"></i> Department Hierarchy</a>
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif"><i class="bi bi-sliders"></i> Department Governance</a>
         <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif"><i class="bi bi-journal-text"></i> Audit Log</a>
         <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif"><i class="bi bi-shield-exclamation"></i> Grievances</a>
         <div class="sidebar-divider"></div>
@@ -1047,9 +1097,14 @@
         @endhasrole
 
         {{-- ===================== ADMISSION MOBILE ===================== --}}
-        @hasanyrole('admission_head|admission_officer')
+        @if($departmentHierarchyService->isAdmissionUser($user))
         <div class="section-label">Main</div>
         <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
+        @if($departmentHierarchyService->canAccessDepartmentGovernance($user, 'ADM'))
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif"><i class="bi bi-person-workspace"></i> Department Hierarchy</a>
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif"><i class="bi bi-sliders"></i> Department Governance</a>
+        @endif
         <div class="sidebar-divider"></div>
         <div class="section-label">Applications</div>
         <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants</a>
@@ -1074,13 +1129,39 @@
         <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
         <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
         <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
-        @endhasanyrole
+        @endif
+
+        @if($showDepartmentControls)
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Department Controls</div>
+        @if($showDepartmentHierarchyControl)
+        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif"><i class="bi bi-person-workspace"></i> Department Hierarchy</a>
+        @endif
+        @if($showDepartmentGovernanceControl)
+        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif"><i class="bi bi-sliders"></i> Department Governance</a>
+        @endif
+        @endif
 
     </div>
 </div>
 
 {{-- ===== MAIN CONTENT ===== --}}
 <div class="main-content">
+    @if(session('impersonation.original_user_id'))
+        @php
+            $impersonationActor = \App\Models\User::find(session('impersonation.original_user_id'));
+        @endphp
+        <div class="alert alert-warning d-flex justify-content-between align-items-center rounded-0 mb-0 px-4">
+            <div>
+                <i class="bi bi-person-bounding-box me-2"></i>
+                You are impersonating this user{{ $impersonationActor ? ' as ' . $impersonationActor->name : '' }}.
+            </div>
+            <form method="POST" action="{{ route('department-governance.impersonation.stop') }}">
+                @csrf
+                <button class="btn btn-sm btn-outline-dark">Stop Impersonation</button>
+            </form>
+        </div>
+    @endif
 
     {{-- TOPBAR --}}
     <div class="topbar">

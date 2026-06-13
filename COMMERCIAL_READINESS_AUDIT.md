@@ -37,9 +37,9 @@ Current codebase evidence:
 - Models: 128.
 - Controller files: 169.
 - Blade views: 480+.
-- Feature tests: 51 files.
+- Feature tests: 52 files.
 - Unit tests: 4 files.
-- Last full test run: 349 tests passed, 1157 assertions.
+- Last full test run: 362 tests passed, 1226 assertions.
 - Build/audit status:
   - `npm run build`: passed.
   - `npm audit --audit-level=critical`: passed.
@@ -359,6 +359,23 @@ Deliverables:
   - Status: started; public apply landing now hides unavailable programs and shows an actionable empty state with status tracking when no intake is open.
   - Status: started; registration-fee details can now be submitted from the applicant portal before final application submission.
 - Admission officer queues UX pass.
+  - Status: started; Admission Workbench now aggregates scoped priority queues for leads, pending documents, pending payments, sessions today, offer-expiry risk, duplicate leads, and enrollment-ready applicants.
+- Admission department hierarchy and process configuration.
+  - Status: started; additive owner, priority, SLA, next-action, team, and region fields now support lead/applicant workload ownership.
+  - Status: started; admission route access and navigation now include admission manager and admission counsellor roles alongside officer/head/admin.
+  - Status: started; process templates and stages can be configured per program/batch without replacing existing admission windows, documents, fees, selection, offers, or enrollment models.
+  - Status: started; reusable Department Hierarchy now supports configurable department roles, levels, teams, reporting managers, and permission/scope metadata for Admission and future departments.
+  - Status: started; Admission Workbench visibility now uses the department reporting tree when the Admissions department (`ADM`) is configured, so managers/directors can see subordinate work without hardcoded role names.
+  - Status: started; default Admission hierarchy roles are seeded for director, head, manager, junior manager, counsellor, telecaller, document verifier, and payment coordinator.
+  - Status: started; Admission lead/applicant assignment now enforces hierarchy assignment permission and prevents managers from assigning outside their reporting tree.
+  - Status: started; Admission applicant CRM, lead list, document queue, and payment queue now apply the same hierarchy visibility as the Workbench, with legacy broad access preserved until memberships are configured.
+  - Status: started; Department Governance now gives admins and configured department heads a reusable control plane for department feature toggles, member oversight, subordinate impersonation, and activity audit logs.
+  - Status: started; admission gateway payments now respect the reusable department feature setting, so institutes can disable online admission payments while keeping manual proof verification available.
+  - Status: started; hierarchy setup and assignment actions now create department activity logs for auditability.
+- Applicant guided checklist.
+  - Status: started; applicant portal now has a checklist page backed by a shared readiness service that exposes concrete blockers for profile, mandatory documents, registration fee, selection, admission payments, offer, and enrollment.
+- Gateway-ready payment flow.
+  - Status: started; admission payments now store provider/order/payment/status/payload metadata, applicants can create Razorpay-style mock gateway orders from pending payments, and webhook processing is idempotent while manual proof verification remains supported.
 - Document/payment verification audit trail.
   - Status: started; payment verification and enrollment actions are now asserted through activity log coverage in the admission-to-enrollment path.
 - Offer acceptance/decline edge cases.
@@ -370,6 +387,11 @@ Verification:
 
 - End-to-end admission test from application to enrolled student.
   - Status: started; current coverage includes public registration-to-tracking and shortlisted-applicant-to-enrollment paths. A single full public application-form-to-enrollment browser test is still needed.
+- Admission Department OS regression.
+  - Status: verified; `C:\tmp\php-8.5.7\php.exe artisan test tests\Feature\AdmissionDepartmentOsTest.php` passed 13 tests and 69 assertions.
+  - Status: verified; admission regression gates passed 69 tests and 216 assertions.
+  - Status: verified; full `C:\tmp\php-8.5.7\php.exe -d memory_limit=512M vendor\phpunit\phpunit\phpunit` passed 362 tests and 1226 assertions.
+  - Note: `artisan test` still hits the local 128 MB PHP memory ceiling late in the suite; direct PHPUnit with explicit memory limit is the verified full-suite command.
 - Browser check of applicant and admission officer pages.
   - Status: started; browser QA completed for applicant payment and admission enrollment screens, including blocked and ready states. Broader applicant/admission officer workflow screenshots remain needed.
 

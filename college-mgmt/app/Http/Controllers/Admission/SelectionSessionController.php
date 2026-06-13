@@ -10,6 +10,7 @@ use App\Models\Program;
 use App\Models\SelectionProcessStep;
 use App\Models\SelectionSession;
 use App\Models\SessionApplicant;
+use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -242,8 +243,8 @@ class SelectionSessionController extends Controller
 
     public function completeSession(SelectionSession $session)
     {
-        if (!auth()->user()->hasRole('admission_head') && !auth()->user()->hasRole('admin')) {
-            return back()->with('error', 'Only admission head can complete a session.');
+        if (!app(DepartmentHierarchyService::class)->canApproveAdmission(auth()->user())) {
+            return back()->with('error', 'Only authorized admission leadership can complete a session.');
         }
 
         $session->update(['status' => 'completed']);

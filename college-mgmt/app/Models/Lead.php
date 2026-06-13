@@ -10,15 +10,16 @@ class Lead extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'email', 'phone', 'program_id', 'source', 'status',
+        'name', 'email', 'phone', 'program_id', 'source', 'status', 'priority',
         'notes', 'last_contacted_at', 'converted_applicant_id', 'converted_at',
-        'assigned_to', 'assigned_at',
+        'assigned_to', 'assigned_at', 'sla_due_at', 'next_action', 'team', 'region',
     ];
 
     protected $casts = [
         'last_contacted_at' => 'datetime',
         'converted_at'      => 'datetime',
         'assigned_at'       => 'datetime',
+        'sla_due_at'        => 'datetime',
     ];
 
     public function program()              { return $this->belongsTo(Program::class); }

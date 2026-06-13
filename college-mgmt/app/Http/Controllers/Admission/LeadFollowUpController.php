@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\LeadFollowUp;
 use App\Models\User;
+use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -22,7 +23,9 @@ class LeadFollowUpController extends Controller
         $endOfMonth = $startOfMonth->copy()->endOfMonth();
 
         $counsellorId = $request->get('counsellor_id');
-        $counsellors = User::role('admission_officer')->orderBy('name')->get();
+        $counsellors = User::whereHas('roles', function ($query) {
+            $query->whereIn('name', DepartmentHierarchyService::ADMISSION_ROLE_NAMES);
+        })->orderBy('name')->get();
 
         $query = LeadFollowUp::with(['lead.program', 'counsellor'])
             ->whereBetween('scheduled_at', [$startOfMonth, $endOfMonth])

@@ -102,7 +102,7 @@
         <button type="submit" name="mark_final" value="0" class="btn btn-primary">
             <i class="bi bi-save me-1"></i>Save Scores
         </button>
-        @if(auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin'))
+        @if(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
         <button type="submit" name="mark_final" value="1" class="btn btn-success">
             <i class="bi bi-lock me-1"></i>Save & Mark Final
         </button>

@@ -52,7 +52,7 @@
                         <i class="bi bi-clipboard2-data me-1"></i> Score Sheet
                     </a>
                 @endif
-                @if($session->status !== 'completed' && (auth()->user()->hasRole('admission_head') || auth()->user()->hasRole('admin')))
+                @if($session->status !== 'completed' && app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
                     <form method="POST" action="{{ route('admission.sessions.complete', $session) }}" class="d-inline" onsubmit="return confirm('Mark session as completed?')">
                         @csrf
                         <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle me-1"></i> Complete Session</button>

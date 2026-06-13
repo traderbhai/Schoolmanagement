@@ -9,6 +9,7 @@ use App\Models\ApplicantDocument;
 use App\Models\Batch;
 use App\Models\DocumentVerificationRequest;
 use App\Models\Program;
+use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +17,17 @@ use Illuminate\Support\Facades\Storage;
 
 class DocumentVerificationController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function pendingQueue(Request $request)
     {
         $query = ApplicantDocument::with(['applicant.user', 'applicant.program', 'applicant.batch', 'requiredDocument'])
             ->where('status', 'pending')
             ->orderByDesc('uploaded_at');
+
+        $query->whereHas('applicant', function ($q) use ($request) {
+            $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM');
+        });
 
         if ($request->filled('program_id')) {
             $query->whereHas('applicant', fn($q) => $q->where('program_id', $request->program_id));
@@ -54,6 +61,8 @@ class DocumentVerificationController extends Controller
 
     public function verify(Request $request, ApplicantDocument $document)
     {
+        $this->guardDocumentScope($document);
+
         $document->update([
             'status'      => 'verified',
             'verified_by' => Auth::id(),
@@ -69,6 +78,8 @@ class DocumentVerificationController extends Controller
 
     public function reject(Request $request, ApplicantDocument $document)
     {
+        $this->guardDocumentScope($document);
+
         $request->validate([
             'rejection_reason' => 'required|string|max:1000',
         ]);
@@ -144,6 +155,8 @@ class DocumentVerificationController extends Controller
         foreach ($request->document_ids as $id) {
             $doc = ApplicantDocument::find($id);
             if ($doc && $doc->status === 'pending') {
+                $this->guardDocumentScope($doc);
+
                 $doc->update([
                     'status'      => 'verified',
                     'verified_by' => Auth::id(),
@@ -166,10 +179,12 @@ class DocumentVerificationController extends Controller
 
     private function authorizeAccess(ApplicantDocument $document): void
     {
+        $document->loadMissing('applicant');
         $user = Auth::user();
 
         // Admission team / admin
-        if ($user->hasAnyRole(['admission_officer', 'admission_head', 'admin'])) {
+        if (($user->hasRole('admin') || $this->hierarchy->isAdmissionUser($user))
+            && $this->hierarchy->canViewAssignedUser($user, 'ADM', $document->applicant?->assigned_to, false)) {
             return;
         }
 
@@ -180,6 +195,16 @@ class DocumentVerificationController extends Controller
         }
 
         abort(403);
+    }
+
+    private function guardDocumentScope(ApplicantDocument $document): void
+    {
+        $document->loadMissing('applicant');
+
+        if (!$this->hierarchy->canVerifyAdmissionDocuments(Auth::user())
+            || !$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $document->applicant?->assigned_to, false)) {
+            abort(403);
+        }
     }
 
     private function checkAndAdvanceApplicant(int $applicantId): void

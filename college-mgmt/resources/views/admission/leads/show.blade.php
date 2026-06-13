@@ -139,7 +139,7 @@
                         @csrf
                         <select name="assigned_to" class="form-select form-select-sm" style="width:auto" required>
                             <option value="">Select Counsellor…</option>
-                            @foreach(\App\Models\User::role('admission_officer')->orderBy('name')->get() as $u)
+                            @foreach(\App\Models\User::whereHas('roles', fn($query) => $query->whereIn('name', \App\Services\DepartmentHierarchyService::ADMISSION_ROLE_NAMES))->orderBy('name')->get() as $u)
                                 <option value="{{ $u->id }}" {{ $lead->assigned_to == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
                             @endforeach
                         </select>

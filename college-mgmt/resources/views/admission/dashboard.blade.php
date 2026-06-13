@@ -9,10 +9,10 @@
         <small class="text-muted">{{ now()->format('l, d F Y') }}</small>
     </div>
     <div>
-        @if(auth()->user()->hasRole('admission_head'))
-            <span class="badge bg-danger fs-6"><i class="bi bi-shield-fill-check me-1"></i>Admission Head</span>
+        @if(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
+            <span class="badge bg-danger fs-6"><i class="bi bi-shield-fill-check me-1"></i>Admission Leadership</span>
         @else
-            <span class="badge bg-info fs-6"><i class="bi bi-person-badge me-1"></i>Admission Officer</span>
+            <span class="badge bg-info fs-6"><i class="bi bi-person-badge me-1"></i>Admission Team</span>
         @endif
     </div>
 </div>

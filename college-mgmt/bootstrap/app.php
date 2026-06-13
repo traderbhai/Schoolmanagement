@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->validateCsrfTokens(except: [
+            'admission/gateway/webhook',
+        ]);
 
         $middleware->alias([
             'role'               => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -22,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_program_scope' => \App\Http\Middleware\RoleProgramScopeMiddleware::class,
             'program.scope'      => \App\Http\Middleware\ProgramScope::class,
             'feature.access'     => \App\Http\Middleware\FeatureAccess::class,
+            'department.feature' => \App\Http\Middleware\DepartmentFeatureEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

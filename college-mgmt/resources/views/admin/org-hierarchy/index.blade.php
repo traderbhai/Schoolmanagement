@@ -23,13 +23,18 @@
                         'director'=>'Director','admin'=>'Admin','dean_academics'=>'Dean (Academics)',
                         'hod'=>'HOD','program_chair'=>'Program Chair / PMC','exam_cell'=>'Exam Cell',
                         'accounts_officer'=>'Accounts Officer','cmc'=>'CMC / Placement',
-                        'teacher'=>'Teacher','admission_head'=>'Admission Head','admission_officer'=>'Admission Officer',
+                        'teacher'=>'Teacher','admission_director'=>'Admission Director',
+                        'admission_head'=>'Admission Head','admission_manager'=>'Admission Manager',
+                        'jr_admission_manager'=>'Jr. Admission Manager','admission_counsellor'=>'Admission Counsellor',
+                        'admission_telecaller'=>'Admission Telecaller','admission_officer'=>'Admission Officer',
                     ];
                     $roleColors = [
                         'director'=>'primary','admin'=>'dark','dean_academics'=>'info',
                         'hod'=>'success','program_chair'=>'primary','exam_cell'=>'warning',
                         'accounts_officer'=>'success','cmc'=>'purple','teacher'=>'secondary',
-                        'admission_head'=>'info','admission_officer'=>'info',
+                        'admission_director'=>'info','admission_head'=>'info','admission_manager'=>'info',
+                        'jr_admission_manager'=>'info','admission_counsellor'=>'info',
+                        'admission_telecaller'=>'info','admission_officer'=>'info',
                     ];
                 @endphp
 

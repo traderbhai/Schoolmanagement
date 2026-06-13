@@ -9,6 +9,15 @@
 - Local app URL: `http://127.0.0.1:8001`
 - Vite dev URL: `http://127.0.0.1:5173`
 
+## Current Product Phase
+
+- Treat earlier commercial-readiness work as the completed v0.00 baseline.
+- Current active development phase: v0.01.
+- Previous v0.00 tasks are considered complete unless the user explicitly reopens a specific item.
+- Do not use `COMMERCIAL_READINESS_AUDIT.md` as the active task source for new work unless the user explicitly asks for it.
+- Do not update `COMMERCIAL_READINESS_AUDIT.md` during normal v0.01 development.
+- For v0.01, use the current worktree and this context file as the operational baseline, then inspect the relevant code before making changes.
+
 ## Runtime
 
 The system XAMPP PHP is `8.2.12`, but this project requires newer PHP. Use the project setup PHP:
@@ -28,7 +37,8 @@ C:\tmp\php-8.5.7\php.exe C:\composer\composer.phar install
 Run these from `college-mgmt`.
 
 ```powershell
-C:\tmp\php-8.5.7\php.exe artisan test
+C:\tmp\php-8.5.7\php.exe artisan test tests\Feature\SpecificTest.php
+C:\tmp\php-8.5.7\php.exe -d memory_limit=512M vendor\phpunit\phpunit\phpunit
 npm run build
 npm audit --audit-level=critical
 C:\tmp\php-8.5.7\php.exe C:\composer\composer.phar audit
@@ -77,7 +87,7 @@ Use these before scanning broad code:
 - Teacher: `/teacher/*`, `layouts.admin`
 - Student: `/student/*`, `layouts.student`
 - Parent: `/parent/*`, `layouts.parent`
-- Applicant: `/applicant/*`, `layouts.admin`
+- Applicant: `/applicant/*`, `layouts.applicant`
 - Public: `/apply`, `/track`, `layouts.guest`
 - Academic team: `/academic/*`, `layouts.admin`
 
@@ -113,6 +123,7 @@ For each requested change:
 7. Run broader tests/build when the change touches shared models, auth, routing, layouts, migrations, or services.
 
 Avoid re-reading the whole repo unless the task is architectural or cross-cutting.
+For full-suite verification, prefer the direct PHPUnit command with `-d memory_limit=512M`; plain `artisan test` can exhaust the local PHP memory limit.
 
 ## Laravel And SQLite Rules
 
@@ -133,7 +144,8 @@ Last verified setup:
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
 - Migrations completed.
 - `npm run build` passed.
-- `C:\tmp\php-8.5.7\php.exe artisan test` passed: 349 tests, 1157 assertions.
+- `C:\tmp\php-8.5.7\php.exe -d memory_limit=512M vendor\phpunit\phpunit\phpunit` passed: 382 tests, 1355 assertions.
+- `C:\tmp\php-8.5.7\php.exe artisan test` can exhaust the local 128 MB CLI memory ceiling late in the suite; use the direct PHPUnit command above for full-suite verification unless the local PHP memory limit is raised globally.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 

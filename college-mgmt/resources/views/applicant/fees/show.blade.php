@@ -35,6 +35,13 @@
                     <label class="text-muted small">Payment Mode</label>
                     <div class="fw-semibold">{{ $payment->payment_mode_label }}</div>
                 </div>
+                @if($payment->gateway_order_id)
+                <div class="col-md-6">
+                    <label class="text-muted small">Gateway Order</label>
+                    <div class="fw-semibold">{{ $payment->gateway_order_id }}</div>
+                    <div class="small text-muted">{{ $payment->provider }} - {{ $payment->gateway_status ?? 'created' }}</div>
+                </div>
+                @endif
                 @if($payment->transaction_reference)
                 <div class="col-md-6">
                     <label class="text-muted small">Transaction Reference / UTR</label>
@@ -95,6 +102,13 @@
                     <div>
                         <div class="fw-semibold">Pending Verification</div>
                         <small>Our accounts team will verify your payment shortly.</small>
+                        <form method="POST" action="{{ route('applicant.fees.gateway.initiate', $payment) }}" class="mt-3">
+                            @csrf
+                            <button class="btn btn-sm btn-primary">
+                                <i class="bi bi-credit-card me-1"></i> Pay Online / Create Gateway Order
+                            </button>
+                            <span class="small text-muted ms-2">Manual proof remains valid if online payment is not available.</span>
+                        </form>
                     </div>
                 </li>
                 @endif

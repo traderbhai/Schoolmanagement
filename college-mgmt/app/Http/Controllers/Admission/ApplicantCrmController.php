@@ -12,12 +12,15 @@ use App\Models\AdmissionTeamNote;
 use App\Models\CounsellingLog;
 use App\Models\Program;
 use App\Models\Batch;
+use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ApplicantCrmController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     // Allowed status transitions
     private const TRANSITIONS = [
         'submitted'    => ['under_review', 'rejected', 'withdrawn'],
@@ -34,6 +37,7 @@ class ApplicantCrmController extends Controller
         $query = Applicant::with(['user', 'program', 'batch',
             'counsellingLogs' => fn($q) => $q->latest()->limit(1),
         ]);
+        $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
 
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
@@ -46,9 +50,11 @@ class ApplicantCrmController extends Controller
         }
         if ($request->search) {
             $search = $request->search;
-            $query->whereHas('user', fn($q) => $q->where('name', 'like', "%$search%")
-                ->orWhere('email', 'like', "%$search%"))
-                ->orWhere('application_number', 'like', "%$search%");
+            $query->where(function ($scope) use ($search) {
+                $scope->whereHas('user', fn($q) => $q->where('name', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%"))
+                    ->orWhere('application_number', 'like', "%$search%");
+            });
         }
         if ($request->date_from) {
             $query->whereDate('applied_at', '>=', $request->date_from);
@@ -80,6 +86,10 @@ class ApplicantCrmController extends Controller
 
     public function show(Applicant $applicant)
     {
+        if (!$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $applicant->assigned_to, false)) {
+            abort(403);
+        }
+
         $applicant->load([
             'user', 'program', 'batch',
             'documents.requiredDocument',
@@ -87,7 +97,7 @@ class ApplicantCrmController extends Controller
             'teamNotes.user',
         ]);
 
-        $canChangeStatus = Auth::user()->hasRole('admission_head') || Auth::user()->hasRole('admin');
+        $canChangeStatus = $this->hierarchy->canApproveAdmission(Auth::user());
         $allowedTransitions = self::TRANSITIONS[$applicant->status] ?? [];
 
         return view('admission.applicants.show', compact('applicant', 'canChangeStatus', 'allowedTransitions'));
@@ -95,8 +105,8 @@ class ApplicantCrmController extends Controller
 
     public function updateStatus(Request $request, Applicant $applicant)
     {
-        if (! (Auth::user()->hasRole('admission_head') || Auth::user()->hasRole('admin'))) {
-            abort(403, 'Only Admission Head can change status.');
+        if (!$this->hierarchy->canApproveAdmission($request->user())) {
+            abort(403, 'Only authorized admission leadership can change status.');
         }
 
         $allowed = self::TRANSITIONS[$applicant->status] ?? [];
@@ -118,6 +128,10 @@ class ApplicantCrmController extends Controller
 
     public function storeCounsellingLog(Request $request, Applicant $applicant)
     {
+        if (!$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $applicant->assigned_to, false)) {
+            abort(403);
+        }
+
         $request->validate([
             'interaction_type'   => 'required|in:call,email,whatsapp,walk_in,other',
             'outcome'            => 'required|in:interested,not_interested,callback,enrolled,lost,follow_up',
@@ -164,7 +178,7 @@ class ApplicantCrmController extends Controller
             'applicant_ids.*' => 'integer|exists:applicants,id',
         ]);
 
-        if (! (Auth::user()->hasRole('admission_head') || Auth::user()->hasRole('admin'))) {
+        if (!$this->hierarchy->canApproveAdmission($request->user())) {
             abort(403);
         }
 
@@ -187,6 +201,10 @@ class ApplicantCrmController extends Controller
 
     public function storeNote(Request $request, Applicant $applicant)
     {
+        if (!$this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $applicant->assigned_to, false)) {
+            abort(403);
+        }
+
         $request->validate(['note' => 'required|string']);
 
         AdmissionTeamNote::create([

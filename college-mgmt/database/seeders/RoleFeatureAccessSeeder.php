@@ -10,6 +10,30 @@ class RoleFeatureAccessSeeder extends Seeder
 {
     public function run(): void
     {
+        $admissionViewRoles = [
+            'admission_director' => 'view',
+            'admission_head' => 'view',
+            'admission_manager' => 'view',
+            'jr_admission_manager' => 'view',
+            'admission_counsellor' => 'view',
+            'admission_telecaller' => 'view',
+            'admission_officer' => 'view',
+        ];
+        $admissionEditRoles = [
+            'admission_director' => 'approve',
+            'admission_head' => 'approve',
+            'admission_manager' => 'edit',
+            'jr_admission_manager' => 'edit',
+            'admission_counsellor' => 'edit',
+            'admission_telecaller' => 'edit',
+            'admission_officer' => 'edit',
+        ];
+        $admissionApproveRoles = [
+            'admission_director' => 'approve',
+            'admission_head' => 'approve',
+            'admission_manager' => 'edit',
+        ];
+
         // [feature_code => [role_name => access_level]]
         $featureMatrix = [
             'exam.enter_marks' => [
@@ -26,8 +50,7 @@ class RoleFeatureAccessSeeder extends Seeder
                 'cmc'              => 'view',
                 'program_chair'    => 'view',
                 'hod'              => 'view',
-                'admission_officer'=> 'view',
-                'admission_head'   => 'view',
+                ...$admissionViewRoles,
                 'dean_academics'   => 'view',
                 'admin'            => 'view',
             ],
@@ -46,25 +69,26 @@ class RoleFeatureAccessSeeder extends Seeder
                 'admin'          => 'delete',
             ],
             'admission.view_applicants' => [
-                'admission_head'   => 'view',
-                'admission_officer'=> 'view',
+                ...$admissionViewRoles,
                 'dean_academics'   => 'view',
                 'admin'            => 'view',
             ],
             'admission.approve_offers' => [
+                ...$admissionApproveRoles,
                 'dean_academics' => 'approve',
                 'admin'          => 'approve',
             ],
             'admission.process_docs' => [
-                'admission_officer' => 'edit',
-                'admission_head'    => 'approve',
+                ...$admissionEditRoles,
             ],
             'admission.shortlist' => [
-                'admission_head' => 'edit',
+                ...$admissionApproveRoles,
                 'dean_academics' => 'approve',
             ],
             'enrollment.enroll_student' => [
+                'admission_director' => 'create',
                 'admission_head' => 'create',
+                'admission_manager' => 'create',
                 'admin'          => 'create',
             ],
             'enrollment.view_enrolled' => [
@@ -76,8 +100,7 @@ class RoleFeatureAccessSeeder extends Seeder
                 'cmc'              => 'view',
                 'program_chair'    => 'view',
                 'hod'              => 'view',
-                'admission_officer'=> 'view',
-                'admission_head'   => 'view',
+                ...$admissionViewRoles,
                 'dean_academics'   => 'view',
                 'admin'            => 'view',
             ],

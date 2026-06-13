@@ -13,7 +13,8 @@ class DemoDataSeeder extends Seeder
     public function run()
     {
         // Ensure roles exist
-        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_officer', 'admission_head',
+        foreach (['admin', 'teacher', 'student', 'parent', 'applicant', 'admission_director', 'admission_officer', 'admission_head',
+                  'admission_manager', 'jr_admission_manager', 'admission_counsellor', 'admission_telecaller',
                   'dean_academics', 'program_chair', 'exam_cell', 'hod', 'accounts_officer', 'cmc', 'director'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
