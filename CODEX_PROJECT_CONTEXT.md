@@ -150,8 +150,8 @@ Last verified setup:
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
 - Migrations completed, including Admission OS v0.031 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 395 tests, 1504 assertions.
-- Admission v0.033 regression gate passed: 89 tests, 455 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 397 tests, 1524 assertions.
+- Admission v0.034 regression gate passed: 91 tests, 475 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -209,6 +209,20 @@ Last verified setup:
 - Admission regression gate passed: `AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 89 tests, 455 assertions.
 - Full suite passed: 395 tests, 1504 assertions.
 - Browser smoke verification passed on localhost after seeding `MasterDemoSeeder` for reminders, walk-ins, assessment panels, assessment operations, manager reviews, dashboard, leads, and applicants. Mobile viewport checks passed for reminders, walk-ins, and manager reviews with no horizontal page overflow.
+
+## Admission OS v0.034 Baseline
+
+- v0.034 is a real user-flow hardening pass for lead/applicant detail operations.
+- Added `AdmissionNextActionService` to compute record-specific blockers, primary next action, quick commands, compact metrics, and recent operating activity for leads and applicants.
+- Lead detail now shows a `Lead Action Center` with assignment/contact/conversion/reminder/call commands and recent communication/call/reminder activity.
+- Applicant detail now shows an `Applicant Action Center` with document/payment/assessment/enrollment/reminder/call commands and recent operating activity.
+- Added reusable action-center Blade partials under `college-mgmt/resources/views/admission/partials/`.
+- Fixed applicant detail mobile header wrapping so the status/action row does not create horizontal overflow.
+- Test: `college-mgmt/tests/Feature/AdmissionOsV034Test.php`.
+- Focused verification passed: `AdmissionOsV034Test` with 2 tests, 20 assertions.
+- Admission regression gate passed: `AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 91 tests, 475 assertions.
+- Full suite passed: 397 tests, 1524 assertions.
+- Browser smoke verification passed on localhost for lead and applicant detail action centers. Mobile viewport checks passed for both detail pages with no horizontal page overflow.
 
 ## Known Local Notes
 

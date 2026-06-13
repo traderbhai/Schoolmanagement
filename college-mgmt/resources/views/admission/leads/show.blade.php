@@ -32,6 +32,8 @@
         <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
+    @include('admission.partials.action-center', ['actionCenter' => $actionCenter])
+
     <div class="row g-4">
         {{-- Left Column --}}
         <div class="col-md-4">
@@ -123,7 +125,7 @@
             @endif
 
             {{-- Assignment Card --}}
-            <div class="card border-0 shadow-sm mt-3">
+            <div class="card border-0 shadow-sm mt-3" id="leadAssignmentCard">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                     <strong>Assigned Counsellor</strong>
                 </div>

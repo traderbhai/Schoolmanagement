@@ -34,7 +34,7 @@
             @endif
         </div>
     </div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center justify-content-start justify-content-md-end gap-2">
         <span class="{{ $applicant->status_badge }} fs-6">{{ $applicant->status_label }}</span>
         @if($canChangeStatus && count($allowedTransitions) > 0)
         <form action="{{ route('admission.applicants.status', $applicant) }}" method="POST" class="d-flex gap-2">
@@ -77,6 +77,8 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
+
+@include('admission.partials.action-center', ['actionCenter' => $actionCenter])
 
 {{-- Tabs --}}
 <ul class="nav nav-tabs mb-4" id="crmTabs">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\Program;
 use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionNextActionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -79,14 +80,16 @@ class LeadController extends Controller
         return view('admission.leads.index', compact('leads', 'stats', 'programs', 'status', 'source', 'programId', 'search', 'sort', 'direction'));
     }
 
-    public function show(Lead $lead)
+    public function show(Lead $lead, AdmissionNextActionService $nextActions)
     {
         if (!$this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $lead->assigned_to, true)) {
             abort(403);
         }
 
-        $lead->load(['program', 'convertedApplicant', 'assignmentEvents.fromUser', 'assignmentEvents.toUser', 'assignmentEvents.assignedBy', 'tags']);
-        return view('admission.leads.show', compact('lead'));
+        $lead->load(['program', 'convertedApplicant', 'assignmentEvents.fromUser', 'assignmentEvents.toUser', 'assignmentEvents.assignedBy', 'tags', 'assignedTo']);
+        $actionCenter = $nextActions->forLead($lead);
+
+        return view('admission.leads.show', compact('lead', 'actionCenter'));
     }
 
     public function contactLead(Request $request, Lead $lead)

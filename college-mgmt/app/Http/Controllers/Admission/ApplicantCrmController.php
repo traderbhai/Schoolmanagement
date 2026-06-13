@@ -13,6 +13,7 @@ use App\Models\CounsellingLog;
 use App\Models\Program;
 use App\Models\Batch;
 use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionNextActionService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +101,7 @@ class ApplicantCrmController extends Controller
         return view('admission.applicants.index', compact('applicants', 'programs', 'batches', 'statuses', 'completenessMap', 'sort', 'direction'));
     }
 
-    public function show(Applicant $applicant)
+    public function show(Applicant $applicant, AdmissionNextActionService $nextActions)
     {
         if (!$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $applicant->assigned_to, false)) {
             abort(403);
@@ -119,8 +120,9 @@ class ApplicantCrmController extends Controller
 
         $canChangeStatus = $this->hierarchy->canApproveAdmission(Auth::user());
         $allowedTransitions = self::TRANSITIONS[$applicant->status] ?? [];
+        $actionCenter = $nextActions->forApplicant($applicant);
 
-        return view('admission.applicants.show', compact('applicant', 'canChangeStatus', 'allowedTransitions'));
+        return view('admission.applicants.show', compact('applicant', 'canChangeStatus', 'allowedTransitions', 'actionCenter'));
     }
 
     public function updateStatus(Request $request, Applicant $applicant)
