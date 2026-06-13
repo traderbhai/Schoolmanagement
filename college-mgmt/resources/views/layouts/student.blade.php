@@ -127,6 +127,9 @@
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif">
             <i class="bi bi-file-earmark-text me-2"></i>Document Requests
         </a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif">
+            <i class="bi bi-door-open me-2"></i>Outpass Request
+        </a>
 
         <div class="sidebar-divider"></div>
 
@@ -198,6 +201,7 @@
         <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>
         <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif"><i class="bi bi-door-open me-2"></i>Outpass Request</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif"><i class="bi bi-card-text me-2"></i>Academic Summary</a>

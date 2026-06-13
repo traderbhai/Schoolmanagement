@@ -280,6 +280,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('audit-log', [Admin\AuditController::class, 'index'])->name('audit.index');
     Route::get('audit-log/search', [Admin\AuditController::class, 'search'])->name('audit.search');
     Route::get('audit-log/{log}', [Admin\AuditController::class, 'show'])->name('audit.show');
+
+    // Hostel Management
+    Route::get('hostel', [Admin\HostelController::class, 'index'])->name('hostel.index');
+    Route::post('hostel/blocks', [Admin\HostelController::class, 'blockStore'])->name('hostel.blocks.store');
+    Route::get('hostel/blocks/{block}/edit', [Admin\HostelController::class, 'blockEdit'])->name('hostel.blocks.edit');
+    Route::put('hostel/blocks/{block}', [Admin\HostelController::class, 'blockUpdate'])->name('hostel.blocks.update');
+    Route::get('hostel/blocks/{block}/rooms', [Admin\HostelController::class, 'rooms'])->name('hostel.rooms');
+    Route::post('hostel/blocks/{block}/rooms', [Admin\HostelController::class, 'roomStore'])->name('hostel.rooms.store');
+    Route::put('hostel/blocks/{block}/rooms/{room}', [Admin\HostelController::class, 'roomUpdate'])->name('hostel.rooms.update');
+    Route::get('hostel/allocations', [Admin\HostelController::class, 'allocations'])->name('hostel.allocations');
+    Route::post('hostel/allocations', [Admin\HostelController::class, 'allocationStore'])->name('hostel.allocations.store');
+    Route::post('hostel/allocations/{allocation}/vacate', [Admin\HostelController::class, 'allocationVacate'])->name('hostel.allocations.vacate');
+    Route::get('hostel/outpasses', [Admin\HostelController::class, 'outpasses'])->name('hostel.outpasses');
+    Route::post('hostel/outpasses/{op}/approve', [Admin\HostelController::class, 'outpassApprove'])->name('hostel.outpasses.approve');
+    Route::post('hostel/outpasses/{op}/reject', [Admin\HostelController::class, 'outpassReject'])->name('hostel.outpasses.reject');
+    Route::post('hostel/outpasses/{op}/return', [Admin\HostelController::class, 'outpassReturn'])->name('hostel.outpasses.return');
+    Route::get('hostel/complaints', [Admin\HostelController::class, 'complaints'])->name('hostel.complaints');
+    Route::put('hostel/complaints/{complaint}', [Admin\HostelController::class, 'complaintUpdate'])->name('hostel.complaints.update');
 });
 
 // ── Academic routes ─────────────────────────────────────────────────────────
@@ -729,6 +747,10 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('alumni', [\App\Http\Controllers\Student\AlumniController::class, 'index'])->name('alumni.index');
     Route::get('promotion-status', [\App\Http\Controllers\Student\PromotionStatusController::class, 'index'])->name('promotion.index');
     Route::get('academic-summary', [\App\Http\Controllers\Student\AcademicSummaryController::class, 'index'])->name('summary.index');
+
+    // Hostel Outpass
+    Route::get('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassIndex'])->name('hostel.outpass');
+    Route::post('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassStore'])->name('hostel.outpass.store');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────

@@ -349,6 +349,12 @@
         </a>
 
         <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
+            <i class="bi bi-building me-2"></i>Hostel
+        </a>
+
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
             <i class="bi bi-graph-up-arrow"></i> Analytics
@@ -427,6 +433,12 @@
         <div class="section-label">Placement</div>
         <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
             <i class="bi bi-bar-chart-line"></i> Placement Stats
+        </a>
+
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
+            <i class="bi bi-building me-2"></i>Hostel
         </a>
 
         <div class="sidebar-divider"></div>
@@ -855,6 +867,9 @@
         <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif"><i class="bi bi-building me-2"></i>Hostel</a>
         @endhasrole
 
         {{-- ===================== DEAN ACADEMICS MOBILE ===================== --}}
