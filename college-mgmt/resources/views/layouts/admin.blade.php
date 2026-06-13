@@ -1237,19 +1237,27 @@
     });
 })();
 
-// ── Notification bell unread count ─────────────────────────
+// ── Notification bell unread count (polls every 60s) ────────
 (function () {
     var badge = document.getElementById('notifBadge');
     if (!badge) return;
-    fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.unread_count > 0) {
-                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-                badge.style.display = '';
-            }
-        })
-        .catch(function () {});
+    function updateCount() {
+        fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = '';
+                    document.title = '(' + (data.unread_count > 99 ? '99+' : data.unread_count) + ') ' + document.title.replace(/^\(\d+\+?\) /, '');
+                } else {
+                    badge.style.display = 'none';
+                    document.title = document.title.replace(/^\(\d+\+?\) /, '');
+                }
+            })
+            .catch(function () {});
+    }
+    updateCount();
+    setInterval(updateCount, 60000);
 })();
 </script>
 

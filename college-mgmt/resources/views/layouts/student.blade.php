@@ -236,6 +236,10 @@
             <span class="text-muted small d-none d-md-inline me-2">
                 {{ Auth::user()->name }}
             </span>
+            <a href="{{ route('notifications.index') }}" class="notif-btn text-decoration-none me-1" title="Notifications">
+                <i class="bi bi-bell" style="font-size:1rem"></i>
+                <span id="studentNotifBadge" class="notif-badge" style="display:none;font-size:.6rem;width:auto;height:auto;padding:1px 4px;border-radius:8px;background:#ef4444;color:#fff;position:absolute;top:4px;right:4px;"></span>
+            </a>
             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px;">
@@ -274,6 +278,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Notification badge polling (every 60s)
+(function () {
+    var badge = document.getElementById('studentNotifBadge');
+    if (!badge) return;
+    function updateCount() {
+        fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }).catch(function() {});
+    }
+    updateCount();
+    setInterval(updateCount, 60000);
+})();
+</script>
 @stack('scripts')
 </body>
 </html>
