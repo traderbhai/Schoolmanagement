@@ -3,9 +3,21 @@
 @section('title', 'Walk-ins')
 
 @section('content')
+<div class="admission-compact">
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div><h3 class="fw-bold mb-1">Walk-in And Campus Visit Desk</h3><div class="text-muted small">Create walk-in leads, assign counsellors, and track visit conversion.</div></div>
+    <div><h3 class="fw-bold mb-1">Walk-in And Campus Visit Desk</h3><div class="text-muted small">{{ $walkIns->total() }} visits after filters. Create walk-in leads, assign counsellors, and track visit conversion.</div></div>
+</div>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-3"><label class="form-label small mb-1">Search</label><input name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name, phone, email"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Status</label><select name="status" class="form-select form-select-sm"><option value="">All Status</option>@foreach(['open','converted','closed'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Program</label><select name="program_id" class="form-select form-select-sm"><option value="">All Programs</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->abbreviation ?? $program->name }}</option>@endforeach</select></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Rows</label><select name="per_page" class="form-select form-select-sm">@foreach([10,25,50,100] as $size)<option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>@endforeach</select></div>
+            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary btn-sm flex-fill">Apply</button><a href="{{ route('admission.walk-ins.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+        </form>
+    </div>
 </div>
 <div class="row g-4">
     <div class="col-xl-8">
@@ -33,6 +45,10 @@
                     </tbody>
                 </table>
             </div>
+            <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                <div class="small text-muted">Showing {{ $walkIns->firstItem() ?? 0 }}-{{ $walkIns->lastItem() ?? 0 }} of {{ $walkIns->total() }}</div>
+                {{ $walkIns->links() }}
+            </div>
         </div>
     </div>
     <div class="col-xl-4">
@@ -59,5 +75,6 @@
             <div class="list-group list-group-flush">@foreach($report as $row)<div class="list-group-item d-flex justify-content-between"><span>{{ $row['counsellor'] }}</span><strong>{{ $row['conversion_pct'] }}%</strong></div>@endforeach</div>
         </div>
     </div>
+</div>
 </div>
 @endsection

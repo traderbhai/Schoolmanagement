@@ -15,7 +15,10 @@ class AssessmentPanelController extends Controller
     public function index()
     {
         return view('admission.v0031.assessment-panels', [
-            'panels' => AdmissionAssessmentPanel::with(['program', 'batch', 'session', 'members.user', 'assignments.applicant.user'])->latest('scheduled_at')->get(),
+            'panels' => AdmissionAssessmentPanel::with(['program', 'batch', 'session', 'members.user', 'assignments.applicant.user'])
+                ->latest('scheduled_at')
+                ->paginate(25)
+                ->withQueryString(),
             'sessions' => SelectionSession::with(['program', 'batch'])->latest('scheduled_date')->limit(50)->get(),
             'programs' => Program::orderBy('name')->get(),
             'evaluators' => User::role(['admission_head', 'admission_manager', 'admission_counsellor', 'admission_officer', 'admin'])->orderBy('name')->get(),
@@ -24,6 +27,7 @@ class AssessmentPanelController extends Controller
 
     public function store(Request $request, AdmissionAssessmentPanelService $service)
     {
+        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
         $panel = $service->createPanel($request->validate([
             'name' => ['required', 'string', 'max:120'],
             'panel_type' => ['required', 'string', 'max:80'],

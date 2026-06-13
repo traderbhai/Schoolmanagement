@@ -38,6 +38,7 @@
                     </div>
                 @endforeach
             </div>
+            <div class="card-footer bg-transparent py-2">{{ $panels->links() }}</div>
         </div>
     </div>
 </div>

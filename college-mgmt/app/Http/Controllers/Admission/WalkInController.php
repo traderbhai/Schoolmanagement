@@ -11,10 +11,14 @@ use Illuminate\Http\Request;
 
 class WalkInController extends Controller
 {
-    public function index(AdmissionWalkInService $service)
+    public function index(Request $request, AdmissionWalkInService $service)
     {
+        $perPage = min(100, max(10, (int) $request->input('per_page', 25)));
+
         return view('admission.v0031.walk-ins', [
-            'walkIns' => AdmissionWalkIn::with(['program', 'counsellor', 'lead'])->latest('visited_at')->get(),
+            'walkIns' => $service->queryFor($request->user(), $request->only(['program_id', 'status', 'search']))
+                ->paginate($perPage)
+                ->withQueryString(),
             'programs' => Program::orderBy('name')->get(),
             'counsellors' => User::role(['admission_counsellor', 'admission_officer', 'admission_manager', 'admin'])->orderBy('name')->get(),
             'report' => $service->report(),
@@ -43,6 +47,7 @@ class WalkInController extends Controller
 
     public function convert(AdmissionWalkIn $walkIn, Request $request, AdmissionWalkInService $service)
     {
+        abort_unless($service->canAccess($walkIn, $request->user()), 403);
         $lead = $service->convertToLead($walkIn, $request->user());
 
         return redirect()->route('admission.leads.show', $lead)->with('success', 'Walk-in converted to lead.');

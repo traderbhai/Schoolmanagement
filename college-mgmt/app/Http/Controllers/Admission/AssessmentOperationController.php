@@ -14,13 +14,14 @@ class AssessmentOperationController extends Controller
     public function index(AdmissionAssessmentPanelService $service)
     {
         return view('admission.v0031.assessment-operations', [
-            'pendingScores' => $service->pendingScores(),
-            'panels' => AdmissionAssessmentPanel::with(['session', 'assignments.applicant.user', 'members.user'])->latest('scheduled_at')->get(),
+            'pendingScores' => $service->pendingScores(evaluator: request()->user()->hasRole('admin') || app(\App\Services\DepartmentHierarchyService::class)->canSeeAll(request()->user(), 'ADM') ? null : request()->user()),
+            'panels' => AdmissionAssessmentPanel::with(['session', 'assignments.applicant.user', 'members.user'])->latest('scheduled_at')->paginate(25)->withQueryString(),
         ]);
     }
 
     public function assign(Request $request, AdmissionAssessmentPanelService $service)
     {
+        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
         $data = $request->validate([
             'panel_id' => ['required', 'exists:admission_assessment_panels,id'],
             'applicant_id' => ['required', 'exists:applicants,id'],
@@ -38,6 +39,7 @@ class AssessmentOperationController extends Controller
 
     public function finalize(Request $request, ApplicantScore $score, AdmissionAssessmentPanelService $service)
     {
+        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()) || (int) $score->scored_by === (int) $request->user()->id, 403);
         $service->finalizeScore($score, $request->user(), $request->input('recommendation'));
 
         return back()->with('success', 'Score finalized and locked.');
@@ -45,6 +47,7 @@ class AssessmentOperationController extends Controller
 
     public function override(Request $request, ApplicantScore $score, AdmissionAssessmentPanelService $service)
     {
+        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
         $data = $request->validate([
             'override_reason' => ['required', 'string', 'min:5'],
             'recommendation' => ['nullable', 'string', 'max:80'],

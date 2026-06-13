@@ -17,8 +17,12 @@ class ReminderController extends Controller
 {
     public function index(Request $request, AdmissionReminderService $reminders)
     {
+        $perPage = min(100, max(10, (int) $request->input('per_page', 25)));
+
         return view('admission.v0031.reminders', [
-            'reminders' => $reminders->dueFor($request->user(), $request->only(['status', 'reason', 'date'])),
+            'reminders' => $reminders->queryFor($request->user(), $request->only(['status', 'reason', 'date']))
+                ->paginate($perPage)
+                ->withQueryString(),
             'templates' => AdmissionCommunicationTemplate::where('is_active', true)->orderBy('name')->get(),
             'cadenceRules' => AdmissionCadenceRule::with('template')->orderBy('name')->get(),
         ]);
@@ -45,6 +49,7 @@ class ReminderController extends Controller
 
     public function send(AdmissionReminderSchedule $reminder, Request $request, AdmissionReminderService $reminders)
     {
+        abort_unless($reminders->canAccess($reminder, $request->user()), 403);
         $reminders->sendNow($reminder, $request->user());
 
         return back()->with('success', 'Reminder queued through communication hub.');
@@ -52,6 +57,7 @@ class ReminderController extends Controller
 
     public function complete(AdmissionReminderSchedule $reminder, Request $request, AdmissionReminderService $reminders)
     {
+        abort_unless($reminders->canAccess($reminder, $request->user()), 403);
         $reminders->complete($reminder, $request->user());
 
         return back()->with('success', 'Reminder completed.');
@@ -59,6 +65,7 @@ class ReminderController extends Controller
 
     public function pause(AdmissionReminderSchedule $reminder, Request $request, AdmissionReminderService $reminders)
     {
+        abort_unless($reminders->canAccess($reminder, $request->user()), 403);
         $reminders->pause($reminder, $request->input('reason', 'Paused by staff'), $request->user());
 
         return back()->with('success', 'Reminder paused.');
@@ -66,6 +73,7 @@ class ReminderController extends Controller
 
     public function resume(AdmissionReminderSchedule $reminder, Request $request, AdmissionReminderService $reminders)
     {
+        abort_unless($reminders->canAccess($reminder, $request->user()), 403);
         $reminders->resume($reminder, $request->user());
 
         return back()->with('success', 'Reminder resumed.');
@@ -73,6 +81,7 @@ class ReminderController extends Controller
 
     public function cadence(Request $request, AdmissionCadenceService $cadences)
     {
+        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'target_type' => ['required', 'string', 'max:40'],

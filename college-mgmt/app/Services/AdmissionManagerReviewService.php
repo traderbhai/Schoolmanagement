@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdmissionManagerReview;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -29,6 +30,11 @@ class AdmissionManagerReviewService
 
     public function queueFor(User $viewer, array $filters = []): Collection
     {
+        return $this->queryFor($viewer, $filters)->limit(100)->get();
+    }
+
+    public function queryFor(User $viewer, array $filters = []): Builder
+    {
         $query = AdmissionManagerReview::with(['reviewable', 'manager'])
             ->when($filters['review_type'] ?? null, fn ($q, $type) => $q->where('review_type', $type))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
@@ -40,7 +46,18 @@ class AdmissionManagerReviewService
             $query->whereIn('assigned_manager_id', $visibleIds);
         }
 
-        return $query->limit(100)->get();
+        return $query;
+    }
+
+    public function canAccess(AdmissionManagerReview $review, User $viewer): bool
+    {
+        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+            return true;
+        }
+
+        $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+
+        return $visibleIds->contains($review->assigned_manager_id);
     }
 
     public function resolve(AdmissionManagerReview $review, User $actor, string $notes): AdmissionManagerReview

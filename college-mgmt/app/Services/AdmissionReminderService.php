@@ -8,6 +8,7 @@ use App\Models\Applicant;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class AdmissionReminderService
@@ -70,6 +71,13 @@ class AdmissionReminderService
 
     public function dueFor(User $viewer, array $filters = []): Collection
     {
+        return $this->queryFor($viewer, $filters)
+            ->limit($filters['limit'] ?? 100)
+            ->get();
+    }
+
+    public function queryFor(User $viewer, array $filters = []): Builder
+    {
         $query = AdmissionReminderSchedule::with(['subject', 'assignee', 'template'])
             ->whereIn('status', ['scheduled', 'queued', 'paused', 'escalated'])
             ->when($filters['reason'] ?? null, fn ($q, $reason) => $q->where('reason', $reason))
@@ -85,7 +93,19 @@ class AdmissionReminderService
             });
         }
 
-        return $query->limit($filters['limit'] ?? 100)->get();
+        return $query;
+    }
+
+    public function canAccess(AdmissionReminderSchedule $reminder, User $viewer): bool
+    {
+        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+            return true;
+        }
+
+        $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+
+        return $visibleIds->contains($reminder->assigned_to)
+            || $visibleIds->contains($reminder->owner_user_id);
     }
 
     public function complete(AdmissionReminderSchedule $reminder, ?User $actor = null): AdmissionReminderSchedule

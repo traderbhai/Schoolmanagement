@@ -150,8 +150,8 @@ Last verified setup:
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
 - Migrations completed, including Admission OS v0.031 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 393 tests, 1480 assertions.
-- Admission v0.032 regression gate passed: 87 tests, 431 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 395 tests, 1504 assertions.
+- Admission v0.033 regression gate passed: 89 tests, 455 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -196,6 +196,19 @@ Last verified setup:
 - New master demo seeder: `college-mgmt/database/seeders/MasterDemoSeeder.php`.
 - Test: `college-mgmt/tests/Feature/AdmissionOsV032Test.php`.
 - Browser smoke verification passed on localhost for dashboard, leads, applicants, counsellor workspace, and manager workspace. Mobile viewport checks passed for dashboard, leads, and applicants with no horizontal page overflow.
+
+## Admission OS v0.033 Baseline
+
+- v0.033 is a stabilization and data-density pass for v0.031 operational pages, focused on real database-backed lists, pagination, filtering, and hierarchy-safe mutations.
+- Reminder, walk-in, and manager-review services now expose scoped query builders and access checks so controllers can paginate/filter and block cross-scope actions.
+- Assessment panel and assessment operation pages now paginate operational tables and keep assignment/finalization/override actions permission-aware.
+- Operational pages now have compact filters and pagination for reminders, walk-ins, assessment panels, assessment operations panel lists, and manager reviews.
+- `AdmissionOperatingDemoSeeder` now creates v0.033 operational volume for reminders, walk-ins, manager reviews, and assessment panels so demo pages show seeded database rows instead of sparse/empty primary content.
+- Test: `college-mgmt/tests/Feature/AdmissionOsV033Test.php`.
+- Focused verification passed: `AdmissionOsV033Test` with 2 tests, 24 assertions.
+- Admission regression gate passed: `AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 89 tests, 455 assertions.
+- Full suite passed: 395 tests, 1504 assertions.
+- Browser smoke verification passed on localhost after seeding `MasterDemoSeeder` for reminders, walk-ins, assessment panels, assessment operations, manager reviews, dashboard, leads, and applicants. Mobile viewport checks passed for reminders, walk-ins, and manager reviews with no horizontal page overflow.
 
 ## Known Local Notes
 

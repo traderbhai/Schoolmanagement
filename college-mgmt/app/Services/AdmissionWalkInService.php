@@ -6,10 +6,13 @@ use App\Models\AdmissionWalkIn;
 use App\Models\Lead;
 use App\Models\LeadFollowUp;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class AdmissionWalkInService
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function record(array $data, ?User $actor = null): AdmissionWalkIn
     {
         return AdmissionWalkIn::create($data + [
@@ -73,5 +76,39 @@ class AdmissionWalkInService
                 'conversion_pct' => $rows->count() ? round($rows->where('status', 'converted')->count() / $rows->count() * 100, 1) : 0,
             ])
             ->values();
+    }
+
+    public function queryFor(User $viewer, array $filters = []): Builder
+    {
+        $query = AdmissionWalkIn::with(['program', 'counsellor', 'lead'])
+            ->when($filters['program_id'] ?? null, fn ($q, $programId) => $q->where('program_id', $programId))
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['search'] ?? null, function ($q, $search) {
+                $q->where(function ($scope) use ($search) {
+                    $scope->where('visitor_name', 'like', "%{$search}%")
+                        ->orWhere('visitor_phone', 'like', "%{$search}%")
+                        ->orWhere('visitor_email', 'like', "%{$search}%");
+                });
+            })
+            ->latest('visited_at');
+
+        if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
+            $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+            $query->where(function ($scope) use ($visibleIds) {
+                $scope->whereIn('assigned_counsellor_id', $visibleIds)
+                    ->orWhereNull('assigned_counsellor_id');
+            });
+        }
+
+        return $query;
+    }
+
+    public function canAccess(AdmissionWalkIn $walkIn, User $viewer): bool
+    {
+        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+            return true;
+        }
+
+        return $this->hierarchy->canViewAssignedUser($viewer, 'ADM', $walkIn->assigned_counsellor_id, true);
     }
 }

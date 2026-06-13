@@ -5,7 +5,7 @@
 @section('content')
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div><h3 class="fw-bold mb-1">Assessment Panels</h3><div class="text-muted small">Panels for PI, GD, case analysis, WAT, presentation, portfolio review, and screening calls.</div></div>
+    <div><h3 class="fw-bold mb-1">Assessment Panels</h3><div class="text-muted small">{{ $panels->total() }} panels after filters. Panels for PI, GD, case analysis, WAT, presentation, portfolio review, and screening calls.</div></div>
     <a href="{{ route('admission.assessment-operations.index') }}" class="btn btn-outline-primary btn-sm">Operations</a>
 </div>
 
@@ -29,6 +29,10 @@
                     @endforeach
                     </tbody>
                 </table>
+            </div>
+            <div class="card-footer bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                <div class="small text-muted">Showing {{ $panels->firstItem() ?? 0 }}-{{ $panels->lastItem() ?? 0 }} of {{ $panels->total() }}</div>
+                {{ $panels->links() }}
             </div>
         </div>
     </div>
