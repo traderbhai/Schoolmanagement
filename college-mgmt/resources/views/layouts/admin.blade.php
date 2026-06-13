@@ -223,6 +223,9 @@
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
             <i class="bi bi-journal-text"></i> Curriculum Changes
         </a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
+            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
+        </a>
         <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.*')) active @endif">
             <i class="bi bi-people"></i> Faculty Roster
         </a>
@@ -392,6 +395,9 @@
         <div class="section-label">Curriculum</div>
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
             <i class="bi bi-journal-text"></i> Curriculum Changes
+        </a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
+            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
         </a>
 
         <div class="sidebar-divider"></div>
@@ -864,6 +870,7 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Curriculum</div>
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif"><i class="bi bi-journal-text"></i> Curriculum Changes</a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif"><i class="bi bi-diagram-3 me-1"></i>OBE Framework</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Exams</div>
         <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams</a>

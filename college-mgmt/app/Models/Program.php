@@ -22,6 +22,8 @@ class Program extends Model
     public function selectionProcessSteps() { return $this->hasMany(SelectionProcessStep::class)->orderBy('step_order'); }
     public function admissionFeeInstallments() { return $this->hasMany(AdmissionFeeInstallment::class)->orderBy('installment_number'); }
     public function seatMatrices() { return $this->hasMany(ProgramSeatMatrix::class); }
+    public function programOutcomes() { return $this->hasMany(ProgramOutcome::class); }
+    public function programSpecificOutcomes() { return $this->hasMany(ProgramSpecificOutcome::class); }
 
     public function getSystemTypeLabelAttribute(): string
     {

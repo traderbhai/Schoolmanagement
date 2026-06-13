@@ -319,6 +319,32 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     Route::get('curriculum-changes/{curriculumChange}', [Academic\CurriculumChangeController::class, 'show'])->name('curriculum-changes.show');
     Route::post('curriculum-changes/{curriculumChange}/approve', [Academic\CurriculumChangeController::class, 'approve'])->name('curriculum-changes.approve');
     Route::post('curriculum-changes/{curriculumChange}/reject', [Academic\CurriculumChangeController::class, 'reject'])->name('curriculum-changes.reject');
+
+    // OBE Framework (Course Outcomes, Program Outcomes, CO-PO Matrix, Attainment)
+    Route::prefix('obe')->name('obe.')->group(function () {
+        // Course Outcomes
+        Route::get('course-outcomes',             [Academic\ObeController::class, 'coIndex'])->name('co.index');
+        Route::post('course-outcomes',            [Academic\ObeController::class, 'coStore'])->name('co.store');
+        Route::put('course-outcomes/{co}',        [Academic\ObeController::class, 'coUpdate'])->name('co.update');
+        Route::delete('course-outcomes/{co}',     [Academic\ObeController::class, 'coDestroy'])->name('co.destroy');
+        // Program Outcomes
+        Route::get('program-outcomes',            [Academic\ObeController::class, 'poIndex'])->name('po.index');
+        Route::post('program-outcomes',           [Academic\ObeController::class, 'poStore'])->name('po.store');
+        Route::put('program-outcomes/{po}',       [Academic\ObeController::class, 'poUpdate'])->name('po.update');
+        Route::delete('program-outcomes/{po}',    [Academic\ObeController::class, 'poDestroy'])->name('po.destroy');
+        Route::post('program-specific-outcomes',  [Academic\ObeController::class, 'psoStore'])->name('pso.store');
+        Route::delete('program-specific-outcomes/{pso}', [Academic\ObeController::class, 'psoDestroy'])->name('pso.destroy');
+        // CO-PO Matrix
+        Route::get('matrix',                      [Academic\ObeController::class, 'matrixIndex'])->name('matrix');
+        Route::post('matrix/save',                [Academic\ObeController::class, 'matrixSave'])->name('matrix.save');
+        // Attainment
+        Route::get('attainment',                  [Academic\ObeController::class, 'attainmentIndex'])->name('attainment');
+        Route::post('attainment/recalculate',     [Academic\ObeController::class, 'recalculate'])->name('attainment.recalculate');
+        // Surveys (indirect assessment)
+        Route::get('surveys',                     [Academic\ObeController::class, 'surveyIndex'])->name('surveys.index');
+        Route::post('surveys',                    [Academic\ObeController::class, 'surveyStore'])->name('surveys.store');
+        Route::post('surveys/{survey}/toggle',    [Academic\ObeController::class, 'surveyToggle'])->name('surveys.toggle');
+    });
 });
 
 // ── Admission Team routes ───────────────────────────────────────────────────
