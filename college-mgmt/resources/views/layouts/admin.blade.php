@@ -353,6 +353,12 @@
         <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
             <i class="bi bi-building me-2"></i>Hostel
         </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
@@ -439,6 +445,9 @@
         <div class="section-label">Hostel</div>
         <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
             <i class="bi bi-building me-2"></i>Hostel
+        </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
         </a>
 
         <div class="sidebar-divider"></div>
@@ -870,6 +879,7 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Hostel</div>
         <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif"><i class="bi bi-building me-2"></i>Hostel</a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
         @endhasrole
 
         {{-- ===================== DEAN ACADEMICS MOBILE ===================== --}}

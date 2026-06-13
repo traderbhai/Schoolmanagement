@@ -112,6 +112,9 @@
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
             <i class="bi bi-megaphone"></i> Notices
         </a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
             <i class="bi bi-chat-square-text me-2"></i>Grievances
         </a>
@@ -129,6 +132,9 @@
         </a>
         <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif">
             <i class="bi bi-door-open me-2"></i>Outpass Request
+        </a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif">
+            <i class="bi bi-book me-2"></i>My Library
         </a>
 
         <div class="sidebar-divider"></div>
@@ -196,6 +202,7 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-chat-square-text me-2"></i>Grievances</a>
         <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif"><i class="bi bi-person-badge me-2"></i>My Mentor</a>
         <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>

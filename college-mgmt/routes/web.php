@@ -298,6 +298,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::post('hostel/outpasses/{op}/return', [Admin\HostelController::class, 'outpassReturn'])->name('hostel.outpasses.return');
     Route::get('hostel/complaints', [Admin\HostelController::class, 'complaints'])->name('hostel.complaints');
     Route::put('hostel/complaints/{complaint}', [Admin\HostelController::class, 'complaintUpdate'])->name('hostel.complaints.update');
+
+    // Library Management
+    Route::get('library',                               [Admin\LibraryController::class, 'index'])->name('library.index');
+    Route::get('library/books',                         [Admin\LibraryController::class, 'books'])->name('library.books');
+    Route::post('library/books',                        [Admin\LibraryController::class, 'bookStore'])->name('library.books.store');
+    Route::get('library/books/{book}',                  [Admin\LibraryController::class, 'bookShow'])->name('library.books.show');
+    Route::put('library/books/{book}',                  [Admin\LibraryController::class, 'bookUpdate'])->name('library.books.update');
+    Route::post('library/issue',                        [Admin\LibraryController::class, 'issueBook'])->name('library.issue');
+    Route::post('library/issues/{issue}/return',        [Admin\LibraryController::class, 'returnBook'])->name('library.issues.return');
+    Route::get('library/issues',                        [Admin\LibraryController::class, 'issues'])->name('library.issues');
+    Route::get('library/memberships',                   [Admin\LibraryController::class, 'memberships'])->name('library.memberships');
+    Route::post('library/memberships',                  [Admin\LibraryController::class, 'membershipStore'])->name('library.memberships.store');
+    Route::get('library/fines',                         [Admin\LibraryController::class, 'fineCollection'])->name('library.fines');
+    Route::post('library/fines/{issue}/pay',            [Admin\LibraryController::class, 'finePay'])->name('library.fines.pay');
 });
 
 // ── Academic routes ─────────────────────────────────────────────────────────
@@ -751,6 +765,9 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // Hostel Outpass
     Route::get('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassIndex'])->name('hostel.outpass');
     Route::post('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassStore'])->name('hostel.outpass.store');
+
+    // Library
+    Route::get('library', [\App\Http\Controllers\Student\LibraryController::class, 'index'])->name('library.index');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
