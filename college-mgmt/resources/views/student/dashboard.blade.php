@@ -98,7 +98,7 @@
                                     <tr>
                                         <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
                                         <td class="fw-semibold small">{{ $entry->subject->name ?? '—' }}</td>
-                                        <td class="text-muted small">{{ $entry->teacher->name ?? '—' }}</td>
+                                        <td class="text-muted small">{{ $entry->teacher?->name ?? '—' }}</td>
                                         <td class="text-muted small">{{ $entry->room ?? '—' }}</td>
                                     </tr>
                                     @endif
@@ -163,8 +163,8 @@
                     @php $typeColors = ['holiday'=>'danger','exam'=>'warning','event'=>'success','workshop'=>'info','seminar'=>'info','other'=>'secondary']; $c = $typeColors[$event->type] ?? 'secondary'; @endphp
                     <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
                         <div class="text-center" style="min-width:42px">
-                            <div class="fw-bold text-{{ $c }}" style="font-size:1.1rem;line-height:1">{{ $event->start_date->format('d') }}</div>
-                            <div class="text-muted" style="font-size:.7rem">{{ $event->start_date->format('M') }}</div>
+                            <div class="fw-bold text-{{ $c }}" style="font-size:1.1rem;line-height:1">{{ $event->start_date?->format('d') ?? '—' }}</div>
+                            <div class="text-muted" style="font-size:.7rem">{{ $event->start_date?->format('M') ?? '' }}</div>
                         </div>
                         <div>
                             <div class="small fw-semibold">{{ $event->title }}</div>

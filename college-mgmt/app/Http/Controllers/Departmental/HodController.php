@@ -37,9 +37,9 @@ class HodController extends Controller
         $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0;
 
         $recentExams = Exam::when($teacher, fn($q) => $q->whereHas('subject', fn($sq) => $sq->where('department_id', $teacher->department_id)))
-            ->with(['subject', 'program'])->latest('exam_date')->take(5)->get()
+            ->with(['subject', 'program', 'examResults'])->latest('exam_date')->take(5)->get()
             ->map(function ($exam) {
-                $results = ExamResult::where('exam_id', $exam->id)->get();
+                $results = $exam->examResults;
                 $exam->result_count = $results->count();
                 $exam->avg_marks    = $results->count() > 0 ? round($results->avg('marks_obtained'), 1) : null;
                 $exam->pass_count   = $results->where('marks_obtained', '>=', $exam->passing_marks ?? 40)->count();
@@ -99,10 +99,16 @@ class HodController extends Controller
 
         if ($request->filled('status')) $query->where('status', $request->status);
 
-        $faculty = $query->get()->map(function ($t) {
-            $t->subject_count = TimetableEntry::where('teacher_id', $t->id)->where('is_active', true)
-                ->distinct('subject_id')->count('subject_id');
-            $t->weekly_hours  = TimetableEntry::where('teacher_id', $t->id)->where('is_active', true)->count();
+        $workloadData = \App\Models\TimetableEntry::selectRaw('teacher_id, COUNT(DISTINCT subject_id) as subject_count, COUNT(*) as weekly_hours')
+            ->where('is_active', true)
+            ->groupBy('teacher_id')
+            ->get()
+            ->keyBy('teacher_id');
+
+        $faculty = $query->get()->map(function ($t) use ($workloadData) {
+            $w = $workloadData->get($t->id);
+            $t->subject_count = $w?->subject_count ?? 0;
+            $t->weekly_hours  = $w?->weekly_hours ?? 0;
             return $t;
         });
 
@@ -114,12 +120,11 @@ class HodController extends Controller
         $teacher    = $this->hodTeacher();
         $department = $teacher ? Department::find($teacher->department_id) : null;
 
-        $faculty = Teacher::with(['user'])
+        $faculty = Teacher::with(['user', 'timetableEntries.subject'])
             ->when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
             ->where('status', 'active')->get()
             ->map(function ($t) {
-                $entries = TimetableEntry::where('teacher_id', $t->id)->where('is_active', true)
-                    ->with('subject')->get();
+                $entries = $t->timetableEntries->where('is_active', true);
                 $t->weekly_slots    = $entries->count();
                 $t->subject_count   = $entries->pluck('subject_id')->unique()->count();
                 $t->subjects        = $entries->pluck('subject.name')->unique()->values();
@@ -161,10 +166,34 @@ class HodController extends Controller
         $teacher    = $this->hodTeacher();
         $department = $teacher ? Department::find($teacher->department_id) : null;
 
+        $subjectIds = Subject::when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
+            ->pluck('id');
+
+        // All exam IDs grouped by subject
+        $examsBySubject = Exam::whereIn('subject_id', $subjectIds)
+            ->get(['id', 'subject_id', 'passing_marks'])
+            ->groupBy('subject_id');
+
+        $allExamIds = $examsBySubject->flatten()->pluck('id');
+
+        // All results for those exams
+        $resultsByExam = ExamResult::whereIn('exam_id', $allExamIds)
+            ->get(['exam_id', 'marks_obtained', 'is_absent'])
+            ->groupBy('exam_id');
+
+        // Attendance aggregated per subject
+        $attBySubject = Attendance::whereIn('subject_id', $subjectIds)
+            ->where('date', '>=', now()->subDays(30))
+            ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('subject_id')
+            ->get()
+            ->keyBy('subject_id');
+
         $subjects = Subject::when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
-            ->with('program')->get()->map(function ($subject) {
-                $exams = Exam::where('subject_id', $subject->id)->pluck('id');
-                $results = ExamResult::whereIn('exam_id', $exams)->get();
+            ->with('program')->get()->map(function ($subject) use ($examsBySubject, $resultsByExam, $attBySubject) {
+                $exams = $examsBySubject->get($subject->id, collect());
+                $examIds = $exams->pluck('id');
+                $results = $examIds->flatMap(fn($id) => $resultsByExam->get($id, collect()));
                 $subject->exam_count    = $exams->count();
                 $subject->result_count  = $results->count();
                 $subject->avg_marks     = $results->count() ? round($results->avg('marks_obtained'), 1) : null;
@@ -172,9 +201,9 @@ class HodController extends Controller
                     ? round($results->where('marks_obtained', '>=', 40)->count() / $results->count() * 100, 1)
                     : null;
 
-                $att = Attendance::where('subject_id', $subject->id)->where('date', '>=', now()->subDays(30));
-                $total   = $att->count();
-                $present = (clone $att)->where('status', 'present')->count();
+                $att = $attBySubject->get($subject->id);
+                $total   = $att?->total ?? 0;
+                $present = $att?->present_count ?? 0;
                 $subject->attendance_pct = $total > 0 ? round($present / $total * 100, 1) : null;
                 return $subject;
             });

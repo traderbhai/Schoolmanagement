@@ -85,7 +85,7 @@
             <tbody>
             @forelse($leaves as $leave)
             <tr>
-                <td class="fw-semibold">{{ $leave->teacher->user->name }}</td>
+                <td class="fw-semibold">{{ $leave->teacher?->user?->name ?? '—' }}</td>
                 <td>{{ ucfirst($leave->leave_type) }}</td>
                 <td style="font-size:.83rem">{{ $leave->from_date->format('d M Y') }} – {{ $leave->to_date->format('d M Y') }}</td>
                 <td>{{ $leave->days }}</td>
@@ -115,7 +115,7 @@
                         <button class="btn btn-sm btn-outline-danger"
                             data-confirm-delete="true"
                             data-action="{{ route('admin.leaves.destroy', $leave) }}"
-                            data-name="{{ $leave->teacher->user->name }}'s leave">
+                            data-name="{{ ($leave->teacher?->user?->name ?? 'Unknown') }}'s leave">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </div>

@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class FeePayment extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'student_id', 'fee_structure_id', 'amount_paid', 'payment_date',
         'receipt_number', 'payment_method', 'transaction_id', 'status', 'remarks',

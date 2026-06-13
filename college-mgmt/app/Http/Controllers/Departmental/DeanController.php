@@ -25,40 +25,46 @@ class DeanController extends Controller
         $pendingApprovals = ApprovalWorkflow::where('approver_role', 'dean_academics')
             ->where('status', 'pending')->count();
 
-        // At-risk students: attendance < 75% (last 30 days)
+        // At-risk students — single aggregate query instead of 2×N per-student queries
+        $attData = Attendance::where('date', '>=', now()->subDays(30))
+            ->selectRaw('student_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('student_id')
+            ->get()
+            ->keyBy('student_id');
+
         $atRiskStudents = Student::where('status', 'active')
             ->with(['user', 'program'])
             ->get()
-            ->map(function($student) {
-                $total = Attendance::where('student_id', $student->id)
-                    ->where('date', '>=', now()->subDays(30))->count();
-                $present = Attendance::where('student_id', $student->id)
-                    ->where('date', '>=', now()->subDays(30))
-                    ->where('status', 'present')->count();
-                $pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
-                $student->attendance_pct = $pct;
+            ->map(function ($student) use ($attData) {
+                $att = $attData->get($student->id);
+                $total   = $att->total ?? 0;
+                $present = $att->present_count ?? 0;
+                $student->attendance_pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
                 return $student;
             })
             ->filter(fn($s) => $s->attendance_pct !== null && $s->attendance_pct < 75)
             ->sortBy('attendance_pct')
             ->take(8);
 
-        // Program health: pass rate per program
+        // Program health — pre-aggregate faculty counts + eager-load exam results
+        $facultyCounts = Teacher::selectRaw('department_id, COUNT(*) as cnt')
+            ->where('status', 'active')
+            ->groupBy('department_id')
+            ->get()
+            ->keyBy('department_id');
+
         $programs = Program::where('is_active', true)
             ->withCount(['students' => fn($q) => $q->where('status', 'active'), 'batches'])
+            ->with(['examResults.exam'])
             ->get()
-            ->map(function($prog) {
-                $results = ExamResult::whereHas('exam', fn($q) => $q->where('program_id', $prog->id))->get();
-                $total = $results->count();
-                $passed = 0;
-                if ($total > 0) {
-                    $passed = $results->filter(function($r) {
-                        $exam = \App\Models\Exam::find($r->exam_id);
-                        return $exam && $r->marks_obtained >= ($exam->passing_marks ?? 40);
-                    })->count();
-                }
-                $prog->pass_rate = $total > 0 ? round(($passed / $total) * 100, 1) : null;
-                $prog->faculty_count = Teacher::where('department_id', $prog->department_id)->where('status', 'active')->count();
+            ->map(function ($prog) use ($facultyCounts) {
+                $results = $prog->examResults;
+                $total   = $results->count();
+                $passed  = $total > 0
+                    ? $results->filter(fn($r) => $r->exam && $r->marks_obtained >= ($r->exam->passing_marks ?? 40))->count()
+                    : 0;
+                $prog->pass_rate    = $total > 0 ? round(($passed / $total) * 100, 1) : null;
+                $prog->faculty_count = $facultyCounts->get($prog->department_id)?->cnt ?? 0;
                 return $prog;
             });
 
@@ -74,12 +80,17 @@ class DeanController extends Controller
         try {
             $openGrievances = \App\Models\StudentGrievance::whereIn('status', ['open','under_review','escalated'])->count();
         } catch (\Exception $e) { $openGrievances = 0; }
+
         $overdueApprovals = ApprovalWorkflow::where('status','pending')
             ->whereNotNull('due_at')->where('due_at','<',now())->count();
 
         // Academic unit overviews from org hierarchy
         $academicOverview = [];
         try {
+            $pendingChair  = ApprovalWorkflow::where('approver_role','program_chair')->where('status','pending')->count();
+            $pendingLeaves = \App\Models\LeaveApplication::where('status','pending')->count();
+            $pendingAppeals = \App\Models\MarksAppeal::where('status','pending')->count();
+
             $childLines = \App\Models\OrgReportingLine::getChildRoles('dean_academics');
             foreach ($childLines as $line) {
                 $summary = match($line->child_role) {
@@ -91,9 +102,9 @@ class DeanController extends Controller
                         'route_label' => 'View PMC',
                         'can_full'    => $line->can_view_full,
                         'metrics'     => [
-                            ['label' => 'Active Students',    'value' => Student::where('status','active')->count()],
-                            ['label' => 'Pending Approvals',  'value' => ApprovalWorkflow::where('approver_role','program_chair')->where('status','pending')->count()],
-                            ['label' => 'Open Grievances',    'value' => $openGrievances],
+                            ['label' => 'Active Students',   'value' => $totalStudents],
+                            ['label' => 'Pending Approvals', 'value' => $pendingChair],
+                            ['label' => 'Open Grievances',   'value' => $openGrievances],
                         ],
                     ],
                     'hod' => [
@@ -104,8 +115,8 @@ class DeanController extends Controller
                         'route_label' => 'View HOD',
                         'can_full'    => $line->can_view_full,
                         'metrics'     => [
-                            ['label' => 'Active Faculty',   'value' => $totalFaculty],
-                            ['label' => 'Pending Leaves',   'value' => \App\Models\LeaveApplication::where('status','pending')->count()],
+                            ['label' => 'Active Faculty',  'value' => $totalFaculty],
+                            ['label' => 'Pending Leaves',  'value' => $pendingLeaves],
                         ],
                     ],
                     'exam_cell' => [
@@ -116,8 +127,8 @@ class DeanController extends Controller
                         'route_label' => 'View Exam Cell',
                         'can_full'    => $line->can_view_full,
                         'metrics'     => [
-                            ['label' => 'Exams This Year',  'value' => $totalExams],
-                            ['label' => 'Pending Appeals',  'value' => \App\Models\MarksAppeal::where('status','pending')->count()],
+                            ['label' => 'Exams This Year', 'value' => $totalExams],
+                            ['label' => 'Pending Appeals', 'value' => $pendingAppeals],
                         ],
                     ],
                     default => null,
@@ -136,6 +147,12 @@ class DeanController extends Controller
 
     public function programs()
     {
+        $facultyCounts = Teacher::selectRaw('department_id, COUNT(*) as cnt')
+            ->where('status', 'active')
+            ->groupBy('department_id')
+            ->get()
+            ->keyBy('department_id');
+
         $programs = Program::where('is_active', true)
             ->with(['department', 'batches'])
             ->withCount([
@@ -144,9 +161,8 @@ class DeanController extends Controller
                 'subjects',
             ])
             ->get()
-            ->map(function ($prog) {
-                $prog->faculty_count = Teacher::where('department_id', $prog->department_id)
-                    ->where('status', 'active')->count();
+            ->map(function ($prog) use ($facultyCounts) {
+                $prog->faculty_count = $facultyCounts->get($prog->department_id)?->cnt ?? 0;
                 return $prog;
             });
 
@@ -183,25 +199,24 @@ class DeanController extends Controller
 
     public function academics()
     {
-        // Top performers by exam results avg
-        $topPerformers = Student::with(['user', 'program'])
+        // Top performers — eager load exam results, compute avg in PHP
+        $topPerformers = Student::with(['user', 'program', 'examResults'])
             ->where('status', 'active')
-            ->withCount('examResults')
             ->get()
-            ->filter(fn($s) => $s->exam_results_count > 0)
+            ->filter(fn($s) => $s->examResults->count() > 0)
             ->map(function ($s) {
-                $s->avg_marks = $s->examResults()->avg('marks_obtained') ?? 0;
+                $s->avg_marks = round($s->examResults->avg('marks_obtained') ?? 0, 1);
                 return $s;
             })
             ->sortByDesc('avg_marks')
             ->take(10);
 
-        // At-risk: students with avg marks < 40% of possible
-        $atRisk = Student::with(['user', 'program'])
+        // At-risk: students with avg marks < 40% — eager load exam results
+        $atRisk = Student::with(['user', 'program', 'examResults.exam'])
             ->where('status', 'active')
             ->get()
             ->map(function ($s) {
-                $results = $s->examResults()->with('exam')->get();
+                $results = $s->examResults;
                 if ($results->isEmpty()) return null;
                 $pct = $results->avg(fn($r) => $r->exam ? ($r->marks_obtained / max($r->exam->total_marks, 1)) * 100 : 0);
                 $s->score_pct = round($pct, 1);
@@ -211,11 +226,17 @@ class DeanController extends Controller
             ->sortBy('score_pct')
             ->take(20);
 
-        // Program-wise pass rate
-        $programs = Program::where('is_active', true)->withCount('students')->get()->map(function ($p) {
-            $results = ExamResult::whereHas('exam', fn($q) => $q->where('program_id', $p->id))->get();
-            $total = $results->count();
-            $passed = $results->filter(fn($r) => !$r->is_absent && $r->exam && $r->marks_obtained >= $r->exam->passing_marks)->count();
+        // Program-wise pass rate — bulk load results grouped by program
+        $programIds = Program::where('is_active', true)->pluck('id');
+        $resultsByProgram = ExamResult::with('exam')
+            ->whereHas('exam', fn($q) => $q->whereIn('program_id', $programIds))
+            ->get()
+            ->groupBy(fn($r) => $r->exam?->program_id);
+
+        $programs = Program::where('is_active', true)->withCount('students')->get()->map(function ($p) use ($resultsByProgram) {
+            $results = $resultsByProgram->get($p->id, collect());
+            $total   = $results->count();
+            $passed  = $results->filter(fn($r) => !$r->is_absent && $r->exam && $r->marks_obtained >= ($r->exam->passing_marks ?? 40))->count();
             $p->pass_rate = $total > 0 ? round(($passed / $total) * 100, 1) : 0;
             return $p;
         });
@@ -225,11 +246,19 @@ class DeanController extends Controller
 
     public function attendance()
     {
-        $programs = Program::where('is_active', true)->get()->map(function ($p) {
-            $studentIds = Student::where('program_id', $p->id)->where('status', 'active')->pluck('id');
-            $total   = Attendance::whereIn('student_id', $studentIds)->count();
-            $present = Attendance::whereIn('student_id', $studentIds)->where('status', 'present')->count();
-            $p->att_pct  = $total > 0 ? round(($present / $total) * 100, 1) : 0;
+        // Single JOIN query instead of 3 queries per program
+        $attendanceByProgram = Attendance::selectRaw(
+            'students.program_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count'
+        )->join('students', 'attendances.student_id', '=', 'students.id')
+         ->groupBy('students.program_id')
+         ->get()
+         ->keyBy('program_id');
+
+        $programs = Program::where('is_active', true)->get()->map(function ($p) use ($attendanceByProgram) {
+            $att = $attendanceByProgram->get($p->id);
+            $total   = $att->total ?? 0;
+            $present = $att->present_count ?? 0;
+            $p->att_pct   = $total > 0 ? round(($present / $total) * 100, 1) : 0;
             $p->att_total = $total;
             return $p;
         });
@@ -293,7 +322,6 @@ class DeanController extends Controller
                 ]);
             }
 
-            // Create next approval chain for Program Chair
             ApprovalWorkflow::create([
                 'approvable_type' => Applicant::class,
                 'approvable_id'   => $applicant->id,

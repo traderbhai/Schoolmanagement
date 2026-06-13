@@ -19,7 +19,7 @@
             <div class="card-header"><strong>Leave Details</strong></div>
             <div class="card-body">
                 <table class="table table-sm table-borderless mb-0" style="font-size:.88rem">
-                    <tr><td class="text-muted" style="width:40%">Teacher</td><td class="fw-semibold">{{ $leave->teacher->user->name }}</td></tr>
+                    <tr><td class="text-muted" style="width:40%">Teacher</td><td class="fw-semibold">{{ $leave->teacher?->user?->name ?? '—' }}</td></tr>
                     <tr><td class="text-muted">Leave Type</td><td>{{ ucfirst($leave->leave_type) }}</td></tr>
                     <tr><td class="text-muted">From Date</td><td>{{ $leave->from_date->format('d M Y') }}</td></tr>
                     <tr><td class="text-muted">To Date</td><td>{{ $leave->to_date->format('d M Y') }}</td></tr>

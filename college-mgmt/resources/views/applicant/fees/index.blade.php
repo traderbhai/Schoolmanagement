@@ -92,7 +92,7 @@
                 <div class="alert alert-success py-2 mb-0">
                     <i class="bi bi-check-circle me-1"></i>
                     Paid ₹{{ number_format($payment->amount_paid, 0) }} via {{ $payment->payment_mode_label }}
-                    on {{ $payment->payment_date->format('d M Y') }}.
+                    on {{ $payment->payment_date?->format('d M Y') ?? '—' }}.
                     Verified on {{ $payment->verified_at?->format('d M Y') }}.
                     <a href="{{ route('applicant.fees.show', $payment) }}" class="ms-2 text-success fw-bold">View Details</a>
                 </div>

@@ -71,9 +71,9 @@
                                     @endif
 
                                     @if($step['key'] === 'submitted' && $applicant->applied_at)
-                                        <p class="text-muted small mb-0 mt-1">{{ $applicant->applied_at->format('d M Y, h:i A') }}</p>
+                                        <p class="text-muted small mb-0 mt-1">{{ $applicant->applied_at?->format('d M Y, h:i A') ?? '—' }}</p>
                                     @elseif($step['key'] === 'shortlisted' && $applicant->reviewed_at && in_array($applicant->status, ['shortlisted', 'selected']))
-                                        <p class="text-muted small mb-0 mt-1">{{ $applicant->reviewed_at->format('d M Y') }}</p>
+                                        <p class="text-muted small mb-0 mt-1">{{ $applicant->reviewed_at?->format('d M Y') ?? '—' }}</p>
                                     @endif
                                 </div>
                             </div>

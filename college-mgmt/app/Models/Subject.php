@@ -14,4 +14,5 @@ class Subject extends Model
     public function timetableEntries() { return $this->hasMany(TimetableEntry::class); }
     public function enrollments() { return $this->hasMany(Enrollment::class); }
     public function exams() { return $this->hasMany(Exam::class); }
+    public function courseOutcomes() { return $this->hasMany(CourseOutcome::class); }
 }

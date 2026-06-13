@@ -112,6 +112,9 @@
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif">
             <i class="bi bi-megaphone"></i> Notices
         </a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif">
             <i class="bi bi-chat-square-text me-2"></i>Grievances
         </a>
@@ -126,6 +129,12 @@
         </a>
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif">
             <i class="bi bi-file-earmark-text me-2"></i>Document Requests
+        </a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif">
+            <i class="bi bi-door-open me-2"></i>Outpass Request
+        </a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif">
+            <i class="bi bi-book me-2"></i>My Library
         </a>
 
         <div class="sidebar-divider"></div>
@@ -193,11 +202,13 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Support</div>
         <a href="{{ route('student.notices') }}" class="nav-link @if(request()->routeIs('student.notices*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
         <a href="{{ route('student.grievances.index') }}" class="nav-link @if(request()->routeIs('student.grievances*')) active @endif"><i class="bi bi-chat-square-text me-2"></i>Grievances</a>
         <a href="{{ route('student.mentor.index') }}" class="nav-link @if(request()->routeIs('student.mentor.*')) active @endif"><i class="bi bi-person-badge me-2"></i>My Mentor</a>
         <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>
         <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif"><i class="bi bi-door-open me-2"></i>Outpass Request</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif"><i class="bi bi-card-text me-2"></i>Academic Summary</a>
@@ -236,6 +247,10 @@
             <span class="text-muted small d-none d-md-inline me-2">
                 {{ Auth::user()->name }}
             </span>
+            <a href="{{ route('notifications.index') }}" class="notif-btn text-decoration-none me-1" title="Notifications">
+                <i class="bi bi-bell" style="font-size:1rem"></i>
+                <span id="studentNotifBadge" class="notif-badge" style="display:none;font-size:.6rem;width:auto;height:auto;padding:1px 4px;border-radius:8px;background:#ef4444;color:#fff;position:absolute;top:4px;right:4px;"></span>
+            </a>
             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px;">
@@ -274,6 +289,27 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Notification badge polling (every 60s)
+(function () {
+    var badge = document.getElementById('studentNotifBadge');
+    if (!badge) return;
+    function updateCount() {
+        fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = '';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }).catch(function() {});
+    }
+    updateCount();
+    setInterval(updateCount, 60000);
+})();
+</script>
 @stack('scripts')
 </body>
 </html>

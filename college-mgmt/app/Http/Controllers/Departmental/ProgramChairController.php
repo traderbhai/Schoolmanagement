@@ -56,24 +56,32 @@ class ProgramChairController extends Controller
 
         // Recent exams
         $recentExams = Exam::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
-            ->with('subject')
+            ->with(['subject', 'examResults'])
             ->latest('exam_date')
             ->take(6)
             ->get()
             ->map(function($exam) {
-                $results = ExamResult::where('exam_id', $exam->id)->get();
+                $results = $exam->examResults;
                 $exam->result_count = $results->count();
                 $exam->pass_count = $results->where('marks_obtained', '>=', ($exam->passing_marks ?? 40))->count();
                 return $exam;
             });
 
+        // Pre-aggregate attendance per subject (join through timetable_entries)
+        $subjectAttData = \App\Models\Attendance::join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+            ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('timetable_entries.subject_id')
+            ->get()
+            ->keyBy('subject_id');
+
         // Subjects with attendance < 75%
         $lowAttSubjects = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
             ->with('program')
             ->take(20)->get()
-            ->map(function($subject) {
-                $total = Attendance::where('subject_id', $subject->id)->count();
-                $present = Attendance::where('subject_id', $subject->id)->where('status', 'present')->count();
+            ->map(function($subject) use ($subjectAttData) {
+                $att = $subjectAttData->get($subject->id);
+                $total = $att?->total ?? 0;
+                $present = $att?->present_count ?? 0;
                 $subject->attendance_pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
                 return $subject;
             })
@@ -84,17 +92,25 @@ class ProgramChairController extends Controller
         // At-risk students (attendance < 75% in any subject, quick approximation)
         $atRiskStudents = collect();
         try {
-            $pmcStudentCtrl = new \App\Http\Controllers\Departmental\PmcStudentController();
-            // Use a lightweight in-line approach for the dashboard
-            $allStudents = Student::whereIn('program_id', $programIds)
-                ->where('status', 'active')->with(['user','batch'])->take(100)->get();
-            $atRiskStudents = $allStudents->filter(function ($student) {
-                $attBySubject = Attendance::where('student_id', $student->id)
-                    ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present')
-                    ->groupBy('subject_id')->get();
+            $studentIds = Student::whereIn('program_id', $programIds)->where('status', 'active')->take(100)->pluck('id');
+
+            $studentAttBySubject = \App\Models\Attendance::whereIn('attendances.student_id', $studentIds)
+                ->join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+                ->selectRaw('attendances.student_id, timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
+                ->groupBy('attendances.student_id', 'timetable_entries.subject_id')
+                ->get()
+                ->groupBy('student_id');
+
+            $studentResults = \App\Models\ExamResult::whereIn('student_id', $studentIds)
+                ->get()
+                ->groupBy('student_id');
+
+            $allStudents = Student::whereIn('id', $studentIds)->with(['user','batch'])->get();
+            $atRiskStudents = $allStudents->filter(function ($student) use ($studentAttBySubject, $studentResults) {
+                $attBySubject = $studentAttBySubject->get($student->id, collect());
                 $risks = [];
-                if ($attBySubject->filter(fn($r) => $r->total > 0 && ($r->present/$r->total) < 0.75)->isNotEmpty()) $risks[] = 'attendance';
-                $results = ExamResult::where('student_id', $student->id)->get();
+                if ($attBySubject->filter(fn($r) => $r->total > 0 && ($r->present_count/$r->total) < 0.75)->isNotEmpty()) $risks[] = 'attendance';
+                $results = $studentResults->get($student->id, collect());
                 if ($results->isNotEmpty()) {
                     $arrears = $results->filter(fn($r) => $r->exam && ($r->marks_obtained / max($r->exam->total_marks??100,1))*100 < 35);
                     if ($arrears->isNotEmpty()) $risks[] = 'arrear';

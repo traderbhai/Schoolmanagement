@@ -116,9 +116,6 @@ class CmcController extends Controller
         ]);
 
         $placement->update($request->only(['application_status', 'offered_package', 'remarks']));
-        if ($request->application_status === 'selected') {
-            $placement->update(['status' => 'selected']);
-        }
         return back()->with('success', 'Application status updated.');
     }
 
@@ -133,7 +130,7 @@ class CmcController extends Controller
     {
         $byProgram = Placement::join('students', 'placements.student_id', '=', 'students.id')
             ->join('programs', 'students.program_id', '=', 'programs.id')
-            ->where('placements.status', 'selected')
+            ->where('placements.application_status', 'selected')
             ->selectRaw('programs.name as program_name, COUNT(*) as placed_count')
             ->groupBy('programs.id', 'programs.name')
             ->orderByDesc('placed_count')->get();

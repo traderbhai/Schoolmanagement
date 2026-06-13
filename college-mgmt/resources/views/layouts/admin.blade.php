@@ -223,6 +223,9 @@
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
             <i class="bi bi-journal-text"></i> Curriculum Changes
         </a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
+            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
+        </a>
         <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.*')) active @endif">
             <i class="bi bi-people"></i> Faculty Roster
         </a>
@@ -346,6 +349,18 @@
         </a>
 
         <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
+            <i class="bi bi-building me-2"></i>Hostel
+        </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
+        </a>
+
+        <div class="sidebar-divider"></div>
         <div class="section-label">System</div>
         <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
             <i class="bi bi-graph-up-arrow"></i> Analytics
@@ -393,6 +408,9 @@
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
             <i class="bi bi-journal-text"></i> Curriculum Changes
         </a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
+            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="section-label">Exams</div>
@@ -421,6 +439,15 @@
         <div class="section-label">Placement</div>
         <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
             <i class="bi bi-bar-chart-line"></i> Placement Stats
+        </a>
+
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
+            <i class="bi bi-building me-2"></i>Hostel
+        </a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
+            <i class="bi bi-book-half me-2"></i>Library
         </a>
 
         <div class="sidebar-divider"></div>
@@ -849,6 +876,10 @@
         <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
         <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
         <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
+        <div class="sidebar-divider"></div>
+        <div class="section-label">Hostel</div>
+        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif"><i class="bi bi-building me-2"></i>Hostel</a>
+        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
         @endhasrole
 
         {{-- ===================== DEAN ACADEMICS MOBILE ===================== --}}
@@ -864,6 +895,7 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Curriculum</div>
         <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif"><i class="bi bi-journal-text"></i> Curriculum Changes</a>
+        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif"><i class="bi bi-diagram-3 me-1"></i>OBE Framework</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Exams</div>
         <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams</a>
@@ -1237,19 +1269,27 @@
     });
 })();
 
-// ── Notification bell unread count ─────────────────────────
+// ── Notification bell unread count (polls every 60s) ────────
 (function () {
     var badge = document.getElementById('notifBadge');
     if (!badge) return;
-    fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data.unread_count > 0) {
-                badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
-                badge.style.display = '';
-            }
-        })
-        .catch(function () {});
+    function updateCount() {
+        fetch('{{ route('notifications.unread-count') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+                    badge.style.display = '';
+                    document.title = '(' + (data.unread_count > 99 ? '99+' : data.unread_count) + ') ' + document.title.replace(/^\(\d+\+?\) /, '');
+                } else {
+                    badge.style.display = 'none';
+                    document.title = document.title.replace(/^\(\d+\+?\) /, '');
+                }
+            })
+            .catch(function () {});
+    }
+    updateCount();
+    setInterval(updateCount, 60000);
 })();
 </script>
 
