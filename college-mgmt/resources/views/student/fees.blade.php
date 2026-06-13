@@ -18,7 +18,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="opacity-75 small fw-semibold mb-1">Total Fee Due</div>
-                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">₹{{ number_format($totalDue) }}</div>
+                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">Rs. {{ number_format($totalDue) }}</div>
                         <div class="opacity-75 mt-2" style="font-size:.78rem">
                             @if($currentYear) {{ $currentYear->name }} @else Current year @endif
                         </div>
@@ -36,7 +36,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="opacity-75 small fw-semibold mb-1">Amount Paid</div>
-                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">₹{{ number_format($totalPaid) }}</div>
+                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">Rs. {{ number_format($totalPaid) }}</div>
                         <div class="opacity-75 mt-2" style="font-size:.78rem">Confirmed payments</div>
                     </div>
                     <div class="opacity-40"><i class="bi bi-check-circle-fill" style="font-size:2.5rem"></i></div>
@@ -56,9 +56,9 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="opacity-75 small fw-semibold mb-1">Balance Due</div>
-                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">₹{{ number_format($balance) }}</div>
+                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">Rs. {{ number_format($balance) }}</div>
                         <div class="opacity-75 mt-2" style="font-size:.78rem">
-                            {{ $balance > 0 ? 'Outstanding amount' : 'Fully paid — No dues' }}
+                            {{ $balance > 0 ? 'Outstanding amount' : 'Fully paid - No dues' }}
                         </div>
                     </div>
                     <div class="opacity-40">
@@ -76,7 +76,7 @@
     <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-2">
         <i class="bi bi-file-earmark-text text-primary"></i> Fee Demands
         @if($outstandingTotal > 0)
-            <span class="badge bg-danger ms-auto">Outstanding: ₹{{ number_format($outstandingTotal, 2) }}</span>
+            <span class="badge bg-danger ms-auto">Outstanding: Rs. {{ number_format($outstandingTotal, 2) }}</span>
         @endif
     </div>
     <div class="card-body p-0">
@@ -97,17 +97,17 @@
                         $isOverdue = $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending';
                     @endphp
                     <tr>
-                        <td>{{ $demand->term->name ?? '—' }}</td>
-                        <td class="text-end">₹{{ number_format($demand->final_amount, 2) }}</td>
+                        <td>{{ $demand->term->name ?? '-' }}</td>
+                        <td class="text-end">Rs. {{ number_format($demand->final_amount, 2) }}</td>
                         <td class="text-end">
                             @if(($demand->penalty_amount ?? 0) > 0)
-                                <span class="text-danger fw-semibold">₹{{ number_format($demand->penalty_amount, 2) }}</span>
+                                <span class="text-danger fw-semibold">Rs. {{ number_format($demand->penalty_amount, 2) }}</span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">-</span>
                             @endif
                         </td>
                         <td class="{{ $isOverdue ? 'text-danger fw-semibold' : '' }}">
-                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '—' }}
+                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '-' }}
                             @if($isOverdue) <i class="bi bi-exclamation-circle-fill ms-1"></i> @endif
                         </td>
                         <td>
@@ -130,12 +130,69 @@
 </div>
 @endif
 
+{{-- Hostel Fee Demands --}}
+@if($hostelFeeDemands->isNotEmpty())
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-house-door text-success"></i> Hostel Fee Demands
+        @if($hostelOutstandingTotal > 0)
+            <span class="badge bg-danger ms-auto">Outstanding: Rs. {{ number_format($hostelOutstandingTotal, 2) }}</span>
+        @endif
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Month</th>
+                        <th>Room</th>
+                        <th class="text-end">Amount</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($hostelFeeDemands as $demand)
+                    @php
+                        $isHostelOverdue = $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending';
+                    @endphp
+                    <tr>
+                        <td>{{ $demand->month }}</td>
+                        <td>
+                            {{ $demand->allocation->room->block->name ?? 'Hostel' }} /
+                            Room {{ $demand->allocation->room->room_number ?? '-' }}
+                        </td>
+                        <td class="text-end fw-semibold">Rs. {{ number_format($demand->amount, 2) }}</td>
+                        <td class="{{ $isHostelOverdue ? 'text-danger fw-semibold' : '' }}">
+                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '-' }}
+                            @if($isHostelOverdue) <i class="bi bi-exclamation-circle-fill ms-1"></i> @endif
+                        </td>
+                        <td>
+                            @if($demand->status === 'paid')
+                                <span class="badge bg-success">Paid</span>
+                            @elseif($demand->status === 'waived')
+                                <span class="badge bg-secondary">Waived</span>
+                            @elseif($isHostelOverdue)
+                                <span class="badge bg-danger">Overdue</span>
+                            @else
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- How to Pay Info Box --}}
 <div class="alert alert-info d-flex gap-2 align-items-start mb-4" role="alert">
     <i class="bi bi-info-circle-fill fs-5 mt-1 flex-shrink-0"></i>
     <div>
         <strong>How to Pay Your Fees</strong><br>
-        Contact the accounts office or admin portal for fee payment. Mention your enrollment number and a receipt will be issued immediately. Online payment options (NEFT, UPI, RTGS) are also accepted — share the transaction reference with the accounts team.
+        Contact the accounts office or admin portal for fee payment. Mention your enrollment number and a receipt will be issued immediately. Online payment options (NEFT, UPI, RTGS) are also accepted - share the transaction reference with the accounts team.
     </div>
 </div>
 
@@ -175,15 +232,15 @@
                                 <span class="badge bg-secondary bg-opacity-10 text-secondary ms-1">Sem {{ $fs->semester_number }}</span>
                             @endif
                         </td>
-                        <td class="text-muted">{{ $fs->description ?: '—' }}</td>
-                        <td class="text-end fw-semibold">₹{{ number_format($fs->amount, 2) }}</td>
+                        <td class="text-muted">{{ $fs->description ?: '-' }}</td>
+                        <td class="text-end fw-semibold">Rs. {{ number_format($fs->amount, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
                         <td colspan="2" class="fw-bold text-end">Total Fee Due</td>
-                        <td class="text-end fw-bold text-primary" style="font-size:1.05rem">₹{{ number_format($totalDue, 2) }}</td>
+                        <td class="text-end fw-bold text-primary" style="font-size:1.05rem">Rs. {{ number_format($totalDue, 2) }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -228,15 +285,15 @@
                             @if($payment->receipt_number)
                                 <span class="font-monospace fw-bold" style="font-size:.82rem;color:#059669">{{ $payment->receipt_number }}</span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">-</span>
                             @endif
                         </td>
                         <td class="text-muted small">
-                            {{ $payment->feeStructure ? ucwords(str_replace('_', ' ', $payment->feeStructure->fee_type)) : '—' }}
+                            {{ $payment->feeStructure ? ucwords(str_replace('_', ' ', $payment->feeStructure->fee_type)) : '-' }}
                         </td>
-                        <td class="text-end fw-bold" style="font-size:.95rem">₹{{ number_format($payment->amount_paid, 2) }}</td>
-                        <td class="small">{{ $payment->payment_date ? $payment->payment_date->format('d M Y') : '—' }}</td>
-                        <td class="small text-muted">{{ $payment->payment_method ? ucfirst($payment->payment_method) : '—' }}</td>
+                        <td class="text-end fw-bold" style="font-size:.95rem">Rs. {{ number_format($payment->amount_paid, 2) }}</td>
+                        <td class="small">{{ $payment->payment_date ? $payment->payment_date->format('d M Y') : '-' }}</td>
+                        <td class="small text-muted">{{ $payment->payment_method ? ucfirst($payment->payment_method) : '-' }}</td>
                         <td>
                             @if($payment->status === 'paid')
                                 <span class="badge-paid">Paid</span>

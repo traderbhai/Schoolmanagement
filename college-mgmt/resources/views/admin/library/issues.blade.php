@@ -72,10 +72,10 @@
                                 <span class="badge bg-secondary">{{ $issue->status }}</span>
                             @endif
                         </td>
-                        <td>{{ $issue->fine_amount > 0 ? '₹'.$issue->fine_amount : '-' }}</td>
+                        <td>{{ $issue->fine_amount > 0 ? 'Rs. '.number_format((float) $issue->fine_amount, 2) : '-' }}</td>
                         <td>
                             @if(in_array($issue->status, ['issued','overdue']))
-                                <form method="POST" action="{{ route('admin.library.return', $issue) }}" class="d-inline" onsubmit="return confirm('Mark this book as returned?')">
+                                <form method="POST" action="{{ route('admin.library.issues.return', $issue) }}" class="d-inline" onsubmit="return confirm('Mark this book as returned?')">
                                     @csrf
                                     <button class="btn btn-sm btn-outline-success" title="Return"><i class="bi bi-arrow-return-left"></i></button>
                                 </form>
@@ -106,8 +106,8 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Book Copy Accession Number *</label>
-                        <input type="number" name="book_copy_id" class="form-control" placeholder="Enter book copy ID" required>
+                        <label class="form-label fw-semibold">Book Copy ID *</label>
+                        <input type="number" name="book_copy_id" class="form-control" placeholder="Enter available book copy ID" required>
                         <div class="form-text">Enter the book copy ID (numeric). You can find it on the book detail page.</div>
                     </div>
                     <div class="mb-3">

@@ -18,7 +18,7 @@
       <tbody>
         @forelse($applications as $app)
         @php
-          $colors=['applied'=>'secondary','shortlisted'=>'info','interviewed'=>'primary','selected'=>'success','rejected'=>'danger'];
+          $colors=['applied'=>'secondary','shortlisted'=>'info','interview'=>'primary','selected'=>'success','rejected'=>'danger','withdrawn'=>'secondary'];
           $status = $app->application_status ?? 'applied';
         @endphp
         <tr>
@@ -54,14 +54,14 @@
           <div class="mb-3">
             <label class="form-label small fw-semibold">Status</label>
             <select name="application_status" id="updateStatus" class="form-select" required>
-              @foreach(['applied','shortlisted','interviewed','selected','rejected'] as $s)
+              @foreach(['applied','shortlisted','interview','selected','rejected','withdrawn'] as $s)
               <option value="{{ $s }}">{{ ucfirst($s) }}</option>
               @endforeach
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label small fw-semibold">Offered Package</label>
-            <input type="text" name="offered_package" id="updatePackage" class="form-control" placeholder="e.g. 6 LPA">
+            <input type="number" name="offered_package" id="updatePackage" class="form-control" min="0" step="0.01" placeholder="e.g. 6.5">
           </div>
           <div>
             <label class="form-label small fw-semibold">Remarks</label>

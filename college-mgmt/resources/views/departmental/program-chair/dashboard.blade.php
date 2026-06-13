@@ -24,6 +24,19 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Program Chair Priority</div>
+            <h5 class="fw-bold mb-1">{{ $chairPriority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $chairPriority['body'] }}</p>
+        </div>
+        <a href="{{ $chairPriority['route'] }}" class="btn btn-sm {{ $chairPriority['level'] === 'danger' ? 'btn-danger' : ($chairPriority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $chairPriority['action'] }}
+        </a>
+    </div>
+</div>
+
 {{-- KPI Row --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-xl-2">

@@ -16,24 +16,34 @@ class ApplyController extends Controller
 {
     public function index()
     {
-        $programs = Program::where('is_active', true)->get();
         $applicationWindows = ApplicationWindow::where('is_active', true)
+            ->where('opens_at', '<=', now())
+            ->where('closes_at', '>', now())
+            ->where(function ($query) {
+                $query->whereNull('capacity_limit')
+                    ->orWhereColumn('current_applications', '<', 'capacity_limit');
+            })
             ->with(['program', 'batch'])
             ->orderBy('opens_at')
             ->get();
 
-        return view('apply.index', compact('programs', 'applicationWindows'));
+        return view('apply.index', compact('applicationWindows'));
     }
 
     public function show(Program $program)
     {
         $window = ApplicationWindow::where('program_id', $program->id)
             ->where('is_active', true)
+            ->where('opens_at', '<=', now())
             ->where('closes_at', '>', now())
+            ->where(function ($query) {
+                $query->whereNull('capacity_limit')
+                    ->orWhereColumn('current_applications', '<', 'capacity_limit');
+            })
             ->first();
 
         if (!$window) {
-            return redirect()->route('apply')->with('error', 'Applications for this program are currently closed.');
+            return redirect()->route('apply')->with('error', 'Applications for this program are not currently open.');
         }
 
         return view('apply.register', compact('program', 'window'));
@@ -62,7 +72,7 @@ class ApplyController extends Controller
             'password' => 'required|min:8|confirmed',
         ]);
 
-        DB::transaction(function () use ($validated, $program, $window, &$applicant) {
+        DB::transaction(function () use ($validated, $program, $window, &$applicant, &$user) {
             $user = User::create([
                 'name'     => $validated['name'],
                 'email'    => $validated['email'],
@@ -70,20 +80,25 @@ class ApplyController extends Controller
                 'email_verified_at' => now(),
             ]);
 
-            Role::firstOrCreate(['name' => 'applicant']);
+            Role::firstOrCreate(['name' => 'applicant', 'guard_name' => 'web']);
             $user->assignRole('applicant');
 
             $applicant = Applicant::create([
                 'user_id'    => $user->id,
                 'program_id' => $program->id,
+                'batch_id'   => $window->batch_id,
                 'status'     => 'draft',
-                'personal_data' => ['phone' => $validated['phone']],
+                'personal_data' => [
+                    'name'  => $validated['name'],
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                ],
             ]);
 
             $window->increment('current_applications');
         });
 
-        Auth::login(User::where('email', $validated['email'])->first());
+        Auth::login($user);
 
         return redirect()->route('applicant.dashboard')
             ->with('success', 'Welcome! Your application has been created. Please complete all sections.');

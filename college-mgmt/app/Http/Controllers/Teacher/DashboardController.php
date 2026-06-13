@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableSlot};
+use App\Models\{Assignment, AssignmentSubmission, Semester, Notice, TimetableSlot};
 use App\Services\TimetableService;
 
 class DashboardController extends Controller
@@ -22,6 +22,25 @@ class DashboardController extends Controller
         $todayDay = now()->dayOfWeekIso;
         $todayClasses = isset($grid[$todayDay]) ? array_filter($grid[$todayDay]) : [];
 
-        return view('teacher.dashboard', compact('teacher','currentSemester','notices','slots','grid','todayClasses','weeklyLoad'));
+        $activeAssignments = Assignment::where('created_by', $user->id)
+            ->where('is_published', true)
+            ->where('due_at', '>=', now())
+            ->count();
+
+        $pendingGrading = AssignmentSubmission::whereHas('assignment', fn($q) => $q->where('created_by', $user->id))
+            ->where('status', 'submitted')
+            ->count();
+
+        return view('teacher.dashboard', compact(
+            'teacher',
+            'currentSemester',
+            'notices',
+            'slots',
+            'grid',
+            'todayClasses',
+            'weeklyLoad',
+            'activeAssignments',
+            'pendingGrading'
+        ));
     }
 }

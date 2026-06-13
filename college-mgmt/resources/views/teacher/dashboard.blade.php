@@ -24,6 +24,42 @@
     </div>
 </div>
 
+{{-- Teaching Priority --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3 p-md-4">
+        <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between">
+            <div>
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Today's Teaching Priority</div>
+                @if($pendingGrading > 0)
+                    <h5 class="fw-bold mb-1">Grade {{ $pendingGrading }} pending submission{{ $pendingGrading === 1 ? '' : 's' }}</h5>
+                    <p class="text-muted mb-0">Students are waiting for feedback. Review submitted assignments before the next class or deadline cycle.</p>
+                @elseif(count($todayClasses) > 0)
+                    <h5 class="fw-bold mb-1">Mark attendance for today's classes</h5>
+                    <p class="text-muted mb-0">{{ count($todayClasses) }} class{{ count($todayClasses) === 1 ? '' : 'es' }} scheduled today. Open attendance when the class is ready.</p>
+                @elseif($activeAssignments > 0)
+                    <h5 class="fw-bold mb-1">Monitor active assignments</h5>
+                    <p class="text-muted mb-0">{{ $activeAssignments }} published assignment{{ $activeAssignments === 1 ? '' : 's' }} still {{ $activeAssignments === 1 ? 'has' : 'have' }} an upcoming due date.</p>
+                @else
+                    <h5 class="fw-bold mb-1">No urgent teaching action due today</h5>
+                    <p class="text-muted mb-0">Use this time to upload materials, create assignments, or review your timetable for upcoming classes.</p>
+                @endif
+            </div>
+            <div class="d-grid gap-2" style="min-width: 220px;">
+                @if($pendingGrading > 0)
+                    <a href="{{ route('teacher.assignments.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-check2-square me-1"></i> Review Submissions</a>
+                @elseif(count($todayClasses) > 0)
+                    <a href="{{ route('teacher.attendance.mark') }}" class="btn btn-warning btn-sm"><i class="bi bi-person-check me-1"></i> Mark Attendance</a>
+                @elseif($activeAssignments > 0)
+                    <a href="{{ route('teacher.assignments.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i> View Assignments</a>
+                @else
+                    <a href="{{ route('teacher.materials.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-upload me-1"></i> Upload Material</a>
+                @endif
+                <a href="{{ route('teacher.timetable.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calendar-week me-1"></i> View Timetable</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-md-4">
@@ -44,11 +80,7 @@
                 <div>
                     <div class="kpi-label">My Classes Today</div>
                     <div class="kpi-value">
-                        @php
-                            $todayDayNum = now()->dayOfWeek; // 0=Sun,1=Mon,...6=Sat
-                            $todayGrid = isset($grid[$todayDayNum]) ? count($grid[$todayDayNum]) : 0;
-                        @endphp
-                        {{ $todayGrid }}<span style="font-size:1rem;opacity:.7"> classes</span>
+                        {{ count($todayClasses) }}<span style="font-size:1rem;opacity:.7"> classes</span>
                     </div>
                     <div class="kpi-trend"><i class="bi bi-calendar-day me-1"></i>{{ now()->format('l') }}</div>
                 </div>
@@ -99,7 +131,7 @@
                         <td class="text-center fw-semibold small">{{ $slot->name }}</td>
                         <td colspan="6" class="text-center">
                             <i class="bi bi-cup-hot me-1 opacity-50"></i>
-                            {{ $slot->start_time }} – {{ $slot->end_time }}
+                            {{ $slot->start_time }} - {{ $slot->end_time }}
                         </td>
                     </tr>
                     @else

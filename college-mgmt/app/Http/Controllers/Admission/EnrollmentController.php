@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Applicant, EnrollmentConfirmation, Program, Batch, Specialization, Term};
+use App\Models\{Applicant, EnrollmentConfirmation, Program, Batch, RequiredDocument, Specialization, Term};
 use App\Services\EnrollmentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -44,8 +44,29 @@ class EnrollmentController extends Controller
 
         $isSelected       = $applicant->status === 'selected';
         $hasVerifiedPayment = $applicant->payments->where('status', 'verified')->isNotEmpty();
-        $hasVerifiedDocs  = $applicant->documents->where('status', 'verified')->isNotEmpty();
+        $mandatoryDocumentIds = RequiredDocument::where('program_id', $applicant->program_id)
+            ->where('is_mandatory', true)
+            ->where('is_active', true)
+            ->pluck('id');
+        $mandatoryDocumentCount = $mandatoryDocumentIds->count();
+        $verifiedMandatoryDocumentCount = $mandatoryDocumentCount > 0
+            ? $applicant->documents
+                ->whereIn('required_document_id', $mandatoryDocumentIds)
+                ->where('status', 'verified')
+                ->count()
+            : 0;
+        $hasVerifiedMandatoryDocs = $mandatoryDocumentCount === 0
+            || $verifiedMandatoryDocumentCount >= $mandatoryDocumentCount;
+        $missingMandatoryDocuments = RequiredDocument::whereIn('id', $mandatoryDocumentIds)
+            ->whereNotIn('id', $applicant->documents
+                ->where('status', 'verified')
+                ->pluck('required_document_id')
+                ->filter()
+                ->all())
+            ->orderBy('sort_order')
+            ->get();
         $alreadyEnrolled  = $applicant->enrollmentConfirmation()->exists();
+        $canEnroll = $isSelected && $hasVerifiedPayment && $hasVerifiedMandatoryDocs && ! $alreadyEnrolled;
 
         $specializations = Specialization::all();
         $terms = $applicant->batch_id
@@ -53,8 +74,10 @@ class EnrollmentController extends Controller
             : collect();
 
         return view('admission.enrollment.create', compact(
-            'applicant', 'isSelected', 'hasVerifiedPayment', 'hasVerifiedDocs',
-            'alreadyEnrolled', 'specializations', 'terms'
+            'applicant', 'isSelected', 'hasVerifiedPayment', 'mandatoryDocumentCount',
+            'verifiedMandatoryDocumentCount', 'hasVerifiedMandatoryDocs',
+            'missingMandatoryDocuments', 'alreadyEnrolled', 'canEnroll',
+            'specializations', 'terms'
         ));
     }
 

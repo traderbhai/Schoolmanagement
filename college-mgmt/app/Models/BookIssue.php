@@ -20,6 +20,6 @@ class BookIssue extends Model {
     }
     public function getDaysOverdueAttribute(): int {
         if (!$this->is_overdue) return 0;
-        return (int) now()->diffInDays($this->due_date);
+        return (int) $this->due_date->startOfDay()->diffInDays(now()->startOfDay());
     }
 }

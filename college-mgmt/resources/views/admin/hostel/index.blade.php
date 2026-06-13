@@ -62,6 +62,9 @@
         <a href="{{ route('admin.hostel.allocations') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-person-check me-1"></i>All Allocations</a>
     </div>
     <div class="col-auto">
+        <a href="{{ route('admin.hostel.fees') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-cash-coin me-1"></i>Hostel Fees</a>
+    </div>
+    <div class="col-auto">
         <a href="{{ route('admin.hostel.outpasses') }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-door-open me-1"></i>Outpasses</a>
     </div>
     <div class="col-auto">
@@ -102,10 +105,10 @@
                                 <span class="badge bg-secondary">Mixed</span>
                             @endif
                         </td>
-                        <td>{{ $block->total_capacity ?? '—' }}</td>
+                        <td>{{ $block->total_capacity ?? '-' }}</td>
                         <td>{{ $block->occupied_count }}</td>
                         <td>{{ max(0, ($block->total_capacity ?? 0) - $block->occupied_count) }}</td>
-                        <td>{{ $block->warden?->name ?? '—' }}</td>
+                        <td>{{ $block->warden?->name ?? '-' }}</td>
                         <td>
                             @if($block->is_active)
                                 <span class="badge bg-success">Active</span>

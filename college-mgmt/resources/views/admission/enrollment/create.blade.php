@@ -15,8 +15,33 @@
 
 {{-- Pre-condition checklist --}}
 <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header fw-semibold bg-transparent">Pre-Enrollment Checklist</div>
+    <div class="card-header fw-semibold bg-transparent d-flex justify-content-between align-items-center">
+        <span>Enrollment Readiness</span>
+        @if($canEnroll)
+            <span class="badge bg-success">Ready for enrollment</span>
+        @else
+            <span class="badge bg-warning text-dark">Action required</span>
+        @endif
+    </div>
     <div class="card-body">
+        @if($canEnroll)
+            <div class="alert alert-success d-flex align-items-start gap-2 py-2">
+                <i class="bi bi-check-circle mt-1"></i>
+                <div>
+                    <div class="fw-semibold">Ready for enrollment</div>
+                    <div class="small">All required admission checks are complete. Confirming enrollment will create the student profile and move this user into the student portal.</div>
+                </div>
+            </div>
+        @else
+            <div class="alert alert-warning d-flex align-items-start gap-2 py-2">
+                <i class="bi bi-exclamation-triangle mt-1"></i>
+                <div>
+                    <div class="fw-semibold">Enrollment is locked until every required check is complete.</div>
+                    <div class="small">Resolve the items below before confirming enrollment. These checks protect admissions, accounts, and student records from incomplete onboarding.</div>
+                </div>
+            </div>
+        @endif
+
         <ul class="list-unstyled mb-0">
             <li class="mb-2">
                 @if($isSelected)
@@ -33,10 +58,14 @@
                 @endif
             </li>
             <li class="mb-2">
-                @if($hasVerifiedDocs)
-                    <span class="badge bg-success me-2"><i class="bi bi-check-lg"></i></span> Verified documents uploaded
+                @if($hasVerifiedMandatoryDocs)
+                    <span class="badge bg-success me-2"><i class="bi bi-check-lg"></i></span>
+                    Mandatory documents verified
+                    <span class="text-muted small">{{ $verifiedMandatoryDocumentCount }}/{{ $mandatoryDocumentCount }} required</span>
                 @else
-                    <span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i></span> No verified documents (enrollment can still proceed)
+                    <span class="badge bg-danger me-2"><i class="bi bi-x-lg"></i></span>
+                    Mandatory documents are incomplete
+                    <span class="text-muted small">{{ $verifiedMandatoryDocumentCount }}/{{ $mandatoryDocumentCount }} required verified</span>
                 @endif
             </li>
             <li class="mb-2">
@@ -47,6 +76,17 @@
                 @endif
             </li>
         </ul>
+
+        @if(!$hasVerifiedMandatoryDocs && $missingMandatoryDocuments->isNotEmpty())
+            <div class="mt-3 border rounded p-3 bg-light">
+                <div class="small fw-semibold text-muted mb-2">Missing verified mandatory documents</div>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach($missingMandatoryDocuments as $document)
+                        <span class="badge bg-white text-dark border">{{ $document->name }}</span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 </div>
 
@@ -72,10 +112,10 @@
 <form action="{{ route('admission.enrollment.store', $applicant) }}" method="POST">
     @csrf
 
-    @if(!$isSelected || !$hasVerifiedPayment)
+    @if(!$canEnroll)
     <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        Pre-conditions are not fully met. Admins may override and proceed, but errors may occur.
+        <i class="bi bi-lock me-1"></i>
+        Enrollment is disabled until selected status, verified admission payment, mandatory document verification, and duplicate-enrollment checks all pass.
     </div>
     @endif
 
@@ -116,7 +156,7 @@
     </div>
 
     <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-success px-4">
+        <button type="submit" class="btn btn-success px-4" @disabled(!$canEnroll)>
             <i class="bi bi-person-check me-1"></i> Confirm Enrollment
         </button>
         <a href="{{ route('admission.applicants.show', $applicant) }}" class="btn btn-outline-secondary">Cancel</a>

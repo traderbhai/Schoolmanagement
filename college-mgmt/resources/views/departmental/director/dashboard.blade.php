@@ -19,6 +19,19 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Director Priority</div>
+            <h5 class="fw-bold mb-1">{{ $directorPriority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $directorPriority['body'] }}</p>
+        </div>
+        <a href="{{ $directorPriority['route'] }}" class="btn btn-sm {{ $directorPriority['level'] === 'danger' ? 'btn-danger' : ($directorPriority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $directorPriority['action'] }}
+        </a>
+    </div>
+</div>
+
 {{-- KPI Row --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-xl-2">

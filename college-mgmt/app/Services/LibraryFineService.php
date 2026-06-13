@@ -9,7 +9,7 @@ class LibraryFineService
     public function calculateFine(BookIssue $issue): float
     {
         if ($issue->returned_at || $issue->due_date >= now()->toDateString()) return 0;
-        $daysOverdue = now()->diffInDays($issue->due_date);
+        $daysOverdue = $issue->due_date->startOfDay()->diffInDays(now()->startOfDay());
         $userId = $issue->student?->user_id ?? $issue->teacher?->user_id;
         $membership = $userId ? LibraryMembership::where('user_id', $userId)->where('is_active', true)->first() : null;
         $ratePerDay = $membership ? (float)$membership->fine_per_day : 1.00;

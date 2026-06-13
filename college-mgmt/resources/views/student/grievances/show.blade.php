@@ -1,5 +1,5 @@
 @extends('layouts.student')
-@section('title', 'Grievance — ' . Str::limit($grievance->title, 40))
+@section('title', 'Grievance - ' . \Illuminate\Support\Str::limit($grievance->title, 40))
 @section('content')
 <div class="container py-4" style="max-width:800px">
     <nav aria-label="breadcrumb" class="mb-3">
@@ -9,43 +9,42 @@
         </ol>
     </nav>
 
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                 <h5 class="fw-semibold mb-0">{{ $grievance->title }}</h5>
-                @php $statBadge = match($grievance->status) { 'open'=>'warning','under_review'=>'info','escalated'=>'danger','resolved'=>'success',default=>'secondary' }; @endphp
-                <span class="badge bg-{{ $statBadge }} fs-6">{{ ucwords(str_replace('_',' ',$grievance->status)) }}</span>
+                {!! $grievance->status_badge !!}
             </div>
             <div class="row g-2 mb-3">
-                <div class="col-auto">
-                    @php $prioBadge = match($grievance->priority) { 'urgent'=>'danger','high'=>'warning','normal'=>'primary',default=>'secondary' }; @endphp
-                    <span class="badge bg-{{ $prioBadge }}">{{ ucfirst($grievance->priority) }}</span>
-                </div>
+                <div class="col-auto">{!! $grievance->priority_badge !!}</div>
                 <div class="col-auto"><span class="badge bg-secondary">{{ ucfirst($grievance->category) }}</span></div>
                 <div class="col-auto text-muted small">Submitted {{ $grievance->created_at->format('d M Y H:i') }}</div>
             </div>
             <p class="mb-0">{!! nl2br(e($grievance->description)) !!}</p>
 
-            @if($grievance->status === 'resolved' && $grievance->resolution_notes)
+            @if(in_array($grievance->status, ['resolved', 'closed']) && $grievance->resolution_notes)
             <div class="alert alert-success mt-3 mb-0">
-                <strong><i class="bi bi-check-circle me-1"></i>Resolved:</strong> {!! nl2br(e($grievance->resolution_notes)) !!}
+                <strong><i class="bi bi-check-circle me-1"></i>Resolution:</strong> {!! nl2br(e($grievance->resolution_notes)) !!}
                 @if($grievance->resolved_at)<div class="text-muted small mt-1">{{ $grievance->resolved_at->format('d M Y') }}</div>@endif
             </div>
             @endif
         </div>
-        @if($grievance->isOpen())
+        @if(in_array($grievance->status, ['open', 'under_review', 'escalated', 'resolved']))
         <div class="card-footer text-end">
-            <form method="POST" action="{{ route('student.grievances.close', $grievance) }}" class="d-inline" onsubmit="return confirm('Mark this grievance as resolved?')">
+            <form method="POST" action="{{ route('student.grievances.close', $grievance) }}" class="d-inline" onsubmit="return confirm('Close this grievance?')">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-check2-circle me-1"></i>Mark as Resolved
+                    <i class="bi bi-check2-circle me-1"></i>Close Grievance
                 </button>
             </form>
         </div>
         @endif
     </div>
 
-    {{-- Comment Thread --}}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header fw-semibold"><i class="bi bi-chat-dots me-2"></i>Updates & Comments</div>
         <div class="card-body p-0">
@@ -70,8 +69,7 @@
             <form method="POST" action="{{ route('student.grievances.comment', $grievance) }}">
                 @csrf
                 <div class="d-flex gap-2">
-                    <textarea name="comment" rows="2" class="form-control form-control-sm @error('comment') is-invalid @enderror"
-                        placeholder="Add a follow-up or additional information...">{{ old('comment') }}</textarea>
+                    <textarea name="comment" rows="2" class="form-control form-control-sm @error('comment') is-invalid @enderror" placeholder="Add a follow-up or additional information">{{ old('comment') }}</textarea>
                     <button type="submit" class="btn btn-sm btn-primary align-self-end">Send</button>
                 </div>
                 @error('comment')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror

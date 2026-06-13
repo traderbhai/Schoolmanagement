@@ -4,8 +4,20 @@
 
 @section('content')
 <div class="container-fluid py-3" style="max-width:1100px">
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Alumni Network</div>
+                <h5 class="fw-bold mb-1">{{ $alumniPriority['title'] }}</h5>
+                <p class="text-muted mb-0">{{ $alumniPriority['body'] }}</p>
+            </div>
+            <div class="text-end small text-muted">
+                <div><strong>{{ $sameProgramCount }}</strong> same program</div>
+                <div><strong>{{ $allVerifiedCount }}</strong> verified total</div>
+            </div>
+        </div>
+    </div>
 
-    {{-- Filters --}}
     <form method="GET" class="card border-0 shadow-sm mb-4">
         <div class="card-body py-2 px-3">
             <div class="row g-2 align-items-end">
@@ -20,13 +32,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small mb-1">Company</label>
-                    <input type="text" name="company" class="form-control form-control-sm"
-                           value="{{ request('company') }}" placeholder="Search by employer...">
+                    <input type="text" name="company" class="form-control form-control-sm" value="{{ request('company') }}" placeholder="Search by employer">
                 </div>
                 <div class="col-md-3">
                     <div class="form-check mt-3">
-                        <input class="form-check-input" type="checkbox" name="all_programs" value="1"
-                               id="allPrograms" {{ request('all_programs')?'checked':'' }}>
+                        <input class="form-check-input" type="checkbox" name="all_programs" value="1" id="allPrograms" {{ request('all_programs')?'checked':'' }}>
                         <label class="form-check-label small" for="allPrograms">Show all programs</label>
                     </div>
                 </div>
@@ -41,7 +51,7 @@
     @if($alumni->isEmpty())
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-people fs-1 d-block mb-2"></i>No alumni found matching your filters.
+            <i class="bi bi-people fs-1 d-block mb-2"></i>No verified alumni found matching your filters.
         </div>
     </div>
     @else
@@ -50,12 +60,11 @@
         <div class="col-md-4 col-lg-3">
             <div class="card border-0 shadow-sm h-100 text-center py-3">
                 <div class="card-body">
-                    <div class="rounded-circle bg-secondary-subtle d-inline-flex align-items-center justify-content-center mb-2"
-                         style="width:52px;height:52px;font-size:1.4rem;">
+                    <div class="rounded-circle bg-secondary-subtle d-inline-flex align-items-center justify-content-center mb-2" style="width:52px;height:52px;font-size:1.4rem;">
                         <i class="bi bi-person-fill text-secondary"></i>
                     </div>
-                    <div class="fw-semibold">{{ $profile->student->user->name ?? '—' }}</div>
-                    <div class="text-muted small">{{ $profile->student->program->name ?? '' }} · {{ $profile->graduation_year }}</div>
+                    <div class="fw-semibold">{{ $profile->student->user->name ?? '-' }}</div>
+                    <div class="text-muted small">{{ $profile->student->program->name ?? '' }} - {{ $profile->graduation_year }}</div>
 
                     @if($profile->current_role || $profile->current_employer)
                     <div class="mt-2 small">
@@ -68,10 +77,13 @@
                     <div class="text-muted small mt-1"><i class="bi bi-geo-alt me-1"></i>{{ implode(', ', array_filter([$profile->city, $profile->country])) }}</div>
                     @endif
 
+                    @if($profile->feedback)
+                    <div class="text-muted small mt-2">{{ \Illuminate\Support\Str::limit($profile->feedback, 90) }}</div>
+                    @endif
+
                     @if($profile->linkedin_url)
                     <div class="mt-2">
-                        <a href="{{ $profile->linkedin_url }}" target="_blank" rel="noopener"
-                           class="btn btn-sm btn-outline-primary py-0 px-2">
+                        <a href="{{ $profile->linkedin_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary py-0 px-2">
                             <i class="bi bi-linkedin me-1"></i>LinkedIn
                         </a>
                     </div>

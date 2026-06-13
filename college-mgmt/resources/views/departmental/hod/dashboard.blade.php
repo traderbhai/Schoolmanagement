@@ -16,6 +16,19 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">HOD Priority</div>
+            <h5 class="fw-bold mb-1">{{ $hodPriority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $hodPriority['body'] }}</p>
+        </div>
+        <a href="{{ $hodPriority['route'] }}" class="btn btn-sm {{ $hodPriority['level'] === 'danger' ? 'btn-danger' : ($hodPriority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $hodPriority['action'] }}
+        </a>
+    </div>
+</div>
+
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-2">

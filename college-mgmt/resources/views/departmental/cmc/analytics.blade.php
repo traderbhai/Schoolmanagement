@@ -53,7 +53,7 @@
                 </div>
                 <div class="card-body">
                     @php
-                        $statusColors = ['open'=>'success','active'=>'primary','closed'=>'secondary','completed'=>'info'];
+                        $statusColors = ['upcoming'=>'success','ongoing'=>'primary','completed'=>'info','cancelled'=>'secondary'];
                     @endphp
                     @forelse($driveStats as $status => $count)
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom">

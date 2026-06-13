@@ -17,7 +17,7 @@
     <div class="alert alert-info mb-4">
         <i class="bi bi-lock-fill me-2"></i>
         Your application is <strong>{{ $applicant->status_label }}</strong> and cannot be edited.
-        <a href="{{ route('applicant.status') }}" class="alert-link ms-2">View Status →</a>
+        <a href="{{ route('applicant.status') }}" class="alert-link ms-2">View Status -></a>
     </div>
     @endif
 

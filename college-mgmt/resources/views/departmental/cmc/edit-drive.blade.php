@@ -16,7 +16,7 @@
         <div class="col-md-4">
           <label class="form-label small fw-semibold">Status <span class="text-danger">*</span></label>
           <select name="status" class="form-select" required>
-            @foreach(['draft','open','active','closed','cancelled'] as $s)
+            @foreach(['upcoming','ongoing','completed','cancelled'] as $s)
             <option value="{{ $s }}" {{ old('status',$drive->status)===$s?'selected':'' }}>{{ ucfirst($s) }}</option>
             @endforeach
           </select>

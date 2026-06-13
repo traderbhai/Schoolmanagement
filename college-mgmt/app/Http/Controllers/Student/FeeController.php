@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{FeeStructure, FeePayment, AcademicYear, FeeDemand};
+use App\Models\{FeeStructure, FeePayment, AcademicYear, FeeDemand, HostelFeeDemand};
 use Illuminate\Http\Request;
 
 class FeeController extends Controller
@@ -50,10 +50,18 @@ class FeeController extends Controller
         $totalPenalties = $feeDemands->sum('penalty_amount');
         $outstandingTotal = $totalPendingDemands + $totalPenalties;
 
+        $hostelFeeDemands = HostelFeeDemand::with('allocation.room.block')
+            ->where('student_id', $student->id)
+            ->latest('due_date')
+            ->get();
+
+        $hostelOutstandingTotal = $hostelFeeDemands->where('status', 'pending')->sum('amount');
+
         return view('student.fees', compact(
             'feeStructures', 'payments', 'totalDue', 'totalPaid', 'balance',
             'currentYear', 'paymentsByType', 'nextDueAmount',
-            'feeDemands', 'outstandingTotal', 'totalPenalties'
+            'feeDemands', 'outstandingTotal', 'totalPenalties',
+            'hostelFeeDemands', 'hostelOutstandingTotal'
         ));
     }
 }

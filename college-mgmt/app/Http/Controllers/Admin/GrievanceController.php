@@ -19,10 +19,15 @@ class GrievanceController extends Controller
 
         $grievances = $query->paginate(25)->withQueryString();
 
-        $openCount   = StudentGrievance::where('status', 'open')->count();
-        $urgentCount = StudentGrievance::where('priority', 'urgent')->whereIn('status', ['open', 'in_progress'])->count();
+        $openCount   = StudentGrievance::whereIn('status', ['open', 'under_review', 'escalated'])->count();
+        $urgentCount = StudentGrievance::where('priority', 'urgent')->whereIn('status', ['open', 'under_review', 'escalated'])->count();
+        $overdueCount = StudentGrievance::whereIn('status', ['open', 'under_review', 'escalated'])
+            ->where('created_at', '<', now()->subDays(7))
+            ->count();
+        $resolvedCount = StudentGrievance::where('status', 'resolved')->count();
+        $grievancePriority = $this->grievancePriority($urgentCount, $overdueCount, $openCount);
 
-        return view('admin.grievances.index', compact('grievances', 'openCount', 'urgentCount'));
+        return view('admin.grievances.index', compact('grievances', 'openCount', 'urgentCount', 'overdueCount', 'resolvedCount', 'grievancePriority'));
     }
 
     public function show(StudentGrievance $grievance)
@@ -38,17 +43,59 @@ class GrievanceController extends Controller
     public function update(Request $request, StudentGrievance $grievance)
     {
         $data = $request->validate([
-            'status'      => 'required|in:open,in_progress,resolved,closed',
-            'resolution'  => 'nullable|string|max:3000',
+            'status'      => 'required|in:open,under_review,escalated,resolved,closed',
+            'resolution_notes'  => 'nullable|string|max:3000',
             'assigned_to' => 'nullable|exists:users,id',
         ]);
 
         if ($data['status'] === 'resolved' && !$grievance->resolved_at) {
             $data['resolved_at'] = now();
+            $data['resolved_by'] = auth()->id();
         }
 
         $grievance->update($data);
 
         return back()->with('success', 'Grievance updated successfully.');
+    }
+
+    private function grievancePriority(int $urgentCount, int $overdueCount, int $openCount): array
+    {
+        if ($urgentCount > 0) {
+            return [
+                'level' => 'danger',
+                'title' => "Handle {$urgentCount} urgent grievance" . ($urgentCount === 1 ? '' : 's'),
+                'body' => 'Urgent grievances should be assigned and moved to review before they become escalation risks.',
+                'route' => route('admin.grievances.index', ['priority' => 'urgent']),
+                'action' => 'Review Urgent',
+            ];
+        }
+
+        if ($overdueCount > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Follow up {$overdueCount} overdue grievance" . ($overdueCount === 1 ? '' : 's'),
+                'body' => 'Open grievances older than seven days need ownership, response notes, or escalation.',
+                'route' => route('admin.grievances.index', ['status' => 'open']),
+                'action' => 'Review Overdue',
+            ];
+        }
+
+        if ($openCount > 0) {
+            return [
+                'level' => 'info',
+                'title' => "Monitor {$openCount} active grievance" . ($openCount === 1 ? '' : 's'),
+                'body' => 'Keep active grievances assigned, updated, and resolved with clear notes.',
+                'route' => route('admin.grievances.index', ['status' => 'open']),
+                'action' => 'Open Queue',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No active grievances',
+            'body' => 'Use filters to review resolved and closed grievance history.',
+            'route' => route('admin.grievances.index'),
+            'action' => 'Review History',
+        ];
     }
 }

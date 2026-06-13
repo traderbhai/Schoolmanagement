@@ -53,12 +53,16 @@ class DeanController extends Controller
             ->get()
             ->keyBy('department_id');
 
+        $resultsByProgram = ExamResult::with('exam')
+            ->whereHas('exam', fn($q) => $q->whereHas('program', fn($p) => $p->where('is_active', true)))
+            ->get()
+            ->groupBy(fn($result) => $result->exam?->program_id);
+
         $programs = Program::where('is_active', true)
             ->withCount(['students' => fn($q) => $q->where('status', 'active'), 'batches'])
-            ->with(['examResults.exam'])
             ->get()
-            ->map(function ($prog) use ($facultyCounts) {
-                $results = $prog->examResults;
+            ->map(function ($prog) use ($facultyCounts, $resultsByProgram) {
+                $results = $resultsByProgram->get($prog->id, collect());
                 $total   = $results->count();
                 $passed  = $total > 0
                     ? $results->filter(fn($r) => $r->exam && $r->marks_obtained >= ($r->exam->passing_marks ?? 40))->count()
@@ -81,7 +85,8 @@ class DeanController extends Controller
             $openGrievances = \App\Models\StudentGrievance::whereIn('status', ['open','under_review','escalated'])->count();
         } catch (\Exception $e) { $openGrievances = 0; }
 
-        $overdueApprovals = ApprovalWorkflow::where('status','pending')
+        $overdueApprovals = ApprovalWorkflow::where('approver_role', 'dean_academics')
+            ->where('status','pending')
             ->whereNotNull('due_at')->where('due_at','<',now())->count();
 
         // Academic unit overviews from org hierarchy
@@ -137,12 +142,82 @@ class DeanController extends Controller
             }
         } catch (\Throwable $e) {}
 
+        $deanPriority = $this->deanPriority(
+            $overdueApprovals,
+            $pendingApprovals,
+            $openGrievances,
+            $atRiskStudents->count(),
+            $attendancePct,
+            $totalPrograms
+        );
+
         return view('departmental.dean.dashboard', compact(
             'totalPrograms', 'totalStudents', 'totalFaculty',
             'totalExams', 'attendancePct', 'programs', 'recentResults',
             'pendingApprovals', 'atRiskStudents', 'recentApprovals',
-            'openGrievances', 'overdueApprovals', 'academicOverview'
+            'openGrievances', 'overdueApprovals', 'academicOverview', 'deanPriority'
         ));
+    }
+
+    private function deanPriority(int $overdueApprovals, int $pendingApprovals, int $openGrievances, int $atRiskCount, float $attendancePct, int $totalPrograms): array
+    {
+        if ($overdueApprovals > 0) {
+            return [
+                'level' => 'danger',
+                'title' => "Clear {$overdueApprovals} overdue dean approval" . ($overdueApprovals === 1 ? '' : 's'),
+                'body' => 'Overdue academic approvals block admissions, offers, and downstream program sign-offs.',
+                'route' => route('dean.approvals'),
+                'action' => 'Open Approvals',
+            ];
+        }
+
+        if ($pendingApprovals > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingApprovals} pending dean approval" . ($pendingApprovals === 1 ? '' : 's'),
+                'body' => 'Applicants cleared by HOD need dean clearance before offer generation and program-chair sign-off.',
+                'route' => route('dean.approvals'),
+                'action' => 'Review Approvals',
+            ];
+        }
+
+        if ($openGrievances > 0) {
+            return [
+                'level' => 'danger',
+                'title' => "Monitor {$openGrievances} open academic grievance" . ($openGrievances === 1 ? '' : 's'),
+                'body' => 'Open grievances need HOD ownership and dean visibility before escalation risk grows.',
+                'route' => route('hod.grievances.index'),
+                'action' => 'Review Grievances',
+            ];
+        }
+
+        if ($atRiskCount > 0 || ($attendancePct > 0 && $attendancePct < 75)) {
+            return [
+                'level' => 'danger',
+                'title' => 'Review academic risk signals',
+                'body' => "{$atRiskCount} student(s) are below attendance threshold and overall attendance is {$attendancePct}%.",
+                'route' => route('dean.attendance'),
+                'action' => 'Review Attendance',
+            ];
+        }
+
+        if ($totalPrograms === 0) {
+            return [
+                'level' => 'warning',
+                'title' => 'No active programs configured',
+                'body' => 'Academic operations need active programs before students, subjects, exams, and reporting can run reliably.',
+                'route' => route('dean.programs'),
+                'action' => 'Review Programs',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No urgent dean action today',
+            'body' => 'Use this time to review program health, academic performance, attendance, and unit dashboards.',
+            'route' => route('dean.academics'),
+            'action' => 'View Academics',
+        ];
     }
 
     public function programs()
@@ -300,6 +375,8 @@ class DeanController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
+        $this->authorizeDeanApproval($approval);
+
         $approval->update([
             'status'      => 'approved',
             'approver_id' => auth()->id(),
@@ -322,12 +399,15 @@ class DeanController extends Controller
                 ]);
             }
 
-            ApprovalWorkflow::create([
-                'approvable_type' => Applicant::class,
-                'approvable_id'   => $applicant->id,
-                'approver_role'   => 'program_chair',
-                'status'          => 'pending',
-            ]);
+            ApprovalWorkflow::firstOrCreate(
+                [
+                    'approvable_type' => Applicant::class,
+                    'approvable_id'   => $applicant->id,
+                    'approver_role'   => 'program_chair',
+                    'status'          => 'pending',
+                ],
+                []
+            );
         }
 
         return back()->with('success', 'Approval granted and offer letter generated.');
@@ -339,6 +419,8 @@ class DeanController extends Controller
             'rejection_reason' => 'required|string|max:500',
         ]);
 
+        $this->authorizeDeanApproval($approval);
+
         $approval->update([
             'status'      => 'rejected',
             'approver_id' => auth()->id(),
@@ -347,5 +429,12 @@ class DeanController extends Controller
         ]);
 
         return back()->with('error', 'Approval rejected.');
+    }
+
+    private function authorizeDeanApproval(ApprovalWorkflow $approval): void
+    {
+        abort_unless($approval->approver_role === 'dean_academics', 403);
+        abort_unless($approval->status === 'pending', 403);
+        abort_unless($approval->approvable instanceof Applicant, 403);
     }
 }

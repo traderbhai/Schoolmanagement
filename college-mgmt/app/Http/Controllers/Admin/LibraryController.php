@@ -12,25 +12,35 @@ class LibraryController extends Controller
 
     public function index()
     {
-        $stats = [
-            'total_books'    => Book::where('is_active', true)->count(),
-            'total_copies'   => BookCopy::count(),
-            'issued'         => BookIssue::whereIn('status', ['issued','overdue'])->count(),
-            'overdue'        => BookIssue::where('status','overdue')->count(),
-            'fines_pending'  => BookIssue::where('fine_paid', false)->where('fine_amount', '>', 0)->count(),
-        ];
-        $recentIssues = BookIssue::with(['bookCopy.book','student.user','teacher.user'])
+        $totalBooks = Book::where('is_active', true)->count();
+        $totalCopies = BookCopy::count();
+        $issuedToday = BookIssue::whereDate('issued_at', today())->count();
+        $overdueCount = BookIssue::where('status','overdue')->count();
+        $dueToday = BookIssue::whereIn('status', ['issued', 'overdue'])->whereDate('due_date', today())->count();
+        $finesPending = BookIssue::where('fine_paid', false)->where('fine_amount', '>', 0)->count();
+        $latestIssues = BookIssue::with(['bookCopy.book','student.user','teacher.user'])
             ->latest()->limit(10)->get();
-        $students = Student::with('user')->where('status','active')->orderBy('id')->limit(200)->get();
-        $books    = Book::where('is_active', true)->where('available_copies', '>', 0)->orderBy('title')->get();
-        return view('admin.library.index', compact('stats', 'recentIssues', 'students', 'books'));
+
+        return view('admin.library.index', compact(
+            'totalBooks',
+            'totalCopies',
+            'issuedToday',
+            'overdueCount',
+            'dueToday',
+            'finesPending',
+            'latestIssues'
+        ));
     }
 
     public function books(Request $r)
     {
-        $query = Book::withCount(['copies','issues' => fn($q) => $q->whereIn('status',['issued','overdue'])]);
-        if ($r->filled('q')) {
-            $s = $r->q;
+        $query = Book::withCount([
+            'copies',
+            'availableCopies as active_copies_count',
+            'issues' => fn($q) => $q->whereIn('status',['issued','overdue']),
+        ]);
+        if ($r->filled('search')) {
+            $s = $r->search;
             $query->where(fn($q) => $q->where('title','like',"%$s%")->orWhere('author','like',"%$s%")->orWhere('isbn','like',"%$s%"));
         }
         $books = $query->orderBy('title')->paginate(20)->withQueryString();
@@ -71,9 +81,10 @@ class LibraryController extends Controller
     public function bookShow(Book $book)
     {
         $book->load(['copies.currentIssue.student.user', 'copies.currentIssue.teacher.user']);
-        $history = BookIssue::whereHas('bookCopy', fn($q) => $q->where('book_id', $book->id))
+        $copies = $book->copies;
+        $issueHistory = BookIssue::whereHas('bookCopy', fn($q) => $q->where('book_id', $book->id))
             ->with(['bookCopy','student.user','teacher.user'])->latest()->limit(50)->get();
-        return view('admin.library.book-show', compact('book', 'history'));
+        return view('admin.library.book-show', compact('book', 'copies', 'issueHistory'));
     }
 
     public function bookUpdate(Request $r, Book $book)
@@ -94,24 +105,54 @@ class LibraryController extends Controller
 
     public function issueBook(Request $r)
     {
-        $r->validate([
-            'book_id'    => 'required|exists:books,id',
-            'student_id' => 'nullable|exists:students,id',
-            'due_date'   => 'required|date|after:today',
+        $data = $r->validate([
+            'book_copy_id'  => 'nullable|exists:book_copies,id',
+            'book_id'       => 'nullable|exists:books,id',
+            'borrower_type' => 'required|in:student,teacher',
+            'borrower_id'   => 'required|integer',
+            'due_date'      => 'required|date|after:today',
         ]);
-        $copy = BookCopy::where('book_id', $r->book_id)->where('is_available', true)->first();
-        if (!$copy) return back()->with('error', 'No available copy for this book.');
+
+        if (empty($data['book_copy_id']) && empty($data['book_id'])) {
+            return back()->withErrors(['book_copy_id' => 'Select a book copy or book to issue.']);
+        }
+
+        $borrowerColumn = $data['borrower_type'] === 'student' ? 'student_id' : 'teacher_id';
+        $borrowerClass = $data['borrower_type'] === 'student' ? Student::class : Teacher::class;
+        $borrower = $borrowerClass::find($data['borrower_id']);
+        if (! $borrower) {
+            return back()->withErrors(['borrower_id' => 'Selected borrower was not found.']);
+        }
+
+        $membership = LibraryMembership::where('user_id', $borrower->user_id)->where('is_active', true)->first();
+        if ($membership && $membership->expiry_date && $membership->expiry_date->isPast()) {
+            return back()->withErrors(['borrower_id' => 'Library membership has expired.']);
+        }
+
+        $activeIssues = BookIssue::where($borrowerColumn, $borrower->id)->whereIn('status', ['issued', 'overdue'])->count();
+        $maxBooks = $membership?->max_books_allowed ?? 2;
+        if ($activeIssues >= $maxBooks) {
+            return back()->withErrors(['borrower_id' => "Borrower already has the maximum {$maxBooks} active issue(s)."]);
+        }
+
+        $copy = ! empty($data['book_copy_id'])
+            ? BookCopy::where('id', $data['book_copy_id'])->where('is_available', true)->first()
+            : BookCopy::where('book_id', $data['book_id'])->where('is_available', true)->first();
+
+        if (! $copy) {
+            return back()->with('error', 'No available copy for this book.');
+        }
 
         BookIssue::create([
             'book_copy_id' => $copy->id,
-            'student_id'   => $r->student_id,
+            $borrowerColumn => $borrower->id,
             'issued_by'    => auth()->id(),
             'issued_at'    => now(),
-            'due_date'     => $r->due_date,
+            'due_date'     => $data['due_date'],
             'status'       => 'issued',
         ]);
         $copy->update(['is_available' => false]);
-        Book::where('id', $r->book_id)->decrement('available_copies');
+        Book::where('id', $copy->book_id)->decrement('available_copies');
         return back()->with('success', 'Book issued successfully.');
     }
 
@@ -127,7 +168,7 @@ class LibraryController extends Controller
         ]);
         $issue->bookCopy->update(['is_available' => true]);
         Book::where('id', $issue->bookCopy->book_id)->increment('available_copies');
-        return back()->with('success', $fine > 0 ? "Returned. Fine: ₹{$fine}" : 'Book returned successfully.');
+        return back()->with('success', $fine > 0 ? 'Returned. Fine: Rs. ' . number_format($fine, 2) : 'Book returned successfully.');
     }
 
     public function issues(Request $r)
@@ -169,6 +210,6 @@ class LibraryController extends Controller
     public function finePay(BookIssue $issue)
     {
         $issue->update(['fine_paid' => true]);
-        return back()->with('success', 'Fine of ₹' . $issue->fine_amount . ' marked as paid.');
+        return back()->with('success', 'Fine of Rs. ' . number_format((float) $issue->fine_amount, 2) . ' marked as paid.');
     }
 }

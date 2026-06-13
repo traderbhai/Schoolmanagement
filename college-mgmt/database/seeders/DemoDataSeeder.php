@@ -36,7 +36,7 @@ class DemoDataSeeder extends Seeder
         // Admin user
         $admin = User::firstOrCreate(['email' => 'admin@demo.edu'], [
             'name' => 'Admin User',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make('password'),
             'email_verified_at' => now()
         ]);
         $admin->assignRole('admin');
@@ -199,7 +199,7 @@ class DemoDataSeeder extends Seeder
         $teachers = [];
         foreach ($teacherData as $td) {
             $user = User::firstOrCreate(['email' => $td['email']], [
-                'name' => $td['name'], 'password' => Hash::make('password123'), 'email_verified_at' => now()
+                'name' => $td['name'], 'password' => Hash::make('password'), 'email_verified_at' => now()
             ]);
             $user->assignRole('teacher');
             $teacher = Teacher::firstOrCreate(['employee_id' => $td['employee_id']], [
@@ -232,7 +232,7 @@ class DemoDataSeeder extends Seeder
         $students = [];
         foreach ($studentNames as $i => [$name, $email, $enroll]) {
             $user = User::firstOrCreate(['email' => $email], [
-                'name' => $name, 'password' => Hash::make('password123'), 'email_verified_at' => now()
+                'name' => $name, 'password' => Hash::make('password'), 'email_verified_at' => now()
             ]);
             $user->assignRole('student');
             $prog = $i < 10 ? $pgdm : $pgdmFin;
@@ -587,7 +587,7 @@ class DemoDataSeeder extends Seeder
         foreach ($applicantData as $data) {
             $user = User::firstOrCreate(['email' => $data['email']], [
                 'name'     => $data['name'],
-                'password' => Hash::make('password123'),
+                'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]);
             $user->assignRole('applicant');
@@ -1040,10 +1040,10 @@ class DemoDataSeeder extends Seeder
         $this->seedFeatureAccessMatrix();
 
         $this->command->info('Demo data seeded successfully!');
-        $this->command->info('  Admin: admin@demo.edu / password123');
-        $this->command->info('  Teacher: anjali@demo.edu / password123');
-        $this->command->info('  Student: arjun.k@demo.edu / password123');
-        $this->command->info('  Applicants: priya.sharma@applicant.demo / password123 (and 4 more)');
+        $this->command->info('  Admin: admin@demo.edu / password');
+        $this->command->info('  Teacher: anjali@demo.edu / password');
+        $this->command->info('  Student: arjun.k@demo.edu / password');
+        $this->command->info('  Applicants: priya.sharma@applicant.demo / password (and 4 more)');
         $this->command->info('  Admission Officer: officer@college.com / password');
         $this->command->info('  Admission Head: head@college.com / password');
         $this->command->info('  Dean of Academics: dean@college.com / password');

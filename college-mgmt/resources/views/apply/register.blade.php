@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apply for {{ $program->name }} — EduManage</title>
+    <title>Apply for {{ $program->name }} - EduManage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -16,6 +16,22 @@
                 <i class="bi bi-mortarboard-fill fs-1 text-primary"></i>
                 <h2 class="fw-bold mt-2">Create Your Application</h2>
                 <p class="text-muted">Program: <strong>{{ $program->name }}</strong></p>
+            </div>
+
+            <div class="alert alert-info d-flex align-items-start gap-2">
+                <i class="bi bi-calendar-check mt-1"></i>
+                <div>
+                    <div class="fw-semibold">Applications are open for this intake.</div>
+                    <div class="small">
+                        Deadline: {{ $window->closes_at->format('d M Y, h:i A') }}
+                        @if($window->batch)
+                            <span class="mx-1">|</span> Batch: {{ $window->batch->name }}
+                        @endif
+                        @if(! is_null($window->getRemainingCapacity()))
+                            <span class="mx-1">|</span> {{ $window->getRemainingCapacity() }} seats remaining
+                        @endif
+                    </div>
+                </div>
             </div>
 
             @if($errors->any())
@@ -71,7 +87,7 @@
             </div>
 
             <div class="text-center mt-3">
-                <a href="{{ route('apply') }}" class="text-muted small">← Choose a different program</a>
+                <a href="{{ route('apply') }}" class="text-muted small">&larr; Choose a different program</a>
                 <span class="text-muted small mx-2">|</span>
                 <a href="{{ route('login') }}" class="text-muted small">Already have an account? Login</a>
             </div>

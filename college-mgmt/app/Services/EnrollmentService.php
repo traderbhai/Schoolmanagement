@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Mail\EnrollmentConfirmed;
-use App\Models\{Applicant, Student, User, EnrollmentConfirmation, ActivityLog};
+use App\Models\{Applicant, Student, User, EnrollmentConfirmation, ActivityLog, RequiredDocument};
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\{DB, Hash};
 
@@ -20,6 +20,22 @@ class EnrollmentService
             $hasVerifiedPayment = $applicant->payments()->where('status', 'verified')->exists();
             if (!$hasVerifiedPayment) {
                 throw new \RuntimeException('Applicant does not have a verified admission payment.');
+            }
+
+            $mandatoryDocumentIds = RequiredDocument::where('program_id', $applicant->program_id)
+                ->where('is_mandatory', true)
+                ->where('is_active', true)
+                ->pluck('id');
+
+            if ($mandatoryDocumentIds->isNotEmpty()) {
+                $verifiedMandatoryCount = $applicant->documents()
+                    ->whereIn('required_document_id', $mandatoryDocumentIds)
+                    ->where('status', 'verified')
+                    ->count();
+
+                if ($verifiedMandatoryCount < $mandatoryDocumentIds->count()) {
+                    throw new \RuntimeException('Applicant must have all mandatory documents verified before enrollment.');
+                }
             }
 
             if ($applicant->enrollmentConfirmation()->exists()) {

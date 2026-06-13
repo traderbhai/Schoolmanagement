@@ -13,52 +13,131 @@ class HodController extends Controller
         return Teacher::where('user_id', auth()->id())->first();
     }
 
+    private function hodDepartmentId(?Teacher $teacher): ?int
+    {
+        if ($teacher) {
+            return $teacher->department_id;
+        }
+
+        return auth()->user()->hasRole('hod') ? -1 : null;
+    }
+
     public function dashboard()
     {
         $teacher    = $this->hodTeacher();
         $department = $teacher ? Department::find($teacher->department_id) : null;
+        $departmentId = $this->hodDepartmentId($teacher);
 
-        $facultyCount = Teacher::when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
+        $facultyCount = Teacher::when($departmentId !== null, fn($q) => $q->where('department_id', $departmentId))
             ->where('status', 'active')->count();
 
-        $subjectCount = Subject::when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))->count();
+        $subjectCount = Subject::when($departmentId !== null, fn($q) => $q->where('department_id', $departmentId))->count();
 
-        $pendingApprovals = ApprovalWorkflow::where('approver_role', 'hod')->where('status', 'pending')->count();
+        $pendingApprovals = $this->pendingHodApprovals($departmentId)->count();
 
-        $pendingLeaves = LeaveApplication::where('status', 'pending')->count();
+        $pendingLeaves = LeaveApplication::where('status', 'pending')
+            ->when($departmentId !== null, fn($q) => $q->whereHas('student.program', fn($p) => $p->where('department_id', $departmentId)))
+            ->count();
 
-        $studentCount = Student::when($teacher, fn($q) => $q->whereHas('program', fn($p) => $p->where('department_id', $teacher->department_id)))
+        $studentCount = Student::when($departmentId !== null, fn($q) => $q->whereHas('program', fn($p) => $p->where('department_id', $departmentId)))
             ->where('status', 'active')->count();
 
         $attQuery = Attendance::where('date', '>=', now()->subDays(30));
-        if ($teacher) $attQuery->whereHas('subject', fn($q) => $q->where('department_id', $teacher->department_id));
+        if ($departmentId !== null) {
+            $attQuery->whereHas('timetableEntry.subject', fn($q) => $q->where('department_id', $departmentId));
+        }
         $totalAtt   = $attQuery->count();
         $presentAtt = (clone $attQuery)->where('status', 'present')->count();
         $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0;
 
-        $recentExams = Exam::when($teacher, fn($q) => $q->whereHas('subject', fn($sq) => $sq->where('department_id', $teacher->department_id)))
-            ->with(['subject', 'program', 'examResults'])->latest('exam_date')->take(5)->get()
+        $recentExams = Exam::when($departmentId !== null, fn($q) => $q->whereHas('subject', fn($sq) => $sq->where('department_id', $departmentId)))
+            ->with(['subject', 'program', 'results'])->latest('exam_date')->take(5)->get()
             ->map(function ($exam) {
-                $results = $exam->examResults;
+                $results = $exam->results;
                 $exam->result_count = $results->count();
                 $exam->avg_marks    = $results->count() > 0 ? round($results->avg('marks_obtained'), 1) : null;
                 $exam->pass_count   = $results->where('marks_obtained', '>=', $exam->passing_marks ?? 40)->count();
                 return $exam;
             });
 
-        $faculty = Teacher::when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
+        $faculty = Teacher::when($departmentId !== null, fn($q) => $q->where('department_id', $departmentId))
             ->with('user')->where('status', 'active')->take(10)->get();
+
+        $hodPriority = $this->hodPriority($departmentId, $pendingApprovals, $pendingLeaves, $attendancePct, $facultyCount, $subjectCount);
 
         return view('departmental.hod.dashboard', compact(
             'department', 'facultyCount', 'subjectCount', 'pendingApprovals',
-            'pendingLeaves', 'studentCount', 'attendancePct', 'recentExams', 'faculty'
+            'pendingLeaves', 'studentCount', 'attendancePct', 'recentExams', 'faculty', 'hodPriority'
         ));
+    }
+
+    private function hodPriority(?int $departmentId, int $pendingApprovals, int $pendingLeaves, float $attendancePct, int $facultyCount, int $subjectCount): array
+    {
+        if ($departmentId === -1) {
+            return [
+                'level' => 'warning',
+                'title' => 'Department profile needed',
+                'body' => 'Your HOD account is not linked to a teacher department profile. Ask an administrator to attach your teacher profile before reviewing approvals, leaves, faculty, or students.',
+                'route' => route('hod.dashboard'),
+                'action' => 'Contact Admin',
+            ];
+        }
+
+        if ($pendingApprovals > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingApprovals} department approval" . ($pendingApprovals === 1 ? '' : 's'),
+                'body' => 'Admission approvals should be cleared before candidates move to dean clearance and offer processing.',
+                'route' => route('hod.approvals'),
+                'action' => 'Open Approvals',
+            ];
+        }
+
+        if ($pendingLeaves > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingLeaves} pending leave request" . ($pendingLeaves === 1 ? '' : 's'),
+                'body' => 'Leave decisions affect attendance records, mentoring, and academic follow-up.',
+                'route' => route('hod.leaves'),
+                'action' => 'Review Leaves',
+            ];
+        }
+
+        if ($attendancePct > 0 && $attendancePct < 75) {
+            return [
+                'level' => 'danger',
+                'title' => 'Department attendance is below threshold',
+                'body' => "Last 30-day attendance is {$attendancePct}%. Review department performance and student interventions.",
+                'route' => route('hod.department-performance'),
+                'action' => 'Review Performance',
+            ];
+        }
+
+        if ($facultyCount === 0 || $subjectCount === 0) {
+            return [
+                'level' => 'info',
+                'title' => 'Review department setup',
+                'body' => 'Faculty or subject records are missing for this department. Check roster and academic setup before term operations.',
+                'route' => route('hod.faculty.roster'),
+                'action' => 'Review Roster',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No urgent HOD action today',
+            'body' => 'Use this time to review department performance, faculty workload, grievances, and upcoming academic risks.',
+            'route' => route('hod.department-performance'),
+            'action' => 'View Performance',
+        ];
     }
 
     public function approvals(Request $request)
     {
-        $query = ApprovalWorkflow::where('approver_role', 'hod')
-            ->where('status', 'pending')
+        $teacher = $this->hodTeacher();
+        $departmentId = $this->hodDepartmentId($teacher);
+
+        $query = $this->pendingHodApprovals($departmentId)
             ->with(['approvable', 'approver'])
             ->latest();
 
@@ -69,13 +148,33 @@ class HodController extends Controller
             }
         });
 
-        $programs = Program::where('is_active', true)->orderBy('name')->get();
+        $programs = Program::where('is_active', true)
+            ->when($departmentId !== null, fn($q) => $q->where('department_id', $departmentId))
+            ->orderBy('name')->get();
         return view('departmental.hod.approvals.index', compact('approvals', 'programs'));
+    }
+
+    private function pendingHodApprovals(?int $departmentId)
+    {
+        return ApprovalWorkflow::where('approver_role', 'hod')
+            ->where('status', 'pending')
+            ->when($departmentId !== null, function ($query) use ($departmentId) {
+                $query->whereHasMorph('approvable', [Applicant::class], fn($q) => $q->whereHas('program', fn($p) => $p->where('department_id', $departmentId)));
+            });
+    }
+
+    private function authorizeDepartmentApproval($approvable): void
+    {
+        $departmentId = $this->hodDepartmentId($this->hodTeacher());
+
+        abort_unless($approvable instanceof Applicant, 403);
+        abort_unless($departmentId === null || (int) $approvable->program?->department_id === $departmentId, 403);
     }
 
     public function approve(Request $request, ApprovalWorkflow $approval)
     {
         $request->validate(['remarks' => 'nullable|string|max:500']);
+        $this->authorizeDepartmentApproval($approval->approvable);
         $approval->update(['status' => 'approved', 'approver_id' => auth()->id(), 'remarks' => $request->remarks, 'approved_at' => now()]);
         $name = $approval->approvable instanceof Applicant ? ($approval->approvable->user->name ?? 'applicant') : 'applicant';
         return back()->with('success', "Approval granted for {$name}.");
@@ -84,6 +183,7 @@ class HodController extends Controller
     public function reject(Request $request, ApprovalWorkflow $approval)
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
+        $this->authorizeDepartmentApproval($approval->approvable);
         $approval->update(['status' => 'rejected', 'approver_id' => auth()->id(), 'remarks' => $request->rejection_reason, 'approved_at' => now()]);
         $name = $approval->approvable instanceof Applicant ? ($approval->approvable->user->name ?? 'applicant') : 'applicant';
         return back()->with('error', "Approval rejected for {$name}.");
@@ -136,9 +236,13 @@ class HodController extends Controller
 
     public function leaves(Request $request)
     {
+        $departmentId = $this->hodDepartmentId($this->hodTeacher());
         $query = LeaveApplication::with(['student.user'])->latest();
 
         if ($request->filled('status')) $query->where('status', $request->status);
+        if ($departmentId !== null) {
+            $query->whereHas('student.program', fn($p) => $p->where('department_id', $departmentId));
+        }
 
         $leaves = $query->paginate(25)->withQueryString();
         return view('departmental.hod.leaves', compact('leaves'));
@@ -150,6 +254,9 @@ class HodController extends Controller
             'action'  => 'required|in:approved,rejected',
             'remarks' => 'nullable|string|max:500',
         ]);
+
+        $departmentId = $this->hodDepartmentId($this->hodTeacher());
+        abort_unless($departmentId === null || (int) $leave->student?->program?->department_id === $departmentId, 403);
 
         $leave->update([
             'status'         => $request->action,
@@ -182,10 +289,11 @@ class HodController extends Controller
             ->groupBy('exam_id');
 
         // Attendance aggregated per subject
-        $attBySubject = Attendance::whereIn('subject_id', $subjectIds)
+        $attBySubject = Attendance::join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+            ->whereIn('timetable_entries.subject_id', $subjectIds)
             ->where('date', '>=', now()->subDays(30))
-            ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
-            ->groupBy('subject_id')
+            ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
+            ->groupBy('timetable_entries.subject_id')
             ->get()
             ->keyBy('subject_id');
 

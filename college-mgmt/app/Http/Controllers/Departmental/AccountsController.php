@@ -3,20 +3,29 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{FeePayment, FeeStructure, Student, Program, Batch, AdmissionPayment, FeeDemand};
+use App\Models\{FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand};
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AccountsController extends Controller
 {
+    private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
     public function dashboard()
     {
-        $totalBilled    = FeeStructure::sum('amount');
+        $totalDemanded  = FeeDemand::sum('final_amount');
+        $totalPenalty   = FeeDemand::whereIn('status', self::ACTIVE_DEMAND_STATUSES)->sum('penalty_amount');
+        $totalBilled    = $totalDemanded + $totalPenalty;
         $totalCollected = FeePayment::where('status', 'paid')->sum('amount_paid');
-        $outstanding    = max(0, $totalBilled - $totalCollected);
+        $outstanding    = FeeDemand::whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+            ->get(['final_amount', 'penalty_amount'])
+            ->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
 
-        $overdue = FeePayment::where('status', '!=', 'paid')
-            ->where('payment_date', '<', now()->subDays(30))
+        $overdue = FeeDemand::where('status', 'overdue')
+            ->orWhere(fn($q) => $q->where('status', 'pending')
+                ->whereNotNull('due_date')
+                ->where('due_date', '<', now()->toDateString()))
             ->count();
 
         $recentPayments = FeePayment::with(['student.user', 'feeStructure'])
@@ -48,14 +57,18 @@ class AccountsController extends Controller
         $pendingScholarshipAmount = \App\Models\ApplicantScholarship::where('status', 'awarded')->sum('awarded_amount');
 
         // Overdue fee demands
-        $overdueDemandsCount = FeeDemand::where('status', 'overdue')->count();
-        $overdueDemandsAmount = FeeDemand::where('status', 'overdue')->sum('final_amount');
+        $overdueDemandQuery = FeeDemand::where('status', 'overdue')
+            ->orWhere(fn($q) => $q->where('status', 'pending')
+                ->whereNotNull('due_date')
+                ->where('due_date', '<', now()->toDateString()));
+
+        $overdueDemandsCount = (clone $overdueDemandQuery)->count();
+        $overdueDemandsAmount = (clone $overdueDemandQuery)
+            ->get(['final_amount', 'penalty_amount'])
+            ->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
 
         // Phase 6: Enhanced fee management KPIs
-        $totalDemanded  = FeeDemand::sum('final_amount');
-        $totalPenalty   = FeeDemand::sum('penalty_amount');
-        $overdueCount   = FeeDemand::where('status', 'pending')
-            ->whereNotNull('due_date')->where('due_date', '<', now()->toDateString())->count();
+        $overdueCount   = $overdueDemandsCount;
         $paidDemands    = FeeDemand::where('status', 'fully_paid')->sum('final_amount');
         $collectionRate = $totalDemanded > 0 ? round(($paidDemands / $totalDemanded) * 100, 1) : 0;
 
@@ -93,32 +106,12 @@ class AccountsController extends Controller
 
     public function outstanding()
     {
-        $feeStructureByProgram = \App\Models\FeeStructure::selectRaw('program_id, SUM(amount) as due_amount')
-            ->groupBy('program_id')
-            ->get()
-            ->keyBy('program_id');
+        $outstandingStudents = $this->outstandingStudents();
 
-        $paidByStudent = \App\Models\FeePayment::selectRaw('student_id, SUM(amount_paid) as paid, MAX(payment_date) as last_payment')
-            ->where('status', 'paid')
-            ->groupBy('student_id')
-            ->get()
-            ->keyBy('student_id');
-
-        $programs = Program::where('is_active', true)->get()->map(function ($p) use ($feeStructureByProgram, $paidByStudent) {
-            $due = $feeStructureByProgram->get($p->id)?->due_amount ?? 0;
-            $students = Student::where('program_id', $p->id)
-                ->where('status', 'active')
-                ->with(['user'])
-                ->get()
-                ->map(function ($s) use ($due, $paidByStudent) {
-                    $studentData = $paidByStudent->get($s->id);
-                    $paid  = $studentData?->paid ?? 0;
-                    $s->amount_due = max(0, $due - $paid);
-                    $s->last_payment_date = $studentData?->last_payment;
-                    return $s;
-                })
-                ->filter(fn($s) => $s->amount_due > 0);
+        $programs = Program::where('is_active', true)->orderBy('name')->get()->map(function ($p) use ($outstandingStudents) {
+            $students = $outstandingStudents->where('program_id', $p->id)->values();
             $p->outstanding_students = $students;
+
             return $p;
         })->filter(fn($p) => $p->outstanding_students->count() > 0);
 
@@ -137,19 +130,34 @@ class AccountsController extends Controller
 
     public function reports()
     {
-        $programs = Program::where('is_active', true)->get()->map(function ($p) {
-            $studentIds = Student::where('program_id', $p->id)->pluck('id');
-            $p->total_billed    = FeeStructure::where('program_id', $p->id)->sum('amount');
-            $p->total_collected = FeePayment::whereIn('student_id', $studentIds)->where('status', 'paid')->sum('amount_paid');
-            $p->outstanding     = max(0, $p->total_billed - $p->total_collected);
-            $p->collection_pct  = $p->total_billed > 0 ? round(($p->total_collected / $p->total_billed) * 100) : 0;
+        $demandByProgram = $this->demandFinancialsBy('program_id');
+        $paymentByProgram = $this->paymentFinancialsBy('program_id');
+
+        $programs = Program::where('is_active', true)->orderBy('name')->get()->map(function ($p) use ($demandByProgram, $paymentByProgram) {
+            $demand = $demandByProgram->get($p->id);
+            $payment = $paymentByProgram->get($p->id);
+
+            $p->total_billed = (float) ($demand?->total_demanded ?? 0) + (float) ($demand?->active_penalty ?? 0);
+            $p->total_collected = (float) ($payment?->total_collected ?? 0);
+            $p->outstanding = (float) ($demand?->outstanding ?? 0);
+            $p->collection_pct = $this->collectionPercentage($p->total_collected, $p->total_billed);
+
             return $p;
         });
 
-        $batches = Batch::with('program')->get()->map(function ($b) {
-            $studentIds = Student::where('batch_id', $b->id)->pluck('id');
-            $b->total_collected = FeePayment::whereIn('student_id', $studentIds)->where('status', 'paid')->sum('amount_paid');
-            $b->student_count   = $studentIds->count();
+        $demandByBatch = $this->demandFinancialsBy('batch_id');
+        $paymentByBatch = $this->paymentFinancialsBy('batch_id');
+
+        $batches = Batch::with('program')->orderBy('name')->get()->map(function ($b) use ($demandByBatch, $paymentByBatch) {
+            $demand = $demandByBatch->get($b->id);
+            $payment = $paymentByBatch->get($b->id);
+
+            $b->total_billed = (float) ($demand?->total_demanded ?? 0) + (float) ($demand?->active_penalty ?? 0);
+            $b->total_collected = (float) ($payment?->total_collected ?? 0);
+            $b->outstanding = (float) ($demand?->outstanding ?? 0);
+            $b->collection_pct = $this->collectionPercentage($b->total_collected, $b->total_billed);
+            $b->student_count = Student::where('batch_id', $b->id)->where('status', 'active')->count();
+
             return $b;
         });
 
@@ -226,16 +234,16 @@ class AccountsController extends Controller
 
         return response()->stream(function () use ($payments) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Student Name', 'Program', 'Batch', 'Fee Structure', 'Amount Paid (₹)', 'Status', 'Payment Date']);
+            fputcsv($out, ['Student Name', 'Program', 'Batch', 'Fee Structure', 'Amount Paid (Rs.)', 'Status', 'Payment Date']);
             foreach ($payments as $p) {
                 fputcsv($out, [
-                    $p->student->user->name ?? '—',
-                    $p->student->program->name ?? '—',
-                    $p->student->batch->name ?? '—',
-                    $p->feeStructure->name ?? '—',
+                    $p->student->user->name ?? '-',
+                    $p->student->program->name ?? '-',
+                    $p->student->batch->name ?? '-',
+                    $p->feeStructure->name ?? '-',
                     number_format($p->amount_paid, 2),
                     $p->status,
-                    $p->payment_date?->format('d M Y') ?? '—',
+                    $p->payment_date?->format('d M Y') ?? '-',
                 ]);
             }
             fclose($out);
@@ -259,16 +267,16 @@ class AccountsController extends Controller
 
         return response()->stream(function () use ($payments) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Applicant Name', 'Application No.', 'Program', 'Reference No.', 'Method', 'Amount Paid (₹)', 'Verified At']);
+            fputcsv($out, ['Applicant Name', 'Application No.', 'Program', 'Reference No.', 'Method', 'Amount Paid (Rs.)', 'Verified At']);
             foreach ($payments as $p) {
                 fputcsv($out, [
-                    $p->applicant->user->name ?? '—',
+                    $p->applicant->user->name ?? '-',
                     $p->applicant->application_number,
-                    $p->applicant->program->name ?? '—',
-                    $p->reference_number ?? '—',
-                    ucfirst(str_replace('_', ' ', $p->payment_method ?? '—')),
+                    $p->applicant->program->name ?? '-',
+                    $p->reference_number ?? '-',
+                    ucfirst(str_replace('_', ' ', $p->payment_method ?? '-')),
                     number_format($p->amount_paid, 2),
-                    $p->verified_at?->format('d M Y, h:i A') ?? '—',
+                    $p->verified_at?->format('d M Y, h:i A') ?? '-',
                 ]);
             }
             fclose($out);
@@ -277,27 +285,7 @@ class AccountsController extends Controller
 
     public function exportOutstanding(Request $request)
     {
-        $feeStructureByProgram = \App\Models\FeeStructure::selectRaw('program_id, SUM(amount) as due_amount')
-            ->groupBy('program_id')
-            ->get()
-            ->keyBy('program_id');
-
-        $paidByStudent = \App\Models\FeePayment::selectRaw('student_id, SUM(amount_paid) as paid')
-            ->where('status', 'paid')
-            ->groupBy('student_id')
-            ->get()
-            ->keyBy('student_id');
-
-        $students = Student::where('status', 'active')
-            ->with(['user', 'program', 'batch'])
-            ->get()
-            ->map(function ($s) use ($feeStructureByProgram, $paidByStudent) {
-                $due  = $feeStructureByProgram->get($s->program_id)?->due_amount ?? 0;
-                $paid = $paidByStudent->get($s->id)?->paid ?? 0;
-                $s->amount_due = max(0, $due - $paid);
-                return $s;
-            })
-            ->filter(fn($s) => $s->amount_due > 0);
+        $students = $this->outstandingStudents();
 
         $filename = 'outstanding-fees-' . now()->format('Ymd') . '.csv';
         $headers = [
@@ -307,16 +295,86 @@ class AccountsController extends Controller
 
         return response()->stream(function () use ($students) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Student Name', 'Program', 'Batch', 'Outstanding Amount (₹)']);
+            fputcsv($out, ['Student Name', 'Program', 'Batch', 'Outstanding Amount (Rs.)']);
             foreach ($students as $s) {
                 fputcsv($out, [
-                    $s->user->name ?? '—',
-                    $s->program->name ?? '—',
-                    $s->batch->name ?? '—',
+                    $s->user->name ?? '-',
+                    $s->program->name ?? '-',
+                    $s->batch->name ?? '-',
                     number_format($s->amount_due, 2),
                 ]);
             }
             fclose($out);
         }, 200, $headers);
+    }
+
+    private function outstandingStudents()
+    {
+        $lastPayments = FeePayment::selectRaw('student_id, MAX(payment_date) as last_payment')
+            ->where('status', 'paid')
+            ->groupBy('student_id')
+            ->get()
+            ->keyBy('student_id');
+
+        return FeeDemand::with(['student.user', 'student.program', 'student.batch'])
+            ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+            ->whereHas('student', fn($q) => $q->where('status', 'active'))
+            ->get()
+            ->groupBy('student_id')
+            ->map(function ($demands) use ($lastPayments) {
+                $student = $demands->first()->student;
+                $student->amount_due = $demands->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
+                $student->oldest_due_date = $demands->pluck('due_date')->filter()->sort()->first();
+                $student->open_demand_count = $demands->count();
+                $student->overdue_demand_count = $demands->filter(fn($demand) => $this->isDemandOverdue($demand))->count();
+                $lastPayment = $lastPayments->get($student->id)?->last_payment;
+                $student->last_payment_date = $lastPayment ? Carbon::parse($lastPayment) : null;
+
+                return $student;
+            })
+            ->filter(fn($student) => $student->amount_due > 0)
+            ->sortBy(fn($student) => [
+                $student->program?->name ?? '',
+                $student->user?->name ?? '',
+            ])
+            ->values();
+    }
+
+    private function isDemandOverdue(FeeDemand $demand): bool
+    {
+        return $demand->status === 'overdue'
+            || ($demand->status === 'pending'
+                && $demand->due_date
+                && $demand->due_date->lt(now()->startOfDay()));
+    }
+
+    private function demandFinancialsBy(string $studentColumn)
+    {
+        $activeStatuses = "'" . implode("','", self::ACTIVE_DEMAND_STATUSES) . "'";
+
+        return FeeDemand::join('students', 'fee_demands.student_id', '=', 'students.id')
+            ->select("students.{$studentColumn}")
+            ->selectRaw('SUM(fee_demands.final_amount) as total_demanded')
+            ->selectRaw("SUM(CASE WHEN fee_demands.status IN ({$activeStatuses}) THEN COALESCE(fee_demands.penalty_amount, 0) ELSE 0 END) as active_penalty")
+            ->selectRaw("SUM(CASE WHEN fee_demands.status IN ({$activeStatuses}) THEN fee_demands.final_amount + COALESCE(fee_demands.penalty_amount, 0) ELSE 0 END) as outstanding")
+            ->groupBy("students.{$studentColumn}")
+            ->get()
+            ->keyBy($studentColumn);
+    }
+
+    private function paymentFinancialsBy(string $studentColumn)
+    {
+        return FeePayment::join('students', 'fee_payments.student_id', '=', 'students.id')
+            ->where('fee_payments.status', 'paid')
+            ->select("students.{$studentColumn}")
+            ->selectRaw('SUM(fee_payments.amount_paid) as total_collected')
+            ->groupBy("students.{$studentColumn}")
+            ->get()
+            ->keyBy($studentColumn);
+    }
+
+    private function collectionPercentage(float $collected, float $billed): int
+    {
+        return $billed > 0 ? min(100, (int) round(($collected / $billed) * 100)) : 0;
     }
 }

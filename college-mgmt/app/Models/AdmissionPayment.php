@@ -68,7 +68,7 @@ class AdmissionPayment extends Model
     public function getFormattedAmountAttribute(): string
     {
         $amount = (float) $this->amount_paid;
-        // Indian number formatting: ₹1,40,000
+        // Indian number formatting: Rs. 1,40,000
         $formatted = '';
         $intPart = (int) $amount;
         $decPart = round($amount - $intPart, 2);
@@ -77,9 +77,9 @@ class AdmissionPayment extends Model
             $last3 = substr($str, -3);
             $rest = substr($str, 0, -3);
             $rest = preg_replace('/(\d)(?=(\d{2})+(?!\d))/', '$1,', $rest);
-            $formatted = '₹' . $rest . ',' . $last3;
+            $formatted = 'Rs. ' . $rest . ',' . $last3;
         } else {
-            $formatted = '₹' . $str;
+            $formatted = 'Rs. ' . $str;
         }
         if ($decPart > 0) {
             $formatted .= '.' . str_pad((int) round($decPart * 100), 2, '0', STR_PAD_LEFT);

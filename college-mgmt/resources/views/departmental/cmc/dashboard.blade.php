@@ -3,12 +3,12 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h4 class="fw-bold mb-0">Placement / CMC</h4>
             <span class="text-muted small">Placement drives, internships, career services</span>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('cmc.drives.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i> New Drive
             </a>
@@ -21,7 +21,19 @@
         </div>
     </div>
 
-    {{-- KPI Cards --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">CMC Priority</div>
+                <h5 class="fw-bold mb-1">{{ $cmcPriority['title'] }}</h5>
+                <p class="text-muted mb-0">{{ $cmcPriority['body'] }}</p>
+            </div>
+            <a href="{{ $cmcPriority['route'] }}" class="btn btn-sm {{ $cmcPriority['level'] === 'danger' ? 'btn-danger' : ($cmcPriority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+                <i class="bi bi-arrow-right-circle me-1"></i>{{ $cmcPriority['action'] }}
+            </a>
+        </div>
+    </div>
+
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-3">
             <div class="kpi-card kpi-blue">
@@ -33,7 +45,7 @@
                     </div>
                 </div>
                 <div class="kpi-trend {{ $activeDrives > 0 ? 'up' : '' }}">
-                    <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Ongoing recruitment
+                    <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Upcoming or ongoing
                 </div>
             </div>
         </div>
@@ -46,7 +58,7 @@
                         <div class="kpi-label">Total Placed</div>
                     </div>
                 </div>
-                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Offers accepted</div>
+                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Selected applications</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
@@ -58,11 +70,10 @@
                         <div class="kpi-label">Total Students</div>
                     </div>
                 </div>
-                <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Placement eligible</div>
+                <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Placement eligible pool</div>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
-            @php $placementRate = $totalStudents > 0 ? round(($totalPlacements / $totalStudents) * 100, 0) : 0; @endphp
             <div class="kpi-card {{ $placementRate >= 70 ? 'kpi-green' : ($placementRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">
                 <div class="d-flex align-items-center gap-3">
                     <div class="kpi-icon"><i class="bi bi-percent"></i></div>
@@ -78,11 +89,10 @@
         </div>
     </div>
 
-    {{-- Recent Drives --}}
     <div class="row g-4">
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between">
+                <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
                     <h6 class="fw-semibold mb-0">Recent Placement Drives</h6>
                     <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary">View All</a>
                 </div>
@@ -92,24 +102,22 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-3">Company</th>
-                                    <th>Type</th>
+                                    <th>Role</th>
                                     <th>Status</th>
                                     <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($recentDrives as $drive)
+                                @php
+                                    $statusColors = ['upcoming'=>'success','ongoing'=>'primary','completed'=>'info','cancelled'=>'secondary'];
+                                    $status = $drive->status ?? 'upcoming';
+                                @endphp
                                 <tr>
-                                    <td class="ps-3 fw-medium">{{ $drive->company->name ?? $drive->title ?? '—' }}</td>
-                                    <td class="small text-muted">{{ ucfirst($drive->type ?? 'placement') }}</td>
-                                    <td>
-                                        @php
-                                            $sc = ['open'=>'success','active'=>'primary','closed'=>'secondary','completed'=>'info'];
-                                            $s = $drive->status ?? 'open';
-                                        @endphp
-                                        <span class="badge bg-{{ $sc[$s] ?? 'secondary' }}-subtle text-{{ $sc[$s] ?? 'secondary' }}">{{ $s }}</span>
-                                    </td>
-                                    <td class="small text-muted">{{ $drive->created_at->format('d M Y') }}</td>
+                                    <td class="ps-3 fw-medium">{{ $drive->company->name ?? $drive->title ?? '-' }}</td>
+                                    <td class="small text-muted">{{ $drive->job_role ?? 'Placement' }}</td>
+                                    <td><span class="badge bg-{{ $statusColors[$status] ?? 'secondary' }}-subtle text-{{ $statusColors[$status] ?? 'secondary' }}">{{ ucfirst($status) }}</span></td>
+                                    <td class="small text-muted">{{ $drive->drive_date?->format('d M Y') ?? '-' }}</td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4" class="text-center text-muted py-3">No drives yet.</td></tr>
@@ -122,7 +130,6 @@
         </div>
 
         <div class="col-md-4">
-            {{-- Upcoming Career Events --}}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-transparent fw-semibold">
                     <i class="bi bi-calendar-event me-2 text-primary"></i>Upcoming Career Events
@@ -133,8 +140,10 @@
                         <li class="list-group-item py-2 px-3">
                             <div class="fw-semibold small">{{ $event->title }}</div>
                             <div class="text-muted" style="font-size:.75rem">
-                                <i class="bi bi-calendar3 me-1"></i>{{ $event->event_date ? $event->event_date->format('d M Y') : ($event->starts_at ? $event->starts_at->format('d M Y') : '—') }}
-                                @if($event->type ?? null) · <span class="badge bg-primary-subtle text-primary">{{ ucfirst($event->type) }}</span>@endif
+                                <i class="bi bi-calendar3 me-1"></i>{{ $event->event_date ? $event->event_date->format('d M Y') : '-' }}
+                                @if($event->event_type ?? null)
+                                    - <span class="badge bg-primary-subtle text-primary">{{ ucfirst(str_replace('_', ' ', $event->event_type)) }}</span>
+                                @endif
                             </div>
                         </li>
                     @empty
@@ -144,7 +153,6 @@
                 </div>
             </div>
 
-            {{-- Quick Actions --}}
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent fw-semibold">
                     <i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Quick Actions

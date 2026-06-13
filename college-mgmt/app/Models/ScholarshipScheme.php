@@ -28,6 +28,11 @@ class ScholarshipScheme extends Model
         return $this->hasMany(ApplicantScholarship::class, 'scheme_id');
     }
 
+    public function studentScholarshipApplications(): HasMany
+    {
+        return $this->hasMany(StudentScholarshipApplication::class, 'scholarship_scheme_id');
+    }
+
     public function getTypeLabelAttribute(): string
     {
         return match ($this->type) {
@@ -54,7 +59,8 @@ class ScholarshipScheme extends Model
 
     public function awardsCount(): int
     {
-        return $this->applicantScholarships()->whereIn('status', ['awarded', 'disbursed'])->count();
+        return $this->applicantScholarships()->whereIn('status', ['awarded', 'disbursed'])->count()
+            + $this->studentScholarshipApplications()->whereIn('status', ['approved', 'disbursed'])->count();
     }
 
     public function seatsRemaining(): ?int

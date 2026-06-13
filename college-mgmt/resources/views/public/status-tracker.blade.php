@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track Your Application — {{ config('app.name') }}</title>
+    <title>Track Your Application - {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -154,6 +154,10 @@
                         <div>
                             <strong>No application found.</strong><br>
                             No application found matching those details. Please check your application number and email.
+                            <div class="mt-3 d-flex flex-wrap gap-2">
+                                <a href="{{ route('apply') }}" class="btn btn-sm btn-outline-danger">Apply for an open intake</a>
+                                <a href="{{ route('login') }}" class="btn btn-sm btn-outline-secondary">Applicant login</a>
+                            </div>
                         </div>
                     </div>
                 @else
@@ -203,17 +207,79 @@
                                 };
                                 $statusLabel = match($applicant->status) {
                                     'draft'        => 'Application Draft',
-                                    'submitted'    => 'Submitted — Under Initial Review',
+                                    'submitted'    => 'Submitted - Under Initial Review',
                                     'under_review' => 'Under Review by Admission Team',
                                     'shortlisted'  => 'Shortlisted for Interview',
-                                    'selected'     => 'Selected — Congratulations!',
+                                    'selected'     => 'Selected - Congratulations!',
                                     'rejected'     => 'Not Selected',
                                     'withdrawn'    => 'Withdrawn',
                                     default        => ucfirst($applicant->status),
                                 };
+                                $nextAction = match($applicant->status) {
+                                    'draft' => [
+                                        'title' => 'Complete your application',
+                                        'body' => 'Log in to the applicant portal, finish all required sections, upload documents, and submit before the intake deadline.',
+                                        'label' => 'Continue application',
+                                        'route' => route('login'),
+                                        'tone' => 'primary',
+                                    ],
+                                    'submitted', 'under_review' => [
+                                        'title' => 'Watch for admission updates',
+                                        'body' => 'Your application is with the admission team. Keep your email and phone reachable for document, interview, or counselling requests.',
+                                        'label' => 'Applicant login',
+                                        'route' => route('login'),
+                                        'tone' => 'warning',
+                                    ],
+                                    'shortlisted' => [
+                                        'title' => 'Prepare for selection steps',
+                                        'body' => 'You have moved ahead in the process. Check the applicant portal and your email for session, interview, document, or fee instructions.',
+                                        'label' => 'View applicant portal',
+                                        'route' => route('login'),
+                                        'tone' => 'info',
+                                    ],
+                                    'selected' => [
+                                        'title' => 'Complete your admission offer tasks',
+                                        'body' => 'Log in to review offer letters, respond before the deadline, submit required payments, and complete enrollment requirements.',
+                                        'label' => 'Review offer tasks',
+                                        'route' => route('login'),
+                                        'tone' => 'success',
+                                    ],
+                                    'rejected' => [
+                                        'title' => 'Contact admissions for guidance',
+                                        'body' => 'This application was not selected at this stage. Contact the admission office if you need counselling or information about future intakes.',
+                                        'label' => 'View open intakes',
+                                        'route' => route('apply'),
+                                        'tone' => 'danger',
+                                    ],
+                                    'withdrawn' => [
+                                        'title' => 'Application withdrawn',
+                                        'body' => 'This application is no longer active. You can review open intakes if you want to apply again.',
+                                        'label' => 'View open intakes',
+                                        'route' => route('apply'),
+                                        'tone' => 'secondary',
+                                    ],
+                                    default => [
+                                        'title' => 'Check your applicant portal',
+                                        'body' => 'Log in to view the latest required actions and messages from the admission team.',
+                                        'label' => 'Applicant login',
+                                        'route' => route('login'),
+                                        'tone' => 'primary',
+                                    ],
+                                };
                             @endphp
                             <div style="background: {{ $statusColor }}; color: white; padding: 12px 20px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; display: inline-block;">
                                 {{ $statusLabel }}
+                            </div>
+                        </div>
+
+                        <div class="alert alert-{{ $nextAction['tone'] }} d-flex align-items-start gap-2 mb-4">
+                            <i class="bi bi-arrow-right-circle fs-5 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <div class="fw-bold">{{ $nextAction['title'] }}</div>
+                                <div class="small mb-3">{{ $nextAction['body'] }}</div>
+                                <a href="{{ $nextAction['route'] }}" class="btn btn-sm btn-{{ $nextAction['tone'] === 'warning' ? 'dark' : $nextAction['tone'] }}">
+                                    {{ $nextAction['label'] }}
+                                </a>
                             </div>
                         </div>
 

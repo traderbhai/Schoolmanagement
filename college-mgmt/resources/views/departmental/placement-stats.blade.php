@@ -8,7 +8,6 @@
         <span class="text-muted small">Institution-wide placement performance overview</span>
     </div>
 
-    {{-- KPI Cards --}}
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-2">
             <div class="card border-0 shadow-sm text-center h-100">
@@ -38,7 +37,7 @@
             <div class="card border-0 shadow-sm text-center h-100">
                 <div class="card-body">
                     <div class="fs-2 fw-bold text-warning">
-                        {{ $avgSalary ? '₹'.number_format($avgSalary/100000,1).'L' : '—' }}
+                        {{ $avgSalary ? number_format($avgSalary, 1) . ' LPA' : '-' }}
                     </div>
                     <div class="text-muted small">Avg Package</div>
                 </div>
@@ -63,11 +62,10 @@
     </div>
 
     <div class="row g-4">
-        {{-- Program-wise placement --}}
         <div class="col-lg-7">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pt-4 pb-0">
-                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">PROGRAM-WISE PLACEMENT</h6>
+                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">Program-Wise Placement</h6>
                 </div>
                 <div class="card-body">
                     @forelse($programStats as $prog)
@@ -91,11 +89,10 @@
             </div>
         </div>
 
-        {{-- Top Recruiters + Internship stats --}}
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-transparent border-0 pt-4 pb-0">
-                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">TOP RECRUITERS</h6>
+                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">Top Recruiters</h6>
                 </div>
                 <div class="card-body">
                     @forelse($topRecruiters as $r)
@@ -111,7 +108,7 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pt-4 pb-0">
-                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">INTERNSHIPS</h6>
+                    <h6 class="fw-semibold text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.08em">Internships</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-around text-center">

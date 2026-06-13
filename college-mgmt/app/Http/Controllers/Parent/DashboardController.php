@@ -2,15 +2,17 @@
 namespace App\Http\Controllers\Parent;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeStructure, FeePayment, Semester};
+use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeDemand, FeePayment, Semester};
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
+    private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
     private function getParent(): ParentProfile
     {
         return ParentProfile::where('user_id', Auth::id())
-            ->with('students.user', 'students.course')
+            ->with('students.user', 'students.course', 'students.program', 'students.batch')
             ->firstOrFail();
     }
 
@@ -39,15 +41,21 @@ class DashboardController extends Controller
                 }
             }
 
-            $feeDue  = $student->course_id ? FeeStructure::where('course_id', $student->course_id)->sum('amount') : 0;
-            $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
-            $balance = max(0, $feeDue - $feePaid);
+            $finance = $this->studentFinance($student);
+            $priority = $this->studentPriority($attendancePct, $finance);
+            $priority['route'] = match ($priority['type']) {
+                'attendance' => route('parent.children.attendance', $student),
+                'fees' => route('parent.children.fees', $student),
+                default => route('parent.children'),
+            };
 
             return [
                 'student'       => $student,
                 'attendancePct' => $attendancePct,
                 'sgpa'          => $sgpa,
-                'balance'       => $balance,
+                'finance'       => $finance,
+                'balance'       => $finance['balance'],
+                'priority'      => $priority,
             ];
         });
 
@@ -55,13 +63,21 @@ class DashboardController extends Controller
             ->where('publish_date', '<=', now())
             ->latest()->take(5)->get();
 
-        return view('parent.dashboard', compact('parent', 'children', 'childrenData', 'notices'));
+        $parentPriority = $childrenData->first(fn($item) => $item['priority']['level'] !== 'none')['priority'] ?? [
+            'level' => 'none',
+            'title' => 'No urgent parent action today',
+            'body' => 'Review notices, attendance, results, and fee updates when you have time.',
+            'route' => route('parent.notices'),
+            'action' => 'View Notices',
+        ];
+
+        return view('parent.dashboard', compact('parent', 'children', 'childrenData', 'notices', 'parentPriority'));
     }
 
     public function children()
     {
         $parent = $this->getParent();
-        $children = $parent->students()->with('user', 'course', 'department')->get();
+        $children = $parent->students()->with('user', 'course', 'department', 'program', 'batch')->get();
         return view('parent.children', compact('parent', 'children'));
     }
 
@@ -129,11 +145,13 @@ class DashboardController extends Controller
         abort_unless($parent->students->contains($student), 403);
 
         $payments = $student->feePayments()->with('feeStructure')->latest()->get();
-        $feeDue   = $student->course_id ? FeeStructure::where('course_id', $student->course_id)->sum('amount') : 0;
-        $feePaid  = $student->feePayments()->where('status', 'paid')->sum('amount_paid');
-        $balance  = max(0, $feeDue - $feePaid);
+        $feeDemands = $student->feeDemands()->with('term')->latest('due_date')->get();
+        $finance = $this->studentFinance($student);
+        $feeDue = $finance['total_billed'];
+        $feePaid = $finance['paid'];
+        $balance = $finance['balance'];
 
-        return view('parent.fees', compact('parent', 'student', 'payments', 'feeDue', 'feePaid', 'balance'));
+        return view('parent.fees', compact('parent', 'student', 'payments', 'feeDemands', 'finance', 'feeDue', 'feePaid', 'balance'));
     }
 
     public function notices()
@@ -146,5 +164,80 @@ class DashboardController extends Controller
             ->paginate(10);
 
         return view('parent.notices', compact('parent', 'notices'));
+    }
+
+    private function studentFinance(Student $student): array
+    {
+        $demands = FeeDemand::where('student_id', $student->id)->get();
+        $activeDemands = $demands->whereIn('status', self::ACTIVE_DEMAND_STATUSES);
+
+        $totalDemanded = $demands->sum(fn($demand) => (float) $demand->final_amount);
+        $activePenalty = $activeDemands->sum(fn($demand) => (float) ($demand->penalty_amount ?? 0));
+        $balance = $activeDemands->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
+        $paid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
+        $overdueCount = $activeDemands->filter(fn($demand) => $this->isDemandOverdue($demand))->count();
+        $nextDueDate = $activeDemands->pluck('due_date')->filter()->sort()->first();
+
+        return [
+            'total_billed' => $totalDemanded + $activePenalty,
+            'paid' => (float) $paid,
+            'balance' => $balance,
+            'open_demand_count' => $activeDemands->count(),
+            'overdue_count' => $overdueCount,
+            'next_due_date' => $nextDueDate,
+        ];
+    }
+
+    private function studentPriority(?int $attendancePct, array $finance): array
+    {
+        if ($attendancePct !== null && $attendancePct < 75) {
+            return [
+                'level' => 'danger',
+                'title' => 'Attendance needs attention',
+                'body' => "Attendance is {$attendancePct}%. Review subject-wise attendance and contact the mentor if needed.",
+                'route' => null,
+                'action' => 'Review Attendance',
+                'type' => 'attendance',
+            ];
+        }
+
+        if ($finance['overdue_count'] > 0) {
+            return [
+                'level' => 'danger',
+                'title' => 'Fee demand is overdue',
+                'body' => 'There are overdue fee demands. Review the balance and recent receipts.',
+                'route' => null,
+                'action' => 'Review Fees',
+                'type' => 'fees',
+            ];
+        }
+
+        if ($finance['balance'] > 0) {
+            return [
+                'level' => 'warning',
+                'title' => 'Fee balance is open',
+                'body' => 'A fee balance remains open. Track the due date and payment history.',
+                'route' => null,
+                'action' => 'Review Fees',
+                'type' => 'fees',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No urgent action',
+            'body' => 'Attendance, fee balance, and recent academic signals are currently clear.',
+            'route' => null,
+            'action' => 'View Details',
+            'type' => 'children',
+        ];
+    }
+
+    private function isDemandOverdue(FeeDemand $demand): bool
+    {
+        return $demand->status === 'overdue'
+            || ($demand->status === 'pending'
+                && $demand->due_date
+                && $demand->due_date->lt(now()->startOfDay()));
     }
 }

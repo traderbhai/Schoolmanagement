@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\DashboardRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,21 +31,7 @@ class AuthenticatedSessionController extends Controller
 
         \App\Models\ActivityLog::record('login', 'User logged in');
 
-        $user = $request->user();
-        if ($user->hasRole('admin'))             return redirect()->route('admin.dashboard');
-        if ($user->hasRole('dean_academics'))    return redirect()->route('dean.dashboard');
-        if ($user->hasRole('program_chair'))     return redirect()->route('chair.dashboard');
-        if ($user->hasRole('hod'))               return redirect()->route('hod.dashboard');
-        if ($user->hasRole('exam_cell'))         return redirect()->route('exam-cell.dashboard');
-        if ($user->hasRole('accounts_officer'))  return redirect()->route('accounts.dashboard');
-        if ($user->hasRole('cmc'))               return redirect()->route('cmc.dashboard');
-        if ($user->hasRole('director'))          return redirect()->route('director.dashboard');
-        if ($user->hasRole('admission_head'))    return redirect()->route('admission.dashboard');
-        if ($user->hasRole('admission_officer')) return redirect()->route('admission.dashboard');
-        if ($user->hasRole('teacher'))           return redirect()->route('teacher.dashboard');
-        if ($user->hasRole('parent'))            return redirect()->route('parent.dashboard');
-        if ($user->hasRole('applicant'))         return redirect()->route('applicant.dashboard');
-        return redirect()->route('student.dashboard');
+        return DashboardRedirect::forUser($request->user());
     }
 
     /**

@@ -7,15 +7,13 @@
 @endsection
 
 @section('content')
-
-{{-- Banner --}}
 <div class="card mb-4" style="background: linear-gradient(135deg, var(--clr-primary), #6366f1); color: #fff;">
     <div class="card-body py-4">
         <div class="d-flex align-items-center gap-3">
             <i class="bi bi-briefcase-fill fs-1 opacity-75"></i>
             <div>
                 <h4 class="mb-1 fw-bold">Placement & Career</h4>
-                <div class="opacity-75">Browse open drives, apply, and track your application status</div>
+                <div class="opacity-75">Browse drives, apply before deadlines, and track every application outcome.</div>
             </div>
         </div>
     </div>
@@ -28,7 +26,19 @@
     <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
-{{-- Tabs --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Placement Priority</div>
+            <h5 class="fw-bold mb-1">{{ $placementPriority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $placementPriority['body'] }}</p>
+        </div>
+        <a href="{{ $placementPriority['route'] }}" class="btn btn-sm {{ $placementPriority['level'] === 'danger' ? 'btn-danger' : ($placementPriority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $placementPriority['action'] }}
+        </a>
+    </div>
+</div>
+
 <ul class="nav nav-tabs mb-4" id="placementTabs">
     <li class="nav-item">
         <a class="nav-link active" data-bs-toggle="tab" href="#openDrives">
@@ -45,30 +55,31 @@
 </ul>
 
 <div class="tab-content">
-    {{-- Open Drives --}}
     <div class="tab-pane fade show active" id="openDrives">
         @if($drives->isEmpty())
             <div class="card">
                 <div class="card-body text-center py-5 text-muted">
                     <i class="bi bi-briefcase fs-1 d-block mb-2"></i>
-                    No open placement drives at the moment.
+                    No placement drives are open right now.
                 </div>
             </div>
         @else
             <div class="row g-3">
                 @foreach($drives as $drive)
-                @php $alreadyApplied = in_array($drive->id, $myApplicationDriveIds); @endphp
+                @php
+                    $alreadyApplied = in_array($drive->id, $myApplicationDriveIds);
+                    $deadlinePassed = $drive->last_apply_date && $drive->last_apply_date->lt(now()->startOfDay());
+                    $deadlineSoon = $drive->last_apply_date && ! $deadlinePassed && $drive->last_apply_date->lte(now()->addDays(3)->endOfDay());
+                    $badge = $drive->status === 'ongoing' ? 'bg-warning text-dark' : 'bg-info';
+                @endphp
                 <div class="col-md-6 col-lg-4">
-                    <div class="card h-100">
+                    <div class="card h-100 border-0 shadow-sm">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
                                 <div>
                                     <h6 class="fw-bold mb-0">{{ $drive->title }}</h6>
-                                    <div class="text-muted" style="font-size:.82rem">{{ $drive->company->name }}</div>
+                                    <div class="text-muted" style="font-size:.82rem">{{ $drive->company->name ?? 'Company pending' }}</div>
                                 </div>
-                                @php
-                                    $badge = $drive->status === 'ongoing' ? 'bg-warning text-dark' : 'bg-info';
-                                @endphp
                                 <span class="badge {{ $badge }}">{{ ucfirst($drive->status) }}</span>
                             </div>
                             <div class="mb-2">
@@ -85,14 +96,17 @@
                                     <div><i class="bi bi-calendar me-1"></i>Drive Date: {{ $drive->drive_date->format('d M Y') }}</div>
                                 @endif
                                 @if($drive->last_apply_date)
-                                    <div><i class="bi bi-clock me-1"></i>Apply by: {{ $drive->last_apply_date->format('d M Y') }}</div>
+                                    <div class="{{ $deadlineSoon ? 'text-danger fw-semibold' : '' }}"><i class="bi bi-clock me-1"></i>Apply by: {{ $drive->last_apply_date->format('d M Y') }}</div>
                                 @endif
                                 @if($drive->location)
                                     <div><i class="bi bi-geo-alt me-1"></i>{{ $drive->location }}</div>
                                 @endif
+                                @if($drive->eligibility)
+                                    <div class="mt-2">{{ $drive->eligibility }}</div>
+                                @endif
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent">
+                        <div class="card-footer bg-transparent border-0 pt-0">
                             @if($alreadyApplied)
                                 <button class="btn btn-sm btn-secondary w-100" disabled>
                                     <i class="bi bi-check-circle me-1"></i>Applied
@@ -100,6 +114,10 @@
                             @elseif(!$student)
                                 <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                     Profile not set up
+                                </button>
+                            @elseif($deadlinePassed)
+                                <button class="btn btn-sm btn-outline-secondary w-100" disabled>
+                                    Deadline passed
                                 </button>
                             @else
                                 <form method="POST" action="{{ route('student.placements.apply', $drive) }}">
@@ -117,63 +135,8 @@
         @endif
     </div>
 
-    {{-- My Applications --}}
     <div class="tab-pane fade" id="myApplications">
-        @if($myApplications->isEmpty())
-            <div class="card">
-                <div class="card-body text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                    You haven't applied to any drives yet.
-                </div>
-            </div>
-        @else
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Drive / Company</th>
-                                    <th>Job Role</th>
-                                    <th>Package</th>
-                                    <th>Status</th>
-                                    <th>Applied On</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($myApplications as $app)
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">{{ $app->drive->title }}</div>
-                                        <div class="text-muted" style="font-size:.78rem">{{ $app->drive->company->name }}</div>
-                                    </td>
-                                    <td>{{ $app->drive->job_role }}</td>
-                                    <td>{{ $app->drive->package ?? '—' }}</td>
-                                    <td>
-                                        @php
-                                            $statusBadge = [
-                                                'applied'     => 'bg-info',
-                                                'shortlisted' => 'bg-primary',
-                                                'interview'   => 'bg-warning text-dark',
-                                                'selected'    => 'bg-success',
-                                                'rejected'    => 'bg-danger',
-                                                'withdrawn'   => 'bg-secondary',
-                                            ];
-                                        @endphp
-                                        <span class="badge {{ $statusBadge[$app->application_status] ?? 'bg-secondary' }}">
-                                            {{ ucfirst($app->application_status) }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $app->created_at->format('d M Y') }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        @endif
+        @include('student.partials.placement-applications-table', ['myApplications' => $myApplications])
     </div>
 </div>
-
 @endsection

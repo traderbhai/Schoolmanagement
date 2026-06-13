@@ -25,6 +25,7 @@ class NotificationService
         'FeeDueReminder'         => 'email_payment_updates',
         'LowAttendanceAlert'     => 'email_notices',
         'NoticePublished'        => 'email_notices',
+        'StudentDocumentRequestUpdated' => 'email_notices',
     ];
 
     /**

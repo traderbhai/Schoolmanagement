@@ -16,8 +16,8 @@
         <div class="col-md-4">
           <label class="form-label small fw-semibold">Status <span class="text-danger">*</span></label>
           <select name="status" class="form-select" required>
-            @foreach(['draft','open','active','closed','cancelled'] as $s)
-            <option value="{{ $s }}" {{ old('status','draft')===$s?'selected':'' }}>{{ ucfirst($s) }}</option>
+            @foreach(['upcoming','ongoing','completed','cancelled'] as $s)
+            <option value="{{ $s }}" {{ old('status','upcoming')===$s?'selected':'' }}>{{ ucfirst($s) }}</option>
             @endforeach
           </select>
         </div>

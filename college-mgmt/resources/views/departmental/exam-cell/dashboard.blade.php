@@ -1,13 +1,28 @@
 @extends('layouts.admin')
-@section('title', 'Exam Cell — Dashboard')
+@section('title', 'Exam Cell - Dashboard')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Exam Cell Dashboard</h4>
-    <a href="{{ route('admin.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Exam Cell Dashboard</h4>
+        <p class="text-muted mb-0">Track exam scheduling, marks entry, publication readiness, appeals, and anomalies.</p>
+    </div>
+    <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Schedule Exam</a>
 </div>
 
-{{-- KPI Cards --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Exam Cell Priority</div>
+            <h5 class="fw-bold mb-1">{{ $priority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $priority['body'] }}</p>
+        </div>
+        <a href="{{ $priority['route'] }}" class="btn btn-sm {{ $priority['level'] === 'danger' ? 'btn-danger' : ($priority['level'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $priority['action'] }}
+        </a>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-2">
         <div class="kpi-card kpi-blue">
@@ -51,41 +66,20 @@
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-green">
+        <div class="kpi-card {{ ($pendingAppeals ?? 0) > 0 ? 'kpi-amber' : 'kpi-green' }}">
             <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-check2-all"></i></div>
+                <div class="kpi-icon"><i class="bi bi-envelope-exclamation"></i></div>
                 <div>
-                    <div class="kpi-value">{{ $withResults }}</div>
-                    <div class="kpi-label">Results Entered</div>
+                    <div class="kpi-value">{{ $pendingAppeals ?? 0 }}</div>
+                    <div class="kpi-label">Open Appeals</div>
                 </div>
             </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Completed</div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ $completionPct >= 75 ? 'kpi-green' : ($completionPct >= 50 ? 'kpi-amber' : 'kpi-red') }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $completionPct }}%</div>
-                    <div class="kpi-label">Completion</div>
-                </div>
+            <div class="kpi-trend {{ ($pendingAppeals ?? 0) > 0 ? 'up' : '' }}">
+                @if(($pendingAppeals ?? 0) > 0)<i class="bi bi-exclamation-circle me-1"></i>Review queue
+                @else
+                <i class="bi bi-check me-1"></i>None pending
+                @endif
             </div>
-            <div class="kpi-trend {{ $completionPct >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $completionPct >= 75 ? 'up' : 'down' }} me-1"></i>Result entry rate
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-purple">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-globe2"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $published }}</div>
-                    <div class="kpi-label">Published</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-megaphone me-1"></i>Visible to students</div>
         </div>
     </div>
     <div class="col-sm-6 col-lg-2">
@@ -107,9 +101,22 @@
             </div>
         </a>
     </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="kpi-card {{ $completionPct >= 75 ? 'kpi-green' : ($completionPct >= 50 ? 'kpi-amber' : 'kpi-red') }}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
+                <div>
+                    <div class="kpi-value">{{ $completionPct }}%</div>
+                    <div class="kpi-label">Completion</div>
+                </div>
+            </div>
+            <div class="kpi-trend {{ $completionPct >= 75 ? 'up' : 'down' }}">
+                <i class="bi bi-arrow-{{ $completionPct >= 75 ? 'up' : 'down' }} me-1"></i>Result entry rate
+            </div>
+        </div>
+    </div>
 </div>
 
-{{-- Progress Bar --}}
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -124,7 +131,6 @@
 </div>
 
 <div class="row g-3">
-    {{-- Recent Exams --}}
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent fw-semibold">
@@ -140,16 +146,16 @@
                         @forelse($recentExams as $exam)
                             <tr>
                                 <td class="small fw-semibold">{{ $exam->name }}</td>
-                                <td class="small text-muted">{{ $exam->subject?->name ?? '—' }}</td>
-                                <td class="small text-muted">{{ $exam->program?->code ?? '—' }}</td>
-                                <td class="small">{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : '—' }}</td>
+                                <td class="small text-muted">{{ $exam->subject?->name ?? '-' }}</td>
+                                <td class="small text-muted">{{ $exam->program?->code ?? $exam->program?->name ?? '-' }}</td>
+                                <td class="small">{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : '-' }}</td>
                                 <td><span class="badge bg-secondary">{{ $exam->result_count }}</span></td>
-                                <td class="small">{{ $exam->avg_marks ?? '—' }}</td>
+                                <td class="small">{{ $exam->avg_marks ?? '-' }}</td>
                                 <td>
                                     @if($exam->pass_pct !== null)
                                         <span class="badge bg-{{ $exam->pass_pct >= 75 ? 'success' : ($exam->pass_pct >= 50 ? 'warning' : 'danger') }}">{{ $exam->pass_pct }}%</span>
                                     @else
-                                        <span class="text-muted small">—</span>
+                                        <span class="text-muted small">-</span>
                                     @endif
                                 </td>
                             </tr>
@@ -163,7 +169,6 @@
         </div>
     </div>
 
-    {{-- Upcoming Exams --}}
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent fw-semibold">
@@ -176,7 +181,7 @@
                         <div class="fw-semibold small">{{ $exam->name }}</div>
                         <div class="text-muted" style="font-size:.75rem">
                             <i class="bi bi-calendar3 me-1"></i>{{ $exam->exam_date->format('d M Y') }}
-                            @if($exam->program) · {{ $exam->program->code }} @endif
+                            @if($exam->program) | {{ $exam->program->code ?? $exam->program->name }} @endif
                         </div>
                         @if($exam->subject)<div class="text-muted" style="font-size:.72rem"><i class="bi bi-book me-1"></i>{{ $exam->subject->name }}</div>@endif
                     </li>
@@ -187,7 +192,6 @@
             </div>
         </div>
 
-        {{-- Quick Actions --}}
         <div class="card border-0 shadow-sm mt-3">
             <div class="card-header bg-transparent fw-semibold"><i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Quick Actions</div>
             <div class="card-body d-flex flex-column gap-2">

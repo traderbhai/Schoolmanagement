@@ -50,9 +50,15 @@ class ExamCellController extends Controller
         try { $anomalyCount = \App\Models\ExamAnomalyLog::whereNull('resolved_at')->count(); }
         catch (\Exception $e) { $anomalyCount = 0; }
 
+        try { $pendingAppeals = \App\Models\MarksAppeal::whereIn('status', ['pending', 'under_review'])->count(); }
+        catch (\Exception $e) { $pendingAppeals = 0; }
+
+        $nextExam = $upcomingExams->first();
+        $priority = $this->examCellPriority($anomalyCount, $pendingAppeals, $pending, $nextExam, $total);
+
         return view('departmental.exam-cell.dashboard', compact(
             'total', 'upcoming', 'pending', 'withResults', 'completionPct', 'published',
-            'recentExams', 'upcomingExams', 'anomalyCount'
+            'recentExams', 'upcomingExams', 'anomalyCount', 'pendingAppeals', 'priority'
         ));
     }
 
@@ -267,5 +273,66 @@ class ExamCellController extends Controller
         } catch (\Exception $e) {}
 
         return back()->with('success', 'Appeal reviewed.');
+    }
+
+    private function examCellPriority(int $anomalyCount, int $pendingAppeals, int $pendingResults, ?Exam $nextExam, int $totalExams): array
+    {
+        if ($anomalyCount > 0) {
+            return [
+                'level' => 'danger',
+                'title' => "Resolve {$anomalyCount} open exam anomal" . ($anomalyCount === 1 ? 'y' : 'ies'),
+                'body' => 'Review malpractice, attendance, paper, or process anomalies before publishing dependent results.',
+                'route' => route('exam-cell.anomalies.index'),
+                'action' => 'Review Anomalies',
+            ];
+        }
+
+        if ($pendingAppeals > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingAppeals} pending marks appeal" . ($pendingAppeals === 1 ? '' : 's'),
+                'body' => 'Close student marks appeals with clear remarks before final result sign-off.',
+                'route' => route('exam-cell.marks-appeals'),
+                'action' => 'Open Appeals',
+            ];
+        }
+
+        if ($pendingResults > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Enter results for {$pendingResults} completed exam" . ($pendingResults === 1 ? '' : 's'),
+                'body' => 'Completed exams without marks block publication, transcripts, and parent/student visibility.',
+                'route' => route('exam-cell.results'),
+                'action' => 'Enter Results',
+            ];
+        }
+
+        if ($nextExam) {
+            return [
+                'level' => 'info',
+                'title' => 'Prepare hall tickets for the next exam',
+                'body' => $nextExam->name . ' is scheduled on ' . $nextExam->exam_date->format('d M Y') . '. Confirm room, subject, and student eligibility.',
+                'route' => route('exam-cell.hall-tickets', ['exam_id' => $nextExam->id]),
+                'action' => 'Prepare Hall Tickets',
+            ];
+        }
+
+        if ($totalExams === 0) {
+            return [
+                'level' => 'warning',
+                'title' => 'Schedule the first exam',
+                'body' => 'No exams are scheduled yet. Create an exam to start hall ticket, marks entry, and publication workflows.',
+                'route' => route('exam-cell.exams.create'),
+                'action' => 'Schedule Exam',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No urgent exam-cell action today',
+            'body' => 'Use this time to audit schedules, verify hall tickets, review reports, or prepare the next exam cycle.',
+            'route' => route('exam-cell.exams'),
+            'action' => 'View Exams',
+        ];
     }
 }

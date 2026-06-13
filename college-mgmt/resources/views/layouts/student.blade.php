@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>@yield('title', 'EduManage — Student')</title>
+    <title>@yield('title', 'EduManage - Student')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -130,8 +130,14 @@
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif">
             <i class="bi bi-file-earmark-text me-2"></i>Document Requests
         </a>
-        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif">
+        <a href="{{ route('student.transport.index') }}" class="nav-link @if(request()->routeIs('student.transport.*')) active @endif">
+            <i class="bi bi-bus-front me-2"></i>Transport
+        </a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.outpass')) active @endif">
             <i class="bi bi-door-open me-2"></i>Outpass Request
+        </a>
+        <a href="{{ route('student.hostel.complaints.index') }}" class="nav-link @if(request()->routeIs('student.hostel.complaints.*')) active @endif">
+            <i class="bi bi-tools me-2"></i>Hostel Complaints
         </a>
         <a href="{{ route('student.library.index') }}" class="nav-link @if(request()->routeIs('student.library.*')) active @endif">
             <i class="bi bi-book me-2"></i>My Library
@@ -208,7 +214,9 @@
         <a href="{{ route('student.feedback.index') }}" class="nav-link @if(request()->routeIs('student.feedback.*')) active @endif"><i class="bi bi-star me-2"></i>Course Feedback</a>
         <a href="{{ route('student.condonation.index') }}" class="nav-link @if(request()->routeIs('student.condonation.*')) active @endif"><i class="bi bi-shield-check me-2"></i>Att. Condonation</a>
         <a href="{{ route('student.documents.index') }}" class="nav-link @if(request()->routeIs('student.documents.*')) active @endif"><i class="bi bi-file-earmark-text me-2"></i>Document Requests</a>
-        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.*')) active @endif"><i class="bi bi-door-open me-2"></i>Outpass Request</a>
+        <a href="{{ route('student.transport.index') }}" class="nav-link @if(request()->routeIs('student.transport.*')) active @endif"><i class="bi bi-bus-front me-2"></i>Transport</a>
+        <a href="{{ route('student.hostel.outpass') }}" class="nav-link @if(request()->routeIs('student.hostel.outpass')) active @endif"><i class="bi bi-door-open me-2"></i>Outpass Request</a>
+        <a href="{{ route('student.hostel.complaints.index') }}" class="nav-link @if(request()->routeIs('student.hostel.complaints.*')) active @endif"><i class="bi bi-tools me-2"></i>Hostel Complaints</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Account</div>
         <a href="{{ route('student.summary.index') }}" class="nav-link @if(request()->routeIs('student.summary.*')) active @endif"><i class="bi bi-card-text me-2"></i>Academic Summary</a>
@@ -232,7 +240,7 @@
             </button>
 
             <div class="page-heading">
-                <h6>@yield('page-title', 'Dashboard')</h6>
+                <h6>@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h6>
                 @hasSection('breadcrumb')
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">

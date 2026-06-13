@@ -8,14 +8,30 @@
 @section('content')
 <div class="mb-4">
     <h5 class="fw-bold mb-0">Welcome, {{ auth()->user()->name }}</h5>
-    <div class="text-muted" style="font-size:.85rem">Here's an overview of your children's progress.</div>
+    <div class="text-muted" style="font-size:.85rem">Track attendance, fees, results, and notices for your linked students.</div>
 </div>
 
-{{-- Children KPI cards --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Parent Priority</div>
+            <h5 class="fw-bold mb-1">{{ $parentPriority['title'] }}</h5>
+            <p class="text-muted mb-0">{{ $parentPriority['body'] }}</p>
+        </div>
+        <a href="{{ $parentPriority['route'] }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-arrow-right-circle me-1"></i>{{ $parentPriority['action'] }}
+        </a>
+    </div>
+</div>
+
 @forelse($childrenData as $item)
-@php $s = $item['student']; @endphp
+@php
+    $s = $item['student'];
+    $finance = $item['finance'];
+    $priority = $item['priority'];
+@endphp
 <div class="card mb-4">
-    <div class="card-header d-flex align-items-center justify-content-between">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <span class="fw-semibold"><i class="bi bi-person-circle me-2 text-primary"></i>{{ $s->user->name }}</span>
         <div class="d-flex gap-2">
             <a href="{{ route('parent.children.attendance', $s) }}" class="btn btn-sm btn-outline-secondary">Attendance</a>
@@ -24,6 +40,18 @@
         </div>
     </div>
     <div class="card-body">
+        <div class="alert {{ $priority['level'] === 'danger' ? 'alert-danger' : ($priority['level'] === 'warning' ? 'alert-warning' : 'alert-success') }} py-2 mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <div class="fw-semibold">{{ $priority['title'] }}</div>
+                    <div style="font-size:.82rem">{{ $priority['body'] }}</div>
+                </div>
+                <a href="{{ $priority['route'] }}" class="btn btn-sm {{ $priority['level'] === 'danger' ? 'btn-danger' : ($priority['level'] === 'warning' ? 'btn-warning' : 'btn-outline-success') }}">
+                    {{ $priority['action'] }}
+                </a>
+            </div>
+        </div>
+
         <div class="row g-3">
             <div class="col-sm-4">
                 <div class="kpi-card kpi-blue">
@@ -38,15 +66,20 @@
                 </div>
             </div>
             <div class="col-sm-4">
-                <div class="kpi-card {{ $item['balance'] > 0 ? 'kpi-red' : 'kpi-green' }}">
+                <div class="kpi-card {{ $finance['balance'] > 0 ? 'kpi-red' : 'kpi-green' }}">
                     <div class="kpi-label">Fee Balance</div>
-                    <div class="kpi-value">₹{{ number_format($item['balance']) }}</div>
+                    <div class="kpi-value">Rs. {{ number_format($finance['balance']) }}</div>
                 </div>
             </div>
         </div>
-        <div class="mt-2 text-muted" style="font-size:.8rem">
-            <i class="bi bi-journal-bookmark me-1"></i>{{ optional($s->course)->name ?? 'N/A' }}
-            &bull; Enrollment: {{ $s->enrollment_number }}
+
+        <div class="mt-3 d-flex flex-wrap gap-3 text-muted" style="font-size:.8rem">
+            <span><i class="bi bi-journal-bookmark me-1"></i>{{ optional($s->program)->name ?? optional($s->course)->name ?? 'N/A' }}</span>
+            <span>Enrollment: {{ $s->enrollment_number }}</span>
+            <span>Open demands: {{ $finance['open_demand_count'] }}</span>
+            @if($finance['next_due_date'])
+                <span>Next due: {{ $finance['next_due_date']->format('d M Y') }}</span>
+            @endif
         </div>
     </div>
 </div>
@@ -58,7 +91,6 @@
 </div>
 @endforelse
 
-{{-- Recent Notices --}}
 @if($notices->count())
 <div class="card mt-4">
     <div class="card-header d-flex align-items-center justify-content-between">

@@ -13,20 +13,20 @@ class PlacementStatsController extends Controller
         $totalStudents = Student::where('status', 'active')->count();
 
         // Placements
-        $placed = Placement::distinct('student_id')->count('student_id');
+        $placed = Placement::where('application_status', 'selected')
+            ->distinct('student_id')
+            ->count('student_id');
         $placementRate = $totalStudents > 0 ? round(($placed / $totalStudents) * 100, 1) : 0;
 
-        // Salary stats
-        try {
-            $avgSalary = Placement::where('salary', '>', 0)->avg('salary');
-            $maxSalary = Placement::max('salary');
-        } catch (\Exception $e) {
-            $avgSalary = null;
-            $maxSalary = null;
-        }
+        // Package stats (LPA)
+        $avgSalary = Placement::where('application_status', 'selected')
+            ->whereNotNull('offered_package')
+            ->avg('offered_package');
+        $maxSalary = Placement::where('application_status', 'selected')
+            ->max('offered_package');
 
         // Active drives
-        $activedrives = PlacementDrive::where('status', 'active')->count();
+        $activedrives = PlacementDrive::whereIn('status', ['upcoming', 'ongoing'])->count();
 
         // Internships
         $ongoingInternships   = 0;
@@ -44,6 +44,7 @@ class PlacementStatsController extends Controller
         $programStats = Program::where('is_active', true)->get()->map(function ($prog) {
             $students = Student::where('program_id', $prog->id)->where('status', 'active')->count();
             $placed   = Placement::whereHas('student', fn($q) => $q->where('program_id', $prog->id))
+                ->where('application_status', 'selected')
                 ->distinct('student_id')->count('student_id');
             $prog->student_count  = $students;
             $prog->placed_count   = $placed;
@@ -52,12 +53,12 @@ class PlacementStatsController extends Controller
         });
 
         // Top recruiters
-        $topRecruiters = Placement::select('company_id')
-            ->with('company')
-            ->whereNotNull('company_id')
+        $topRecruiters = Placement::with('drive.company')
+            ->where('application_status', 'selected')
             ->get()
-            ->groupBy('company_id')
-            ->map(fn($g) => ['company' => $g->first()->company, 'count' => $g->count()])
+            ->filter(fn($placement) => $placement->drive?->company)
+            ->groupBy(fn($placement) => $placement->drive->company_id)
+            ->map(fn($g) => ['company' => $g->first()->drive->company, 'count' => $g->count()])
             ->sortByDesc('count')
             ->take(5)
             ->values();

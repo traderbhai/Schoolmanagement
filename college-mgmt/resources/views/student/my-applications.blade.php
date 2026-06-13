@@ -8,59 +8,15 @@
 @endsection
 
 @section('content')
-<div class="card">
-    <div class="card-header py-3">
-        <h6 class="mb-0 fw-bold">My Placement Applications</h6>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-0 fw-bold">My Placement Applications</h5>
+        <div class="text-muted small">Track status, packages, and next steps for each drive.</div>
     </div>
-    <div class="card-body p-0">
-        @if($myApplications->isEmpty())
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                No applications yet. <a href="{{ route('student.placements') }}">Browse open drives</a>.
-            </div>
-        @else
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Drive / Company</th>
-                            <th>Job Role</th>
-                            <th>Package</th>
-                            <th>Status</th>
-                            <th>Applied On</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($myApplications as $app)
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ $app->drive->title }}</div>
-                                <div class="text-muted" style="font-size:.78rem">{{ $app->drive->company->name }}</div>
-                            </td>
-                            <td>{{ $app->drive->job_role }}</td>
-                            <td>{{ $app->drive->package ?? '—' }}</td>
-                            <td>
-                                @php
-                                    $statusBadge = [
-                                        'applied'     => 'bg-info',
-                                        'shortlisted' => 'bg-primary',
-                                        'interview'   => 'bg-warning text-dark',
-                                        'selected'    => 'bg-success',
-                                        'rejected'    => 'bg-danger',
-                                        'withdrawn'   => 'bg-secondary',
-                                    ];
-                                @endphp
-                                <span class="badge {{ $statusBadge[$app->application_status] ?? 'bg-secondary' }}">
-                                    {{ ucfirst($app->application_status) }}
-                                </span>
-                            </td>
-                            <td>{{ $app->created_at->format('d M Y') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
-    </div>
+    <a href="{{ route('student.placements') }}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-briefcase me-1"></i>Browse Drives
+    </a>
 </div>
+
+@include('student.partials.placement-applications-table', ['myApplications' => $myApplications])
 @endsection

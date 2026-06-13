@@ -30,11 +30,14 @@ class Student extends Model
     public function termPromotions() { return $this->hasMany(TermPromotion::class); }
     public function feeDemands() { return $this->hasMany(FeeDemand::class); }
     public function transcripts() { return $this->hasMany(AcademicTranscript::class); }
+    public function alumniProfile() { return $this->hasOne(AlumniProfile::class); }
     public function mentor() { return $this->belongsTo(User::class, 'mentor_id'); }
     public function mentorMeetings() { return $this->hasMany(MentorMeeting::class); }
     public function leaveApplications() { return $this->hasMany(LeaveApplication::class); }
     public function subjectEnrollments() { return $this->hasMany(StudentSubjectEnrollment::class); }
     public function subjects() { return $this->belongsToMany(Subject::class, 'student_subject_enrollments')->wherePivot('status', 'active'); }
+    public function transportAssignments() { return $this->hasMany(TransportAssignment::class); }
+    public function activeTransportAssignment() { return $this->hasOne(TransportAssignment::class)->where('status', 'active'); }
 
     public function calculateCGPA(): float
     {

@@ -1,5 +1,5 @@
 @extends('layouts.applicant')
-@section('title', 'Dashboard — Applicant Portal')
+@section('title', 'Dashboard - Applicant Portal')
 @section('page-title', 'Dashboard')
 
 @section('content')
@@ -23,7 +23,7 @@
                     </div>
                     <p class="text-muted small mb-0">Application Status</p>
                     @if($applicant->applied_at)
-                        <p class="text-muted small mt-1">Submitted: {{ $applicant->applied_at ? $applicant->applied_at->format('d M Y') : '—' }}</p>
+                        <p class="text-muted small mt-1">Submitted: {{ $applicant->applied_at ? $applicant->applied_at->format('d M Y') : '-' }}</p>
                     @endif
                 </div>
             </div>
@@ -59,15 +59,23 @@
     </div>
 
     {{-- Registration Fee CTA --}}
-    @if(!$applicant->hasRegistrationFeePaid() && in_array($applicant->status, ['draft', 'submitted']))
+    @if(!$applicant->hasRegistrationFeePaid() && $applicant->status === 'draft')
     <div class="alert alert-warning d-flex align-items-start gap-3 mb-4">
         <i class="bi bi-exclamation-triangle-fill fs-4 mt-1"></i>
         <div>
             <div class="fw-semibold">Registration Fee Required</div>
-            <div class="small mt-1">Your application cannot be submitted until the registration fee is paid.</div>
-            <a href="{{ route('admission.applicants.registration-fee.show', $applicant) }}" class="btn btn-warning btn-sm mt-2">
-                <i class="bi bi-credit-card me-1"></i> Pay Registration Fee
+            <div class="small mt-1">Your application cannot be submitted until the registration fee details are saved.</div>
+            <a href="{{ route('applicant.registration-fee.show') }}" class="btn btn-warning btn-sm mt-2">
+                <i class="bi bi-credit-card me-1"></i> Submit Fee Details
             </a>
+        </div>
+    </div>
+    @elseif(!$applicant->hasRegistrationFeePaid() && $applicant->status !== 'draft')
+    <div class="alert alert-info d-flex align-items-start gap-3 mb-4">
+        <i class="bi bi-info-circle-fill fs-4 mt-1"></i>
+        <div>
+            <div class="fw-semibold">Registration Fee Not Recorded</div>
+            <div class="small mt-1">Your application has already been submitted. If the admission team needs fee details, they will record or request them during review.</div>
         </div>
     </div>
     @endif
@@ -92,9 +100,9 @@
                     <i class="bi bi-{{ $feePaid ? 'check-circle-fill text-success' : 'circle text-warning' }} fs-5"></i>
                     <div class="flex-grow-1">
                         <div class="fw-semibold small">Registration Fee</div>
-                        <div class="text-muted smaller">{{ $feePaid ? 'Paid on ' . ($applicant->registration_fee_paid_at?->format('d M Y') ?? '—') : 'Not yet paid' }}</div>
+                        <div class="text-muted smaller">{{ $feePaid ? 'Recorded on ' . ($applicant->registration_fee_paid_at?->format('d M Y') ?? '-') : 'Not yet recorded' }}</div>
                     </div>
-                    @if(!$feePaid)<a href="{{ route('admission.applicants.registration-fee.show', $applicant) }}" class="btn btn-xs btn-outline-warning btn-sm">Pay Now</a>@endif
+                    @if(!$feePaid && $applicant->status === 'draft')<a href="{{ route('applicant.registration-fee.show') }}" class="btn btn-xs btn-outline-warning btn-sm">Submit Details</a>@endif
                 </li>
                 <li class="list-group-item d-flex align-items-center gap-3 py-3">
                     <i class="bi bi-{{ $formComplete ? 'check-circle-fill text-success' : 'circle text-secondary' }} fs-5"></i>
@@ -116,7 +124,7 @@
                     <i class="bi bi-{{ $submitted ? 'check-circle-fill text-success' : 'circle text-secondary' }} fs-5"></i>
                     <div class="flex-grow-1">
                         <div class="fw-semibold small">Application Submitted</div>
-                        <div class="text-muted smaller">{{ $submitted ? 'Submitted — status: ' . ucfirst(str_replace('_',' ',$applicant->status)) : 'Not yet submitted' }}</div>
+                        <div class="text-muted smaller">{{ $submitted ? 'Submitted - status: ' . ucfirst(str_replace('_',' ',$applicant->status)) : 'Not yet submitted' }}</div>
                     </div>
                 </li>
             </ul>

@@ -13,11 +13,13 @@ use App\Http\Controllers\Applicant\ApplicationController as ApplicantApplication
 use App\Http\Controllers\Applicant\DocumentController as ApplicantDocument;
 use App\Http\Controllers\Applicant\StatusController as ApplicantStatus;
 use App\Http\Controllers\Applicant\PaymentController as ApplicantPayment;
+use App\Http\Controllers\Applicant\RegistrationFeeController as ApplicantRegistrationFee;
 use App\Http\Controllers\Departmental;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StatusTrackerController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ClaudeAnalysisController;
+use App\Support\DashboardRedirect;
 use Illuminate\Support\Facades\Route;
 
 // ── Public Application Status Tracker ─────────────────────────────────────
@@ -40,7 +42,9 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('documents/{requiredDocument}', [ApplicantDocument::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicantDocument::class, 'destroy'])->name('documents.destroy');
     Route::get('status', [ApplicantStatus::class, 'index'])->name('status');
-    // Fees — static route before parameterized
+    Route::get('registration-fee', [ApplicantRegistrationFee::class, 'show'])->name('registration-fee.show');
+    Route::post('registration-fee', [ApplicantRegistrationFee::class, 'store'])->name('registration-fee.store');
+    // Fees - static route before parameterized
     Route::get('fees', [ApplicantPayment::class, 'index'])->name('fees.index');
     Route::get('fees/payment/{payment}', [ApplicantPayment::class, 'show'])->name('fees.show');
     Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
@@ -66,38 +70,14 @@ Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->gr
 
 Route::get('/', function () {
     if (auth()->check()) {
-        $user = auth()->user();
-        if ($user->hasRole('admin'))            return redirect()->route('admin.dashboard');
-        if ($user->hasRole('dean_academics'))   return redirect()->route('dean.dashboard');
-        if ($user->hasRole('program_chair'))    return redirect()->route('chair.dashboard');
-        if ($user->hasRole('hod'))              return redirect()->route('hod.dashboard');
-        if ($user->hasRole('exam_cell'))        return redirect()->route('exam-cell.dashboard');
-        if ($user->hasRole('accounts_officer')) return redirect()->route('accounts.dashboard');
-        if ($user->hasRole('cmc'))              return redirect()->route('cmc.dashboard');
-        if ($user->hasRole('director'))         return redirect()->route('director.dashboard');
-        if ($user->hasRole('teacher'))          return redirect()->route('teacher.dashboard');
-        if ($user->hasRole('parent'))           return redirect()->route('parent.dashboard');
-        if ($user->hasRole('applicant'))        return redirect()->route('applicant.dashboard');
-        return redirect()->route('student.dashboard');
+        return DashboardRedirect::forUser(auth()->user());
     }
     return view('welcome');
 });
 
 // Compatibility alias so Breeze tests and legacy redirects still work
 Route::get('/dashboard', function () {
-    $user = auth()->user();
-    if ($user?->hasRole('admin'))            return redirect()->route('admin.dashboard');
-    if ($user?->hasRole('dean_academics'))   return redirect()->route('dean.dashboard');
-    if ($user?->hasRole('program_chair'))    return redirect()->route('chair.dashboard');
-    if ($user?->hasRole('hod'))              return redirect()->route('hod.dashboard');
-    if ($user?->hasRole('exam_cell'))        return redirect()->route('exam-cell.dashboard');
-    if ($user?->hasRole('accounts_officer')) return redirect()->route('accounts.dashboard');
-    if ($user?->hasRole('cmc'))              return redirect()->route('cmc.dashboard');
-    if ($user?->hasRole('director'))         return redirect()->route('director.dashboard');
-    if ($user?->hasRole('teacher'))          return redirect()->route('teacher.dashboard');
-    if ($user?->hasRole('parent'))           return redirect()->route('parent.dashboard');
-    if ($user?->hasRole('applicant'))        return redirect()->route('applicant.dashboard');
-    return redirect()->route('student.dashboard');
+    return DashboardRedirect::forUser(auth()->user());
 })->middleware(['auth'])->name('dashboard');
 
 // ── Admin routes ────────────────────────────────────────────────────────────
@@ -107,7 +87,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::resource('departments',   Admin\DepartmentController::class);
     Route::resource('courses',       Admin\CourseController::class);
 
-    // Academic Structure — Programs, Batches, Terms, Specializations
+    // Academic Structure - Programs, Batches, Terms, Specializations
     Route::resource('programs', Admin\ProgramController::class);
     Route::resource('batches', Admin\BatchController::class);
     Route::post('terms', [Admin\TermController::class, 'store'])->name('terms.store');
@@ -121,6 +101,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::resource('semesters',     Admin\SemesterController::class);
     Route::resource('teachers',      Admin\TeacherController::class);
     Route::resource('students',      Admin\StudentController::class);
+    Route::get('document-requests', [Admin\StudentDocumentRequestController::class, 'index'])->name('document-requests.index');
+    Route::patch('document-requests/{documentRequest}/approve', [Admin\StudentDocumentRequestController::class, 'approve'])->name('document-requests.approve');
+    Route::patch('document-requests/{documentRequest}/reject', [Admin\StudentDocumentRequestController::class, 'reject'])->name('document-requests.reject');
+    Route::post('document-requests/{documentRequest}/fulfill', [Admin\StudentDocumentRequestController::class, 'fulfill'])->name('document-requests.fulfill');
+    Route::get('document-requests/{documentRequest}/download', [Admin\StudentDocumentRequestController::class, 'download'])->name('document-requests.download');
     Route::resource('timetable-slots', Admin\TimetableSlotController::class);
     Route::resource('notices',       Admin\NoticeController::class);
     Route::resource('parents',       Admin\ParentController::class);
@@ -165,6 +150,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::post('admission-config/{program}/fee-installments', [Admin\AdmissionConfigController::class, 'storeFeeInstallment'])->name('admission-config.fee.store');
     Route::put('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'updateFeeInstallment'])->name('admission-config.fee.update');
     Route::delete('admission-config/fee-installments/{installment}', [Admin\AdmissionConfigController::class, 'destroyFeeInstallment'])->name('admission-config.fee.destroy');
+
+    Route::get('student-scholarships', [Admin\StudentScholarshipApplicationController::class, 'index'])->name('student-scholarships.index');
+    Route::patch('student-scholarships/{application}/shortlist', [Admin\StudentScholarshipApplicationController::class, 'shortlist'])->name('student-scholarships.shortlist');
+    Route::patch('student-scholarships/{application}/approve', [Admin\StudentScholarshipApplicationController::class, 'approve'])->name('student-scholarships.approve');
+    Route::patch('student-scholarships/{application}/reject', [Admin\StudentScholarshipApplicationController::class, 'reject'])->name('student-scholarships.reject');
+    Route::patch('student-scholarships/{application}/disburse', [Admin\StudentScholarshipApplicationController::class, 'disburse'])->name('student-scholarships.disburse');
 
     // Applicants (P2 portal)
     Route::get('applicants', [Admin\ApplicantController::class, 'index'])->name('applicants.index');
@@ -293,12 +284,35 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('hostel/allocations', [Admin\HostelController::class, 'allocations'])->name('hostel.allocations');
     Route::post('hostel/allocations', [Admin\HostelController::class, 'allocationStore'])->name('hostel.allocations.store');
     Route::post('hostel/allocations/{allocation}/vacate', [Admin\HostelController::class, 'allocationVacate'])->name('hostel.allocations.vacate');
+    Route::post('hostel/allocations/{allocation}/transfer', [Admin\HostelController::class, 'allocationTransfer'])->name('hostel.allocations.transfer');
+    Route::get('hostel/fees', [Admin\HostelController::class, 'fees'])->name('hostel.fees');
+    Route::post('hostel/fees/generate', [Admin\HostelController::class, 'feeGenerate'])->name('hostel.fees.generate');
+    Route::post('hostel/fees/{demand}/paid', [Admin\HostelController::class, 'feeMarkPaid'])->name('hostel.fees.paid');
+    Route::post('hostel/fees/{demand}/waive', [Admin\HostelController::class, 'feeWaive'])->name('hostel.fees.waive');
     Route::get('hostel/outpasses', [Admin\HostelController::class, 'outpasses'])->name('hostel.outpasses');
     Route::post('hostel/outpasses/{op}/approve', [Admin\HostelController::class, 'outpassApprove'])->name('hostel.outpasses.approve');
     Route::post('hostel/outpasses/{op}/reject', [Admin\HostelController::class, 'outpassReject'])->name('hostel.outpasses.reject');
     Route::post('hostel/outpasses/{op}/return', [Admin\HostelController::class, 'outpassReturn'])->name('hostel.outpasses.return');
     Route::get('hostel/complaints', [Admin\HostelController::class, 'complaints'])->name('hostel.complaints');
     Route::put('hostel/complaints/{complaint}', [Admin\HostelController::class, 'complaintUpdate'])->name('hostel.complaints.update');
+
+    // Transport Management
+    Route::get('transport', [Admin\TransportController::class, 'index'])->name('transport.index');
+    Route::post('transport/routes', [Admin\TransportController::class, 'routeStore'])->name('transport.routes.store');
+    Route::post('transport/stops', [Admin\TransportController::class, 'stopStore'])->name('transport.stops.store');
+    Route::post('transport/vehicles', [Admin\TransportController::class, 'vehicleStore'])->name('transport.vehicles.store');
+    Route::post('transport/assignments', [Admin\TransportController::class, 'assignmentStore'])->name('transport.assignments.store');
+    Route::post('transport/assignments/{assignment}/end', [Admin\TransportController::class, 'assignmentEnd'])->name('transport.assignments.end');
+
+    // Asset Management
+    Route::get('assets', [Admin\AssetController::class, 'index'])->name('assets.index');
+    Route::post('assets/categories', [Admin\AssetController::class, 'categoryStore'])->name('assets.categories.store');
+    Route::post('assets', [Admin\AssetController::class, 'assetStore'])->name('assets.store');
+    Route::post('assets/stock-items', [Admin\AssetController::class, 'stockItemStore'])->name('assets.stock-items.store');
+    Route::post('assets/stock-items/{item}/receive', [Admin\AssetController::class, 'stockReceive'])->name('assets.stock-items.receive');
+    Route::post('assets/stock-items/{item}/issue', [Admin\AssetController::class, 'stockIssue'])->name('assets.stock-items.issue');
+    Route::post('assets/{asset}/assign', [Admin\AssetController::class, 'assign'])->name('assets.assign');
+    Route::post('assets/assignments/{assignment}/return', [Admin\AssetController::class, 'returnAssignment'])->name('assets.assignments.return');
 
     // Library Management
     Route::get('library',                               [Admin\LibraryController::class, 'index'])->name('library.index');
@@ -335,7 +349,7 @@ Route::middleware(['auth', 'role:dean_academics|program_chair|exam_cell|hod|acco
     // B3: Scholarships
     Route::resource('scholarships', Academic\ScholarshipController::class);
 
-    // B3: Fee Demands — static routes BEFORE resource wildcard
+    // B3: Fee Demands - static routes BEFORE resource wildcard
     Route::post('fee-demands/generate-demands', [Academic\FeeDemandController::class, 'generateDemands'])->name('fee-demands.generate');
     Route::post('fee-demands/apply-penalties', [Academic\FeeDemandController::class, 'applyPenalties'])->name('fee-demands.apply-penalties');
     Route::resource('fee-demands', Academic\FeeDemandController::class);
@@ -631,6 +645,7 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('attendance', [Student\AttendanceController::class, 'index'])->name('attendance');
     Route::get('results',    [Student\ResultController::class, 'index'])->name('results');
     Route::get('fees',       [Student\FeeController::class, 'index'])->name('fees');
+    Route::get('transport',  [Student\TransportController::class, 'index'])->name('transport.index');
     Route::get('profile',    [Student\ProfileController::class, 'index'])->name('profile');
     Route::patch('profile',  [Student\ProfileController::class, 'update'])->name('profile.update');
     Route::get('notices',    [Student\NoticeController::class, 'index'])->name('notices');
@@ -683,6 +698,7 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('documents', [\App\Http\Controllers\Student\DocumentRequestController::class, 'index'])->name('documents.index');
     Route::get('documents/request', [\App\Http\Controllers\Student\DocumentRequestController::class, 'create'])->name('documents.create');
     Route::post('documents', [\App\Http\Controllers\Student\DocumentRequestController::class, 'store'])->name('documents.store');
+    Route::get('documents/{documentRequest}/download', [\App\Http\Controllers\Student\DocumentRequestController::class, 'download'])->name('documents.download');
 
     // Sprint 2: Grievance follow-up comments + close
     Route::post('grievances/{grievance}/comment', [\App\Http\Controllers\Student\GrievanceController::class, 'addComment'])->name('grievances.comment');
@@ -766,6 +782,8 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     // Hostel Outpass
     Route::get('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassIndex'])->name('hostel.outpass');
     Route::post('hostel/outpass', [\App\Http\Controllers\Student\HostelController::class, 'outpassStore'])->name('hostel.outpass.store');
+    Route::get('hostel/complaints', [\App\Http\Controllers\Student\HostelController::class, 'complaintsIndex'])->name('hostel.complaints.index');
+    Route::post('hostel/complaints', [\App\Http\Controllers\Student\HostelController::class, 'complaintStore'])->name('hostel.complaints.store');
 
     // Library
     Route::get('library', [\App\Http\Controllers\Student\LibraryController::class, 'index'])->name('library.index');
@@ -813,7 +831,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('approvals/{approval}/approve', [Departmental\ProgramChairController::class, 'approve'])->name('approve');
     Route::post('approvals/{approval}/reject', [Departmental\ProgramChairController::class, 'reject'])->name('reject');
 
-    // PMC Sprint — Curriculum Management
+    // PMC Sprint - Curriculum Management
     Route::get('curriculum/assignments',                     [Departmental\PmcCurriculumController::class, 'assignments'])->name('curriculum.assignments');
     Route::post('curriculum/assign-faculty',                 [Departmental\PmcCurriculumController::class, 'assignFaculty'])->name('curriculum.assign-faculty');
     Route::delete('curriculum/assignments/{assignment}',     [Departmental\PmcCurriculumController::class, 'unassignFaculty'])->name('curriculum.unassign-faculty');
@@ -826,7 +844,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('curriculum/subject',                        [Departmental\PmcCurriculumController::class, 'addSubject'])->name('curriculum.add-subject');
     Route::delete('curriculum/subject/{programSubject}',     [Departmental\PmcCurriculumController::class, 'removeSubject'])->name('curriculum.remove-subject');
 
-    // PMC Sprint — Timetable
+    // PMC Sprint - Timetable
     Route::get('timetable/builder',                          [Departmental\PmcTimetableController::class, 'builder'])->name('timetable.builder');
     Route::post('timetable/slot',                            [Departmental\PmcTimetableController::class, 'saveSlot'])->name('timetable.save-slot');
     Route::post('timetable/publish',                         [Departmental\PmcTimetableController::class, 'publish'])->name('timetable.publish');
@@ -853,7 +871,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('timetable/auto-schedule',                   [Departmental\PmcTimetableController::class, 'suggestAutoSchedule'])->name('timetable.auto-schedule');
     Route::post('timetable/accept-auto-schedule',            [Departmental\PmcTimetableController::class, 'acceptAutoScheduleSuggestions'])->name('timetable.accept-auto-schedule');
 
-    // PMC Sprint — Student oversight
+    // PMC Sprint - Student oversight
     Route::get('students/at-risk',                           [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');
     Route::get('students/mentors',                           [Departmental\PmcStudentController::class, 'mentors'])->name('students.mentors');
     Route::post('students/mentors/assign',                   [Departmental\PmcStudentController::class, 'assignMentor'])->name('students.mentors.assign');
@@ -870,13 +888,13 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     Route::post('students/elective-override/{enrollment}',   [Departmental\PmcStudentController::class, 'changeElective'])->name('students.elective-override.change');
     Route::get('students/promotions',                        [Departmental\PmcStudentController::class, 'promotions'])->name('students.promotions');
 
-    // PMC Sprint 2 — Faculty oversight
+    // PMC Sprint 2 - Faculty oversight
     Route::get('faculty/workload',                           [Departmental\PmcFacultyController::class, 'workload'])->name('faculty.workload');
     Route::get('faculty/marks-tracker',                      [Departmental\PmcFacultyController::class, 'marksTracker'])->name('faculty.marks-tracker');
     Route::get('faculty/course-delivery',                    [Departmental\PmcFacultyController::class, 'courseDelivery'])->name('faculty.course-delivery');
     Route::get('faculty/feedback',                           [Departmental\PmcFacultyController::class, 'feedbackSummary'])->name('faculty.feedback');
 
-    // PMC Sprint 2 — Reports
+    // PMC Sprint 2 - Reports
     Route::get('reports/subject-performance',                [Departmental\PmcReportsController::class, 'subjectPerformance'])->name('reports.subject-performance');
     Route::get('reports/attendance-defaulters',              [Departmental\PmcReportsController::class, 'attendanceDefaulters'])->name('reports.attendance-defaulters');
     Route::get('reports/term-summary',                       [Departmental\PmcReportsController::class, 'termSummary'])->name('reports.term-summary');

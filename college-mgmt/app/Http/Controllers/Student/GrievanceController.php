@@ -11,7 +11,9 @@ class GrievanceController extends Controller {
     public function index() {
         $student = $this->student();
         $grievances = StudentGrievance::where('student_id', $student->id)->latest()->get();
-        return view('student.grievances.index', compact('grievances'));
+        $grievancePriority = $this->grievancePriority($grievances);
+
+        return view('student.grievances.index', compact('grievances', 'grievancePriority'));
     }
 
     public function create() { return view('student.grievances.create'); }
@@ -56,7 +58,51 @@ class GrievanceController extends Controller {
     public function close(StudentGrievance $grievance) {
         $student = $this->student();
         abort_if($grievance->student_id !== $student->id, 403);
-        $grievance->update(['status' => 'resolved']);
+        abort_unless(in_array($grievance->status, ['open', 'under_review', 'escalated', 'resolved'], true), 422, 'This grievance is already closed.');
+        $grievance->update(['status' => 'closed', 'resolved_at' => now()]);
         return back()->with('success', 'Grievance closed.');
+    }
+
+    private function grievancePriority($grievances): array {
+        $escalated = $grievances->firstWhere('status', 'escalated');
+        if ($escalated) {
+            return [
+                'level' => 'danger',
+                'title' => 'A grievance has been escalated',
+                'body' => 'Your escalated grievance is visible to senior academic staff. Add any missing evidence in the comment thread.',
+                'route' => route('student.grievances.show', $escalated),
+                'action' => 'Open Grievance',
+            ];
+        }
+
+        $open = $grievances->first(fn($g) => in_array($g->status, ['open', 'under_review'], true));
+        if ($open) {
+            return [
+                'level' => 'info',
+                'title' => 'Track your open grievance',
+                'body' => 'Follow staff updates, add clarifications, and close the grievance only after the issue is resolved.',
+                'route' => route('student.grievances.show', $open),
+                'action' => 'Track Status',
+            ];
+        }
+
+        $resolved = $grievances->firstWhere('status', 'resolved');
+        if ($resolved) {
+            return [
+                'level' => 'success',
+                'title' => 'Review resolved grievance',
+                'body' => 'Read the resolution notes and close the grievance if the issue has been addressed.',
+                'route' => route('student.grievances.show', $resolved),
+                'action' => 'Review Resolution',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No active grievance follow-up',
+            'body' => 'Submit a grievance when you need help with academic, financial, facility, faculty, or administrative issues.',
+            'route' => route('student.grievances.create'),
+            'action' => 'Submit Grievance',
+        ];
     }
 }

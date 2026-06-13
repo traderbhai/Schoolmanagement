@@ -121,7 +121,7 @@
             </button>
 
             <div class="page-heading">
-                <h6>@yield('page-title', 'Dashboard')</h6>
+                <h6>@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h6>
                 @hasSection('breadcrumb')
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">

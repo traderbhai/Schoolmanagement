@@ -9,11 +9,11 @@
     <div class="alert alert-danger d-flex align-items-start gap-2 mb-3 py-2" role="alert">
         <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
         <div>
-            <strong>Low Attendance Alert</strong> — Below 75% in
+            <strong>Low Attendance Alert</strong> - Below 75% in
             @foreach($lowAttendanceSubjects as $i => $sub)
                 <strong>{{ $sub['subject'] }}</strong> ({{ $sub['pct'] }}%){{ $i < count($lowAttendanceSubjects)-1 ? ', ' : '.' }}
             @endforeach
-            <a href="{{ route('student.attendance') }}" class="alert-link ms-1">View details →</a>
+            <a href="{{ route('student.attendance') }}" class="alert-link ms-1">View details -></a>
         </div>
     </div>
     @endif
@@ -23,11 +23,52 @@
     <div class="alert alert-warning d-flex align-items-start gap-2 mb-3 py-2">
         <i class="bi bi-credit-card-fill fs-5 mt-1 flex-shrink-0"></i>
         <div>
-            <strong>Fee Outstanding: ₹{{ number_format($feeOutstanding, 0) }}</strong>
-            <a href="{{ route('student.fees') }}" class="alert-link ms-2">View details →</a>
+            <strong>Fee Outstanding: Rs. {{ number_format($feeOutstanding, 0) }}</strong>
+            <a href="{{ route('student.fees') }}" class="alert-link ms-2">View details -></a>
         </div>
     </div>
     @endif
+
+    {{-- Today's Priority --}}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between">
+                <div>
+                    <div class="text-muted small text-uppercase fw-semibold mb-1">Today's Priority</div>
+                    @if(count($lowAttendanceSubjects) > 0)
+                        <h5 class="fw-bold mb-1">Recover attendance in {{ count($lowAttendanceSubjects) }} subject{{ count($lowAttendanceSubjects) === 1 ? '' : 's' }}</h5>
+                        <p class="text-muted mb-0">You are below the 75% requirement. Check the subject-wise sessions and plan make-up action with your mentor or faculty.</p>
+                    @elseif($feeOutstanding > 0)
+                        <h5 class="fw-bold mb-1">Clear pending fee balance</h5>
+                        <p class="text-muted mb-0">Review your outstanding demand and submit payment proof early to avoid blocked exam registration or late penalties.</p>
+                    @elseif($pendingAssignmentCount > 0)
+                        <h5 class="fw-bold mb-1">Submit {{ $pendingAssignmentCount }} upcoming assignment{{ $pendingAssignmentCount === 1 ? '' : 's' }}</h5>
+                        <p class="text-muted mb-0">You have coursework due in the next 7 days. Open assignments and submit before the due date.</p>
+                    @elseif(count($todayClasses) > 0)
+                        <h5 class="fw-bold mb-1">Attend today's scheduled classes</h5>
+                        <p class="text-muted mb-0">{{ count($todayClasses) }} class{{ count($todayClasses) === 1 ? '' : 'es' }} scheduled today. Check rooms and faculty before you leave.</p>
+                    @else
+                        <h5 class="fw-bold mb-1">No urgent academic action due today</h5>
+                        <p class="text-muted mb-0">Use the time to review course materials, check notices, or plan upcoming academic events.</p>
+                    @endif
+                </div>
+                <div class="d-grid gap-2" style="min-width: 210px;">
+                    @if(count($lowAttendanceSubjects) > 0)
+                        <a href="{{ route('student.attendance') }}" class="btn btn-danger btn-sm"><i class="bi bi-clipboard2-check me-1"></i> Review Attendance</a>
+                    @elseif($feeOutstanding > 0)
+                        <a href="{{ route('student.fees') }}" class="btn btn-warning btn-sm"><i class="bi bi-credit-card me-1"></i> Review Fees</a>
+                    @elseif($pendingAssignmentCount > 0)
+                        <a href="{{ route('student.assignments.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i> Open Assignments</a>
+                    @elseif(count($todayClasses) > 0)
+                        <a href="{{ route('student.timetable') }}" class="btn btn-primary btn-sm"><i class="bi bi-calendar-week me-1"></i> View Timetable</a>
+                    @else
+                        <a href="{{ route('student.courses.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-book me-1"></i> Review Courses</a>
+                    @endif
+                    <a href="{{ route('student.grievances.create') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-life-preserver me-1"></i> Need Help?</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- KPI Row --}}
     <div class="row g-3 mb-4">
@@ -35,7 +76,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold {{ is_null($attendanceOverall) ? 'text-muted' : ($attendanceOverall < 75 ? 'text-danger' : 'text-success') }}">
-                        {{ is_null($attendanceOverall) ? '—' : $attendanceOverall . '%' }}
+                        {{ is_null($attendanceOverall) ? '-' : $attendanceOverall . '%' }}
                     </div>
                     <div class="text-muted small mt-1">Attendance</div>
                     @if(!is_null($attendanceOverall))
@@ -49,7 +90,7 @@
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body py-3 text-center">
-                    <div class="fs-2 fw-bold text-primary">{{ $sgpa ?? '—' }}</div>
+                    <div class="fs-2 fw-bold text-primary">{{ $sgpa ?? '-' }}</div>
                     <div class="text-muted small mt-1">Current SGPA</div>
                 </div>
             </div>
@@ -57,7 +98,7 @@
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body py-3 text-center">
-                    <div class="fs-2 fw-bold text-info">{{ $cgpa ?? '—' }}</div>
+                    <div class="fs-2 fw-bold text-info">{{ $cgpa ?? '-' }}</div>
                     <div class="text-muted small mt-1">Overall CGPA</div>
                 </div>
             </div>
@@ -66,7 +107,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold {{ $feeOutstanding > 0 ? 'text-danger' : 'text-success' }}">
-                        ₹{{ number_format($feeOutstanding, 0) }}
+                        Rs. {{ number_format($feeOutstanding, 0) }}
                     </div>
                     <div class="text-muted small mt-1">Fee Outstanding</div>
                 </div>
@@ -81,8 +122,8 @@
             {{-- Today's Classes --}}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="fw-semibold"><i class="bi bi-calendar-check me-2"></i>Today's Classes — {{ now()->format('l, d M') }}</span>
-                    <a href="{{ route('student.timetable') }}" class="btn btn-sm btn-link p-0">Full timetable →</a>
+                    <span class="fw-semibold"><i class="bi bi-calendar-check me-2"></i>Today's Classes - {{ now()->format('l, d M') }}</span>
+                    <a href="{{ route('student.timetable') }}" class="btn btn-sm btn-link p-0">Full timetable -></a>
                 </div>
                 <div class="card-body p-0">
                     @if(count($todayClasses) > 0)
@@ -97,9 +138,9 @@
                                     @php $entry = $todayClasses[$slot->id]; @endphp
                                     <tr>
                                         <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
-                                        <td class="fw-semibold small">{{ $entry->subject->name ?? '—' }}</td>
-                                        <td class="text-muted small">{{ $entry->teacher?->name ?? '—' }}</td>
-                                        <td class="text-muted small">{{ $entry->room ?? '—' }}</td>
+                                        <td class="fw-semibold small">{{ $entry->subject->name ?? '-' }}</td>
+                                        <td class="text-muted small">{{ $entry->teacher?->name ?? '-' }}</td>
+                                        <td class="text-muted small">{{ $entry->room ?? '-' }}</td>
                                     </tr>
                                     @endif
                                 @endforeach
@@ -116,8 +157,8 @@
             @if($upcomingAssignments->isNotEmpty() || $upcomingExams->isNotEmpty())
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="fw-semibold"><i class="bi bi-clock-history me-2 text-danger"></i>Upcoming Deadlines — Next 7 Days</span>
-                    <a href="{{ route('student.assignments.index') }}" class="btn btn-sm btn-link p-0">All assignments →</a>
+                    <span class="fw-semibold"><i class="bi bi-clock-history me-2 text-danger"></i>Upcoming Deadlines - Next 7 Days</span>
+                    <a href="{{ route('student.assignments.index') }}" class="btn btn-sm btn-link p-0">All assignments -></a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($upcomingAssignments as $assignment)
@@ -155,15 +196,15 @@
             @if($upcomingEvents->isNotEmpty())
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
-                    <span class="fw-semibold"><i class="bi bi-calendar-event me-2"></i>Coming Up — Next 30 Days</span>
-                    <a href="{{ route('student.calendar.index') }}" class="btn btn-sm btn-link p-0">Full calendar →</a>
+                    <span class="fw-semibold"><i class="bi bi-calendar-event me-2"></i>Coming Up - Next 30 Days</span>
+                    <a href="{{ route('student.calendar.index') }}" class="btn btn-sm btn-link p-0">Full calendar -></a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($upcomingEvents as $event)
                     @php $typeColors = ['holiday'=>'danger','exam'=>'warning','event'=>'success','workshop'=>'info','seminar'=>'info','other'=>'secondary']; $c = $typeColors[$event->type] ?? 'secondary'; @endphp
                     <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
                         <div class="text-center" style="min-width:42px">
-                            <div class="fw-bold text-{{ $c }}" style="font-size:1.1rem;line-height:1">{{ $event->start_date?->format('d') ?? '—' }}</div>
+                            <div class="fw-bold text-{{ $c }}" style="font-size:1.1rem;line-height:1">{{ $event->start_date?->format('d') ?? '-' }}</div>
                             <div class="text-muted" style="font-size:.7rem">{{ $event->start_date?->format('M') ?? '' }}</div>
                         </div>
                         <div>
@@ -181,7 +222,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <span class="fw-semibold"><i class="bi bi-megaphone me-2"></i>Latest Notices</span>
-                    <a href="{{ route('student.notices') }}" class="btn btn-sm btn-link p-0">All notices →</a>
+                    <a href="{{ route('student.notices') }}" class="btn btn-sm btn-link p-0">All notices -></a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($notices as $notice)
@@ -213,9 +254,9 @@
                         </div>
                     </div>
                     <table class="table table-sm mb-0" style="font-size:.85rem">
-                        <tr><td class="text-muted border-0 ps-0 py-1">Program</td><td class="border-0 py-1">{{ $student->program->name ?? '—' }}</td></tr>
-                        <tr><td class="text-muted border-0 ps-0 py-1">Batch</td><td class="border-0 py-1">{{ $student->batch->name ?? '—' }}</td></tr>
-                        <tr><td class="text-muted border-0 ps-0 py-1">Term</td><td class="border-0 py-1">{{ $currentSemester->name ?? ($student->current_term ?? '—') }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Program</td><td class="border-0 py-1">{{ $student->program->name ?? '-' }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Batch</td><td class="border-0 py-1">{{ $student->batch->name ?? '-' }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Term</td><td class="border-0 py-1">{{ $currentSemester->name ?? ($student->current_term ?? '-') }}</td></tr>
                         @if($student->mentor)
                         <tr><td class="text-muted border-0 ps-0 py-1">Mentor</td><td class="border-0 py-1">{{ $student->mentor->name }}</td></tr>
                         @endif

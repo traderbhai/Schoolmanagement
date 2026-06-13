@@ -8,13 +8,13 @@
     {{-- Header --}}
     <div class="row g-3 mb-4">
         <div class="col-12">
-            <h4 class="fw-bold mb-0">{{ $applicant->program->name ?? 'Program' }} — Fee Summary</h4>
+            <h4 class="fw-bold mb-0">{{ $applicant->program->name ?? 'Program' }} - Fee Summary</h4>
             <small class="text-muted">Application: {{ $applicant->application_number }}</small>
         </div>
         <div class="col-md-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-3">
-                    <div class="fs-4 fw-bold text-dark">₹{{ number_format($totalFee, 0) }}</div>
+                    <div class="fs-4 fw-bold text-dark">Rs. {{ number_format($totalFee, 0) }}</div>
                     <div class="small text-muted">Total Fee</div>
                 </div>
             </div>
@@ -22,7 +22,7 @@
         <div class="col-md-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-3">
-                    <div class="fs-4 fw-bold text-success">₹{{ number_format($totalPaid, 0) }}</div>
+                    <div class="fs-4 fw-bold text-success">Rs. {{ number_format($totalPaid, 0) }}</div>
                     <div class="small text-muted">Paid & Verified</div>
                 </div>
             </div>
@@ -30,7 +30,7 @@
         <div class="col-md-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-3">
-                    <div class="fs-4 fw-bold text-warning">₹{{ number_format($outstanding, 0) }}</div>
+                    <div class="fs-4 fw-bold text-warning">Rs. {{ number_format($outstanding, 0) }}</div>
                     <div class="small text-muted">Outstanding</div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
                     </small>
                 </div>
                 <div class="text-end">
-                    <div class="fw-bold fs-5">₹{{ number_format($installment->amount, 0) }}</div>
+                    <div class="fw-bold fs-5">Rs. {{ number_format($installment->amount, 0) }}</div>
                     @if($payment)
                         <span class="{{ $payment->status_badge }}">
                             @if($payment->status === 'verified') Paid & Verified
@@ -91,8 +91,8 @@
             @if($payment && $payment->status === 'verified')
                 <div class="alert alert-success py-2 mb-0">
                     <i class="bi bi-check-circle me-1"></i>
-                    Paid ₹{{ number_format($payment->amount_paid, 0) }} via {{ $payment->payment_mode_label }}
-                    on {{ $payment->payment_date?->format('d M Y') ?? '—' }}.
+                    Paid Rs. {{ number_format($payment->amount_paid, 0) }} via {{ $payment->payment_mode_label }}
+                    on {{ $payment->payment_date?->format('d M Y') ?? '-' }}.
                     Verified on {{ $payment->verified_at?->format('d M Y') }}.
                     <a href="{{ route('applicant.fees.show', $payment) }}" class="ms-2 text-success fw-bold">View Details</a>
                 </div>
@@ -101,11 +101,11 @@
             @elseif($payment && $payment->status === 'pending')
                 <div class="alert alert-warning py-2 mb-0">
                     <i class="bi bi-clock me-1"></i>
-                    Payment submitted on {{ $payment->created_at->format('d M Y') }} — awaiting verification.
+                    Payment submitted on {{ $payment->created_at->format('d M Y') }} - awaiting verification.
                     <a href="{{ route('applicant.fees.show', $payment) }}" class="ms-2 text-dark fw-bold">View Details</a>
                 </div>
 
-            {{-- Rejected — allow resubmission --}}
+            {{-- Rejected - allow resubmission --}}
             @elseif($payment && $payment->status === 'rejected')
                 <div class="alert alert-danger py-2 mb-2">
                     <i class="bi bi-x-circle me-1"></i>
@@ -144,7 +144,7 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Amount Paid <span class="text-danger">*</span></label>
                                 <div class="input-group">
-                                    <span class="input-group-text">₹</span>
+                                    <span class="input-group-text">Rs. </span>
                                     <input type="number" name="amount_paid" class="form-control"
                                         value="{{ old('amount_paid', $installment->amount) }}"
                                         min="1" step="0.01" required>
@@ -181,7 +181,7 @@
                                 <label class="form-label fw-semibold">Payment Proof</label>
                                 <input type="file" name="payment_proof" class="form-control"
                                     accept=".jpg,.jpeg,.png,.pdf">
-                                <div class="form-text">Upload screenshot or receipt (JPG, PNG, PDF — max 5MB)</div>
+                                <div class="form-text">Upload screenshot or receipt (JPG, PNG, PDF - max 5MB)</div>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">

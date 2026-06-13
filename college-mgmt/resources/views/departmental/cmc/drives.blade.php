@@ -34,13 +34,13 @@
                     <tbody>
                         @forelse($drives as $drive)
                         @php
-                            $sc = ['open'=>'success','active'=>'primary','closed'=>'secondary','completed'=>'info'];
-                            $s = $drive->status ?? 'open';
+                            $sc = ['upcoming'=>'success','ongoing'=>'primary','completed'=>'info','cancelled'=>'secondary'];
+                            $s = $drive->status ?? 'upcoming';
                         @endphp
                         <tr>
                             <td class="ps-3 fw-medium">{{ $drive->company->name ?? $drive->title ?? '—' }}</td>
                             <td class="small text-muted">{{ ucfirst($drive->type ?? 'placement') }}</td>
-                            <td><span class="badge bg-{{ $sc[$s] ?? 'secondary' }}-subtle text-{{ $sc[$s] ?? 'secondary' }}">{{ $s }}</span></td>
+                            <td><span class="badge bg-{{ $sc[$s] ?? 'secondary' }}-subtle text-{{ $sc[$s] ?? 'secondary' }}">{{ ucfirst($s) }}</span></td>
                             <td>{{ $drive->placements->count() }}</td>
                             <td class="small text-muted">{{ $drive->created_at->format('d M Y') }}</td>
                             <td class="text-end pe-3">

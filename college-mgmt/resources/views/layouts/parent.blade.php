@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>@yield('title', 'EduManage — Parent')</title>
+    <title>@yield('title', 'EduManage - Parent')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -81,7 +81,7 @@
             </button>
 
             <div class="page-heading">
-                <h6>@yield('page-title', 'Dashboard')</h6>
+                <h6>@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h6>
                 @hasSection('breadcrumb')
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">

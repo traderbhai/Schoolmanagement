@@ -10,5 +10,5 @@ class BookCopy extends Model {
 
     public function book() { return $this->belongsTo(Book::class); }
     public function issues() { return $this->hasMany(BookIssue::class); }
-    public function currentIssue() { return $this->hasOne(BookIssue::class)->where('status','issued'); }
+    public function currentIssue() { return $this->hasOne(BookIssue::class)->whereIn('status',['issued','overdue']); }
 }

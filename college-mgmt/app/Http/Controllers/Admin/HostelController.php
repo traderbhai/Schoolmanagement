@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{HostelBlock, HostelRoom, HostelAllocation, HostelFeeDemand, OutpassRequest, HostelComplaint, Student, User};
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class HostelController extends Controller
 {
@@ -150,20 +151,48 @@ class HostelController extends Controller
 
         $room = HostelRoom::findOrFail($r->hostel_room_id);
 
+        if ($r->bed_number > $room->capacity) {
+            return back()->withErrors(['bed_number' => 'Bed number cannot exceed room capacity.']);
+        }
+
+        if ($room->status === 'maintenance') {
+            return back()->withErrors(['hostel_room_id' => 'Room is under maintenance and cannot be allocated.']);
+        }
+
         // Room has capacity
         $activeCount = HostelAllocation::where('hostel_room_id', $room->id)->where('status', 'active')->count();
         if ($activeCount >= $room->capacity) {
             return back()->withErrors(['hostel_room_id' => 'Room is at full capacity.']);
         }
 
-        HostelAllocation::create([
-            'hostel_room_id' => $r->hostel_room_id,
-            'student_id'     => $r->student_id,
-            'bed_number'     => $r->bed_number,
-            'allocated_from' => $r->allocated_from,
-            'status'         => 'active',
-            'allocated_by'   => auth()->id(),
-        ]);
+        $bedAllocation = HostelAllocation::where('hostel_room_id', $room->id)
+            ->where('bed_number', $r->bed_number)
+            ->first();
+
+        if ($bedAllocation && $bedAllocation->status === 'active') {
+            return back()->withErrors(['bed_number' => 'This bed is already allocated.']);
+        }
+
+        if ($bedAllocation) {
+            $bedAllocation->update([
+                'student_id'     => $r->student_id,
+                'allocated_from' => $r->allocated_from,
+                'allocated_to'   => null,
+                'status'         => 'active',
+                'allocated_by'   => auth()->id(),
+                'vacated_at'     => null,
+                'vacate_reason'  => null,
+            ]);
+        } else {
+            HostelAllocation::create([
+                'hostel_room_id' => $r->hostel_room_id,
+                'student_id'     => $r->student_id,
+                'bed_number'     => $r->bed_number,
+                'allocated_from' => $r->allocated_from,
+                'status'         => 'active',
+                'allocated_by'   => auth()->id(),
+            ]);
+        }
 
         // Update room status if now full
         $newCount = HostelAllocation::where('hostel_room_id', $room->id)->where('status', 'active')->count();
@@ -176,9 +205,14 @@ class HostelController extends Controller
 
     public function allocationVacate(HostelAllocation $allocation)
     {
+        if ($allocation->status !== 'active') {
+            return back()->with('error', 'Only active allocations can be vacated.');
+        }
+
         $allocation->update([
-            'status'     => 'vacated',
-            'vacated_at' => now(),
+            'status'       => 'vacated',
+            'vacated_at'   => now(),
+            'allocated_to' => now()->toDateString(),
         ]);
 
         // Update room status back to available if no more active allocations
@@ -192,6 +226,186 @@ class HostelController extends Controller
     }
 
     // ── Outpasses ─────────────────────────────────────────────────────────────
+
+    public function allocationTransfer(Request $r, HostelAllocation $allocation)
+    {
+        if ($allocation->status !== 'active') {
+            return back()->with('error', 'Only active allocations can be transferred.');
+        }
+
+        $data = $r->validate([
+            'hostel_room_id' => 'required|exists:hostel_rooms,id',
+            'bed_number' => 'required|integer|min:1',
+            'allocated_from' => 'required|date',
+            'transfer_reason' => 'nullable|string|max:255',
+        ]);
+
+        $targetRoom = HostelRoom::findOrFail($data['hostel_room_id']);
+
+        if ((int) $data['hostel_room_id'] === (int) $allocation->hostel_room_id
+            && (int) $data['bed_number'] === (int) $allocation->bed_number) {
+            return back()->withErrors(['bed_number' => 'Choose a different room or bed for the transfer.']);
+        }
+
+        if ($data['bed_number'] > $targetRoom->capacity) {
+            return back()->withErrors(['bed_number' => 'Bed number cannot exceed room capacity.']);
+        }
+
+        if ($targetRoom->status === 'maintenance') {
+            return back()->withErrors(['hostel_room_id' => 'Room is under maintenance and cannot receive transfers.']);
+        }
+
+        $activeCount = HostelAllocation::where('hostel_room_id', $targetRoom->id)
+            ->where('status', 'active')
+            ->when($targetRoom->id === $allocation->hostel_room_id, fn($q) => $q->whereKeyNot($allocation->id))
+            ->count();
+
+        if ($activeCount >= $targetRoom->capacity) {
+            return back()->withErrors(['hostel_room_id' => 'Target room is at full capacity.']);
+        }
+
+        $targetBedAllocation = HostelAllocation::where('hostel_room_id', $targetRoom->id)
+            ->where('bed_number', $data['bed_number'])
+            ->first();
+
+        if ($targetBedAllocation && $targetBedAllocation->status === 'active') {
+            return back()->withErrors(['bed_number' => 'Target bed is already allocated.']);
+        }
+
+        $sourceRoom = $allocation->room;
+
+        $allocation->update([
+            'status' => 'transferred',
+            'allocated_to' => now()->toDateString(),
+            'vacated_at' => now(),
+            'vacate_reason' => $data['transfer_reason'] ?: 'Room transfer',
+        ]);
+
+        if ($targetBedAllocation) {
+            $targetBedAllocation->update([
+                'student_id' => $allocation->student_id,
+                'allocated_from' => $data['allocated_from'],
+                'allocated_to' => null,
+                'status' => 'active',
+                'allocated_by' => auth()->id(),
+                'vacated_at' => null,
+                'vacate_reason' => null,
+            ]);
+        } else {
+            HostelAllocation::create([
+                'hostel_room_id' => $targetRoom->id,
+                'student_id' => $allocation->student_id,
+                'bed_number' => $data['bed_number'],
+                'allocated_from' => $data['allocated_from'],
+                'status' => 'active',
+                'allocated_by' => auth()->id(),
+            ]);
+        }
+
+        if (!HostelAllocation::where('hostel_room_id', $sourceRoom->id)->where('status', 'active')->exists()) {
+            $sourceRoom->update(['status' => 'available']);
+        }
+
+        $newCount = HostelAllocation::where('hostel_room_id', $targetRoom->id)->where('status', 'active')->count();
+        $targetRoom->update(['status' => $newCount >= $targetRoom->capacity ? 'occupied' : 'available']);
+
+        return back()->with('success', 'Student transferred to the new room.');
+    }
+
+    public function fees(Request $r)
+    {
+        $query = HostelFeeDemand::with(['student.user', 'allocation.room.block'])->latest('due_date');
+
+        if ($r->filled('status')) {
+            $query->where('status', $r->status);
+        }
+
+        if ($r->filled('month')) {
+            $query->where('month', $r->month);
+        }
+
+        $demands = $query->paginate(20)->withQueryString();
+        $stats = [
+            'pending' => HostelFeeDemand::where('status', 'pending')->count(),
+            'paid' => HostelFeeDemand::where('status', 'paid')->count(),
+            'waived' => HostelFeeDemand::where('status', 'waived')->count(),
+            'pending_amount' => HostelFeeDemand::where('status', 'pending')->sum('amount'),
+        ];
+
+        return view('admin.hostel.fees', compact('demands', 'stats'));
+    }
+
+    public function feeGenerate(Request $r)
+    {
+        $data = $r->validate([
+            'month' => 'required|date_format:Y-m',
+            'due_date' => 'required|date',
+        ]);
+
+        $created = 0;
+        $skipped = 0;
+
+        HostelAllocation::with('room')
+            ->where('status', 'active')
+            ->chunkById(100, function ($allocations) use ($data, &$created, &$skipped) {
+                foreach ($allocations as $allocation) {
+                    $amount = (float) ($allocation->room?->monthly_fee ?? 0);
+                    if ($amount <= 0) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $exists = HostelFeeDemand::where('hostel_allocation_id', $allocation->id)
+                        ->where('month', $data['month'])
+                        ->exists();
+
+                    if ($exists) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    HostelFeeDemand::create([
+                        'hostel_allocation_id' => $allocation->id,
+                        'student_id' => $allocation->student_id,
+                        'month' => $data['month'],
+                        'amount' => $amount,
+                        'status' => 'pending',
+                        'due_date' => $data['due_date'],
+                    ]);
+                    $created++;
+                }
+            });
+
+        return back()->with('success', "Hostel fee demands generated: {$created} created, {$skipped} skipped.");
+    }
+
+    public function feeMarkPaid(HostelFeeDemand $demand)
+    {
+        if ($demand->status !== 'pending') {
+            return back()->with('error', 'Only pending hostel fee demands can be marked paid.');
+        }
+
+        $demand->update([
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+
+        return back()->with('success', 'Hostel fee demand marked as paid.');
+    }
+
+    public function feeWaive(HostelFeeDemand $demand)
+    {
+        if ($demand->status !== 'pending') {
+            return back()->with('error', 'Only pending hostel fee demands can be waived.');
+        }
+
+        $demand->update([
+            'status' => 'waived',
+            'paid_at' => null,
+        ]);
+
+        return back()->with('success', 'Hostel fee demand waived.');
+    }
 
     public function outpasses(Request $r)
     {
@@ -208,6 +422,10 @@ class HostelController extends Controller
 
     public function outpassApprove(OutpassRequest $op)
     {
+        if ($op->status !== 'pending') {
+            return back()->with('error', 'Only pending outpass requests can be approved.');
+        }
+
         $op->update([
             'status'      => 'approved',
             'approved_by' => auth()->id(),
@@ -221,6 +439,10 @@ class HostelController extends Controller
     {
         $r->validate(['remarks' => 'nullable|string|max:500']);
 
+        if ($op->status !== 'pending') {
+            return back()->with('error', 'Only pending outpass requests can be rejected.');
+        }
+
         $op->update([
             'status'      => 'rejected',
             'approved_by' => auth()->id(),
@@ -233,6 +455,10 @@ class HostelController extends Controller
 
     public function outpassReturn(OutpassRequest $op)
     {
+        if ($op->status !== 'approved') {
+            return back()->with('error', 'Only approved outpasses can be marked returned.');
+        }
+
         $op->update([
             'actual_return' => now(),
             'status'        => 'returned',

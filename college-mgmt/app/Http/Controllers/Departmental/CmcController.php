@@ -8,19 +8,98 @@ use Illuminate\Http\Request;
 
 class CmcController extends Controller
 {
+    private const ACTIVE_DRIVE_STATUSES = ['upcoming', 'ongoing'];
+    private const OPEN_APPLICATION_STATUSES = ['applied', 'shortlisted', 'interview'];
+
     public function dashboard()
     {
-        $activeDrives    = PlacementDrive::whereIn('status', ['open', 'active'])->count();
-        $totalPlacements = Placement::where('status', 'selected')->count();
+        $activeDrives    = PlacementDrive::whereIn('status', self::ACTIVE_DRIVE_STATUSES)->count();
+        $totalPlacements = Placement::where('application_status', 'selected')->count();
         $totalStudents   = Student::count();
         $recentDrives    = PlacementDrive::with('company')->latest()->take(5)->get();
         $programs        = Program::where('is_active', true)->orderBy('name')->get();
         $upcomingEvents  = CareerEvent::where('event_date', '>=', now())->where('is_published', true)->orderBy('event_date')->take(5)->get();
+        $activeCompanies = Company::where('is_active', true)->count();
+        $openApplications = Placement::whereIn('application_status', self::OPEN_APPLICATION_STATUSES)->count();
+        $careerEventsThisMonth = CareerEvent::where('is_published', true)
+            ->whereBetween('event_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->count();
+        $placementRate = $totalStudents > 0 ? round(($totalPlacements / $totalStudents) * 100, 0) : 0;
+
+        $cmcPriority = $this->cmcPriority(
+            $activeCompanies,
+            $activeDrives,
+            $openApplications,
+            $totalStudents,
+            $placementRate,
+            $careerEventsThisMonth
+        );
 
         return view('departmental.cmc.dashboard', compact(
             'activeDrives', 'totalPlacements', 'totalStudents',
-            'recentDrives', 'programs', 'upcomingEvents'
+            'recentDrives', 'programs', 'upcomingEvents', 'placementRate', 'cmcPriority'
         ));
+    }
+
+    private function cmcPriority(int $activeCompanies, int $activeDrives, int $openApplications, int $totalStudents, int $placementRate, int $careerEventsThisMonth): array
+    {
+        if ($activeCompanies === 0) {
+            return [
+                'level' => 'warning',
+                'title' => 'Build the recruiter pipeline',
+                'body' => 'No active companies are available for drives. Add recruiter records before scheduling placement activity.',
+                'route' => route('cmc.companies.create'),
+                'action' => 'Add Company',
+            ];
+        }
+
+        if ($openApplications > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$openApplications} open placement application" . ($openApplications === 1 ? '' : 's'),
+                'body' => 'Applications in applied, shortlisted, or interview stages need status updates so students and leadership see current outcomes.',
+                'route' => route('cmc.drives'),
+                'action' => 'Review Applications',
+            ];
+        }
+
+        if ($activeDrives === 0) {
+            return [
+                'level' => 'danger',
+                'title' => 'Schedule an active placement drive',
+                'body' => 'There are no upcoming or ongoing drives visible to students. Create a drive to keep opportunities moving.',
+                'route' => route('cmc.drives.create'),
+                'action' => 'New Drive',
+            ];
+        }
+
+        if ($totalStudents > 0 && $placementRate < 40) {
+            return [
+                'level' => 'warning',
+                'title' => "Placement rate is {$placementRate}%",
+                'body' => 'Review program-wise placement performance and target recruiter outreach for low-coverage cohorts.',
+                'route' => route('cmc.analytics'),
+                'action' => 'Open Analytics',
+            ];
+        }
+
+        if ($careerEventsThisMonth === 0) {
+            return [
+                'level' => 'info',
+                'title' => 'Plan this month\'s career engagement',
+                'body' => 'No published career events are scheduled this month. Add preparation sessions before recruitment peaks.',
+                'route' => route('cmc.events.create'),
+                'action' => 'New Event',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'Placement operations are current',
+            'body' => 'Use analytics to review program outcomes, recruiter coverage, and event participation.',
+            'route' => route('cmc.analytics'),
+            'action' => 'Open Analytics',
+        ];
     }
 
     public function drives(Request $request)
@@ -57,7 +136,7 @@ class CmcController extends Controller
             'location'        => 'nullable|string|max:255',
             'vacancies'       => 'nullable|integer|min:1',
             'description'     => 'nullable|string|max:2000',
-            'status'          => 'required|in:draft,open,active,closed,cancelled',
+            'status'          => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
 
         PlacementDrive::create($data);
@@ -85,7 +164,7 @@ class CmcController extends Controller
             'location'        => 'nullable|string|max:255',
             'vacancies'       => 'nullable|integer|min:1',
             'description'     => 'nullable|string|max:2000',
-            'status'          => 'required|in:draft,open,active,closed,cancelled',
+            'status'          => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
 
         $drive->update($data);
@@ -110,8 +189,8 @@ class CmcController extends Controller
     public function updateApplicationStatus(Request $request, Placement $placement)
     {
         $request->validate([
-            'application_status' => 'required|in:applied,shortlisted,interviewed,selected,rejected',
-            'offered_package'    => 'nullable|string|max:100',
+            'application_status' => 'required|in:applied,shortlisted,interview,selected,rejected,withdrawn',
+            'offered_package'    => 'nullable|numeric|min:0',
             'remarks'            => 'nullable|string|max:500',
         ]);
 

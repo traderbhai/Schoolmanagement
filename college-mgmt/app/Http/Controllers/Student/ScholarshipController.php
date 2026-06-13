@@ -25,6 +25,17 @@ class ScholarshipController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
         abort_unless($scheme->is_active, 422, 'This scholarship is not accepting applications.');
+        abort_if(
+            $scheme->program_id && $scheme->program_id !== $student->program_id,
+            403,
+            'This scholarship is not available for your program.'
+        );
+
+        abort_if(
+            $scheme->available_seats !== null && $scheme->seatsRemaining() <= 0,
+            422,
+            'This scholarship has no seats remaining.'
+        );
 
         abort_if(
             StudentScholarshipApplication::where('student_id',$student->id)

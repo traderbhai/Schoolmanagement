@@ -3,9 +3,7 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
-use App\Models\AdmissionPayment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class RegistrationFeeController extends Controller
 {
@@ -28,23 +26,6 @@ class RegistrationFeeController extends Controller
             'receipt_number'   => 'nullable|string|max:100',
         ]);
 
-        $proofPath = null;
-        if ($request->hasFile('proof_document')) {
-            $proofPath = $request->file('proof_document')->store('payment-proofs/' . $applicant->id, 'public');
-        }
-
-        // Create an AdmissionPayment record
-        AdmissionPayment::create([
-            'applicant_id'     => $applicant->id,
-            'amount_paid'      => $validated['amount_paid'],
-            'payment_method'   => $validated['payment_method'],
-            'reference_number' => $validated['reference_number'],
-            'proof_document'   => $proofPath,
-            'status'           => 'pending',
-            'payment_type'     => 'registration_fee',
-        ]);
-
-        // Mark the applicant
         $applicant->update([
             'registration_fee_amount'  => $validated['amount_paid'],
             'registration_fee_paid_at' => now(),

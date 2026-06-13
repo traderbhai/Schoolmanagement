@@ -29,7 +29,7 @@ class DashboardController extends Controller
         $presentAttendance = Attendance::where('student_id', $student->id)->whereIn('status', ['present','late'])->count();
         $attendanceOverall = $totalAttendance > 0 ? round(($presentAttendance / $totalAttendance) * 100) : null;
 
-        // Per-subject attendance — flag low ones
+        // Per-subject attendance - flag low ones
         $lowAttendanceSubjects = [];
         $attendanceBySubject = Attendance::with('timetableEntry.subject')
             ->where('student_id', $student->id)
@@ -44,7 +44,7 @@ class DashboardController extends Controller
             }
         }
 
-        // SGPA — from current semester
+        // SGPA - from current semester
         $sgpa = null;
         if ($currentSemester) {
             $results = ExamResult::with('exam')
@@ -59,7 +59,7 @@ class DashboardController extends Controller
             }
         }
 
-        // CGPA — avg across all semesters
+        // CGPA - avg across all semesters
         $cgpa = null;
         try {
             $allResults = ExamResult::with('exam')
@@ -73,12 +73,13 @@ class DashboardController extends Controller
             }
         } catch (\Exception $e) { $cgpa = null; }
 
-        // Fee balance — use FeeDemand as source of truth
+        // Fee balance - use FeeDemand as source of truth
         $feeOutstanding = 0;
         try {
             $feeOutstanding = FeeDemand::where('student_id', $student->id)
-                ->where('status', '!=', 'paid')
-                ->sum('amount');
+                ->whereIn('status', ['pending', 'partially_paid', 'overdue'])
+                ->get(['final_amount', 'penalty_amount'])
+                ->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
         } catch (\Exception $e) {
             $feeDue  = FeeStructure::where('course_id', $student->course_id)->sum('amount');
             $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
@@ -97,6 +98,11 @@ class DashboardController extends Controller
                 ->orderBy('due_at')
                 ->get();
         } catch (\Exception $e) {}
+
+        $pendingAssignmentCount = $upcomingAssignments
+            ->filter(fn($assignment) => ! $assignment->submissions->first()
+                || ! in_array($assignment->submissions->first()->status, ['submitted', 'graded']))
+            ->count();
 
         // Upcoming exams
         $upcomingExams = collect();
@@ -133,7 +139,7 @@ class DashboardController extends Controller
         return view('student.dashboard', compact(
             'student', 'currentSemester', 'notices', 'slots', 'grid', 'todayClasses',
             'attendanceOverall', 'lowAttendanceSubjects', 'sgpa', 'cgpa', 'feeOutstanding',
-            'upcomingAssignments', 'upcomingExams', 'upcomingEvents', 'pendingLeaves'
+            'upcomingAssignments', 'pendingAssignmentCount', 'upcomingExams', 'upcomingEvents', 'pendingLeaves'
         ));
     }
 }

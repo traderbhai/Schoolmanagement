@@ -4,6 +4,27 @@
 
 @section('content')
 <div class="container-fluid py-3" style="max-width:960px">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-semibold mb-0">Scholarships</h4>
+            <div class="text-muted small">Apply for eligible schemes and track review, approval, and disbursement status.</div>
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <div class="fw-semibold mb-1">Please review your scholarship application.</div>
+            <ul class="mb-0 small">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     @if($myApplications->isNotEmpty())
     <div class="card border-0 shadow-sm mb-4">
@@ -15,11 +36,21 @@
                 </thead>
                 <tbody>
                     @foreach($myApplications as $app)
-                    @php $badge = match($app->status) { 'approved'=>'success','disbursed'=>'success','rejected'=>'danger','shortlisted'=>'info',default=>'warning' }; @endphp
+                    @php $badge = match($app->status) { 'approved', 'disbursed' => 'success', 'rejected' => 'danger', 'shortlisted' => 'info', default => 'warning' }; @endphp
                     <tr>
-                        <td class="fw-semibold">{{ $app->scheme->name ?? '—' }}</td>
-                        <td>{{ $app->cgpa_at_application }}</td>
-                        <td><span class="badge bg-{{ $badge }}">{{ ucfirst($app->status) }}</span></td>
+                        <td>
+                            <div class="fw-semibold">{{ $app->scheme->name ?? '-' }}</div>
+                            @if($app->review_note)
+                                <div class="small text-muted">{{ $app->review_note }}</div>
+                            @endif
+                        </td>
+                        <td>{{ $app->cgpa_at_application ?? '-' }}</td>
+                        <td>
+                            <span class="badge bg-{{ $badge }}">{{ ucfirst($app->status) }}</span>
+                            @if($app->disbursed_amount)
+                                <div class="small text-muted mt-1">Rs. {{ number_format((float) $app->disbursed_amount, 2) }}</div>
+                            @endif
+                        </td>
                         <td class="text-muted small">{{ $app->created_at->format('d M Y') }}</td>
                     </tr>
                     @endforeach
@@ -40,35 +71,45 @@
             @foreach($schemes as $scheme)
             @php $applied = isset($myApplications[$scheme->id]); @endphp
             <div class="list-group-item px-4 py-3">
-                <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
                         <h6 class="fw-semibold mb-1">{{ $scheme->name }}</h6>
                         <div class="text-muted small mb-1">
-                            <span class="badge bg-secondary me-1">{{ ucfirst($scheme->type ?? 'general') }}</span>
-                            @if($scheme->amount) <span>₹{{ number_format($scheme->amount) }}</span> @endif
-                            @if($scheme->application_deadline)
-                                · Deadline: {{ \Carbon\Carbon::parse($scheme->application_deadline)->format('d M Y') }}
+                            <span class="{{ $scheme->type_badge }} me-1">{{ $scheme->type_label }}</span>
+                            <span>Max Rs. {{ number_format((float) $scheme->max_amount, 0) }}</span>
+                            @if($scheme->available_seats !== null)
+                                <span class="ms-2">Seats left: {{ $scheme->seatsRemaining() }}</span>
+                            @else
+                                <span class="ms-2">Unlimited seats</span>
                             @endif
                         </div>
-                        @if($scheme->description)
-                        <p class="small text-muted mb-1">{{ Str::limit($scheme->description, 140) }}</p>
-                        @endif
-                        @if($scheme->eligibility_criteria)
-                        <p class="small mb-0"><strong>Eligibility:</strong> {{ $scheme->eligibility_criteria }}</p>
+                        @if($scheme->criteria)
+                            <p class="small mb-0"><strong>Eligibility:</strong> {{ $scheme->criteria }}</p>
                         @endif
                     </div>
-                    <div class="ms-3 flex-shrink-0">
+                    <div class="flex-shrink-0">
                         @if($applied)
-                            @php $badge = match($myApplications[$scheme->id]->status) { 'approved'=>'success','disbursed'=>'success','rejected'=>'danger','shortlisted'=>'info',default=>'warning' }; @endphp
+                            @php $badge = match($myApplications[$scheme->id]->status) { 'approved', 'disbursed' => 'success', 'rejected' => 'danger', 'shortlisted' => 'info', default => 'warning' }; @endphp
                             <span class="badge bg-{{ $badge }}">{{ ucfirst($myApplications[$scheme->id]->status) }}</span>
                         @else
-                            <form method="POST" action="{{ route('student.scholarships.apply', $scheme) }}">
-                                @csrf
-                                <button class="btn btn-sm btn-outline-primary">Apply</button>
-                            </form>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#applyScholarship{{ $scheme->id }}">Apply</button>
                         @endif
                     </div>
                 </div>
+
+                @if(!$applied)
+                    <div class="collapse mt-3" id="applyScholarship{{ $scheme->id }}">
+                        <form method="POST" action="{{ route('student.scholarships.apply', $scheme) }}">
+                            @csrf
+                            <label class="form-label small fw-semibold">Why should you be considered? <span class="text-danger">*</span></label>
+                            <textarea name="reason" class="form-control form-control-sm mb-2" rows="4" minlength="50" maxlength="2000" required placeholder="Mention academic performance, financial need, achievements, or relevant circumstances.">{{ old('reason') }}</textarea>
+                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                <div class="small text-muted">Minimum 50 characters. Staff will review this with your academic record.</div>
+                                <button class="btn btn-sm btn-primary">Submit Application</button>
+                            </div>
+                        </form>
+                    </div>
+                @endif
             </div>
             @endforeach
         </div>

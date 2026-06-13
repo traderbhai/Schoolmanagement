@@ -28,17 +28,18 @@ class ProgramChairController extends Controller
     {
         $programIds = $this->getAssignedProgramIds();
         $programs = Program::whereIn('id', $programIds)->with(['batches'])->get();
+        $hasAssignedPrograms = !empty($programIds);
 
-        $activeStudents = Student::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+        $activeStudents = Student::whereIn('program_id', $programIds)
             ->where('status', 'active')->count();
 
         $currentTerm = Term::latest('start_date')->first();
-        $subjectsThisTerm = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+        $subjectsThisTerm = Subject::whereIn('program_id', $programIds)
             ->when($currentTerm, fn($q) => $q->where('term_id', $currentTerm->id))
             ->count();
 
         $examCount = Exam::whereYear('exam_date', now()->year)
-            ->when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+            ->whereIn('program_id', $programIds)
             ->count();
 
         // Average marks
@@ -46,8 +47,8 @@ class ProgramChairController extends Controller
         $avgMarks = $avgMarks ? round($avgMarks, 1) : '—';
 
         // Pending approvals
-        $pendingApprovals = ApprovalWorkflow::where('approver_role', 'program_chair')
-            ->where('status', 'pending')->count();
+        $pendingApprovals = $this->pendingProgramChairApprovals($programIds)->count();
+        $avgMarks = is_numeric($avgMarks) ? $avgMarks : '-';
 
         // Attendance % for these programs
         $attTotal = Attendance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))->count();
@@ -55,13 +56,13 @@ class ProgramChairController extends Controller
         $attendancePct = $attTotal > 0 ? round(($attPresent / $attTotal) * 100, 1) : 0;
 
         // Recent exams
-        $recentExams = Exam::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
-            ->with(['subject', 'examResults'])
+        $recentExams = Exam::whereIn('program_id', $programIds)
+            ->with(['subject', 'results'])
             ->latest('exam_date')
             ->take(6)
             ->get()
             ->map(function($exam) {
-                $results = $exam->examResults;
+                $results = $exam->results;
                 $exam->result_count = $results->count();
                 $exam->pass_count = $results->where('marks_obtained', '>=', ($exam->passing_marks ?? 40))->count();
                 return $exam;
@@ -75,7 +76,7 @@ class ProgramChairController extends Controller
             ->keyBy('subject_id');
 
         // Subjects with attendance < 75%
-        $lowAttSubjects = Subject::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+        $lowAttSubjects = Subject::whereIn('program_id', $programIds)
             ->with('program')
             ->take(20)->get()
             ->map(function($subject) use ($subjectAttData) {
@@ -123,7 +124,7 @@ class ProgramChairController extends Controller
         } catch (\Throwable $e) {}
 
         // Faculty workload summary
-        $workloadSummary = TimetableEntry::when(!empty($programIds), fn($q) => $q->whereIn('program_id', $programIds))
+        $workloadSummary = TimetableEntry::whereIn('program_id', $programIds)
             ->when($currentTerm ?? null, fn($q) => $q->where('term_id', ($currentTerm = Term::latest('start_date')->first())?->id))
             ->where('is_active', true)
             ->selectRaw('teacher_id, COUNT(*) as sessions')
@@ -155,12 +156,124 @@ class ProgramChairController extends Controller
         $openGrievances = StudentGrievance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
             ->whereIn('status', ['open','under_review'])->count();
 
+        $chairPriority = $this->chairPriority(
+            $hasAssignedPrograms,
+            $pendingApprovals,
+            $pendingLeaves,
+            $pendingCondonations,
+            $openGrievances,
+            $atRiskStudents->count(),
+            $lowAttSubjects->count(),
+            $timetableVersions->where('status', 'published')->count(),
+            $subjectsThisTerm
+        );
+
         return view('departmental.program-chair.dashboard', compact(
             'activeStudents', 'subjectsThisTerm', 'examCount', 'avgMarks',
             'pendingApprovals', 'attendancePct', 'recentExams', 'lowAttSubjects', 'programs',
             'atRiskStudents', 'workloadSummary', 'timetableVersions', 'electiveWindows',
-            'pendingLeaves', 'pendingCondonations', 'openGrievances'
+            'pendingLeaves', 'pendingCondonations', 'openGrievances', 'chairPriority'
         ));
+    }
+
+    private function chairPriority(
+        bool $hasAssignedPrograms,
+        int $pendingApprovals,
+        int $pendingLeaves,
+        int $pendingCondonations,
+        int $openGrievances,
+        int $atRiskCount,
+        int $lowAttendanceSubjectCount,
+        int $publishedTimetableCount,
+        int $subjectsThisTerm
+    ): array {
+        if (!$hasAssignedPrograms) {
+            return [
+                'level' => 'warning',
+                'title' => 'Program assignment needed',
+                'body' => 'No active program is assigned to your Program Chair role. Ask an administrator to scope your access before reviewing students, timetable, or approvals.',
+                'route' => route('admin.role-assignments.index'),
+                'action' => 'Review Assignments',
+            ];
+        }
+
+        if ($pendingApprovals > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingApprovals} pending approval" . ($pendingApprovals === 1 ? '' : 's'),
+                'body' => 'Admission and capacity sign-offs should be cleared before seats and offers move forward.',
+                'route' => route('chair.approvals'),
+                'action' => 'Open Approvals',
+            ];
+        }
+
+        if ($pendingLeaves > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingLeaves} student leave request" . ($pendingLeaves === 1 ? '' : 's'),
+                'body' => 'Pending leave decisions affect attendance, mentoring, and class follow-up.',
+                'route' => route('chair.students.leaves'),
+                'action' => 'Review Leaves',
+            ];
+        }
+
+        if ($pendingCondonations > 0) {
+            return [
+                'level' => 'warning',
+                'title' => "Review {$pendingCondonations} attendance condonation request" . ($pendingCondonations === 1 ? '' : 's'),
+                'body' => 'Condonation decisions should be resolved before exam eligibility and hall-ticket workflows.',
+                'route' => route('chair.students.condonations'),
+                'action' => 'Review Condonations',
+            ];
+        }
+
+        if ($openGrievances > 0) {
+            return [
+                'level' => 'danger',
+                'title' => "Resolve {$openGrievances} open student grievance" . ($openGrievances === 1 ? '' : 's'),
+                'body' => 'Open grievances need ownership and resolution notes before they become escalations.',
+                'route' => route('chair.students.grievances'),
+                'action' => 'Review Grievances',
+            ];
+        }
+
+        if ($atRiskCount > 0 || $lowAttendanceSubjectCount > 0) {
+            return [
+                'level' => 'danger',
+                'title' => 'Review at-risk student signals',
+                'body' => "{$atRiskCount} student(s) and {$lowAttendanceSubjectCount} subject(s) need academic or attendance intervention.",
+                'route' => route('chair.students.at-risk'),
+                'action' => 'Open At-Risk List',
+            ];
+        }
+
+        if ($publishedTimetableCount === 0) {
+            return [
+                'level' => 'warning',
+                'title' => 'Publish timetable for assigned programs',
+                'body' => 'No published timetable version is available yet. Publish a version so students and faculty have an official schedule.',
+                'route' => route('chair.timetable.builder'),
+                'action' => 'Open Timetable Builder',
+            ];
+        }
+
+        if ($subjectsThisTerm === 0) {
+            return [
+                'level' => 'info',
+                'title' => 'Review curriculum setup for the current term',
+                'body' => 'No subjects are mapped for the current term. Verify curriculum and faculty assignments.',
+                'route' => route('chair.curriculum.index'),
+                'action' => 'Open Curriculum',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'No urgent program action today',
+            'body' => 'Use this time to review workload, performance reports, timetable quality, and curriculum readiness.',
+            'route' => route('chair.reports.subject-performance'),
+            'action' => 'View Reports',
+        ];
     }
 
     public function students(Request $request)
@@ -240,8 +353,9 @@ class ProgramChairController extends Controller
 
     public function approvals(Request $request)
     {
-        $query = ApprovalWorkflow::where('approver_role', 'program_chair')
-            ->where('status', 'pending')
+        $programIds = $this->getAssignedProgramIds();
+
+        $query = $this->pendingProgramChairApprovals($programIds)
             ->with(['approvable' => function ($q) {
                 $q->with(['user', 'program', 'batch']);
             }])
@@ -252,6 +366,19 @@ class ProgramChairController extends Controller
         return view('departmental.program-chair.approvals.index', compact('approvals'));
     }
 
+    private function pendingProgramChairApprovals(array $programIds)
+    {
+        return ApprovalWorkflow::where('approver_role', 'program_chair')
+            ->where('status', 'pending')
+            ->whereHasMorph('approvable', [Applicant::class], fn($q) => $q->whereIn('program_id', $programIds));
+    }
+
+    private function authorizeProgramApproval($approvable): void
+    {
+        abort_unless($approvable instanceof Applicant, 403);
+        abort_unless(in_array($approvable->program_id, $this->getAssignedProgramIds(), true), 403);
+    }
+
     public function approve(Request $request, ApprovalWorkflow $approval)
     {
         $request->validate([
@@ -260,6 +387,7 @@ class ProgramChairController extends Controller
 
         // Check seat capacity before approving
         $applicant = $approval->approvable;
+        $this->authorizeProgramApproval($applicant);
         $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
 
         if ($seatMatrix) {
@@ -287,6 +415,8 @@ class ProgramChairController extends Controller
         $request->validate([
             'rejection_reason' => 'required|string|max:500',
         ]);
+
+        $this->authorizeProgramApproval($approval->approvable);
 
         $approval->update([
             'status'      => 'rejected',

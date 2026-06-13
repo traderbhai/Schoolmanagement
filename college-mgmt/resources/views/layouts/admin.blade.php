@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'EduManage — Portal')</title>
+    <title>@yield('title', 'EduManage - Portal')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -126,6 +126,11 @@
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif">
             <i class="bi bi-people"></i> Students
         </a>
+        <a href="{{ route('admin.document-requests.index') }}" class="nav-link @if(request()->routeIs('admin.document-requests.*')) active @endif">
+            <i class="bi bi-file-earmark-check"></i> Student Documents
+            @php $studentDocsPending = \App\Models\DocumentRequest::whereIn('status', ['pending', 'approved'])->count(); @endphp
+            @if($studentDocsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $studentDocsPending }}</span>@endif
+        </a>
         <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif">
             <i class="bi bi-person-lines-fill"></i> Applications
         </a>
@@ -216,6 +221,11 @@
         </a>
         <a href="{{ route('admission.scholarship-disbursements.index') }}" class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}">
             <i class="bi bi-send me-2"></i>Disbursements
+        </a>
+        <a href="{{ route('admin.student-scholarships.index') }}" class="nav-link {{ request()->routeIs('admin.student-scholarships.*') ? 'active' : '' }}">
+            <i class="bi bi-person-check me-2"></i>Student Applications
+            @php $studentScholarshipsPending = \App\Models\StudentScholarshipApplication::whereIn('status', ['pending', 'shortlisted', 'approved'])->count(); @endphp
+            @if($studentScholarshipsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $studentScholarshipsPending }}</span>@endif
         </a>
 
         <div class="sidebar-divider"></div>
@@ -352,6 +362,12 @@
         <div class="section-label">Hostel</div>
         <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
             <i class="bi bi-building me-2"></i>Hostel
+        </a>
+        <a href="{{ route('admin.transport.index') }}" class="nav-link @if(request()->routeIs('admin.transport.*')) active @endif">
+            <i class="bi bi-bus-front me-2"></i>Transport
+        </a>
+        <a href="{{ route('admin.assets.index') }}" class="nav-link @if(request()->routeIs('admin.assets.*')) active @endif">
+            <i class="bi bi-box-seam me-2"></i>Assets
         </a>
         <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
             <i class="bi bi-book-half me-2"></i>Library
@@ -818,6 +834,7 @@
         <div class="section-label">People</div>
         <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif"><i class="bi bi-person-badge"></i> Teachers</a>
         <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
+        <a href="{{ route('admin.document-requests.index') }}" class="nav-link @if(request()->routeIs('admin.document-requests.*')) active @endif"><i class="bi bi-file-earmark-check"></i> Student Documents</a>
         <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applications</a>
         <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
         <div class="sidebar-divider"></div>
@@ -879,6 +896,8 @@
         <div class="sidebar-divider"></div>
         <div class="section-label">Hostel</div>
         <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif"><i class="bi bi-building me-2"></i>Hostel</a>
+        <a href="{{ route('admin.transport.index') }}" class="nav-link @if(request()->routeIs('admin.transport.*')) active @endif"><i class="bi bi-bus-front me-2"></i>Transport</a>
+        <a href="{{ route('admin.assets.index') }}" class="nav-link @if(request()->routeIs('admin.assets.*')) active @endif"><i class="bi bi-box-seam me-2"></i>Assets</a>
         <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
         @endhasrole
 
@@ -1076,7 +1095,7 @@
 
             {{-- Page heading --}}
             <div class="page-heading">
-                <h6>@yield('page-title', 'Dashboard')</h6>
+                <h6>@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h6>
                 @hasSection('breadcrumb')
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
@@ -1088,7 +1107,7 @@
         </div>
 
         <div class="topbar-right">
-            {{-- Global search — admin only --}}
+            {{-- Global search - admin only --}}
             @hasrole('admin')
             <form method="GET" action="{{ route('admin.search') }}" class="topbar-search d-none d-md-flex">
                 <i class="bi bi-search search-icon"></i>

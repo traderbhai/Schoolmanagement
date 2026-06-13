@@ -7,15 +7,17 @@
         <a href="{{ route('cmc.alumni.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h4 class="fw-bold mb-0">Add Alumni Profile</h4>
-            <span class="text-muted small">Record a graduate's post-program journey</span>
+            <span class="text-muted small">Record a graduate's post-program journey for verified student networking.</span>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-lg-7">
+        <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
-                    @if($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
+                    @if($errors->any())
+                        <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
+                    @endif
                     <form method="POST" action="{{ route('cmc.alumni.store') }}">
                         @csrf
                         <div class="mb-3">
@@ -24,22 +26,25 @@
                                 <option value="">Select Student</option>
                                 @foreach($students as $s)
                                 <option value="{{ $s->id }}" @selected(old('student_id')==$s->id)>
-                                    {{ $s->user->name }} ({{ $s->enrollment_number }})
+                                    {{ $s->user->name }} ({{ $s->enrollment_number ?? 'No enrollment number' }})
                                 </option>
                                 @endforeach
                             </select>
                             @error('student_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
+                            <div class="col-sm-4">
                                 <label class="form-label fw-semibold">Graduation Year <span class="text-danger">*</span></label>
-                                <input type="number" name="graduation_year" class="form-control @error('graduation_year') is-invalid @enderror"
-                                    value="{{ old('graduation_year', now()->year) }}" min="2000" max="{{ now()->year }}" required>
+                                <input type="number" name="graduation_year" class="form-control @error('graduation_year') is-invalid @enderror" value="{{ old('graduation_year', now()->year) }}" min="2000" max="{{ now()->year }}" required>
                                 @error('graduation_year')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            <div class="col-sm-6">
+                            <div class="col-sm-4">
                                 <label class="form-label fw-semibold">City</label>
                                 <input type="text" name="city" class="form-control" value="{{ old('city') }}" placeholder="e.g. Mumbai">
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label fw-semibold">Country</label>
+                                <input type="text" name="country" class="form-control" value="{{ old('country', 'India') }}">
                             </div>
                         </div>
                         <div class="row g-3 mb-3">
@@ -54,7 +59,7 @@
                         </div>
                         <div class="row g-3 mb-3">
                             <div class="col-sm-6">
-                                <label class="form-label fw-semibold">Current Salary (₹/year)</label>
+                                <label class="form-label fw-semibold">Current Salary (Rs./year)</label>
                                 <input type="number" name="current_salary" class="form-control" value="{{ old('current_salary') }}" min="0" step="1000">
                             </div>
                             <div class="col-sm-6">
@@ -64,7 +69,7 @@
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Feedback about Institution</label>
-                            <textarea name="feedback" rows="3" class="form-control" placeholder="Alumni's feedback...">{{ old('feedback') }}</textarea>
+                            <textarea name="feedback" rows="3" class="form-control" placeholder="Alumni feedback, referral notes, or mentoring interest">{{ old('feedback') }}</textarea>
                         </div>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Save Profile</button>

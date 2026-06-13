@@ -35,6 +35,37 @@ class AlumniController extends Controller {
             ->orderByDesc('graduation_year')
             ->pluck('graduation_year');
 
-        return view('student.alumni.index', compact('alumni', 'years', 'student'));
+        $sameProgramCount = AlumniProfile::where('is_verified', true)
+            ->whereHas('student', fn($q) => $q->where('program_id', $student->program_id))
+            ->count();
+        $allVerifiedCount = AlumniProfile::where('is_verified', true)->count();
+        $alumniPriority = $this->alumniPriority($sameProgramCount, $allVerifiedCount, $request->boolean('all_programs', false));
+
+        return view('student.alumni.index', compact('alumni', 'years', 'student', 'sameProgramCount', 'allVerifiedCount', 'alumniPriority'));
+    }
+
+    private function alumniPriority(int $sameProgramCount, int $allVerifiedCount, bool $showingAllPrograms): array
+    {
+        if ($sameProgramCount > 0 && ! $showingAllPrograms) {
+            return [
+                'level' => 'info',
+                'title' => "{$sameProgramCount} alumni from your program",
+                'body' => 'Start with alumni from your academic program for relevant mentoring, referrals, and career paths.',
+            ];
+        }
+
+        if ($allVerifiedCount > 0) {
+            return [
+                'level' => 'info',
+                'title' => "{$allVerifiedCount} verified alumni available",
+                'body' => 'Use filters to find alumni by graduation year, employer, or all programs.',
+            ];
+        }
+
+        return [
+            'level' => 'none',
+            'title' => 'Alumni network is being built',
+            'body' => 'Verified alumni profiles will appear here after CMC confirms graduate career details.',
+        ];
     }
 }
