@@ -50,14 +50,7 @@ class AdmissionCommunicationService
 
     public function dispatchQueued(?int $limit = 50): int
     {
-        return AdmissionCommunicationLog::where('status', 'queued')
-            ->oldest('queued_at')
-            ->limit($limit)
-            ->get()
-            ->each(function (AdmissionCommunicationLog $log) {
-                $log->update(['status' => 'sent', 'sent_at' => now()]);
-            })
-            ->count();
+        return app(AdmissionIntegrationService::class)->dispatchQueued($limit);
     }
 
     public function manuallyLog(Lead|Applicant $subject, string $channel, string $body, ?User $actor = null): AdmissionCommunicationLog
@@ -112,7 +105,7 @@ class AdmissionCommunicationService
             'email' => 'mail',
             'sms' => 'mock_sms',
             'whatsapp' => 'mock_whatsapp',
-            default => 'internal',
+            default => app(AdmissionProviderRegistry::class)->active($channel)->provider_name,
         };
     }
 }

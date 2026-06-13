@@ -23,6 +23,9 @@ class User extends Authenticatable
     public function notices()       { return $this->hasMany(Notice::class); }
     public function applicant()     { return $this->hasOne(Applicant::class); }
     public function notifications() { return $this->hasMany(Notification::class); }
+    public function admissionEvaluatorAvailabilities() { return $this->hasMany(AdmissionEvaluatorAvailability::class, 'user_id'); }
+    public function admissionCounsellorTargets() { return $this->hasMany(AdmissionCounsellorTarget::class, 'user_id'); }
+    public function admissionCoachingNotes() { return $this->hasMany(AdmissionCounsellorCoachingNote::class, 'counsellor_user_id'); }
 
     /**
      * Get the attributes that should be cast.

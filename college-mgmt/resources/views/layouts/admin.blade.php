@@ -159,6 +159,52 @@
         <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
             <i class="bi bi-kanban"></i> Workbench
         </a>
+        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
+            <i class="bi bi-telephone-outbound"></i> Calling Desk
+        </a>
+        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
+            <i class="bi bi-search"></i> Quick Search
+        </a>
+        <div class="section-label">Command</div>
+        <a href="{{ route('admission.assessment-control-room.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-control-room.*')) active @endif">
+            <i class="bi bi-display"></i> Assessment Control
+        </a>
+        <a href="{{ route('admission.counsellor-desk.index') }}" class="nav-link @if(request()->routeIs('admission.counsellor-desk.*')) active @endif">
+            <i class="bi bi-person-workspace"></i> Counsellor Desk
+        </a>
+        <a href="{{ route('admission.integrations.index') }}" class="nav-link @if(request()->routeIs('admission.integrations.*')) active @endif">
+            <i class="bi bi-plug"></i> Integrations
+        </a>
+        <a href="{{ route('admission.automation-simulation.index') }}" class="nav-link @if(request()->routeIs('admission.automation-simulation.*')) active @endif">
+            <i class="bi bi-lightning-charge"></i> Automation Ops
+        </a>
+        <a href="{{ route('admission.saved-views.index') }}" class="nav-link @if(request()->routeIs('admission.saved-views.*')) active @endif">
+            <i class="bi bi-bookmark-check"></i> Saved Views
+        </a>
+        <div class="section-label">Calling</div>
+        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
+            <i class="bi bi-telephone-outbound"></i> Calling Desk
+        </a>
+        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
+            <i class="bi bi-search"></i> Quick Search
+        </a>
+        <div class="section-label">Assessments</div>
+        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*') || request()->routeIs('admission.gd-groups.*') || request()->routeIs('admission.assessment-submissions.*')) active @endif">
+            <i class="bi bi-calendar2-check"></i> Scheduling
+        </a>
+        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif">
+            <i class="bi bi-clipboard2-check"></i> Committee Board
+        </a>
+        <div class="section-label">Offers & Safety</div>
+        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*')) active @endif">
+            <i class="bi bi-ui-checks-grid"></i> Seat Control
+        </a>
+        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*') || request()->routeIs('admission.consent-center.*') || request()->routeIs('admission.template-approvals.*')) active @endif">
+            <i class="bi bi-shield-check"></i> Consent & Safety
+        </a>
+        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif">
+            <i class="bi bi-activity"></i> Integration Health
+        </a>
         <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif">
             <i class="bi bi-diagram-3"></i> Process Templates
         </a>
@@ -759,6 +805,12 @@
         <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
             <i class="bi bi-kanban"></i> Workbench
         </a>
+        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
+            <i class="bi bi-telephone-outbound"></i> Calling Desk
+        </a>
+        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
+            <i class="bi bi-search"></i> Quick Search
+        </a>
         @if($departmentHierarchyService->canAccessDepartmentGovernance($user, 'ADM'))
         <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
             <i class="bi bi-person-workspace"></i> Department Hierarchy
@@ -786,6 +838,12 @@
 
         <div class="sidebar-divider"></div>
         <div class="section-label">Process</div>
+        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*') || request()->routeIs('admission.gd-groups.*') || request()->routeIs('admission.assessment-submissions.*')) active @endif">
+            <i class="bi bi-calendar2-check"></i> Assessment Scheduling
+        </a>
+        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif">
+            <i class="bi bi-clipboard2-check"></i> Committee Board
+        </a>
         @if($firstProgram)
         <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
             <i class="bi bi-list-ol"></i> Merit List
@@ -796,6 +854,9 @@
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
             <i class="bi bi-person-check-fill"></i> Enrollments
+        </a>
+        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*') || request()->routeIs('admission.deferrals.*') || request()->routeIs('admission.joining-kit.*')) active @endif">
+            <i class="bi bi-ui-checks-grid"></i> Seat Control
         </a>
         <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
             <i class="bi bi-calendar-event"></i> Sessions
@@ -825,6 +886,12 @@
         </a>
         <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif">
             <i class="bi bi-megaphone"></i> Bulk Communication
+        </a>
+        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*') || request()->routeIs('admission.consent-center.*') || request()->routeIs('admission.template-approvals.*')) active @endif">
+            <i class="bi bi-shield-check"></i> Consent & Safety
+        </a>
+        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif">
+            <i class="bi bi-activity"></i> Integration Health
         </a>
         <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif">
             <i class="bi bi-arrow-counterclockwise"></i> Refunds
@@ -900,6 +967,8 @@
         <a href="{{ route('admission.reminders.index') }}" class="nav-link @if(request()->routeIs('admission.reminders.*')) active @endif"><i class="bi bi-bell"></i> Reminders</a>
         <a href="{{ route('admission.calendar.index') }}" class="nav-link @if(request()->routeIs('admission.calendar.*')) active @endif"><i class="bi bi-calendar-event"></i> Admission Calendar</a>
         <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
+        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*')||request()->routeIs('admission.call-attempts.*')) active @endif"><i class="bi bi-telephone-outbound"></i> Calling Desk</a>
+        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif"><i class="bi bi-search"></i> Quick Search</a>
         <a href="{{ route('admission.call-queue.index') }}" class="nav-link @if(request()->routeIs('admission.call-queue.*')) active @endif"><i class="bi bi-telephone-outbound"></i> Call Queue</a>
         <a href="{{ route('admission.pipeline.index') }}" class="nav-link @if(request()->routeIs('admission.pipeline.*')) active @endif"><i class="bi bi-columns-gap"></i> Pipeline</a>
         <a href="{{ route('admission.communication.index') }}" class="nav-link @if(request()->routeIs('admission.communication.*')) active @endif"><i class="bi bi-chat-dots"></i> Communication Hub</a>
@@ -911,6 +980,8 @@
         <a href="{{ route('admission.forecasting.index') }}" class="nav-link @if(request()->routeIs('admission.forecasting.*')) active @endif"><i class="bi bi-graph-up-arrow"></i> Forecasting</a>
         <a href="{{ route('admission.approvals.index') }}" class="nav-link @if(request()->routeIs('admission.approvals.*')) active @endif"><i class="bi bi-patch-check"></i> Approvals</a>
         <a href="{{ route('admission.assessment-panels.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-panels.*')||request()->routeIs('admission.assessment-operations.*')) active @endif"><i class="bi bi-clipboard2-data"></i> Assessment Panels</a>
+        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*')||request()->routeIs('admission.gd-groups.*')||request()->routeIs('admission.assessment-submissions.*')) active @endif"><i class="bi bi-calendar2-check"></i> Assessment Scheduling</a>
+        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif"><i class="bi bi-clipboard2-check"></i> Committee Board</a>
         <a href="{{ route('admission.walk-ins.index') }}" class="nav-link @if(request()->routeIs('admission.walk-ins.*')) active @endif"><i class="bi bi-door-open"></i> Walk-ins</a>
         <a href="{{ route('admission.manager-reviews.index') }}" class="nav-link @if(request()->routeIs('admission.manager-reviews.*')) active @endif"><i class="bi bi-clipboard-check"></i> Manager Reviews</a>
         <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif"><i class="bi bi-diagram-3"></i> Process Templates</a>
@@ -924,6 +995,7 @@
         <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif"><i class="bi bi-envelope-open"></i> Offer Letters</a>
         @endif
         <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
+        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*')||request()->routeIs('admission.seat-control.*')||request()->routeIs('admission.waitlist.*')||request()->routeIs('admission.deferrals.*')||request()->routeIs('admission.joining-kit.*')) active @endif"><i class="bi bi-ui-checks-grid"></i> Seat Control</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Leads</div>
         <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>
@@ -931,6 +1003,8 @@
         <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
         <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
         <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
+        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*')||request()->routeIs('admission.consent-center.*')||request()->routeIs('admission.template-approvals.*')) active @endif"><i class="bi bi-shield-check"></i> Consent & Safety</a>
+        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif"><i class="bi bi-activity"></i> Integration Health</a>
         <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
         <div class="sidebar-divider"></div>
         <div class="section-label">Academics</div>

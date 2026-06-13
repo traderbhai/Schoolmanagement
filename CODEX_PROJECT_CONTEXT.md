@@ -12,7 +12,7 @@
 ## Current Product Phase
 
 - Treat earlier commercial-readiness work as the completed v0.00 baseline.
-- Current active development phase: v0.03.
+- Current active development phase: v0.038.
 - Previous v0.00 tasks are considered complete unless the user explicitly reopens a specific item.
 - Do not use `COMMERCIAL_READINESS_AUDIT.md` as the active task source for new work unless the user explicitly asks for it.
 - Do not update `COMMERCIAL_READINESS_AUDIT.md` during normal v0.03 development.
@@ -148,10 +148,10 @@ Last verified setup:
 - npm dependencies installed.
 - `.env` exists.
 - SQLite database exists at `college-mgmt/database/database.sqlite`.
-- Migrations completed, including Admission OS v0.031 additive tables.
+- Migrations completed, including Admission OS v0.038 additive tables.
 - `npm run build` passed.
-- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 397 tests, 1524 assertions.
-- Admission v0.034 regression gate passed: 91 tests, 475 assertions.
+- `PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test` passed: 417 tests, 1684 assertions.
+- Admission v0.038 regression gate passed: 111 tests, 635 assertions.
 - `npm audit --audit-level=critical` passed with 0 vulnerabilities.
 - Composer audit passed with no advisories.
 
@@ -223,6 +223,58 @@ Last verified setup:
 - Admission regression gate passed: `AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 91 tests, 475 assertions.
 - Full suite passed: 397 tests, 1524 assertions.
 - Browser smoke verification passed on localhost for lead and applicant detail action centers. Mobile viewport checks passed for both detail pages with no horizontal page overflow.
+
+## Admission OS v0.036 Baseline
+
+- v0.036 is an assessment-control and counsellor-operations sprint over the v0.034 baseline.
+- Added assessment control room, rubric templates/criteria, evaluator draft/final scoring, lifecycle events, reschedules, assessment artifacts, aggregate score/variance detection, and panel readiness signals.
+- Added counsellor operating desk, conversation timeline aggregation, counsellor playbooks/steps, structured counselling profiles, and quick call/reminder/communication commands.
+- v0.036 key files:
+  - Migration: `college-mgmt/database/migrations/2026_06_13_920001_add_admission_os_v0036_assessment_and_counsellor_ops.php`
+  - Services: `AdmissionAssessmentControlRoomService`, `AdmissionRubricService`, `AdmissionEvaluatorScoringService`, `AdmissionCounsellorDeskService`, `AdmissionConversationTimelineService`, `AdmissionCounsellorPlaybookService`
+  - Routes: `/admission/assessment-control-room`, `/admission/assessment-rubrics`, `/admission/evaluator-scoring`, `/admission/counsellor-desk`, `/admission/conversation-timeline/{subjectType}/{subjectId}`, `/admission/counsellor-playbooks`
+  - Views: `college-mgmt/resources/views/admission/v0036/*`
+  - Test: `college-mgmt/tests/Feature/AdmissionOsV036Test.php`
+- `AdmissionOperatingDemoSeeder` now seeds v0.036 rubrics, rubric criteria, panel lifecycle states, evaluator scores, no-show/reschedule records, artifacts, counsellor playbooks, structured counselling profiles, and conversation timeline examples.
+- Focused verification passed: `AdmissionOsV036Test` with 5 tests, 40 assertions.
+- Admission regression gate passed: `AdmissionOsV036Test|AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 96 tests, 515 assertions.
+- Full suite passed: 402 tests, 1564 assertions.
+- Browser smoke verification passed on localhost for assessment control room, evaluator scoring, assessment rubrics, counsellor desk, counsellor playbooks, lead detail, applicant detail, and selection session detail. Mobile viewport checks passed for assessment control room, counsellor desk, and session detail with no horizontal page overflow.
+
+## Admission OS v0.037 Baseline
+
+- v0.037 is a completed production-hardening sprint focused on integration readiness, assessment scheduling/scoring depth, counsellor productivity, automation expansion, access audit visibility, exports, saved views, and UX navigation.
+- Added sandbox/live-config-ready provider records for email/SMS/WhatsApp/dialer/video/signature, webhook event logs, provider delivery attempts, and communication delivery state tracking. Existing `mock_sms`/`mock_whatsapp` queued-provider aliases remain backward compatible; dispatch uses sandbox provider records.
+- Added evaluator availability, assessment schedule conflict records, bulk evaluator assignment, blind scoring aliases, normalized assessment scores, counsellor target scorecards, script compliance logs, objection analytics, parent/guardian journeys, coaching notes, route access audit records, automation schedules/simulations/conflict logs, saved views, accessibility checklist, and v0.037 export logs.
+- New services include `AdmissionIntegrationService`, `AdmissionProviderRegistry`, `AdmissionWebhookService`, `AdmissionBulkEvaluatorAssignmentService`, `AdmissionBlindScoringService`, `AdmissionAssessmentNormalizationService`, `AdmissionScriptComplianceService`, `AdmissionObjectionAnalyticsService`, `AdmissionParentJourneyService`, `AdmissionAutomationSchedulerService`, `AdmissionAutomationSimulationService`, `AdmissionSavedViewService`, `AdmissionAccessibilityAuditService`, and `AdmissionExportService`.
+- New routes include `/admission/integrations`, `/admission/assessment-bulk-assignment`, `/admission/assessment-normalization`, `/admission/script-compliance`, `/admission/objection-analytics`, `/admission/parent-journeys`, `/admission/automation-simulation`, `/admission/saved-views`, `/admission/accessibility-audit`, `/admission/v037-exports/{type}`, plus webhook and action POST routes.
+- New views: `college-mgmt/resources/views/admission/v0037/*`.
+- `AdmissionOperatingDemoSeeder` now seeds all v0.037 completion data: provider configs, webhook/delivery records, conflict demo panel/assignments, blind aliases, normalized scores, script templates/compliance logs, objections, parent journeys, automation schedules/simulations, saved views, export logs, counsellor targets, coaching notes, and route access audit records.
+- Focused verification passed: `AdmissionOsV037Test` with 9 tests, 75 assertions.
+- Admission regression gate passed: `AdmissionOsV037Test|AdmissionOsV036Test|AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 105 tests, 590 assertions.
+- Full suite passed: 411 tests, 1639 assertions.
+- Browser smoke verification passed on localhost for integrations, assessment bulk assignment, assessment normalization, script compliance, objection analytics, parent journeys, automation simulation, saved views, accessibility audit, assessment control room, and counsellor desk. Mobile viewport checks passed for integrations, bulk assignment, normalization, counsellor desk, and automation simulation with no horizontal page overflow.
+
+## Admission OS v0.038 Baseline
+
+- v0.038 is a real-team admission operations sprint over the v0.037 baseline.
+- Added calling-desk speed mode with next-call selection, call attempts, queue skips, script-compliance capture, retry reminders, and parent/objection context.
+- Added assessment logistics for slots, slot assignments, reschedule requests, resources/resource bookings, evaluator invitations, GD group building, assessment submissions, and final selection committee decisions.
+- Added offer/seat control for offer rounds, waitlist entries and promotions, seat holds/releases, seat movements, deferrals, and joining-kit tasks.
+- Added communication safety for consent records/history, quiet-hour rules, template approval/versioning, bulk-send safety previews, and sensitive action audit events.
+- Added vendor-ready integration health and retry queue records for MSG91-style SMS, Meta WhatsApp, Exotel-style dialer, Zoom/Meet-style video, and DocuSign/Leegality-style signature adapters, with sandbox providers as the local default.
+- Added global Admission quick search across leads, applicants, offers, and selection sessions.
+- v0.038 key files:
+  - Migration: `college-mgmt/database/migrations/2026_06_14_100001_add_admission_os_v0038_real_team_ops.php`
+  - Services: `AdmissionCallingDeskService`, `AdmissionCallQueueSelectorService`, `AdmissionCallAttemptService`, `AdmissionAssessmentSlotService`, `AdmissionAssessmentResourceService`, `AdmissionGdGroupService`, `AdmissionAssessmentSubmissionService`, `AdmissionSelectionCommitteeService`, `AdmissionOfferRoundService`, `AdmissionWaitlistService`, `AdmissionSeatControlService`, `AdmissionDeferralService`, `AdmissionJoiningKitService`, `AdmissionConsentService`, `AdmissionTemplateApprovalService`, `AdmissionCommunicationSafetyService`, `AdmissionVendorAdapterRegistry`, `AdmissionIntegrationHealthService`, `AdmissionQuickSearchService`
+  - Routes: `/admission/calling-desk`, `/admission/assessment-scheduling`, `/admission/selection-committee`, `/admission/offer-seat-control`, `/admission/communication-safety`, `/admission/integration-health`, `/admission/quick-search`
+  - Views: `college-mgmt/resources/views/admission/v0038/*`
+  - Test: `college-mgmt/tests/Feature/AdmissionOsV038Test.php`
+- `AdmissionOperatingDemoSeeder` now seeds v0.038 data for call queues/attempts, assessment slots/resources/GD groups/submissions, committee decisions, offer rounds, waitlists, seat holds, deferrals, joining-kit tasks, consents, template approvals, quiet hours, provider health checks, retry queue, saved views, and quick-search logs.
+- Focused verification passed: `AdmissionOsV038Test` with 6 tests, 45 assertions.
+- Admission regression gate passed: `AdmissionOsV038Test|AdmissionOsV037Test|AdmissionOsV036Test|AdmissionOsV034Test|AdmissionOsV033Test|AdmissionOsV032Test|AdmissionOsV031Test|AdmissionOsV003Test|AdmissionDepartmentOsTest|AdmissionFlowTest|ApplicantStatusGuidanceTest|OfferLetterTest|LaunchRouteSmokeTest|ErrorPageTest` with 111 tests, 635 assertions.
+- Full suite passed: 417 tests, 1684 assertions.
+- Browser verification passed on localhost for calling desk, assessment scheduling, selection committee, offer/seat control, communication safety, integration health, and quick search. Mobile viewport checks passed for calling desk, assessment scheduling, offer/seat control, and communication safety with no document-level horizontal overflow. Browser action checks passed for calling-desk outcome creation and integration health refresh.
 
 ## Known Local Notes
 

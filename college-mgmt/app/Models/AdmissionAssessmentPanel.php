@@ -13,7 +13,8 @@ class AdmissionAssessmentPanel extends Model
 
     protected $fillable = [
         'name', 'panel_type', 'program_id', 'batch_id', 'selection_session_id',
-        'capacity', 'venue', 'online_link', 'scheduled_at', 'status', 'created_by', 'metadata',
+        'rubric_id', 'capacity', 'venue', 'online_link', 'scheduled_at', 'status',
+        'readiness_status', 'created_by', 'metadata',
     ];
 
     protected $casts = [
@@ -44,5 +45,20 @@ class AdmissionAssessmentPanel extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(AdmissionAssessmentPanelAssignment::class, 'panel_id');
+    }
+
+    public function rubric(): BelongsTo
+    {
+        return $this->belongsTo(AdmissionAssessmentRubric::class, 'rubric_id');
+    }
+
+    public function artifacts(): HasMany
+    {
+        return $this->hasMany(AdmissionAssessmentArtifact::class, 'panel_id');
+    }
+
+    public function scheduleConflicts(): HasMany
+    {
+        return $this->hasMany(AdmissionAssessmentScheduleConflict::class, 'panel_id');
     }
 }

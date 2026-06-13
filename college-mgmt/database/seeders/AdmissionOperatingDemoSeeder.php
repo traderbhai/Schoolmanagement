@@ -345,6 +345,9 @@ class AdmissionOperatingDemoSeeder extends Seeder
         }
 
         $this->seedV033OperationalVolume($program, $batch, $admHead, $manager, $counsellor, $officer, $emailTemplate, $panel, $session, $demoApplicants, $leads);
+        $this->seedV036AssessmentAndCounsellorOps($program, $batch, $admHead, $manager, $counsellor, $officer, $emailTemplate, $panel, $session, $demoApplicants, $leads);
+        $this->seedV037Hardening($program, $batch, $admHead, $manager, $counsellor, $officer, $telecaller, $panel, $demoApplicants);
+        $this->seedV038RealTeamOps($program, $batch, $admHead, $manager, $counsellor, $officer, $telecaller, $panel, $session, $demoApplicants, $leads);
 
         \App\Models\AdmissionPipelineBoard::updateOrCreate(
             ['object_type' => 'lead', 'is_default' => true],
@@ -398,7 +401,7 @@ class AdmissionOperatingDemoSeeder extends Seeder
             );
         }
 
-        $this->command?->info('  Admission OS v0.03/v0.031/v0.033 demo operating data seeded.');
+        $this->command?->info('  Admission OS v0.03/v0.031/v0.033/v0.036/v0.037/v0.038 demo operating data seeded.');
     }
 
     private function user(string $email, string $name, ?string $role): User
@@ -589,5 +592,588 @@ class AdmissionOperatingDemoSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    private function seedV036AssessmentAndCounsellorOps(Program $program, Batch $batch, User $admHead, User $manager, User $counsellor, User $officer, \App\Models\AdmissionCommunicationTemplate $template, \App\Models\AdmissionAssessmentPanel $basePanel, \App\Models\SelectionSession $session, $applicants, $leads): void
+    {
+        $types = [
+            'group_discussion' => ['Group Discussion Rubric', ['Content Quality', 'Listening', 'Leadership', 'Team Conduct']],
+            'personal_interview' => ['Personal Interview Rubric', ['Communication', 'Motivation', 'Academic Fit', 'Career Clarity']],
+            'case_analysis' => ['Case Analysis Rubric', ['Problem Structure', 'Quantitative Reasoning', 'Recommendation', 'Presentation']],
+            'written_ability_test' => ['WAT Rubric', ['Structure', 'Argument', 'Language', 'Originality']],
+            'aptitude_test' => ['Aptitude Test Rubric', ['Quantitative', 'Logical', 'Verbal', 'Accuracy']],
+            'presentation' => ['Presentation Rubric', ['Storyline', 'Evidence', 'Delivery', 'Q&A']],
+            'portfolio_review' => ['Portfolio Review Rubric', ['Relevance', 'Depth', 'Reflection', 'Potential']],
+            'screening_call' => ['Screening Call Rubric', ['Intent', 'Eligibility', 'Responsiveness', 'Fit']],
+        ];
+
+        $rubrics = collect();
+        foreach ($types as $type => [$name, $criteria]) {
+            $rubric = \App\Models\AdmissionAssessmentRubric::updateOrCreate(
+                ['assessment_type' => $type, 'program_id' => $program->id, 'version' => 1],
+                [
+                    'name' => $name,
+                    'batch_id' => $batch->id,
+                    'minimum_score' => 55,
+                    'recommendation_options' => ['recommended', 'waitlist', 'not_recommended'],
+                    'evaluator_instructions' => 'Use the full scale, add evidence-based comments, and submit final only after review.',
+                    'is_active' => true,
+                    'created_by' => $admHead->id,
+                ]
+            );
+            foreach ($criteria as $index => $criterion) {
+                \App\Models\AdmissionAssessmentRubricCriterion::updateOrCreate(
+                    ['rubric_id' => $rubric->id, 'name' => $criterion],
+                    [
+                        'description' => 'Seeded v0.036 assessment criterion for ' . str_replace('_', ' ', $type) . '.',
+                        'max_score' => 25,
+                        'weight' => $index === 0 ? 1.2 : 1,
+                        'requires_comment' => in_array($index, [0, 3], true),
+                        'sort_order' => $index + 1,
+                    ]
+                );
+            }
+            $rubrics->put($type, $rubric->fresh('criteria'));
+        }
+
+        $basePanel->update(['rubric_id' => $rubrics->get('case_analysis')?->id, 'readiness_status' => 'ready']);
+
+        $artifactRows = [
+            ['group_discussion', 'AI in Indian Higher Education', 'GD-1', 'Moderator should track listening and leadership balance.'],
+            ['case_analysis', 'EduFin Admissions Growth Case', 'CASE-1', 'Candidates get 30 minutes prep and 5 minutes presentation.'],
+            ['personal_interview', 'Career Goals PI', 'PI-1', 'Structured interview across motivation, fit, and communication.'],
+        ];
+        foreach ($artifactRows as [$type, $title, $group, $notes]) {
+            \App\Models\AdmissionAssessmentArtifact::updateOrCreate(
+                ['selection_session_id' => $session->id, 'panel_id' => $basePanel->id, 'artifact_type' => $type, 'title' => $title],
+                [
+                    'topic' => $title,
+                    'group_number' => $group,
+                    'artifact_url' => 'https://demo.local/admission/artifacts/' . $group,
+                    'prep_minutes' => $type === 'case_analysis' ? 30 : 10,
+                    'submission_due_at' => now()->addDays(2)->setTime(12, 0),
+                    'moderator_notes' => $notes,
+                    'observer_notes' => 'Seeded v0.036 observer note.',
+                    'metadata' => ['demo' => true],
+                ]
+            );
+        }
+
+        $states = ['invited', 'confirmed', 'checked_in', 'waiting', 'in_progress', 'completed', 'no_show', 'rescheduled'];
+        $applicants->take(8)->values()->each(function (Applicant $applicant, int $index) use ($states, $session, $basePanel, $counsellor, $officer, $manager, $rubrics) {
+            $state = $states[$index % count($states)];
+            \App\Models\SessionApplicant::updateOrCreate(
+                ['selection_session_id' => $session->id, 'applicant_id' => $applicant->id],
+                [
+                    'assigned_at' => now()->subDays(2),
+                    'attendance_status' => in_array($state, ['checked_in', 'waiting', 'in_progress', 'completed'], true) ? 'present' : ($state === 'no_show' ? 'absent' : 'pending'),
+                    'lifecycle_status' => $state,
+                    'checked_in_at' => $state === 'checked_in' ? now()->subHour() : null,
+                    'completed_at' => $state === 'completed' ? now()->subMinutes(20) : null,
+                    'panel_number' => 1,
+                ]
+            );
+
+            $assignment = \App\Models\AdmissionAssessmentPanelAssignment::updateOrCreate(
+                ['panel_id' => $basePanel->id, 'applicant_id' => $applicant->id],
+                [
+                    'selection_session_id' => $session->id,
+                    'evaluator_user_id' => $index % 2 === 0 ? $counsellor->id : $officer->id,
+                    'attendance_status' => in_array($state, ['checked_in', 'waiting', 'in_progress', 'completed'], true) ? 'present' : ($state === 'no_show' ? 'absent' : 'pending'),
+                    'lifecycle_status' => $state,
+                    'score_status' => $state === 'completed' ? 'finalized' : ($index % 3 === 0 ? 'draft' : 'pending'),
+                    'recommendation' => $state === 'completed' ? 'recommended' : null,
+                    'aggregate_score' => $state === 'completed' ? 78 : null,
+                    'variance_score' => $index === 5 ? 24 : 8,
+                    'variance_flag' => $index === 5,
+                    'score_locked_at' => $state === 'completed' ? now()->subMinutes(25) : null,
+                    'finalized_at' => $state === 'completed' ? now()->subMinutes(25) : null,
+                    'metadata' => ['demo' => true, 'v' => '0.036'],
+                ]
+            );
+
+            \App\Models\AdmissionAssessmentLifecycleEvent::updateOrCreate(
+                ['assignment_id' => $assignment->id, 'to_status' => $state],
+                [
+                    'selection_session_id' => $session->id,
+                    'panel_id' => $basePanel->id,
+                    'applicant_id' => $applicant->id,
+                    'from_status' => 'invited',
+                    'reason' => 'Seeded v0.036 lifecycle state',
+                    'actor_user_id' => $manager->id,
+                    'metadata' => ['demo' => true],
+                ]
+            );
+
+            if (in_array($assignment->score_status, ['draft', 'finalized'], true) && ($rubric = $rubrics->get('case_analysis'))) {
+                foreach ($rubric->criteria as $criterion) {
+                    \App\Models\AdmissionEvaluatorScore::updateOrCreate(
+                        ['assignment_id' => $assignment->id, 'criterion_id' => $criterion->id, 'evaluator_user_id' => $assignment->evaluator_user_id],
+                        [
+                            'rubric_id' => $rubric->id,
+                            'score' => min($criterion->max_score, 16 + $index),
+                            'max_score' => $criterion->max_score,
+                            'weighted_score' => (16 + $index) * $criterion->weight,
+                            'comment' => 'Seeded v0.036 evaluator comment for ' . $criterion->name,
+                            'status' => $assignment->score_status,
+                            'submitted_at' => $assignment->score_status === 'finalized' ? now()->subMinutes(30) : null,
+                            'locked_at' => $assignment->score_status === 'finalized' ? now()->subMinutes(25) : null,
+                            'metadata' => ['demo' => true],
+                        ]
+                    );
+                }
+            }
+
+            if ($state === 'rescheduled') {
+                \App\Models\AdmissionAssessmentReschedule::updateOrCreate(
+                    ['assignment_id' => $assignment->id, 'applicant_id' => $applicant->id],
+                    [
+                        'from_session_id' => $session->id,
+                        'to_session_id' => $session->id,
+                        'old_scheduled_at' => now()->subDay(),
+                        'new_scheduled_at' => now()->addDays(3),
+                        'reason' => 'Applicant requested another slot.',
+                        'status' => 'approved',
+                        'requested_by' => $manager->id,
+                        'metadata' => ['demo' => true],
+                    ]
+                );
+            }
+        });
+
+        foreach ([
+            ['Program Pitch', 'program_pitch', null],
+            ['Fee And Scholarship Discussion', 'fee_scholarship', null],
+            ['Document Checklist Follow-up', 'document_checklist', 'submitted'],
+            ['Assessment Preparation', 'assessment_preparation', 'shortlisted'],
+            ['Parent Conversation', 'parent_conversation', null],
+            ['Objection Handling', 'objection_handling', null],
+        ] as [$name, $type, $stage]) {
+            $playbook = \App\Models\AdmissionCounsellorPlaybook::updateOrCreate(
+                ['name' => $name, 'playbook_type' => $type, 'program_id' => $program->id],
+                ['stage' => $stage, 'is_active' => true, 'created_by' => $admHead->id]
+            );
+            foreach ([
+                ['Clarify need', 'Ask the candidate or parent what they need before deciding.', 'ask_discovery'],
+                ['Resolve blocker', 'Address fee, document, assessment, or decision-maker blocker.', 'resolve_blocker'],
+                ['Commit next step', 'Send the checklist and schedule the next follow-up.', 'schedule_follow_up'],
+            ] as $index => [$title, $body, $action]) {
+                \App\Models\AdmissionCounsellorPlaybookStep::updateOrCreate(
+                    ['playbook_id' => $playbook->id, 'title' => $title],
+                    ['body' => $body, 'suggested_action' => $action, 'sort_order' => $index + 1]
+                );
+            }
+        }
+
+        $subjects = $leads->merge($applicants->take(5));
+        foreach ($subjects as $index => $subject) {
+            \App\Models\AdmissionCounsellingProfile::updateOrCreate(
+                ['subject_type' => get_class($subject), 'subject_id' => $subject->id],
+                [
+                    'preferred_program_id' => $program->id,
+                    'budget_sensitivity' => ['low', 'medium', 'high'][$index % 3],
+                    'scholarship_need' => $index % 2 === 0,
+                    'hostel_interest' => $index % 3 === 0,
+                    'transport_interest' => $index % 4 === 0,
+                    'parent_decision_maker' => ['Father', 'Mother', 'Guardian'][$index % 3],
+                    'key_objection' => ['fee', 'location', 'placement', 'eligibility'][$index % 4],
+                    'lost_reason' => $index % 5 === 0 ? 'competitor_selected' : null,
+                    'competitor_considered' => 'Demo Business School',
+                    'parent_spoken' => $index % 2 === 0,
+                    'last_parent_contacted_at' => now()->subDays($index + 1),
+                    'updated_by' => $counsellor->id,
+                    'metadata' => ['demo' => true, 'v' => '0.036'],
+                ]
+            );
+
+            \App\Models\AdmissionConversationEvent::updateOrCreate(
+                ['subject_type' => get_class($subject), 'subject_id' => $subject->id, 'event_type' => 'parent_call'],
+                [
+                    'title' => 'Parent conversation logged',
+                    'body' => 'Discussed fees, scholarship need, and assessment preparation.',
+                    'occurred_at' => now()->subHours($index + 2),
+                    'actor_user_id' => $counsellor->id,
+                    'source_type' => 'seeded_demo',
+                    'source_id' => $index,
+                    'metadata' => ['demo' => true],
+                ]
+            );
+        }
+
+        foreach (['Assessment Invite Email', 'Assessment Reminder WhatsApp', 'Assessment Reschedule Notice', 'Assessment No-show Follow-up', 'Assessment Result Next Step'] as $index => $name) {
+            \App\Models\AdmissionCommunicationTemplate::updateOrCreate(
+                ['name' => $name],
+                [
+                    'channel' => $index === 0 ? 'email' : 'whatsapp',
+                    'purpose' => 'assessment_' . $index,
+                    'subject' => 'Assessment update for {{ program }}',
+                    'body' => 'Hello {{ name }}, assessment update: {{ next_action }}. Counsellor: {{ counsellor }}.',
+                    'variables' => ['name', 'program', 'next_action', 'counsellor'],
+                    'is_active' => true,
+                    'created_by' => $admHead->id,
+                ]
+            );
+        }
+    }
+
+    private function seedV037Hardening(Program $program, Batch $batch, User $admHead, User $manager, User $counsellor, User $officer, User $telecaller, \App\Models\AdmissionAssessmentPanel $basePanel, $applicants): void
+    {
+        foreach ([$counsellor, $officer, $manager] as $index => $evaluator) {
+            \App\Models\AdmissionEvaluatorAvailability::updateOrCreate(
+                ['user_id' => $evaluator->id, 'available_from' => now()->startOfDay()->addHours(9 + $index)],
+                [
+                    'available_until' => now()->startOfDay()->addHours(18),
+                    'availability_type' => 'available',
+                    'location_mode' => $index === 1 ? 'online' : 'campus',
+                    'notes' => 'Seeded v0.037 evaluator availability.',
+                    'is_active' => true,
+                    'metadata' => ['demo' => true, 'v' => '0.037'],
+                ]
+            );
+        }
+
+        $conflictPanel = \App\Models\AdmissionAssessmentPanel::updateOrCreate(
+            ['name' => 'PI Backup Panel - Conflict Demo', 'selection_session_id' => $basePanel->selection_session_id],
+            [
+                'panel_type' => 'personal_interview',
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'capacity' => 2,
+                'venue' => null,
+                'online_link' => null,
+                'scheduled_at' => $basePanel->scheduled_at ?: now()->addDay()->setTime(10, 0),
+                'status' => 'scheduled',
+                'readiness_status' => 'needs_setup',
+                'created_by' => $admHead->id,
+                'metadata' => ['demo' => true, 'v' => '0.037', 'duration_minutes' => 90],
+            ]
+        );
+
+        \App\Models\AdmissionAssessmentPanelMember::updateOrCreate(
+            ['panel_id' => $conflictPanel->id, 'user_id' => $counsellor->id],
+            ['role' => 'evaluator', 'is_chair' => false]
+        );
+
+        $applicants->take(3)->each(function (Applicant $applicant) use ($conflictPanel, $counsellor) {
+            \App\Models\AdmissionAssessmentPanelAssignment::updateOrCreate(
+                ['panel_id' => $conflictPanel->id, 'applicant_id' => $applicant->id],
+                [
+                    'selection_session_id' => $conflictPanel->selection_session_id,
+                    'evaluator_user_id' => $counsellor->id,
+                    'attendance_status' => 'pending',
+                    'lifecycle_status' => 'invited',
+                    'score_status' => 'pending',
+                    'metadata' => ['demo' => true, 'v' => '0.037'],
+                ]
+            );
+        });
+
+        app(\App\Services\AdmissionAssessmentSchedulingService::class)->detectConflictsForPanel($conflictPanel);
+
+        foreach ([$counsellor, $telecaller, $officer] as $index => $user) {
+            \App\Models\AdmissionCounsellorTarget::updateOrCreate(
+                ['user_id' => $user->id, 'period_type' => 'daily', 'period_start' => now()->toDateString()],
+                [
+                    'period_end' => now()->toDateString(),
+                    'target_calls' => [18, 35, 12][$index],
+                    'target_followups' => [10, 18, 8][$index],
+                    'target_applications' => [3, 2, 2][$index],
+                    'target_enrollments' => [1, 0, 1][$index],
+                    'created_by' => $manager->id,
+                    'metadata' => ['demo' => true, 'v' => '0.037'],
+                ]
+            );
+
+            \App\Models\AdmissionCounsellorCoachingNote::updateOrCreate(
+                ['counsellor_user_id' => $user->id, 'reviewed_for_date' => now()->toDateString(), 'review_type' => 'daily_review'],
+                [
+                    'reviewer_user_id' => $manager->id,
+                    'score_band' => $index === 1 ? 'excellent' : 'on_track',
+                    'strengths' => 'Consistent follow-up discipline and clear next-step commitments.',
+                    'improvement_areas' => 'Improve documentation of parent objections and assessment readiness.',
+                    'action_plan' => 'Review pending blockers, close overdue callbacks, and update timeline notes before EOD.',
+                    'next_review_at' => now()->addWeek()->toDateString(),
+                    'status' => 'open',
+                    'metadata' => ['demo' => true, 'v' => '0.037'],
+                ]
+            );
+        }
+
+        foreach (['email', 'sms', 'whatsapp', 'dialer', 'video', 'signature'] as $channel) {
+            \App\Models\AdmissionIntegrationProvider::updateOrCreate(
+                ['channel' => $channel, 'provider_name' => 'sandbox_' . $channel],
+                [
+                    'base_url' => 'https://sandbox.local/' . $channel,
+                    'credential_keys' => ['api_key' => 'ADMISSION_' . strtoupper($channel) . '_KEY'],
+                    'webhook_secret' => 'sandbox-secret-' . $channel,
+                    'is_active' => true,
+                    'sandbox_mode' => true,
+                    'timeout_seconds' => 10,
+                    'retry_policy' => ['max_attempts' => 3, 'backoff_seconds' => 30],
+                    'metadata' => ['demo' => true, 'v' => '0.037-complete'],
+                ]
+            );
+        }
+
+        $log = \App\Models\AdmissionCommunicationLog::latest()->first();
+        if ($log) {
+            $log->update([
+                'provider_message_id' => $log->provider_message_id ?: 'msg_demo_v037',
+                'provider_request_id' => $log->provider_request_id ?: 'req_demo_v037',
+                'delivery_state' => $log->delivery_state ?: 'delivered',
+                'retry_count' => 0,
+                'last_synced_at' => now(),
+            ]);
+            \App\Models\AdmissionIntegrationWebhookEvent::updateOrCreate(
+                ['provider_name' => $log->provider, 'external_id' => $log->provider_message_id, 'event_type' => 'delivery_update'],
+                [
+                    'subject_type' => $log->subject_type,
+                    'subject_id' => $log->subject_id,
+                    'communication_log_id' => $log->id,
+                    'status' => 'processed',
+                    'payload' => ['message_id' => $log->provider_message_id, 'delivery_state' => 'delivered'],
+                    'processed_at' => now(),
+                ]
+            );
+            \App\Models\AdmissionProviderDeliveryAttempt::updateOrCreate(
+                ['communication_log_id' => $log->id, 'attempt_number' => 1],
+                [
+                    'provider_name' => $log->provider,
+                    'channel' => $log->channel,
+                    'status' => 'sent',
+                    'request_payload' => ['recipient' => $log->recipient],
+                    'response_payload' => ['accepted' => true, 'sandbox' => true],
+                    'attempted_at' => now(),
+                ]
+            );
+        }
+
+        $conflictPanel->update(['metadata' => ($conflictPanel->metadata ?? []) + ['blind_scoring' => true]]);
+        foreach ($conflictPanel->assignments as $assignment) {
+            \App\Models\AdmissionBlindScoringAlias::updateOrCreate(
+                ['panel_id' => $conflictPanel->id, 'applicant_id' => $assignment->applicant_id],
+                ['alias_code' => 'CAND-' . str_pad((string) $assignment->applicant_id, 4, '0', STR_PAD_LEFT), 'is_active' => true, 'metadata' => ['demo' => true]]
+            );
+            $assignment->update(['aggregate_score' => $assignment->aggregate_score ?: 62 + ($assignment->id % 25)]);
+        }
+        app(\App\Services\AdmissionAssessmentNormalizationService::class)->normalizePanel($conflictPanel);
+
+        $script = \App\Models\AdmissionScriptTemplate::updateOrCreate(
+            ['name' => 'Admission Counsellor Discovery Script', 'stage' => 'interested'],
+            [
+                'program_id' => $program->id,
+                'steps' => ['Confirm program interest', 'Ask budget sensitivity', 'Confirm parent decision maker', 'Explain assessment process', 'Commit next follow-up'],
+                'is_active' => true,
+                'created_by' => $admHead->id,
+            ]
+        );
+        $call = \App\Models\AdmissionCallLog::where('caller_user_id', $counsellor->id)->first() ?: \App\Models\AdmissionCallLog::first();
+        if ($call) {
+            app(\App\Services\AdmissionScriptComplianceService::class)->log($call, $script, ['covered', 'covered', 'missed', 'covered', 'covered'], $counsellor);
+        }
+
+        foreach ([
+            ['Fee concern', 'fee', 'Offer installment plan and scholarship checklist.'],
+            ['Location concern', 'location', 'Explain hostel, transport, and city connectivity.'],
+            ['Placement concern', 'placement', 'Share placement report and alumni outcomes.'],
+            ['Parent approval pending', 'parent', 'Schedule parent/guardian discussion.'],
+        ] as [$name, $category, $response]) {
+            $type = \App\Models\AdmissionObjectionType::updateOrCreate(
+                ['name' => $name],
+                ['category' => $category, 'recommended_response' => $response, 'is_active' => true]
+            );
+            if ($lead = \App\Models\Lead::first()) {
+                \App\Models\AdmissionObjectionEvent::updateOrCreate(
+                    ['objection_type_id' => $type->id, 'subject_type' => get_class($lead), 'subject_id' => $lead->id],
+                    ['counsellor_user_id' => $counsellor->id, 'stage' => $lead->status, 'status' => 'open', 'notes' => 'Seeded v0.037 objection event.']
+                );
+            }
+        }
+
+        foreach ($applicants->take(5) as $applicant) {
+            app(\App\Services\AdmissionParentJourneyService::class)->ensure($applicant, $counsellor);
+        }
+
+        $automation = \App\Models\AdmissionAutomation::updateOrCreate(
+            ['name' => 'v0.037 Parent Follow-up And Quality Review'],
+            [
+                'trigger' => 'lead_updated',
+                'priority' => 20,
+                'is_active' => true,
+                'conditions' => [],
+                'actions' => [
+                    ['type' => 'parent_followup'],
+                    ['type' => 'create_reminder', 'reason' => 'automation_followup', 'due_hours' => 24],
+                    ['type' => 'data_quality_flag', 'flag_type' => 'automation_review', 'message' => 'Review lead follow-up quality.'],
+                ],
+                'created_by' => $admHead->id,
+            ]
+        );
+        \App\Models\AdmissionAutomationSchedule::updateOrCreate(
+            ['automation_id' => $automation->id],
+            ['trigger_window' => 'daily', 'next_run_at' => now()->subMinute(), 'is_active' => true, 'metadata' => ['demo' => true]]
+        );
+        app(\App\Services\AdmissionAutomationSimulationService::class)->simulate($automation, $admHead);
+
+        foreach ([
+            ['assessment_control_room', 'Pending scores and no-shows', ['score_status' => 'pending', 'lifecycle_status' => 'no_show']],
+            ['counsellor_desk', 'Hot leads and parent follow-ups', ['priority' => 'high', 'reason' => 'parent_guardian_followup']],
+            ['automation_logs', 'Automation conflicts', ['status' => 'open']],
+        ] as [$surface, $name, $filters]) {
+            app(\App\Services\AdmissionSavedViewService::class)->save($surface, $name, $filters, $admHead);
+        }
+
+        \App\Models\AdmissionExportLog::updateOrCreate(
+            ['export_type' => 'normalization', 'surface' => 'admission-v037'],
+            ['filters' => ['demo' => true], 'row_count' => \App\Models\AdmissionAssessmentNormalizedScore::count(), 'created_by' => $admHead->id]
+        );
+
+        app(\App\Services\AdmissionRouteAccessAuditService::class)->refresh($admHead);
+    }
+
+    private function seedV038RealTeamOps(Program $program, Batch $batch, User $admHead, User $manager, User $counsellor, User $officer, User $telecaller, \App\Models\AdmissionAssessmentPanel $panel, \App\Models\SelectionSession $session, $applicants, $leads): void
+    {
+        $script = \App\Models\AdmissionScriptTemplate::where('is_active', true)->latest()->first();
+        foreach ($leads->take(3) as $index => $lead) {
+            $lead->update([
+                'assigned_to' => $lead->assigned_to ?: $telecaller->id,
+                'current_handler_user_id' => $lead->current_handler_user_id ?: $telecaller->id,
+                'priority' => $index === 0 ? 'urgent' : 'high',
+                'sla_due_at' => now()->subHours($index + 1),
+                'next_action' => $index === 0 ? 'Parent callback due before lunch' : 'Retry after no-answer cadence',
+            ]);
+
+            app(\App\Services\AdmissionCallAttemptService::class)->record($lead, $telecaller, [
+                'disposition' => $index === 0 ? 'no_answer' : 'connected',
+                'outcome' => $index === 0 ? 'callback' : 'interested',
+                'retry_due_at' => now()->addHours($index + 2),
+                'duration_seconds' => 120 + ($index * 40),
+                'script_template_id' => $script?->id,
+                'script_results' => ['covered', 'covered', $index === 0 ? 'missed' : 'covered', 'covered', 'covered'],
+                'notes' => 'Seeded v0.038 calling desk attempt.',
+            ]);
+        }
+
+        if ($firstLead = $leads->first()) {
+            \Illuminate\Support\Facades\DB::table('admission_call_queue_skips')->updateOrInsert(
+                ['subject_type' => get_class($firstLead), 'subject_id' => $firstLead->id, 'user_id' => $telecaller->id],
+                ['reason' => 'Candidate requested callback after class.', 'skipped_until' => now()->addMinutes(45), 'metadata' => json_encode(['demo' => true]), 'created_at' => now(), 'updated_at' => now()]
+            );
+        }
+
+        $resourceId = \Illuminate\Support\Facades\DB::table('admission_assessment_resources')->updateOrInsert(
+            ['name' => 'Assessment Room A'],
+            ['resource_type' => 'room', 'capacity' => 18, 'location' => 'Admission Block', 'online_link' => null, 'is_active' => true, 'metadata' => json_encode(['demo' => true, 'v' => '0.038']), 'created_at' => now(), 'updated_at' => now()]
+        );
+        $resource = \Illuminate\Support\Facades\DB::table('admission_assessment_resources')->where('name', 'Assessment Room A')->first();
+
+        $slotId = \Illuminate\Support\Facades\DB::table('admission_assessment_slots')->updateOrInsert(
+            ['panel_id' => $panel->id, 'slot_code' => 'PGDM-GD-01'],
+            ['selection_session_id' => $session->id, 'resource_id' => $resource?->id, 'starts_at' => now()->addDays(2)->setTime(10, 0), 'ends_at' => now()->addDays(2)->setTime(11, 0), 'capacity' => 6, 'venue' => 'Assessment Room A', 'status' => 'open', 'metadata' => json_encode(['demo' => true]), 'created_at' => now(), 'updated_at' => now()]
+        );
+        $slot = \Illuminate\Support\Facades\DB::table('admission_assessment_slots')->where('panel_id', $panel->id)->where('slot_code', 'PGDM-GD-01')->first();
+
+        if ($slot && $resource) {
+            \Illuminate\Support\Facades\DB::table('admission_assessment_resource_bookings')->updateOrInsert(
+                ['resource_id' => $resource->id, 'slot_id' => $slot->id],
+                ['panel_id' => $panel->id, 'starts_at' => $slot->starts_at, 'ends_at' => $slot->ends_at, 'status' => 'booked', 'metadata' => json_encode(['demo' => true]), 'created_at' => now(), 'updated_at' => now()]
+            );
+            \Illuminate\Support\Facades\DB::table('admission_assessment_resource_bookings')->updateOrInsert(
+                ['resource_id' => $resource->id, 'panel_id' => $panel->id, 'slot_id' => null],
+                ['starts_at' => now()->addDays(2)->setTime(10, 30), 'ends_at' => now()->addDays(2)->setTime(11, 30), 'status' => 'booked', 'metadata' => json_encode(['demo' => true, 'conflict' => true]), 'created_at' => now(), 'updated_at' => now()]
+            );
+
+            foreach ($applicants->take(4) as $applicant) {
+                app(\App\Services\AdmissionAssessmentSlotService::class)->assignApplicant($slot->id, $applicant, $manager);
+            }
+
+            app(\App\Services\AdmissionGdGroupService::class)->build($panel->id, $slot->id, 4, $manager->id);
+        }
+
+        app(\App\Services\AdmissionAssessmentSlotService::class)->inviteEvaluators($panel);
+        $invitation = \Illuminate\Support\Facades\DB::table('admission_evaluator_invitations')->where('panel_id', $panel->id)->where('user_id', $counsellor->id)->first();
+        if ($invitation) {
+            app(\App\Services\AdmissionAssessmentSlotService::class)->evaluatorResponse($invitation->id, 'accepted', 'Available for v0.038 demo slot.');
+        }
+
+        foreach ($applicants->take(3) as $index => $applicant) {
+            app(\App\Services\AdmissionAssessmentSubmissionService::class)->markReceived($applicant, [
+                'panel_id' => $panel->id,
+                'slot_id' => $slot?->id,
+                'submission_type' => ['case_analysis', 'wat', 'presentation'][$index],
+                'artifact_url' => 'https://demo.local/submissions/' . $applicant->application_number,
+                'status' => $index === 2 ? 'late' : 'received',
+                'originality_flag' => $index === 2,
+            ], $officer);
+        }
+
+        if ($candidate = $applicants->first()) {
+            app(\App\Services\AdmissionSelectionCommitteeService::class)->decide($candidate, 'selected', 'Strong normalized score, documents ready, and fee readiness confirmed.', $admHead, ['panel_id' => $panel->id, 'normalized_score' => 82]);
+        }
+
+        $roundId = app(\App\Services\AdmissionOfferRoundService::class)->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'round_number' => 1,
+            'name' => 'PGDM Round 1 - v0.038 Demo',
+            'offer_valid_until' => now()->addDays(7),
+            'status' => 'draft',
+        ]);
+        app(\App\Services\AdmissionOfferRoundService::class)->publish($roundId, $admHead);
+
+        foreach ($applicants->skip(1)->take(3) as $rank => $applicant) {
+            app(\App\Services\AdmissionWaitlistService::class)->add($applicant, ['offer_round_id' => $roundId, 'program_id' => $program->id, 'batch_id' => $batch->id, 'rank' => $rank + 1]);
+        }
+
+        if ($hold = \Illuminate\Support\Facades\DB::table('admission_seat_holds')->where('status', 'held')->first()) {
+            \Illuminate\Support\Facades\DB::table('admission_seat_holds')->where('id', $hold->id)->update(['expires_at' => now()->addDays(3), 'updated_at' => now()]);
+        }
+
+        if ($deferApplicant = $applicants->skip(2)->first()) {
+            $deferralId = app(\App\Services\AdmissionDeferralService::class)->request($deferApplicant, $batch->id, 'Family requested future joining cycle.');
+            app(\App\Services\AdmissionDeferralService::class)->approve($deferralId, $admHead, 'Carry forward registration fee and verified documents.');
+            app(\App\Services\AdmissionJoiningKitService::class)->ensure($deferApplicant, $counsellor);
+        }
+
+        $emailTemplate = \App\Models\AdmissionCommunicationTemplate::where('channel', 'email')->first();
+        $whatsappTemplate = \App\Models\AdmissionCommunicationTemplate::where('channel', 'whatsapp')->first();
+        foreach ($leads->take(2) as $index => $lead) {
+            app(\App\Services\AdmissionConsentService::class)->set($lead, 'whatsapp', $index === 0 ? 'opt_out' : 'opt_in', $officer, $index === 0 ? 'Candidate opted out from WhatsApp reminders.' : 'Seeded consent from web enquiry.', 'seeded_demo');
+            app(\App\Services\AdmissionConsentService::class)->set($lead, 'sms', 'opt_in', $officer, 'Seeded SMS consent.', 'seeded_demo');
+        }
+
+        \Illuminate\Support\Facades\DB::table('admission_quiet_hour_rules')->updateOrInsert(
+            ['channel' => 'whatsapp'],
+            ['starts_at_time' => '22:00:00', 'ends_at_time' => '07:00:00', 'timezone' => 'Asia/Kolkata', 'is_active' => true, 'emergency_override_allowed' => false, 'metadata' => json_encode(['demo' => true]), 'created_at' => now(), 'updated_at' => now()]
+        );
+
+        foreach ([$emailTemplate, $whatsappTemplate] as $template) {
+            if ($template) {
+                $approvalId = app(\App\Services\AdmissionTemplateApprovalService::class)->request($template, $manager);
+                app(\App\Services\AdmissionTemplateApprovalService::class)->approve($approvalId, $admHead);
+                app(\App\Services\AdmissionCommunicationSafetyService::class)->preview($template, $leads->take(3), $admHead, ['source' => 'v0.038_demo']);
+            }
+        }
+
+        app(\App\Services\AdmissionVendorAdapterRegistry::class)->ensureDefaults();
+        app(\App\Services\AdmissionIntegrationHealthService::class)->checkAll();
+        $failedLog = \App\Models\AdmissionCommunicationLog::where('status', 'failed')->first() ?: \App\Models\AdmissionCommunicationLog::first();
+        if ($failedLog) {
+            \Illuminate\Support\Facades\DB::table('admission_integration_retry_queue')->updateOrInsert(
+                ['communication_log_id' => $failedLog->id],
+                ['provider_name' => $failedLog->provider ?: 'sandbox_whatsapp', 'channel' => $failedLog->channel ?: 'whatsapp', 'failure_type' => 'temporary_provider_failure', 'retryable' => true, 'attempts' => 1, 'max_attempts' => 3, 'next_retry_at' => now()->addMinutes(15), 'status' => 'queued', 'last_error' => 'Seeded retryable sandbox failure.', 'created_at' => now(), 'updated_at' => now()]
+            );
+        }
+
+        foreach ([
+            ['calling_desk', 'Urgent callbacks', ['priority' => 'urgent', 'due' => 'today']],
+            ['assessment_scheduling', 'Today slots and conflicts', ['slot_status' => 'open']],
+            ['offer_seat_control', 'Seat holds expiring', ['status' => 'held']],
+            ['communication_safety', 'Blocked recipients', ['blocked' => true]],
+        ] as [$surface, $name, $filters]) {
+            app(\App\Services\AdmissionSavedViewService::class)->save($surface, $name, $filters, $admHead);
+        }
+
+        app(\App\Services\AdmissionQuickSearchService::class)->search('PGDM', $admHead);
     }
 }

@@ -85,6 +85,8 @@ class Applicant extends Model
     public function panelAssignments(){ return $this->hasMany(AdmissionAssessmentPanelAssignment::class); }
     public function dataQualityFlags(){ return $this->morphMany(AdmissionDataQualityFlag::class, 'subject')->latest(); }
     public function admissionApprovals(){ return $this->morphMany(AdmissionApproval::class, 'approvable')->latest(); }
+    public function counsellingProfile(){ return $this->morphOne(AdmissionCounsellingProfile::class, 'subject'); }
+    public function conversationEvents(){ return $this->morphMany(AdmissionConversationEvent::class, 'subject')->latest('occurred_at'); }
     public function teamNotes()      { return $this->hasMany(AdmissionTeamNote::class); }
     public function scores()         { return $this->hasMany(ApplicantScore::class); }
     public function meritListEntry() { return $this->hasOne(MeritListEntry::class); }

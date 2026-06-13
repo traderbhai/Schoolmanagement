@@ -8,7 +8,13 @@ class SessionApplicant extends Model
 {
     protected $fillable = [
         'selection_session_id', 'applicant_id', 'assigned_at',
-        'attendance_status', 'panel_number',
+        'attendance_status', 'lifecycle_status', 'checked_in_at', 'completed_at', 'panel_number',
+    ];
+
+    protected $casts = [
+        'assigned_at' => 'datetime',
+        'checked_in_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function session()

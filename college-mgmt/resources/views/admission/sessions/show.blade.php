@@ -10,6 +10,15 @@
     <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
+<div class="d-flex justify-content-end gap-2 mb-3">
+    <a href="{{ route('admission.assessment-control-room.index') }}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-command me-1"></i>Assessment Control Room
+    </a>
+    <a href="{{ route('admission.evaluator-scoring.index') }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-clipboard-check me-1"></i>Evaluator Scoring
+    </a>
+</div>
+
 {{-- Header --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">

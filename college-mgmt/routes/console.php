@@ -12,6 +12,7 @@ Artisan::command('inspire', function () {
 Schedule::command('admission:deadline-reminders')->dailyAt('08:00');
 Schedule::command('admission:followup-reminders')->dailyAt('08:30');
 Schedule::command('admission:close-expired-windows')->hourly();
+Schedule::command('admission:run-automations')->everyFifteenMinutes();
 Schedule::command('accounts:mark-overdue-demands')->dailyAt('00:30');
 Schedule::command('fees:apply-late-fees')->dailyAt('01:00');
 Schedule::command('library:apply-fines')->dailyAt('02:00');

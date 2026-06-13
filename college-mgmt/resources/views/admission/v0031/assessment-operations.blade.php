@@ -4,7 +4,13 @@
 
 @section('content')
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-<h3 class="fw-bold mb-3">Assessment Operations</h3>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div><h3 class="fw-bold mb-1">Assessment Operations</h3><div class="text-muted small">Panels, evaluator scoring, attendance, pending scores, and overrides.</div></div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admission.assessment-control-room.index') }}" class="btn btn-primary btn-sm">Control Room</a>
+        <a href="{{ route('admission.evaluator-scoring.index') }}" class="btn btn-outline-success btn-sm">Evaluator Scoring</a>
+    </div>
+</div>
 <div class="row g-4">
     <div class="col-xl-7">
         <div class="card border-0 shadow-sm">

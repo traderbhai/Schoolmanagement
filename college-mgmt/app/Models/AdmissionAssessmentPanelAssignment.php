@@ -12,13 +12,17 @@ class AdmissionAssessmentPanelAssignment extends Model
 
     protected $fillable = [
         'panel_id', 'selection_session_id', 'applicant_id', 'evaluator_user_id',
-        'attendance_status', 'score_status', 'recommendation', 'manager_override_reason',
+        'attendance_status', 'lifecycle_status', 'score_status', 'recommendation',
+        'aggregate_score', 'variance_score', 'variance_flag', 'manager_override_reason',
         'overridden_by', 'score_locked_at', 'finalized_at', 'metadata',
     ];
 
     protected $casts = [
         'score_locked_at' => 'datetime',
         'finalized_at' => 'datetime',
+        'aggregate_score' => 'float',
+        'variance_score' => 'float',
+        'variance_flag' => 'boolean',
         'metadata' => 'array',
     ];
 
@@ -40,5 +44,15 @@ class AdmissionAssessmentPanelAssignment extends Model
     public function evaluator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'evaluator_user_id');
+    }
+
+    public function criterionScores()
+    {
+        return $this->hasMany(AdmissionEvaluatorScore::class, 'assignment_id');
+    }
+
+    public function lifecycleEvents()
+    {
+        return $this->hasMany(AdmissionAssessmentLifecycleEvent::class, 'assignment_id')->latest();
     }
 }

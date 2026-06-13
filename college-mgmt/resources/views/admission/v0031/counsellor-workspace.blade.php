@@ -20,6 +20,7 @@
         <div class="text-muted small">Assigned work, follow-ups, reminders, calls, and blockers.</div>
     </div>
     <div class="d-flex gap-2">
+        <a href="{{ route('admission.counsellor-desk.index') }}" class="btn btn-success btn-sm"><i class="bi bi-person-workspace me-1"></i>My Day Desk</a>
         <a href="{{ route('admission.reminders.index') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-bell me-1"></i>Reminders</a>
         <a href="{{ route('admission.call-queue.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-telephone me-1"></i>Call Queue</a>
     </div>
