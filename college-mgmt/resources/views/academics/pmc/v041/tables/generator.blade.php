@@ -1,0 +1,7 @@
+<div class="card shadow-sm mb-3">
+    <div class="card-header py-2 fw-semibold">Generation Runs</div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Run</th><th>Strategy</th><th>Scheduled</th><th>Conflicts</th><th>Score</th></tr></thead><tbody>
+        @forelse($runs as $run)<tr><td><div class="fw-semibold">{{ $run->title }}</div><div class="small text-muted">{{ $run->status }}</div></td><td>{{ $run->strategy }}</td><td>{{ $run->scheduled_count }}/{{ $run->scheduled_count + $run->unscheduled_count }}</td><td>{{ $run->hard_conflict_count }} hard / {{ $run->soft_warning_count }} soft</td><td>{{ $run->quality_score }}%</td></tr>@empty<tr><td colspan="5" class="text-muted">No generation runs.</td></tr>@endforelse
+    </tbody></table></div><div class="card-footer py-2">{{ $runs->links() }}</div>
+</div>
+<div class="card shadow-sm"><div class="card-header py-2 fw-semibold">Generated Items</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Group</th><th>Faculty</th><th>Room</th><th>Day/Slot</th><th>Status</th></tr></thead><tbody>@foreach($items as $item)<tr><td>{{ $item->courseGroup?->name }}</td><td>{{ $item->teacher?->user?->name }}</td><td>{{ $item->classroom?->name }}</td><td>{{ $item->day_of_week }}/{{ $item->slot?->name }}</td><td>{{ $item->status }}</td></tr>@endforeach</tbody></table></div><div class="card-footer py-2">{{ $items->links() }}</div></div>

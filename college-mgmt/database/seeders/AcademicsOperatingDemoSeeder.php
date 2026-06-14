@@ -25,11 +25,34 @@ use App\Models\AcademicDeanSavedView;
 use App\Models\AcademicPmcCurriculumPlan;
 use App\Models\AcademicPmcExportLog;
 use App\Models\AcademicPmcFacultyLoadPlan;
+use App\Models\AcademicPmcAnalyticsSnapshot;
+use App\Models\AcademicPmcApproval;
+use App\Models\AcademicPmcAutomationExecution;
+use App\Models\AcademicPmcAutomationRule;
+use App\Models\AcademicPmcCourseAllocationBatch;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcFacultyPreference;
+use App\Models\AcademicPmcGroupFacultyAssignment;
+use App\Models\AcademicPmcLockedSlot;
+use App\Models\AcademicPmcOperatingRecord;
+use App\Models\AcademicPmcPolicyAudit;
 use App\Models\AcademicPmcReviewMeeting;
+use App\Models\AcademicPmcReviewGovernanceRecord;
 use App\Models\AcademicPmcSavedView;
+use App\Models\AcademicPmcStudentCourseAllocation;
 use App\Models\AcademicPmcStudentSuccessPlan;
+use App\Models\AcademicPmcSubstitutionRecommendation;
+use App\Models\AcademicPmcTimetableChangeRequest;
+use App\Models\AcademicPmcTimetableConstraint;
 use App\Models\AcademicPmcTimetableControl;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcTimetableImpactRecord;
+use App\Models\AcademicPmcTimetableNotification;
+use App\Models\AcademicPmcTimetableQualityScore;
 use App\Models\AcademicPmcWorkItem;
+use App\Models\AcademicPmcWorkloadRule;
 use App\Models\ApprovalWorkflow;
 use App\Models\Attendance;
 use App\Models\Classroom;
@@ -71,6 +94,7 @@ use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use App\Services\AcademicScopeService;
 use Illuminate\Database\Seeder;
@@ -493,6 +517,8 @@ class AcademicsOperatingDemoSeeder extends Seeder
 
         $this->seedPmcOperatingSignals($department, $pmcHead, $program, $subject, $student, $semester, $termId);
         $this->seedPmcV003Signals($department, $pmcHead, $program, $subject, $student, $termId);
+        $this->seedPmcV004Signals($department, $pmcHead, $program, $subject, $student, $termId);
+        $this->seedPmcTimetableV041Signals($department, $dean, $pmcHead, $program, $subject, $student, $termId);
         $this->seedIqacOperatingSignals($department, $iqacHead, $program, $subject, $student, $termId);
         $this->seedCourseDeliverySignals($department, $pmcHead, $program, $subject, $student, $semester, $termId);
         $this->seedDeanOperatingSignals($department, $dean, $pmcHead, $coe, $iqacHead, $program);
@@ -735,6 +761,387 @@ class AcademicsOperatingDemoSeeder extends Seeder
                 'actor_user_id' => $pmcHead->id,
                 'metadata' => ['version' => 'Academics PMC OS v0.03'],
             ]
+        );
+    }
+
+    private function seedPmcV004Signals(Department $department, User $pmcHead, ?Program $program, ?Subject $subject, ?Student $student, ?int $termId): void
+    {
+        $pmcManager = User::where('email', 'pmc.manager@college.com')->first() ?: $pmcHead;
+        $pmcOfficer = User::where('email', 'pmc.officer@college.com')->first() ?: $pmcHead;
+        $mentor = User::where('email', 'faculty.mentor@college.com')->first() ?: $pmcHead;
+        $programId = $program?->id;
+        $subjectId = $subject?->id;
+        $studentId = $student?->id;
+
+        $records = [
+            ['planning', 'annual_plan', 'Annual PMC Academic Execution Plan 2026-27', 'approved', 'medium', 82, $pmcHead->id, 'Annual program delivery, assessment, review, and resource readiness plan.'],
+            ['semester_readiness', 'curriculum_approved', 'Semester readiness checklist - curriculum approved', 'open', 'high', 72, $pmcManager->id, 'Curriculum, faculty, timetable, elective, assessment, mentor, and student-risk checklist.'],
+            ['academic_calendar', 'internal_assessment_calendar', 'Internal assessment and PMC review calendar', 'published', 'low', 90, $pmcOfficer->id, 'Assessment windows, review meetings, elective deadlines, and delivery checkpoints.'],
+            ['curriculum_rollout', 'co_po_mapping', 'CO/PO mapping pending for Management Analytics', 'blocked', 'critical', 48, $pmcManager->id, 'CO/PO/PSO mapping must be completed before final curriculum rollout.'],
+            ['syllabus_version', 'version_compare', 'Syllabus version v2 ready for Dean approval', 'pmc_review', 'high', 76, $pmcHead->id, 'Versioned syllabus with change log, owner sign-off, and compliance checklist.'],
+            ['curriculum_validation', 'credit_rule', 'Credit structure validation warning', 'open', 'high', 65, $pmcManager->id, 'Elective and audit credits need validation against academic rules.'],
+            ['faculty_allocation', 'unassigned_subject', 'Advanced Analytics subject has no backup faculty', 'open', 'high', 60, $pmcManager->id, 'Primary faculty exists but backup and lab support are missing.'],
+            ['faculty_allocation', 'overload', 'Faculty overload requires Dean approval', 'pmc_review', 'critical', 42, $pmcHead->id, 'Weekly planned load exceeds threshold and needs adjustment or approval.'],
+            ['workload_rule', 'mentor_capacity', 'Mentor capacity threshold configured', 'active', 'medium', 80, $pmcOfficer->id, 'Mentor load cap, overload threshold, subject cap, and substitution risk rules.'],
+            ['faculty_shortage', 'adjunct_required', 'Adjunct faculty required for Business Analytics lab', 'open', 'high', 55, $pmcHead->id, 'Shortage planning record for unfilled lab and tutorial load.'],
+            ['timetable_governance', 'freeze_due', 'Timetable freeze due this week', 'conflict_review', 'high', 70, $pmcOfficer->id, 'Timetable must move through PMC approval, Dean approval, publish, and freeze.'],
+            ['timetable_conflict', 'conflict', 'Room and teacher clash in Tuesday slot', 'open', 'critical', 35, $pmcOfficer->id, 'Conflict board item with resolution actions: reassign teacher, room, or slot.'],
+            ['substitution_control', 'repeated_substitution', 'Repeated substitution trend in analytics studio', 'open', 'high', 58, $pmcManager->id, 'Repeated substitutions need review and backup faculty plan.'],
+            ['course_delivery', 'behind_schedule', 'Course delivery behind planned sessions', 'open', 'critical', 46, $pmcManager->id, 'Planned vs actual delivery gap requires remedial and faculty follow-up.'],
+            ['course_delivery', 'marks_pending', 'Internal assessment marks pending', 'open', 'high', 52, $pmcOfficer->id, 'Assessment marks need submission before PMC review pack.'],
+            ['delivery_risk', 'low_feedback_subject', 'Low feedback subject needs corrective action', 'open', 'high', 54, $pmcHead->id, 'Poor feedback, weak result trend, and attendance drop detected.'],
+            ['remedial_plan', 'remedial_class', 'Remedial class plan for weak performers', 'assigned', 'medium', 74, $mentor->id, 'Remedial class schedule and owner tracking.'],
+            ['student_success', 'retention_risk', 'Student success risk needs mentor intervention', 'open', 'critical', 38, $mentor->id, 'Attendance, academic, mentor follow-up, and parent escalation risk.'],
+            ['intervention', 'parent_contact', 'Parent contact and mentor follow-up pending', 'assigned', 'high', 57, $mentor->id, 'Intervention lifecycle from mentor contact to resolution.'],
+            ['mentor_governance', 'mentor_overdue', 'Mentor follow-up overdue for assigned cohort', 'open', 'high', 50, $mentor->id, 'Mentor load and follow-up compliance queue.'],
+            ['parent_escalation', 'guardian_call', 'Parent escalation required for attendance decline', 'open', 'high', 49, $mentor->id, 'Parent/guardian escalation with next follow-up date.'],
+        ];
+
+        foreach ($records as [$type, $category, $title, $status, $risk, $score, $ownerId, $description]) {
+            AcademicPmcOperatingRecord::firstOrCreate(
+                ['record_type' => $type, 'title' => $title],
+                [
+                    'category' => $category,
+                    'description' => $description,
+                    'program_id' => $programId,
+                    'term_id' => $termId,
+                    'subject_id' => in_array($type, ['curriculum_rollout', 'syllabus_version', 'curriculum_validation', 'faculty_allocation', 'course_delivery', 'delivery_risk', 'remedial_plan'], true) ? $subjectId : null,
+                    'student_id' => in_array($type, ['student_success', 'intervention', 'mentor_governance', 'parent_escalation'], true) ? $studentId : null,
+                    'owner_user_id' => $ownerId,
+                    'created_by' => $pmcHead->id,
+                    'status' => $status,
+                    'priority' => in_array($risk, ['critical', 'high'], true) ? 'high' : 'normal',
+                    'risk_band' => $risk,
+                    'score' => $score,
+                    'due_at' => now()->addDays($risk === 'critical' ? 1 : 5),
+                    'source_type' => 'pmc_v004_demo',
+                    'source_key' => $type . ':' . $category,
+                    'source_route' => route('academics.pmc.command'),
+                    'metrics' => ['planned' => 100, 'actual' => $score, 'gap' => 100 - $score],
+                    'checklist' => ['owner_assigned' => true, 'evidence_required' => in_array($risk, ['critical', 'high'], true), 'dean_escalation' => $risk === 'critical'],
+                    'payload' => ['recommended_action' => 'Review source record and close blocker with evidence.', 'version' => 'Academics PMC OS v0.04'],
+                ]
+            );
+        }
+
+        foreach ([
+            ['curriculum_change', 'Curriculum change approval for analytics syllabus', 'pending', $pmcManager->id],
+            ['faculty_allocation', 'Faculty overload exception approval', 'pending', $pmcHead->id],
+            ['timetable_freeze', 'Timetable freeze approval for PGDM term', 'pending', $pmcOfficer->id],
+            ['student_intervention', 'Escalated student success intervention', 'evidence_requested', $mentor->id],
+        ] as [$type, $title, $status, $ownerId]) {
+            AcademicPmcApproval::firstOrCreate(
+                ['approval_type' => $type, 'title' => $title],
+                [
+                    'description' => 'Seeded PMC v0.04 approval cockpit item.',
+                    'program_id' => $programId,
+                    'term_id' => $termId,
+                    'subject_id' => $subjectId,
+                    'requested_by' => $pmcOfficer->id,
+                    'owner_user_id' => $ownerId,
+                    'status' => $status,
+                    'sla_status' => $status === 'pending' ? 'at_risk' : 'waiting_evidence',
+                    'due_at' => now()->addDays(2),
+                    'source_type' => 'pmc_v004_demo',
+                    'source_key' => $type,
+                    'evidence' => [['label' => 'Demo evidence checklist', 'status' => 'pending']],
+                    'metadata' => ['version' => 'Academics PMC OS v0.04'],
+                ]
+            );
+        }
+
+        $template = AcademicPmcReviewGovernanceRecord::firstOrCreate(
+            ['record_type' => 'template', 'title' => 'Weekly PMC Review Template'],
+            ['body' => 'Curriculum readiness, faculty allocation, timetable, delivery, student success, approvals, and actions.', 'owner_user_id' => $pmcHead->id, 'status' => 'active', 'decision_type' => 'weekly_pmc', 'metadata' => ['recurrence' => 'weekly']]
+        );
+        $meeting = AcademicPmcReviewMeeting::firstOrCreate(
+            ['title' => 'PMC v0.04 Weekly Academic Execution Review'],
+            ['review_type' => 'weekly_pmc', 'scheduled_for' => now()->addDays(2), 'chair_user_id' => $pmcHead->id, 'status' => 'scheduled', 'agenda' => 'Review blockers and decisions.', 'metadata' => ['template_id' => $template->id]]
+        );
+        foreach ([
+            ['agenda', 'Resolve timetable conflict before freeze', 'expected_decision'],
+            ['minutes', 'PMC minutes draft with action extraction', 'minutes_draft'],
+            ['decision', 'Approve backup faculty plan with Dean escalation', 'faculty_allocation'],
+            ['evidence', 'Evidence metadata for curriculum rollout closure', 'evidence_required'],
+        ] as [$type, $title, $decisionType]) {
+            AcademicPmcReviewGovernanceRecord::firstOrCreate(
+                ['record_type' => $type, 'title' => $title],
+                ['meeting_id' => $meeting->id, 'body' => 'Seeded PMC v0.04 review governance record.', 'owner_user_id' => $pmcManager->id, 'status' => $type === 'minutes' ? 'draft' : 'open', 'decision_type' => $decisionType, 'due_at' => now()->addDays(3), 'evidence' => [['label' => 'source link', 'url' => route('academics.pmc.command')]], 'metadata' => ['version' => 'Academics PMC OS v0.04']]
+            );
+        }
+
+        foreach ([
+            ['Curriculum blocker auto-escalation', 'curriculum_mapping_gap'],
+            ['Faculty overload attention rule', 'faculty_overload'],
+            ['Timetable conflict refresh', 'timetable_conflict'],
+            ['Student success parent escalation', 'parent_escalation_due'],
+        ] as [$name, $trigger]) {
+            $rule = AcademicPmcAutomationRule::firstOrCreate(
+                ['name' => $name],
+                ['trigger_key' => $trigger, 'conditions' => ['risk' => ['high', 'critical']], 'actions' => ['create_work_item', 'assign_owner', 'escalate'], 'priority' => 50, 'is_active' => true]
+            );
+            AcademicPmcAutomationExecution::firstOrCreate(
+                ['idempotency_key' => 'seed-' . $trigger],
+                ['rule_id' => $rule->id, 'subject_type' => 'pmc_seed', 'subject_key' => $trigger, 'status' => 'executed', 'result' => 'Seeded execution log.', 'metadata' => ['version' => 'Academics PMC OS v0.04'], 'executed_at' => now()->subHour()]
+            );
+        }
+
+        foreach ([
+            ['readiness_progress', 82, 'improving'],
+            ['faculty_workload', 63, 'at_risk'],
+            ['timetable_conflict_reduction', 70, 'stable'],
+            ['student_success_risk', 48, 'worsening'],
+        ] as [$type, $score, $band]) {
+            AcademicPmcAnalyticsSnapshot::firstOrCreate(
+                ['snapshot_type' => $type, 'snapshot_date' => now()->toDateString()],
+                ['program_id' => $programId, 'term_id' => $termId, 'score' => $score, 'band' => $band, 'metrics' => ['current' => $score, 'previous' => max(0, $score - 8)], 'metadata' => ['version' => 'Academics PMC OS v0.04']]
+            );
+        }
+
+        foreach ([
+            'academics.pmc.command',
+            'academics.pmc.planning.index',
+            'academics.pmc.curriculum-governance.index',
+            'academics.pmc.faculty-allocation-v004.index',
+            'academics.pmc.timetable-governance.index',
+            'academics.pmc.course-delivery.index',
+            'academics.pmc.student-success-v004.index',
+            'academics.pmc.approvals.index',
+            'academics.pmc.policy-audit.index',
+        ] as $route) {
+            AcademicPmcPolicyAudit::updateOrCreate(
+                ['route_name' => $route],
+                ['method' => str_contains($route, 'index') || $route === 'academics.pmc.command' ? 'GET' : 'POST', 'required_scope' => 'pmc_scope', 'risk_level' => str_contains($route, 'approvals') ? 'high' : 'medium', 'middleware_present' => true, 'policy_present' => true, 'last_test_status' => 'passed', 'missing_enforcement' => false, 'roles_tested' => ['pmc_head', 'pmc_manager', 'pmc_officer', 'faculty_mentor', 'student'], 'metadata' => ['version' => 'Academics PMC OS v0.04']]
+            );
+        }
+
+        foreach ([
+            ['PMC Planning Default', 'planning'],
+            ['PMC Curriculum Blockers', 'curriculum-governance-v004'],
+            ['PMC Faculty Overload', 'faculty-allocation-v004'],
+            ['PMC Timetable Conflicts', 'timetable-governance'],
+            ['PMC Student Risk', 'student-success-v004'],
+            ['PMC Analytics Pack', 'analytics'],
+        ] as [$name, $surface]) {
+            AcademicPmcSavedView::firstOrCreate(
+                ['user_id' => $pmcHead->id, 'surface' => $surface, 'name' => $name],
+                ['filters' => ['risk_band' => 'high'], 'is_default' => $surface === 'planning']
+            );
+        }
+
+        AcademicPmcExportLog::firstOrCreate(
+            ['user_id' => $pmcHead->id, 'report_key' => 'pmc_v004_seed_report'],
+            ['filters' => ['demo' => true], 'row_count' => AcademicPmcOperatingRecord::count(), 'exported_at' => now(), 'metadata' => ['version' => 'Academics PMC OS v0.04']]
+        );
+
+        DepartmentActivityLog::firstOrCreate(
+            ['action' => 'academics_pmc_os_v004_seeded', 'description' => 'Seeded Academics PMC OS v0.04 complete operating system data.'],
+            [
+                'department_id' => $department->id,
+                'actor_user_id' => $pmcHead->id,
+                'metadata' => ['version' => 'Academics PMC OS v0.04'],
+            ]
+        );
+    }
+
+    private function seedPmcTimetableV041Signals(Department $department, User $dean, User $pmcHead, ?Program $program, ?Subject $subject, ?Student $student, ?int $termId): void
+    {
+        if (! $program || ! $subject) {
+            return;
+        }
+
+        $batch = Batch::where('program_id', $program->id)->first();
+        $term = $termId ? Term::find($termId) : Term::where('program_id', $program->id)->orWhere('batch_id', $batch?->id)->first();
+        $pmcManager = User::where('email', 'pmc.manager@college.com')->first() ?: $pmcHead;
+        $pmcOfficer = User::where('email', 'pmc.officer@college.com')->first() ?: $pmcHead;
+        $facultyUser = $this->user('pmc.faculty@college.com', 'Prof. Aditi Sen', []);
+        $adjunctUser = $this->user('pmc.adjunct@college.com', 'Prof. Vikram Shah', ['teacher']);
+        $teacher = Teacher::firstOrCreate(
+            ['user_id' => $facultyUser->id],
+            ['department_id' => $program->department_id ?? $department->id, 'employee_id' => 'PMC-FAC-001', 'designation' => 'Assistant Professor', 'qualification' => 'PhD', 'specialization' => 'Analytics And Strategy', 'status' => 'active']
+        );
+        $adjunct = Teacher::firstOrCreate(
+            ['user_id' => $adjunctUser->id],
+            ['department_id' => $program->department_id ?? $department->id, 'employee_id' => 'PMC-ADJ-001', 'designation' => 'Visiting Faculty', 'qualification' => 'MBA', 'specialization' => 'Digital Marketing', 'employment_type' => 'visiting', 'status' => 'active']
+        );
+        $slotOne = TimetableSlot::firstOrCreate(
+            ['name' => 'PMC v041 Period 1'],
+            ['start_time' => '09:00', 'end_time' => '10:00', 'is_break' => false, 'sort_order' => 1, 'is_active' => true]
+        );
+        $slotTwo = TimetableSlot::firstOrCreate(
+            ['name' => 'PMC v041 Period 2'],
+            ['start_time' => '10:05', 'end_time' => '11:05', 'is_break' => false, 'sort_order' => 2, 'is_active' => true]
+        );
+        $room = Classroom::firstOrCreate(
+            ['room_number' => 'PMC-V041-101'],
+            ['name' => 'PMC v041 Lecture Room', 'capacity' => 70, 'type' => 'lecture', 'building' => 'Academic Block', 'is_active' => true]
+        );
+        $lab = Classroom::firstOrCreate(
+            ['room_number' => 'PMC-V041-LAB'],
+            ['name' => 'PMC v041 Analytics Lab', 'capacity' => 35, 'type' => 'lab', 'building' => 'Academic Block', 'has_lab' => true, 'is_active' => true]
+        );
+        $elective = Subject::firstOrCreate(
+            ['code' => 'PMC-ELEC-401'],
+            ['department_id' => $program->department_id ?? $department->id, 'program_id' => $program->id, 'term_number' => 1, 'name' => 'Open Elective: Growth Analytics', 'credits' => 3, 'type' => 'theory', 'hours_per_week' => 3, 'is_active' => true]
+        );
+        $labSubject = Subject::firstOrCreate(
+            ['code' => 'PMC-LAB-401'],
+            ['department_id' => $program->department_id ?? $department->id, 'program_id' => $program->id, 'term_number' => 1, 'name' => 'Decision Analytics Lab', 'credits' => 2, 'type' => 'practical', 'hours_per_week' => 2, 'is_active' => true]
+        );
+
+        foreach ([$subject, $elective, $labSubject] as $mappedSubject) {
+            ProgramSubject::firstOrCreate(
+                ['program_id' => $program->id, 'subject_id' => $mappedSubject->id],
+                ['term_id' => $term?->id, 'type' => $mappedSubject->id === $elective->id ? 'elective' : 'compulsory', 'credits' => $mappedSubject->credits ?? 3, 'is_active' => true]
+            );
+        }
+        $pmcPo = ProgramOutcome::firstOrCreate(
+            ['program_id' => $program->id, 'code' => 'PO-PMC-V041'],
+            ['description' => 'Apply academic planning and timetable operations in realistic institute contexts.', 'category' => 'management', 'is_active' => true]
+        );
+        foreach ([[$elective, 'CO-PMC-ELEC-1'], [$labSubject, 'CO-PMC-LAB-1']] as [$outcomeSubject, $code]) {
+            $pmcCo = CourseOutcome::firstOrCreate(
+                ['subject_id' => $outcomeSubject->id, 'code' => $code],
+                ['description' => 'Seeded v0.041 timetable-linked course outcome.', 'bloom_level' => 'apply', 'is_active' => true]
+            );
+            CoPoMapping::firstOrCreate(
+                ['course_outcome_id' => $pmcCo->id, 'program_outcome_id' => $pmcPo->id],
+                ['correlation_level' => 2]
+            );
+        }
+
+        $allocationBatch = AcademicPmcCourseAllocationBatch::firstOrCreate(
+            ['title' => 'PMC v0.041 Term Course Allocation', 'program_id' => $program->id],
+            ['batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcHead->id, 'status' => 'approved', 'student_count' => 1, 'core_allocations' => 2, 'elective_allocations' => 1, 'conflict_count' => 1, 'rules' => ['max_credits' => 28, 'elective_priority' => true]]
+        );
+
+        if ($student) {
+            foreach ([[$subject, 'core', false, null], [$elective, 'elective', true, 'Capacity full; waitlisted for second choice'], [$labSubject, 'core', false, 'Dean-approved lab overload for demo']] as [$allocatedSubject, $type, $waitlisted, $reason]) {
+                $enrollment = StudentSubjectEnrollment::firstOrCreate(
+                    ['student_id' => $student->id, 'subject_id' => $allocatedSubject->id, 'term_id' => $term?->id],
+                    ['enrollment_type' => $type === 'elective' ? 'elective' : 'compulsory', 'status' => 'active']
+                );
+                AcademicPmcStudentCourseAllocation::firstOrCreate(
+                    ['student_id' => $student->id, 'subject_id' => $allocatedSubject->id, 'term_id' => $term?->id],
+                    ['allocation_batch_id' => $allocationBatch->id, 'student_subject_enrollment_id' => $enrollment->id, 'allocation_type' => $type, 'allocation_source' => $type === 'elective' ? 'choice_window' : 'bulk_core', 'approval_status' => $reason ? 'override_approved' : 'allocated', 'basket_status' => 'approved', 'waitlisted' => $waitlisted, 'override_reason' => $reason, 'validation_flags' => $waitlisted ? ['waitlist' => true] : []]
+                );
+            }
+        }
+
+        $coreGroup = AcademicPmcCourseGroup::firstOrCreate(
+            ['name' => 'PGDM Core Section A', 'subject_id' => $subject->id],
+            ['group_type' => 'core_section', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcManager->id, 'min_capacity' => 20, 'max_capacity' => 60, 'current_strength' => $student ? 1 : 0, 'status' => 'locked', 'is_locked' => true, 'constraints' => ['compact_student_day' => true]]
+        );
+        $electiveGroup = AcademicPmcCourseGroup::firstOrCreate(
+            ['name' => 'Growth Analytics Elective Group 1', 'subject_id' => $elective->id],
+            ['group_type' => 'elective_group', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 10, 'max_capacity' => 35, 'current_strength' => $student ? 1 : 0, 'status' => 'conflict_review', 'is_locked' => false, 'constraints' => ['elective_min_strength' => 10]]
+        );
+        $labGroup = AcademicPmcCourseGroup::firstOrCreate(
+            ['name' => 'Decision Analytics Lab Group L1', 'subject_id' => $labSubject->id],
+            ['group_type' => 'lab_group', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 8, 'max_capacity' => 30, 'current_strength' => $student ? 1 : 0, 'status' => 'ready', 'is_locked' => false, 'constraints' => ['double_slot_required' => true]]
+        );
+
+        if ($student) {
+            foreach ([$coreGroup, $electiveGroup, $labGroup] as $group) {
+                $allocationId = AcademicPmcStudentCourseAllocation::where('student_id', $student->id)->where('subject_id', $group->subject_id)->value('id');
+                AcademicPmcCourseGroupMember::firstOrCreate(
+                    ['course_group_id' => $group->id, 'student_id' => $student->id],
+                    ['student_course_allocation_id' => $allocationId, 'status' => 'active', 'moved_by' => $pmcHead->id, 'move_reason' => 'Seeded v0.041 group membership']
+                );
+            }
+        }
+
+        foreach ([[$coreGroup, $teacher, 'primary', 3, false], [$electiveGroup, $adjunct, 'primary', 3, false], [$labGroup, $teacher, 'lab_faculty', 2, false], [$coreGroup, $adjunct, 'backup', 0, true]] as [$group, $assignedTeacher, $role, $hours, $backup]) {
+            AcademicPmcGroupFacultyAssignment::updateOrCreate(
+                ['course_group_id' => $group->id, 'teacher_id' => $assignedTeacher->id, 'assignment_role' => $role],
+                ['assignment_source' => $role === 'backup' ? 'area_chair_recommended' : 'pmc', 'approval_status' => 'pmc_approved', 'weekly_hours' => $hours, 'is_backup' => $backup, 'assigned_by' => $pmcHead->id, 'notes' => 'Seeded v0.041 exact group-level assignment']
+            );
+        }
+
+        AcademicPmcFacultyPreference::updateOrCreate(
+            ['teacher_id' => $adjunct->id, 'term_id' => $term?->id],
+            ['faculty_type' => 'adjunct', 'available_days' => [2, 4], 'preferred_slots' => [$slotOne->id], 'unavailable_slots' => [1 => [$slotTwo->id], 3 => [$slotOne->id, $slotTwo->id]], 'max_classes_per_day' => 2, 'max_consecutive_classes' => 2, 'max_weekly_load' => 8, 'subject_expertise' => [$elective->code], 'restriction_notes' => 'Adjunct available only Tuesday and Thursday.']
+        );
+        AcademicPmcFacultyPreference::updateOrCreate(
+            ['teacher_id' => $teacher->id, 'term_id' => $term?->id],
+            ['faculty_type' => 'regular', 'available_days' => [1, 2, 3, 4, 5], 'preferred_slots' => [$slotOne->id, $slotTwo->id], 'unavailable_slots' => [], 'max_classes_per_day' => 4, 'max_consecutive_classes' => 3, 'max_weekly_load' => 18, 'subject_expertise' => [$subject->code, $labSubject->code]]
+        );
+        AcademicPmcWorkloadRule::firstOrCreate(
+            ['name' => 'PMC v0.041 Standard Faculty Load', 'program_id' => $program->id],
+            ['term_id' => $term?->id, 'normal_weekly_hours' => 16, 'overload_threshold' => 18, 'underload_threshold' => 8, 'max_subjects' => 4, 'mentor_capacity' => 30, 'rules' => ['max_daily_classes' => 4, 'max_consecutive' => 3], 'is_active' => true]
+        );
+
+        AcademicPmcLockedSlot::firstOrCreate(
+            ['title' => 'Dean mandated orientation block', 'day_of_week' => 1, 'timetable_slot_id' => $slotOne->id],
+            ['slot_type' => 'orientation', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'classroom_id' => $room->id, 'is_hard_lock' => true, 'status' => 'active', 'created_by' => $dean->id, 'reason' => 'Orientation cannot be moved.']
+        );
+        AcademicPmcLockedSlot::firstOrCreate(
+            ['title' => 'Guest lecture preferred block', 'day_of_week' => 4, 'timetable_slot_id' => $slotTwo->id],
+            ['slot_type' => 'guest_lecture', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'course_group_id' => $electiveGroup->id, 'teacher_id' => $adjunct->id, 'classroom_id' => $room->id, 'is_hard_lock' => false, 'status' => 'active', 'created_by' => $pmcHead->id, 'reason' => 'Preferred slot for industry speaker.']
+        );
+
+        $version = TimetableVersion::firstOrCreate(
+            ['program_id' => $program->id, 'term_id' => $term?->id, 'batch_id' => $batch?->id, 'version_number' => 41],
+            ['status' => 'published', 'created_by' => $pmcHead->id, 'published_by' => $dean->id, 'published_at' => now(), 'effective_from' => now()->addWeek()->toDateString(), 'notes' => 'PMC v0.041 seeded timetable version; freeze state is tracked in v0.041 companion change records.']
+        );
+        $run = AcademicPmcTimetableGenerationRun::firstOrCreate(
+            ['title' => 'PMC v0.041 Balanced Draft', 'program_id' => $program->id],
+            ['strategy' => 'balanced', 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'timetable_version_id' => $version->id, 'created_by' => $pmcHead->id, 'status' => 'conflict_review', 'scheduled_count' => 3, 'unscheduled_count' => 1, 'hard_conflict_count' => 1, 'soft_warning_count' => 1, 'quality_score' => 78, 'input_summary' => ['groups' => 3, 'strategy' => 'balanced']]
+        );
+        foreach ([[$coreGroup, $teacher, $room, 2, $slotOne, 'scheduled', 88], [$electiveGroup, $adjunct, $room, 2, $slotOne, 'scheduled', 72], [$labGroup, $teacher, $lab, 3, $slotTwo, 'scheduled', 84], [$electiveGroup, null, null, null, null, 'unscheduled', 0]] as [$group, $itemTeacher, $itemRoom, $day, $slot, $status, $confidence]) {
+            AcademicPmcTimetableGenerationItem::firstOrCreate(
+                ['generation_run_id' => $run->id, 'course_group_id' => $group->id, 'status' => $status],
+                ['teacher_id' => $itemTeacher?->id, 'classroom_id' => $itemRoom?->id, 'day_of_week' => $day, 'timetable_slot_id' => $slot?->id, 'confidence' => $confidence, 'explanation' => $status === 'scheduled' ? 'Seeded deterministic placement.' : 'Adjunct day conflict requires alternate slot.', 'conflicts' => $status === 'unscheduled' ? ['adjunct_day_violation'] : []]
+            );
+        }
+        AcademicPmcTimetableConstraint::firstOrCreate(
+            ['generation_run_id' => $run->id, 'constraint_type' => 'student_clash', 'affected_type' => 'student', 'affected_key' => (string) ($student?->id ?? 0)],
+            ['severity' => 'hard', 'title' => 'Student clash through elective group membership', 'description' => 'Core section and elective group are both placed in the same slot for an overlapping student.', 'recommended_fix' => 'Move elective group or choose alternate section.', 'source_route' => route('academics.pmc.timetable-planner.index')]
+        );
+        AcademicPmcTimetableConstraint::firstOrCreate(
+            ['generation_run_id' => $run->id, 'constraint_type' => 'adjunct_day_preference', 'affected_type' => 'teacher', 'affected_key' => (string) $adjunct->id],
+            ['severity' => 'soft', 'title' => 'Adjunct preferred day warning', 'description' => 'Adjunct faculty has a preferred Tuesday/Thursday pattern.', 'recommended_fix' => 'Review if Wednesday placement is unavoidable.', 'source_route' => route('academics.pmc.faculty-preferences.index')]
+        );
+        AcademicPmcTimetableQualityScore::updateOrCreate(
+            ['generation_run_id' => $run->id],
+            ['timetable_version_id' => $version->id, 'overall_score' => 78, 'hard_conflicts' => 1, 'soft_warnings' => 1, 'student_compactness_score' => 82, 'faculty_balance_score' => 76, 'room_utilization_score' => 84, 'details' => ['formula' => '100 - hard*15 - soft*4 plus balance deductions']]
+        );
+
+        $change = AcademicPmcTimetableChangeRequest::firstOrCreate(
+            ['timetable_version_id' => $version->id, 'change_type' => 'revision', 'reason' => 'Move elective away from student clash.'],
+            ['status' => 'requested', 'requested_by' => $pmcHead->id, 'impact_summary' => ['students' => 1, 'faculty' => 1, 'rooms' => 1]]
+        );
+        foreach ([['students', 'Affected student cohort', 1], ['faculty', 'Affected adjunct faculty', 1], ['rooms', 'Room change candidate', 1], ['groups', 'Elective group impacted', 1]] as [$type, $title, $count]) {
+            AcademicPmcTimetableImpactRecord::firstOrCreate(
+                ['change_request_id' => $change->id, 'impact_type' => $type, 'title' => $title],
+                ['affected_count' => $count, 'affected_records' => ['source' => 'seeded_v041']]
+            );
+        }
+        AcademicPmcSubstitutionRecommendation::firstOrCreate(
+            ['course_group_id' => $coreGroup->id, 'original_teacher_id' => $teacher->id, 'substitution_date' => now()->addDays(2)->toDateString()],
+            ['substitute_teacher_id' => $adjunct->id, 'status' => 'recommended', 'score' => 74, 'reasons' => ['subject_expertise_overlap', 'available_day_clear'], 'conflict_checks' => ['faculty' => 'clear', 'student' => 'clear', 'room' => 'clear']]
+        );
+        foreach ([['publish', 'students', 'Timetable draft ready for review'], ['revision', 'faculty', 'Elective slot revision proposed'], ['substitution', 'faculty', 'Substitution recommendation queued']] as [$type, $recipient, $title]) {
+            AcademicPmcTimetableNotification::firstOrCreate(
+                ['notification_type' => $type, 'recipient_type' => $recipient, 'title' => $title],
+                ['recipient_user_id' => $recipient === 'faculty' ? $facultyUser->id : null, 'message' => 'Seeded PMC v0.041 timetable notification.', 'status' => 'queued', 'source_type' => 'pmc_timetable_v041', 'source_key' => $run->id]
+            );
+        }
+
+        foreach (['course-allocation', 'course-groups', 'section-faculty-allocation', 'locked-slots', 'timetable-generator', 'timetable-planner', 'timetable-versions-v041', 'substitution-intelligence', 'timetable-reports'] as $surface) {
+            AcademicPmcSavedView::firstOrCreate(
+                ['user_id' => $pmcHead->id, 'surface' => $surface, 'name' => 'v0.041 ' . str($surface)->headline()],
+                ['filters' => ['program_id' => $program->id], 'is_default' => $surface === 'timetable-planner']
+            );
+            AcademicPmcPolicyAudit::updateOrCreate(
+                ['route_name' => 'academics.pmc.' . $surface . '.index'],
+                ['method' => 'GET', 'required_scope' => 'pmc_timetable_scope', 'risk_level' => str_contains($surface, 'versions') ? 'high' : 'medium', 'middleware_present' => true, 'policy_present' => true, 'last_test_status' => 'passed', 'missing_enforcement' => false, 'roles_tested' => ['dean_academics', 'pmc_head', 'pmc_manager', 'pmc_officer', 'student'], 'metadata' => ['version' => 'PMC OS v0.041']]
+            );
+        }
+
+        DepartmentActivityLog::firstOrCreate(
+            ['department_id' => $department->id, 'action' => 'academics_pmc_timetable_v041_seeded', 'description' => 'Seeded PMC OS v0.041 timetable allocation, section/group, faculty load, constraints, versioning, substitution, and notification data.'],
+            ['actor_user_id' => $pmcHead->id, 'metadata' => ['version' => 'PMC OS v0.041']]
         );
     }
 

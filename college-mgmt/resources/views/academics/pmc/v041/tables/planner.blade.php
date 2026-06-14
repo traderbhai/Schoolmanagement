@@ -1,0 +1,7 @@
+<div class="card shadow-sm mb-3">
+    <div class="card-header py-2 fw-semibold">Planning Board Grid</div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Day</th><th>Slot</th><th>Course Group</th><th>Faculty</th><th>Room</th><th>Quality</th></tr></thead><tbody>
+        @forelse($items as $item)<tr><td>{{ $item->day_of_week }}</td><td>{{ $item->slot?->name ?? $item->timetable_slot_id }}</td><td><div class="fw-semibold">{{ $item->courseGroup?->name }}</div><div class="small text-muted">{{ $item->courseGroup?->subject?->name }}</div></td><td>{{ $item->teacher?->user?->name }}</td><td>{{ $item->classroom?->name }}</td><td>{{ $item->is_locked ? 'locked' : 'movable' }} | {{ $item->confidence }}%</td></tr>@empty<tr><td colspan="6" class="text-muted">No scheduled timetable items.</td></tr>@endforelse
+    </tbody></table></div><div class="card-footer py-2">{{ $items->links() }}</div>
+</div>
+<div class="card shadow-sm"><div class="card-header py-2 fw-semibold">Conflict Panel</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Type</th><th>Severity</th><th>Issue</th><th>Fix</th></tr></thead><tbody>@foreach($constraints as $constraint)<tr><td>{{ $constraint->constraint_type }}</td><td>{{ $constraint->severity }}</td><td>{{ $constraint->title }}</td><td>{{ $constraint->recommended_fix }}</td></tr>@endforeach</tbody></table></div><div class="card-footer py-2">{{ $constraints->links() }}</div></div>

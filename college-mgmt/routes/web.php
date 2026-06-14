@@ -130,6 +130,142 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         Route::get('timetable-readiness', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'timetableReadiness'])->name('timetable-readiness');
         Route::get('student-monitoring', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'studentMonitoring'])->name('student-monitoring');
         Route::get('reports', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'reports'])->name('reports');
+
+        Route::post('v004/records', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeV004Record'])->name('v004.records.store');
+        Route::patch('v004/records/{record}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updateV004Record'])->name('v004.records.update');
+        Route::post('v004/records/{record}/work-item', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'createWorkItemFromRecord'])->name('v004.records.work-item');
+        Route::patch('v004/approvals/{approval}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'decideApproval'])->name('v004.approvals.decide');
+        Route::post('v004/automation/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'refreshAutomation'])->name('v004.automation.refresh');
+
+        Route::prefix('planning')->name('planning.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'planning')->name('index');
+        });
+        Route::prefix('semester-readiness')->name('semester-readiness.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'semester-readiness')->name('index');
+        });
+        Route::prefix('academic-calendar')->name('academic-calendar.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'academic-calendar')->name('index');
+        });
+        Route::prefix('curriculum-governance-v004')->name('curriculum-governance.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'curriculum-governance-v004')->name('index');
+        });
+        Route::prefix('syllabus-versions')->name('syllabus-versions.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'syllabus-versions')->name('index');
+        });
+        Route::prefix('curriculum-rollout')->name('curriculum-rollout.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'curriculum-rollout')->name('index');
+        });
+        Route::prefix('faculty-allocation-v004')->name('faculty-allocation-v004.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'faculty-allocation-v004')->name('index');
+        });
+        Route::prefix('workload-rules')->name('workload-rules.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'workload-rules')->name('index');
+        });
+        Route::prefix('faculty-shortage')->name('faculty-shortage.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'faculty-shortage')->name('index');
+        });
+        Route::prefix('timetable-governance')->name('timetable-governance.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'timetable-governance')->name('index');
+        });
+        Route::prefix('timetable-conflicts')->name('timetable-conflicts.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'timetable-conflicts')->name('index');
+        });
+        Route::prefix('substitution-control')->name('substitution-control.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'substitution-control')->name('index');
+        });
+        Route::prefix('course-delivery')->name('course-delivery.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'course-delivery')->name('index');
+        });
+        Route::prefix('delivery-risk')->name('delivery-risk.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'delivery-risk')->name('index');
+        });
+        Route::prefix('remedial-planning')->name('remedial-planning.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'remedial-planning')->name('index');
+        });
+        Route::prefix('student-success-v004')->name('student-success-v004.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'student-success-v004')->name('index');
+        });
+        Route::prefix('interventions')->name('interventions.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'interventions')->name('index');
+        });
+        Route::prefix('mentor-governance')->name('mentor-governance.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'mentor-governance')->name('index');
+        });
+        Route::prefix('parent-escalations')->name('parent-escalations.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'parent-escalations')->name('index');
+        });
+        Route::prefix('review-templates')->name('review-templates.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+        });
+        Route::prefix('meeting-minutes')->name('meeting-minutes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+        });
+        Route::prefix('decisions')->name('decisions.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+        });
+        Route::prefix('action-governance')->name('action-governance.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+        });
+        Route::prefix('approvals')->name('approvals.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Approvals'])->name('index');
+        });
+        Route::prefix('attention')->name('attention.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'planning')->name('index');
+        });
+        Route::prefix('automation')->name('automation.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Automation'])->name('index');
+        });
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Analytics'])->name('index');
+        });
+        Route::prefix('scheduled-reports')->name('scheduled-reports.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Analytics'])->name('index');
+        });
+        Route::prefix('export-logs')->name('export-logs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Analytics'])->name('index');
+        });
+        Route::prefix('policy-audit')->name('policy-audit.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004PolicyAudit'])->name('index');
+        });
+        Route::get('timetable-os', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Dashboard'])->name('timetable-os.index');
+        Route::post('course-allocation/bulk-core', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreAllocationBatch'])->name('course-allocation.bulk-core');
+        Route::post('course-groups', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreGroup'])->name('course-groups.store');
+        Route::post('sections', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreGroup'])->name('sections.store');
+        Route::post('section-faculty-allocation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041AssignFaculty'])->name('section-faculty-allocation.assign');
+        Route::post('locked-slots', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreLockedSlot'])->name('locked-slots.store');
+        Route::post('timetable-generator', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Generate'])->name('timetable-generator.generate');
+        Route::post('timetable-change-requests', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041RequestChange'])->name('timetable-change-requests.store');
+        Route::patch('timetable-change-requests/{change}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041DecideChange'])->name('timetable-change-requests.decide');
+        Route::post('substitution-intelligence', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041RecommendSubstitution'])->name('substitution-intelligence.recommend');
+        Route::post('timetable-notifications', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041LogNotification'])->name('timetable-notifications.store');
+        foreach ([
+            'course-allocation',
+            'elective-allocation',
+            'student-course-baskets',
+            'sections',
+            'course-groups',
+            'group-memberships',
+            'section-faculty-allocation',
+            'faculty-preferences',
+            'load-planning',
+            'area-chair-recommendations',
+            'locked-slots',
+            'timetable-readiness-v041',
+            'timetable-generator',
+            'timetable-suggestions',
+            'timetable-quality',
+            'timetable-planner',
+            'timetable-versions-v041',
+            'timetable-impact',
+            'timetable-freeze',
+            'substitution-intelligence',
+            'timetable-change-requests',
+            'timetable-reports',
+        ] as $pmcTimetableSurface) {
+            Route::get($pmcTimetableSurface, [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Surface'])
+                ->defaults('surface', $pmcTimetableSurface)
+                ->name($pmcTimetableSurface . '.index');
+        }
     });
     Route::prefix('coe')->name('coe.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'index'])->name('index');
