@@ -1,0 +1,9 @@
+@extends('layouts.admin')
+@section('title', 'PMC Timetable Control')
+@section('content')
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><h1 class="h4 mb-1">PMC Timetable Control Room</h1><div class="small text-muted">Planning, freeze/publish readiness, faculty-room conflicts, section clashes, and change control.</div></div>@include('academics.pmc.v003.partials.nav')</div>
+    <div class="row g-2 mb-3"><div class="col-md-6"><div class="card shadow-sm"><div class="card-body py-2"><div class="small text-muted">Freeze Due</div><div class="h4 mb-0">{{ $freeze_due }}</div></div></div></div><div class="col-md-6"><div class="card shadow-sm"><div class="card-body py-2"><div class="small text-muted">Conflicts</div><div class="h4 mb-0">{{ $conflicts }}</div></div></div></div></div>
+    <div class="card shadow-sm"><div class="card-header py-2 small text-muted">Visible filter summary: active timetable controls | <a href="{{ route('academics.pmc.export', 'timetable') }}">Export current view</a></div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Control</th><th>Program</th><th>Status</th><th>Draft</th><th>Published</th><th>Teacher Conflicts</th><th>Room Conflicts</th><th>Freeze Due</th></tr></thead><tbody>@foreach($controls as $control)<tr><td>{{ $control->title }}</td><td>{{ $control->program?->code ?? '-' }}</td><td>{{ $control->status }}</td><td>{{ $control->draft_slots }}</td><td>{{ $control->published_slots }}</td><td>{{ $control->teacher_conflicts }}</td><td>{{ $control->room_conflicts }}</td><td>{{ optional($control->freeze_due_at)->format('d M Y') }}</td></tr>@endforeach</tbody></table></div><div class="card-footer py-2">{{ $controls->links() }}</div></div>
+</div>
+@endsection

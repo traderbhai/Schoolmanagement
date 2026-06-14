@@ -107,6 +107,128 @@ Route::middleware(['auth'])->prefix('department-hierarchy')->name('department-hi
     Route::patch('/members/{member}/deactivate', [Admin\DepartmentHierarchyController::class, 'deactivateMember'])->name('members.deactivate');
 });
 
+Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(function () {
+    Route::get('command-center', [\App\Http\Controllers\Academics\CommandCenterController::class, 'index'])->name('command-center.index');
+    Route::get('workspaces/{workspace}', [\App\Http\Controllers\Academics\CommandCenterController::class, 'workspace'])->name('workspaces.show');
+    Route::get('attention/{queue}', [\App\Http\Controllers\Academics\CommandCenterController::class, 'queue'])->name('attention.queue');
+    Route::prefix('pmc')->name('pmc.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'index'])->name('index');
+        Route::get('command', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'command'])->name('command');
+        Route::get('workbench', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'workbench'])->name('workbench');
+        Route::post('work-items', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeWorkItem'])->name('work-items.store');
+        Route::patch('work-items/{item}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updateWorkItem'])->name('work-items.update');
+        Route::get('curriculum-governance', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'curriculumGovernance'])->name('curriculum-governance');
+        Route::get('faculty-workload', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'facultyWorkload'])->name('faculty-workload');
+        Route::get('timetable-control', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'timetableControl'])->name('timetable-control');
+        Route::get('student-success', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'studentSuccess'])->name('student-success');
+        Route::get('reviews', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'reviews'])->name('reviews');
+        Route::post('reviews', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeReview'])->name('reviews.store');
+        Route::post('saved-views', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeSavedView'])->name('saved-views.store');
+        Route::get('export/{report}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'export'])->name('export');
+        Route::get('curriculum-readiness', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'curriculumReadiness'])->name('curriculum-readiness');
+        Route::get('faculty-allocation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'facultyAllocation'])->name('faculty-allocation');
+        Route::get('timetable-readiness', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'timetableReadiness'])->name('timetable-readiness');
+        Route::get('student-monitoring', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'studentMonitoring'])->name('student-monitoring');
+        Route::get('reports', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'reports'])->name('reports');
+    });
+    Route::prefix('coe')->name('coe.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'index'])->name('index');
+        Route::get('exam-readiness', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'examReadiness'])->name('exam-readiness');
+        Route::get('marks-results', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'marksResults'])->name('marks-results');
+        Route::get('hall-ticket-readiness', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'hallTicketReadiness'])->name('hall-ticket-readiness');
+        Route::get('transcripts', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'transcripts'])->name('transcripts');
+        Route::get('appeals-anomalies', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'appealsAnomalies'])->name('appeals-anomalies');
+        Route::get('reports', [\App\Http\Controllers\Academics\CoeOperatingController::class, 'reports'])->name('reports');
+    });
+    Route::prefix('iqac')->name('iqac.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'index'])->name('index');
+        Route::get('obe-readiness', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'obeReadiness'])->name('obe-readiness');
+        Route::get('attainment-monitoring', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'attainmentMonitoring'])->name('attainment-monitoring');
+        Route::get('feedback-quality', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'feedbackQuality'])->name('feedback-quality');
+        Route::get('audit-compliance', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'auditCompliance'])->name('audit-compliance');
+        Route::get('reports', [\App\Http\Controllers\Academics\IqacOperatingController::class, 'reports'])->name('reports');
+    });
+    Route::prefix('program-leadership')->name('program-leadership.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'index'])->name('index');
+        Route::get('portfolio', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'portfolio'])->name('portfolio');
+        Route::get('course-delivery', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'courseDelivery'])->name('course-delivery');
+        Route::get('student-success', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'studentSuccess'])->name('student-success');
+        Route::get('quality-signals', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'qualitySignals'])->name('quality-signals');
+        Route::get('reports', [\App\Http\Controllers\Academics\ProgramLeadershipController::class, 'reports'])->name('reports');
+    });
+    Route::prefix('course-delivery')->name('course-delivery.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'index'])->name('index');
+        Route::get('course-load', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'courseLoad'])->name('course-load');
+        Route::get('session-delivery', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'sessionDelivery'])->name('session-delivery');
+        Route::get('attendance-interventions', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'attendanceInterventions'])->name('attendance-interventions');
+        Route::get('course-engagement', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'courseEngagement'])->name('course-engagement');
+        Route::get('mentor-actions', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'mentorActions'])->name('mentor-actions');
+        Route::get('reports', [\App\Http\Controllers\Academics\CourseDeliveryController::class, 'reports'])->name('reports');
+    });
+    Route::prefix('dean-os')->name('dean-os.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Academics\DeanOsController::class, 'index'])->name('index');
+        Route::get('attention/{queue}', [\App\Http\Controllers\Academics\DeanOsController::class, 'attention'])->name('attention');
+        Route::get('branch-health', [\App\Http\Controllers\Academics\DeanOsController::class, 'branchHealth'])->name('branch-health');
+        Route::get('program-risk', [\App\Http\Controllers\Academics\DeanOsController::class, 'programRisk'])->name('program-risk');
+        Route::get('reviews', [\App\Http\Controllers\Academics\DeanOsController::class, 'reviews'])->name('reviews');
+        Route::post('reviews', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeReview'])->name('reviews.store');
+        Route::post('actions', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeAction'])->name('actions.store');
+        Route::patch('actions/{action}', [\App\Http\Controllers\Academics\DeanOsController::class, 'updateAction'])->name('actions.update');
+        Route::get('handoff', [\App\Http\Controllers\Academics\DeanOsController::class, 'handoff'])->name('handoff');
+        Route::get('calendar', [\App\Http\Controllers\Academics\DeanOsController::class, 'calendar'])->name('calendar');
+        Route::get('reports', [\App\Http\Controllers\Academics\DeanOsController::class, 'reports'])->name('reports');
+        Route::get('export/{report}', [\App\Http\Controllers\Academics\DeanOsController::class, 'export'])->name('export');
+        Route::get('planning', [\App\Http\Controllers\Academics\DeanOsController::class, 'planning'])->name('planning.index');
+        Route::post('planning', [\App\Http\Controllers\Academics\DeanOsController::class, 'storePlanning'])->name('planning.store');
+        Route::patch('planning/{cycle}/approve', [\App\Http\Controllers\Academics\DeanOsController::class, 'approvePlanning'])->name('planning.approve');
+        Route::post('semester-readiness/{item}/action', [\App\Http\Controllers\Academics\DeanOsController::class, 'actionFromReadiness'])->name('semester-readiness.action');
+        Route::get('semester-readiness', [\App\Http\Controllers\Academics\DeanOsController::class, 'planning'])->name('semester-readiness.index');
+        Route::get('academic-calendar-approval', [\App\Http\Controllers\Academics\DeanOsController::class, 'planning'])->name('academic-calendar-approval.index');
+        Route::get('teaching-load-approval', [\App\Http\Controllers\Academics\DeanOsController::class, 'planning'])->name('teaching-load-approval.index');
+        Route::get('review-templates', [\App\Http\Controllers\Academics\DeanOsController::class, 'reviewTemplates'])->name('review-templates.index');
+        Route::post('meeting-minutes/{meeting}', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeMinutes'])->name('meeting-minutes.store');
+        Route::patch('meeting-minutes/{minute}/approve', [\App\Http\Controllers\Academics\DeanOsController::class, 'approveMinutes'])->name('meeting-minutes.approve');
+        Route::post('decision-register', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeDecision'])->name('decision-register.store');
+        Route::get('action-rules', [\App\Http\Controllers\Academics\DeanOsController::class, 'actionsIndex'])->name('action-rules.index');
+        Route::get('actions-governance', [\App\Http\Controllers\Academics\DeanOsController::class, 'actionsIndex'])->name('actions.index');
+        Route::post('action-evidence/{action}', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeActionEvidence'])->name('action-evidence.store');
+        Route::get('action-escalations', [\App\Http\Controllers\Academics\DeanOsController::class, 'actionsIndex'])->name('action-escalations.index');
+        Route::get('risk-settings', [\App\Http\Controllers\Academics\DeanOsController::class, 'riskSettings'])->name('risk-settings.index');
+        Route::post('risk-history/capture', [\App\Http\Controllers\Academics\DeanOsController::class, 'captureRiskSnapshot'])->name('risk-history.capture');
+        Route::get('risk-history', [\App\Http\Controllers\Academics\DeanOsController::class, 'riskSettings'])->name('risk-history.index');
+        Route::post('risk-mitigation', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeRiskMitigation'])->name('risk-mitigation.store');
+        Route::get('approval-cockpit', [\App\Http\Controllers\Academics\DeanOsController::class, 'approvalCockpit'])->name('approval-cockpit.index');
+        Route::patch('approval-cockpit/{item}', [\App\Http\Controllers\Academics\DeanOsController::class, 'decideApproval'])->name('approval-cockpit.decide');
+        Route::get('faculty-workload', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'faculty-workload')->name('faculty-workload.index');
+        Route::get('faculty-performance', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'faculty-performance')->name('faculty-performance.index');
+        Route::get('mentoring-governance', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'mentoring-governance')->name('mentoring-governance.index');
+        Route::get('student-success', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'student-success')->name('student-success.index');
+        Route::get('interventions', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'interventions')->name('interventions.index');
+        Route::get('parent-escalations', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'student-success')->name('parent-escalations.index');
+        Route::get('curriculum-governance', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'curriculum-governance')->name('curriculum-governance.index');
+        Route::get('syllabus-versions', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'syllabus-versions')->name('syllabus-versions.index');
+        Route::get('compliance-mapping', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'compliance-mapping')->name('compliance-mapping.index');
+        Route::get('exam-readiness', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'exam-readiness')->name('exam-readiness.index');
+        Route::get('quality-command', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'quality-command')->name('quality-command.index');
+        Route::get('audit-evidence', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'audit-evidence')->name('audit-evidence.index');
+        Route::get('obe-action-plans', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'obe-action-plans')->name('obe-action-plans.index');
+        Route::get('induction', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'induction')->name('induction.index');
+        Route::get('onboarding', [\App\Http\Controllers\Academics\DeanOsController::class, 'operatingSurface'])->defaults('surface', 'onboarding')->name('onboarding.index');
+        Route::get('analytics', [\App\Http\Controllers\Academics\DeanOsController::class, 'analytics'])->name('analytics.index');
+        Route::get('scheduled-reports', [\App\Http\Controllers\Academics\DeanOsController::class, 'analytics'])->name('scheduled-reports.index');
+        Route::patch('scheduled-reports/{pack}/generate', [\App\Http\Controllers\Academics\DeanOsController::class, 'generateReportPack'])->name('scheduled-reports.generate');
+        Route::post('saved-views', [\App\Http\Controllers\Academics\DeanOsController::class, 'storeSavedView'])->name('saved-views.store');
+        Route::get('planning-calendar', [\App\Http\Controllers\Academics\DeanOsController::class, 'planningCalendar'])->name('planning-calendar.index');
+        Route::get('policy-audit', [\App\Http\Controllers\Academics\DeanOsController::class, 'policyAudit'])->name('policy-audit.index');
+    });
+    Route::get('governance', [\App\Http\Controllers\Academics\GovernanceController::class, 'index'])->name('governance.index');
+    Route::get('hierarchy', [\App\Http\Controllers\Academics\GovernanceController::class, 'hierarchy'])->name('hierarchy.index');
+    Route::get('scopes', [\App\Http\Controllers\Academics\GovernanceController::class, 'scopes'])->name('scopes.index');
+    Route::post('scopes', [\App\Http\Controllers\Academics\GovernanceController::class, 'storeScope'])->name('scopes.store');
+    Route::patch('scopes/{scope}/deactivate', [\App\Http\Controllers\Academics\GovernanceController::class, 'deactivateScope'])->name('scopes.deactivate');
+    Route::get('permission-matrix', [\App\Http\Controllers\Academics\GovernanceController::class, 'permissionMatrix'])->name('permission-matrix.index');
+});
+
 // ── Admin routes ────────────────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_academics|program_chair|exam_cell|hod|accounts_officer|cmc|director'])->group(function () {
     Route::get('dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');

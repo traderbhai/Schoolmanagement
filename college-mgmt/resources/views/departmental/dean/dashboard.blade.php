@@ -5,6 +5,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-mortarboard-fill me-2 text-primary"></i>Dean Academics Dashboard</h4>
     <div class="d-flex gap-2">
+        <a href="{{ route('academics.dean-os.index') }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-command me-1"></i>Dean OS
+        </a>
         <a href="{{ route('dean.approvals') }}" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-check2-circle me-1"></i>Approvals
             @if($pendingApprovals > 0)<span class="badge bg-danger ms-1">{{ $pendingApprovals }}</span>@endif

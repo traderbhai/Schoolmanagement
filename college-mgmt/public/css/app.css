@@ -76,18 +76,38 @@ h6 { font-size: .9rem; font-weight: 600; }
    ============================================================ */
 .sidebar {
   width: var(--sidebar-width);
-  min-height: 100vh;
+  height: 100vh;
   background: var(--clr-sidebar-bg);
   position: fixed;
   top: 0;
   left: 0;
-  overflow-y: auto;
+  overflow: hidden;
   z-index: 300;
   transition: width .25s;
   display: flex;
   flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.sidebar > .flex-grow-1 {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.18) transparent;
+}
+
+.sidebar > .flex-grow-1::-webkit-scrollbar,
+.offcanvas[id="mobileSidebar"] .offcanvas-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar > .flex-grow-1::-webkit-scrollbar-thumb,
+.offcanvas[id="mobileSidebar"] .offcanvas-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
 }
 
 .sidebar-brand {
@@ -152,6 +172,13 @@ h6 { font-size: .9rem; font-weight: 600; }
 /* Offcanvas mobile sidebar styles */
 .offcanvas[id="mobileSidebar"] {
   background: var(--clr-sidebar-bg) !important;
+}
+.offcanvas[id="mobileSidebar"] .offcanvas-body {
+  max-height: calc(100vh - var(--topbar-height));
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.18) transparent;
 }
 .offcanvas[id="mobileSidebar"] .sidebar-brand { background: rgba(0,0,0,.25); }
 .offcanvas[id="mobileSidebar"] .nav-link {

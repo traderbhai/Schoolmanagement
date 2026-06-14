@@ -1,0 +1,95 @@
+@extends('layouts.admin')
+@section('title', 'IQAC Operating System')
+
+@php
+    $sections = [
+        'obe' => ['label' => 'OBE Readiness', 'route' => route('academics.iqac.obe-readiness'), 'icon' => 'bi-diagram-3'],
+        'attainment' => ['label' => 'Attainment Monitoring', 'route' => route('academics.iqac.attainment-monitoring'), 'icon' => 'bi-graph-up'],
+        'feedback' => ['label' => 'Feedback Quality', 'route' => route('academics.iqac.feedback-quality'), 'icon' => 'bi-chat-square-text'],
+        'audit' => ['label' => 'Audit And Compliance', 'route' => route('academics.iqac.audit-compliance'), 'icon' => 'bi-shield-check'],
+    ];
+@endphp
+
+@section('content')
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-1">IQAC Operating System</h1>
+            <div class="small text-muted">{{ $scopeSummary['label'] }} - {{ $scopeSummary['detail'] }}</div>
+        </div>
+        <div class="btn-group btn-group-sm">
+            <a href="{{ route('academics.workspaces.show', 'iqac') }}" class="btn btn-outline-secondary">Workspace</a>
+            <a href="{{ route('academics.iqac.reports') }}" class="btn btn-outline-primary">Reports</a>
+            <a href="{{ route('academic.obe.co.index') }}" class="btn btn-primary">OBE Framework</a>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        @foreach([
+            ['label' => 'OBE Gaps', 'value' => $kpis['obe_gaps'], 'route' => route('academics.iqac.obe-readiness')],
+            ['label' => 'Mapping Gaps', 'value' => $kpis['mapping_gaps'], 'route' => route('academics.iqac.obe-readiness')],
+            ['label' => 'Target Misses', 'value' => $kpis['target_misses'], 'route' => route('academics.iqac.attainment-monitoring')],
+            ['label' => 'Feedback Gaps', 'value' => $kpis['feedback_gaps'], 'route' => route('academics.iqac.feedback-quality')],
+        ] as $metric)
+            <div class="col-6 col-xl-3">
+                <a class="text-decoration-none" href="{{ $metric['route'] }}">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body py-2">
+                            <div class="small text-muted">{{ $metric['label'] }}</div>
+                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        @endforeach
+    </div>
+
+    <div class="row g-3">
+        @foreach($sections as $key => $meta)
+            @php($section = $$key)
+            <div class="col-xl-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <div class="fw-semibold"><i class="bi {{ $meta['icon'] }} me-1"></i>{{ $meta['label'] }}</div>
+                        <a href="{{ $meta['route'] }}" class="btn btn-sm btn-outline-primary">Open</a>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="small text-muted mb-2">{{ $section['description'] }}</div>
+                        <div class="row g-2 mb-2">
+                            @foreach($section['metrics'] as $label => $value)
+                                <div class="col-6 col-md-3">
+                                    <a href="{{ $meta['route'] }}" class="text-decoration-none">
+                                        <div class="border rounded p-2 h-100">
+                                            <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
+                                            <div class="fw-semibold">{{ $value }}</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Item</th><th>Status</th><th></th></tr></thead>
+                                <tbody>
+                                    @forelse($section['items']->take(5) as $item)
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold small">{{ $item['title'] }}</div>
+                                                <div class="small text-muted">{{ $item['subtitle'] }}</div>
+                                            </td>
+                                            <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
+                                            <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Go</a></td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="3" class="text-muted text-center py-3">No current exceptions in this IQAC area.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endsection

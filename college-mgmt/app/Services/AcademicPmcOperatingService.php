@@ -1,0 +1,310 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Attendance;
+use App\Models\CurriculumChange;
+use App\Models\ExamResult;
+use App\Models\LeaveApplication;
+use App\Models\Program;
+use App\Models\ProgramSubject;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\SubjectFacultyAssignment;
+use App\Models\TimetableEntry;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+class AcademicPmcOperatingService
+{
+    public function __construct(
+        private AcademicHierarchyService $hierarchy,
+        private AcademicScopeService $scopes
+    ) {}
+
+    public function dashboard(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $curriculum = $this->curriculumReadiness($user);
+        $faculty = $this->facultyAllocation($user);
+        $timetable = $this->timetableReadiness($user);
+        $students = $this->studentMonitoring($user);
+
+        return [
+            'scopeSummary' => $this->scopeSummary($user),
+            'kpis' => [
+                'programs' => $this->applyProgramScope(Program::where('is_active', true), $programIds)->count(),
+                'curriculum_gaps' => $curriculum['metrics']['mapping_gaps'] + $curriculum['metrics']['pending_changes'],
+                'faculty_gaps' => $faculty['metrics']['unassigned_subjects'] + $faculty['metrics']['overloaded_faculty'],
+                'student_risk' => $students['metrics']['attendance_risk'] + $students['metrics']['weak_performance'],
+            ],
+            'curriculum' => $curriculum,
+            'faculty' => $faculty,
+            'timetable' => $timetable,
+            'students' => $students,
+            'reports' => $this->reports($user),
+        ];
+    }
+
+    public function curriculumReadiness(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $subjectIdsMapped = ProgramSubject::query()->where('is_active', true)->pluck('subject_id');
+        $mappingGaps = $this->applyProgramScope(
+            Subject::with('program')->where('is_active', true)->whereNotIn('id', $subjectIdsMapped),
+            $programIds
+        )->orderBy('name')->limit(25)->get();
+
+        $pendingChanges = $this->applyProgramScope(
+            CurriculumChange::with(['program', 'subject'])->whereIn('status', ['submitted', 'under_review']),
+            $programIds
+        )->latest('submitted_at')->limit(25)->get();
+
+        return [
+            'title' => 'Curriculum Readiness',
+            'description' => 'Program structure, subject mapping, credits, and curriculum change approvals.',
+            'metrics' => [
+                'mapping_gaps' => $mappingGaps->count(),
+                'pending_changes' => $pendingChanges->count(),
+                'active_subjects' => $this->applyProgramScope(Subject::where('is_active', true), $programIds)->count(),
+                'mapped_subjects' => $this->applyProgramScope(ProgramSubject::where('is_active', true), $programIds)->count(),
+            ],
+            'items' => $mappingGaps->map(fn (Subject $subject) => [
+                'title' => $subject->name,
+                'subtitle' => ($subject->program?->code ?? 'Program') . ' - ' . $subject->code,
+                'status' => 'Mapping missing',
+                'action' => route('chair.curriculum.index'),
+            ])->merge($pendingChanges->map(fn (CurriculumChange $change) => [
+                'title' => $change->title,
+                'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
+                'status' => ucfirst(str_replace('_', ' ', $change->status)),
+                'action' => route('chair.approvals'),
+            ]))->values(),
+        ];
+    }
+
+    public function facultyAllocation(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $assignedSubjectIds = SubjectFacultyAssignment::query()->pluck('subject_id');
+        $unassigned = $this->applyProgramScope(
+            Subject::with('program')->where('is_active', true)->whereNotIn('id', $assignedSubjectIds),
+            $programIds
+        )->orderBy('name')->limit(25)->get();
+
+        $loads = $this->applyProgramScope(
+            SubjectFacultyAssignment::with(['teacher.user', 'program'])
+                ->selectRaw('teacher_id, program_id, count(*) as subject_count')
+                ->groupBy('teacher_id', 'program_id')
+                ->having('subject_count', '>=', 3),
+            $programIds
+        )->limit(25)->get();
+
+        return [
+            'title' => 'Faculty Allocation',
+            'description' => 'Primary faculty, co-faculty, workload, and allocation exceptions.',
+            'metrics' => [
+                'unassigned_subjects' => $unassigned->count(),
+                'assigned_subjects' => $this->applyProgramScope(SubjectFacultyAssignment::query(), $programIds)->count(),
+                'overloaded_faculty' => $loads->count(),
+                'co_faculty_assignments' => $this->applyProgramScope(SubjectFacultyAssignment::where('is_primary', false), $programIds)->count(),
+            ],
+            'items' => $unassigned->map(fn (Subject $subject) => [
+                'title' => $subject->name,
+                'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty not assigned',
+                'status' => 'Unassigned',
+                'action' => route('chair.curriculum.assignments'),
+            ])->merge($loads->map(fn ($load) => [
+                'title' => $load->teacher?->user?->name ?? 'Faculty #' . $load->teacher_id,
+                'subtitle' => ($load->program?->code ?? 'Program') . ' - ' . $load->subject_count . ' subjects',
+                'status' => 'Workload review',
+                'action' => route('chair.faculty.workload'),
+            ]))->values(),
+        ];
+    }
+
+    public function timetableReadiness(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $draft = $this->applyProgramScope(
+            TimetableEntry::with(['program', 'subject', 'teacher.user', 'classroom'])->where('is_active', true)->where('status', '!=', 'published'),
+            $programIds
+        )->orderBy('day_of_week')->limit(25)->get();
+
+        $conflicts = $this->applyProgramScope(
+            TimetableEntry::query()
+                ->selectRaw('teacher_id, day_of_week, timetable_slot_id, count(*) as conflict_count')
+                ->where('is_active', true)
+                ->groupBy('teacher_id', 'day_of_week', 'timetable_slot_id')
+                ->having('conflict_count', '>', 1),
+            $programIds
+        )->limit(25)->get();
+
+        return [
+            'title' => 'Timetable Readiness',
+            'description' => 'Draft slots, publish readiness, faculty-room conflicts, and workload balance.',
+            'metrics' => [
+                'draft_slots' => $draft->count(),
+                'published_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true)->where('status', 'published'), $programIds)->count(),
+                'teacher_conflicts' => $conflicts->count(),
+                'active_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true), $programIds)->count(),
+            ],
+            'items' => $draft->map(fn (TimetableEntry $entry) => [
+                'title' => $entry->subject?->name ?? 'Timetable slot',
+                'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
+                'status' => ucfirst($entry->status ?? 'draft'),
+                'action' => route('chair.timetable.builder'),
+            ])->merge($conflicts->map(fn ($conflict) => [
+                'title' => 'Teacher #' . $conflict->teacher_id . ' conflict',
+                'subtitle' => 'Day ' . $conflict->day_of_week . ', slot #' . $conflict->timetable_slot_id,
+                'status' => 'Conflict',
+                'action' => route('chair.timetable.builder'),
+            ]))->values(),
+        ];
+    }
+
+    public function studentMonitoring(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $visibleStudentIds = $this->applyProgramScope(Student::query(), $programIds)->pluck('id');
+
+        $attendanceRisk = Attendance::query()
+            ->with('student.program')
+            ->selectRaw('student_id, count(*) as exception_count')
+            ->whereIn('student_id', $visibleStudentIds)
+            ->whereIn('status', ['absent', 'late'])
+            ->groupBy('student_id')
+            ->having('exception_count', '>=', 2)
+            ->limit(25)
+            ->get();
+
+        $weakPerformance = ExamResult::with(['student.program', 'exam.subject'])
+            ->whereIn('student_id', $visibleStudentIds)
+            ->whereHas('exam', fn (Builder $query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+            ->limit(25)
+            ->get();
+
+        $pendingLeaves = LeaveApplication::with('student.program')
+            ->where('status', 'pending')
+            ->whereIn('student_id', $visibleStudentIds)
+            ->limit(25)
+            ->get();
+
+        return [
+            'title' => 'Student Monitoring',
+            'description' => 'Attendance risk, weak performance, leave approvals, and mentoring interventions.',
+            'metrics' => [
+                'attendance_risk' => $attendanceRisk->count(),
+                'weak_performance' => $weakPerformance->count(),
+                'pending_leaves' => $pendingLeaves->count(),
+                'unassigned_mentors' => $this->applyProgramScope(Student::whereNull('mentor_id'), $programIds)->count(),
+            ],
+            'items' => $attendanceRisk->map(fn ($row) => [
+                'title' => $row->student?->user?->name ?? 'Student #' . $row->student_id,
+                'subtitle' => ($row->student?->program?->code ?? 'Program') . ' - ' . $row->exception_count . ' attendance exceptions',
+                'status' => 'Intervention due',
+                'action' => route('chair.students.at-risk'),
+            ])->merge($weakPerformance->map(fn (ExamResult $result) => [
+                'title' => $result->student?->user?->name ?? 'Student #' . $result->student_id,
+                'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
+                'status' => 'Weak performance',
+                'action' => route('chair.reports.subject-performance'),
+            ]))->merge($pendingLeaves->map(fn (LeaveApplication $leave) => [
+                'title' => $leave->student?->user?->name ?? 'Student #' . $leave->student_id,
+                'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
+                'status' => 'Leave pending',
+                'action' => route('chair.students.leaves'),
+            ]))->values(),
+        ];
+    }
+
+    public function reports(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+
+        return [
+            'curriculum_readiness' => [
+                'label' => 'Curriculum readiness',
+                'count' => $this->curriculumReadiness($user)['metrics']['mapping_gaps'],
+                'route' => route('academics.pmc.curriculum-readiness'),
+            ],
+            'timetable_readiness' => [
+                'label' => 'Timetable readiness',
+                'count' => $this->timetableReadiness($user)['metrics']['draft_slots'],
+                'route' => route('academics.pmc.timetable-readiness'),
+            ],
+            'faculty_workload' => [
+                'label' => 'Faculty workload',
+                'count' => $this->facultyAllocation($user)['metrics']['overloaded_faculty'],
+                'route' => route('academics.pmc.faculty-allocation'),
+            ],
+            'student_risk' => [
+                'label' => 'Student risk',
+                'count' => $this->studentMonitoring($user)['metrics']['attendance_risk'],
+                'route' => route('academics.pmc.student-monitoring'),
+            ],
+            'active_programs' => [
+                'label' => 'Active scoped programs',
+                'count' => $this->applyProgramScope(Program::where('is_active', true), $programIds)->count(),
+                'route' => route('academics.pmc.index'),
+            ],
+        ];
+    }
+
+    public function section(User $user, string $section): array
+    {
+        return match ($section) {
+            'curriculum-readiness' => $this->curriculumReadiness($user),
+            'faculty-allocation' => $this->facultyAllocation($user),
+            'timetable-readiness' => $this->timetableReadiness($user),
+            'student-monitoring' => $this->studentMonitoring($user),
+            default => abort(404),
+        };
+    }
+
+    private function visibleProgramIds(User $user): ?Collection
+    {
+        if ($this->hierarchy->canSeeAll($user)) {
+            return null;
+        }
+
+        $ids = $this->scopes->scopeIdsFor($user, 'program');
+        if ($ids->isEmpty()) {
+            $ids = $this->scopes->scopeIdsFor($user, 'batch')
+                ->map(fn ($batchId) => \App\Models\Batch::whereKey($batchId)->value('program_id'))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        return $ids;
+    }
+
+    private function applyProgramScope(Builder $query, ?Collection $programIds, string $column = 'program_id'): Builder
+    {
+        if ($programIds === null) {
+            return $query;
+        }
+
+        if ($programIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn($column, $programIds);
+    }
+
+    private function scopeSummary(User $user): array
+    {
+        if ($this->hierarchy->canSeeAll($user)) {
+            return ['label' => 'All PMC programs', 'detail' => 'Department-level visibility'];
+        }
+
+        $scopes = $this->scopes->scopesFor($user);
+
+        return [
+            'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned PMC work',
+            'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit PMC program scope assigned yet',
+        ];
+    }
+}

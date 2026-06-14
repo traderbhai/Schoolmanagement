@@ -1,0 +1,293 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Attendance;
+use App\Models\CourseFeedback;
+use App\Models\CourseOutcome;
+use App\Models\CurriculumChange;
+use App\Models\Exam;
+use App\Models\ExamResult;
+use App\Models\LeaveApplication;
+use App\Models\Program;
+use App\Models\ProgramOutcome;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\SubjectFacultyAssignment;
+use App\Models\TimetableEntry;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+class AcademicProgramLeadershipService
+{
+    public function __construct(
+        private AcademicHierarchyService $hierarchy,
+        private AcademicScopeService $scopes
+    ) {}
+
+    public function dashboard(User $user): array
+    {
+        $portfolio = $this->programPortfolio($user);
+        $delivery = $this->courseDelivery($user);
+        $students = $this->studentSuccess($user);
+        $quality = $this->qualitySignals($user);
+
+        return [
+            'scopeSummary' => $this->scopeSummary($user),
+            'kpis' => [
+                'programs' => $portfolio['metrics']['active_programs'],
+                'active_students' => $portfolio['metrics']['active_students'],
+                'delivery_gaps' => $delivery['metrics']['faculty_gaps'] + $delivery['metrics']['draft_timetable'],
+                'student_risk' => $students['metrics']['attendance_risk'] + $students['metrics']['weak_performance'],
+            ],
+            'portfolio' => $portfolio,
+            'delivery' => $delivery,
+            'students' => $students,
+            'quality' => $quality,
+            'reports' => $this->reports($user),
+        ];
+    }
+
+    public function programPortfolio(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $programs = $this->applyProgramScope(Program::withCount(['students', 'subjects'])->where('is_active', true), $programIds)
+            ->orderBy('name')
+            ->limit(25)
+            ->get();
+
+        $pendingChanges = $this->applyProgramScope(
+            CurriculumChange::with(['program', 'subject'])->whereIn('status', ['submitted', 'under_review']),
+            $programIds
+        )->latest('submitted_at')->limit(25)->get();
+
+        return [
+            'title' => 'Program Portfolio',
+            'description' => 'Assigned programs, active student strength, curriculum change pressure, and program readiness.',
+            'metrics' => [
+                'active_programs' => $programs->count(),
+                'active_students' => $this->applyProgramScope(Student::where('status', 'active'), $programIds)->count(),
+                'active_subjects' => $this->applyProgramScope(Subject::where('is_active', true), $programIds)->count(),
+                'pending_curriculum_changes' => $pendingChanges->count(),
+            ],
+            'items' => collect($programs->map(fn (Program $program) => [
+                'title' => $program->name,
+                'subtitle' => $program->code . ' - ' . $program->students_count . ' students, ' . $program->subjects_count . ' subjects',
+                'status' => 'Active',
+                'action' => route('dean.programs'),
+            ])->values())->concat($pendingChanges->map(fn (CurriculumChange $change) => [
+                'title' => $change->title,
+                'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
+                'status' => ucfirst(str_replace('_', ' ', $change->status)),
+                'action' => route('academic.curriculum-changes.index'),
+            ])->values())->values(),
+        ];
+    }
+
+    public function courseDelivery(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $assignedSubjectIds = SubjectFacultyAssignment::query()->pluck('subject_id');
+        $facultyGaps = $this->applyProgramScope(
+            Subject::with('program')->where('is_active', true)->whereNotIn('id', $assignedSubjectIds),
+            $programIds
+        )->orderBy('name')->limit(25)->get();
+
+        $draftTimetable = $this->applyProgramScope(
+            TimetableEntry::with(['program', 'subject', 'teacher.user'])->where('is_active', true)->where('status', '!=', 'published'),
+            $programIds
+        )->orderBy('day_of_week')->limit(25)->get();
+
+        return [
+            'title' => 'Course Delivery',
+            'description' => 'Faculty assignment, timetable readiness, session load, and course-delivery exceptions.',
+            'metrics' => [
+                'faculty_gaps' => $facultyGaps->count(),
+                'draft_timetable' => $draftTimetable->count(),
+                'published_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true)->where('status', 'published'), $programIds)->count(),
+                'faculty_assignments' => $this->applyProgramScope(SubjectFacultyAssignment::query(), $programIds)->count(),
+            ],
+            'items' => collect($facultyGaps->map(fn (Subject $subject) => [
+                'title' => $subject->name,
+                'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty assignment pending',
+                'status' => 'Faculty gap',
+                'action' => route('chair.curriculum.assignments'),
+            ])->values())->concat($draftTimetable->map(fn (TimetableEntry $entry) => [
+                'title' => $entry->subject?->name ?? 'Timetable entry',
+                'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name,
+                'status' => ucfirst($entry->status ?? 'draft'),
+                'action' => route('chair.timetable.builder'),
+            ])->values())->values(),
+        ];
+    }
+
+    public function studentSuccess(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $studentIds = $this->applyProgramScope(Student::query(), $programIds)->pluck('id');
+
+        $attendanceRisk = Attendance::with('student.user')
+            ->selectRaw('student_id, count(*) as exception_count')
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('status', ['absent', 'late'])
+            ->groupBy('student_id')
+            ->having('exception_count', '>=', 2)
+            ->limit(25)
+            ->get();
+
+        $weakPerformance = ExamResult::with(['student.user', 'exam.subject'])
+            ->whereIn('student_id', $studentIds)
+            ->whereHas('exam', fn (Builder $query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+            ->limit(25)
+            ->get();
+
+        $pendingLeaves = LeaveApplication::with('student.user')
+            ->whereIn('student_id', $studentIds)
+            ->where('status', 'pending')
+            ->limit(25)
+            ->get();
+
+        return [
+            'title' => 'Student Success',
+            'description' => 'At-risk students, weak performance, leave reviews, mentor needs, and intervention queues.',
+            'metrics' => [
+                'attendance_risk' => $attendanceRisk->count(),
+                'weak_performance' => $weakPerformance->count(),
+                'pending_leaves' => $pendingLeaves->count(),
+                'mentor_gaps' => $this->applyProgramScope(Student::whereNull('mentor_id'), $programIds)->count(),
+            ],
+            'items' => collect($attendanceRisk->map(fn ($row) => [
+                'title' => $row->student?->user?->name ?? 'Student #' . $row->student_id,
+                'subtitle' => $row->exception_count . ' attendance exceptions',
+                'status' => 'Intervention due',
+                'action' => route('chair.students.at-risk'),
+            ])->values())->concat($weakPerformance->map(fn (ExamResult $result) => [
+                'title' => $result->student?->user?->name ?? 'Student #' . $result->student_id,
+                'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
+                'status' => 'Weak performance',
+                'action' => route('chair.reports.subject-performance'),
+            ])->values())->concat($pendingLeaves->map(fn (LeaveApplication $leave) => [
+                'title' => $leave->student?->user?->name ?? 'Student #' . $leave->student_id,
+                'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
+                'status' => 'Leave pending',
+                'action' => route('chair.students.leaves'),
+            ])->values())->values(),
+        ];
+    }
+
+    public function qualitySignals(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $programsWithoutPo = $this->applyProgramScope(
+            Program::where('is_active', true)->whereNotIn('id', ProgramOutcome::query()->pluck('program_id')),
+            $programIds
+        )->limit(25)->get();
+
+        $subjectsWithoutCo = $this->applyProgramScope(
+            Subject::with('program')->where('is_active', true)->whereNotIn('id', CourseOutcome::query()->pluck('subject_id')),
+            $programIds
+        )->limit(25)->get();
+
+        $lowFeedback = CourseFeedback::with('subject.program')
+            ->selectRaw('subject_id, avg(overall_rating) as avg_rating, count(*) as response_count')
+            ->whereHas('subject', fn (Builder $query) => $this->applyProgramScope($query, $programIds))
+            ->groupBy('subject_id')
+            ->having('avg_rating', '<', 3.5)
+            ->limit(25)
+            ->get();
+
+        return [
+            'title' => 'Quality Signals',
+            'description' => 'OBE gaps, feedback action plans, exam outcomes, and quality follow-up signals for assigned programs.',
+            'metrics' => [
+                'program_outcome_gaps' => $programsWithoutPo->count(),
+                'course_outcome_gaps' => $subjectsWithoutCo->count(),
+                'low_feedback_subjects' => $lowFeedback->count(),
+                'exams_this_year' => $this->applyProgramScope(Exam::whereYear('exam_date', now()->year), $programIds)->count(),
+            ],
+            'items' => collect($programsWithoutPo->map(fn (Program $program) => [
+                'title' => $program->name,
+                'subtitle' => $program->code . ' - PO setup missing',
+                'status' => 'Quality gap',
+                'action' => route('academic.obe.po.index', ['program_id' => $program->id]),
+            ])->values())->concat($subjectsWithoutCo->map(fn (Subject $subject) => [
+                'title' => $subject->name,
+                'subtitle' => ($subject->program?->code ?? 'Program') . ' - CO setup missing',
+                'status' => 'OBE gap',
+                'action' => route('academic.obe.co.index', ['program_id' => $subject->program_id, 'subject_id' => $subject->id]),
+            ])->values())->concat($lowFeedback->map(fn ($row) => [
+                'title' => $row->subject?->name ?? 'Subject',
+                'subtitle' => ($row->subject?->program?->code ?? 'Program') . ' - average rating ' . round($row->avg_rating, 1),
+                'status' => 'Feedback action due',
+                'action' => route('chair.faculty.feedback'),
+            ])->values())->values(),
+        ];
+    }
+
+    public function reports(User $user): array
+    {
+        return [
+            'program_portfolio' => ['label' => 'Program portfolio', 'count' => $this->programPortfolio($user)['metrics']['active_programs'], 'route' => route('academics.program-leadership.portfolio')],
+            'course_delivery' => ['label' => 'Course delivery', 'count' => $this->courseDelivery($user)['metrics']['faculty_gaps'], 'route' => route('academics.program-leadership.course-delivery')],
+            'student_success' => ['label' => 'Student success', 'count' => $this->studentSuccess($user)['metrics']['attendance_risk'], 'route' => route('academics.program-leadership.student-success')],
+            'quality_signals' => ['label' => 'Quality signals', 'count' => $this->qualitySignals($user)['metrics']['course_outcome_gaps'], 'route' => route('academics.program-leadership.quality-signals')],
+        ];
+    }
+
+    public function section(User $user, string $section): array
+    {
+        return match ($section) {
+            'portfolio' => $this->programPortfolio($user),
+            'course-delivery' => $this->courseDelivery($user),
+            'student-success' => $this->studentSuccess($user),
+            'quality-signals' => $this->qualitySignals($user),
+            default => abort(404),
+        };
+    }
+
+    private function visibleProgramIds(User $user): ?Collection
+    {
+        if ($this->hierarchy->canSeeAll($user)) {
+            return null;
+        }
+
+        $ids = $this->scopes->scopeIdsFor($user, 'program');
+        if ($ids->isEmpty()) {
+            $ids = $this->scopes->scopeIdsFor($user, 'batch')
+                ->map(fn ($batchId) => \App\Models\Batch::whereKey($batchId)->value('program_id'))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        return $ids;
+    }
+
+    private function applyProgramScope(Builder $query, ?Collection $programIds, string $column = 'program_id'): Builder
+    {
+        if ($programIds === null) {
+            return $query;
+        }
+
+        if ($programIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn($column, $programIds);
+    }
+
+    private function scopeSummary(User $user): array
+    {
+        if ($this->hierarchy->canSeeAll($user)) {
+            return ['label' => 'All assigned programs', 'detail' => 'Department-level program leadership visibility'];
+        }
+
+        $scopes = $this->scopes->scopesFor($user);
+
+        return [
+            'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned program work',
+            'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit program scope assigned yet',
+        ];
+    }
+}

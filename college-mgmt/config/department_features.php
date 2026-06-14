@@ -148,6 +148,48 @@ return [
             ],
         ],
         'ACAD' => [
+            'academic.command_center' => [
+                'name' => 'Academics Command Center',
+                'category' => 'Operations',
+                'description' => 'Role-specific command center, attention queues, branch summaries, and academic activity monitoring.',
+                'default_enabled' => true,
+            ],
+            'academic.pmc_operating_system' => [
+                'name' => 'PMC Operating System',
+                'category' => 'Operations',
+                'description' => 'Curriculum readiness, faculty allocation, timetable readiness, student monitoring, and PMC reports.',
+                'default_enabled' => true,
+            ],
+            'academic.coe_operating_system' => [
+                'name' => 'CoE Operating System',
+                'category' => 'Operations',
+                'description' => 'Exam readiness, marks/results control, hall tickets, transcripts, appeals, and anomalies.',
+                'default_enabled' => true,
+            ],
+            'academic.iqac_operating_system' => [
+                'name' => 'IQAC Operating System',
+                'category' => 'Quality',
+                'description' => 'OBE readiness, attainment monitoring, feedback quality, surveys, audit trails, and compliance reports.',
+                'default_enabled' => true,
+            ],
+            'academic.program_leadership_os' => [
+                'name' => 'Program Leadership OS',
+                'category' => 'Operations',
+                'description' => 'Program portfolio, course delivery, student success, quality signals, and leadership reports.',
+                'default_enabled' => true,
+            ],
+            'academic.course_delivery_os' => [
+                'name' => 'Course Delivery OS',
+                'category' => 'Operations',
+                'description' => 'Faculty course load, session delivery, attendance interventions, course engagement, and mentor actions.',
+                'default_enabled' => true,
+            ],
+            'academic.governance' => [
+                'name' => 'Academics Governance',
+                'category' => 'Governance',
+                'description' => 'Flexible hierarchy, branch ownership, academic scopes, permission matrix, and governance audit trail.',
+                'default_enabled' => true,
+            ],
             'academic.dashboard' => [
                 'name' => 'Academic Dashboard',
                 'category' => 'Oversight',

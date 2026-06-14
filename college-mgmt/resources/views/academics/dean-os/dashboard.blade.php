@@ -1,0 +1,138 @@
+@extends('layouts.admin')
+@section('title', 'Dean Academics Command OS')
+
+@section('content')
+<div class="container-fluid py-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-1">Dean Academics Command OS</h1>
+            <div class="small text-muted">Department-level academic command, risk, reviews, handoff, and action tracking.</div>
+        </div>
+        @include('academics.dean-os.partials.nav')
+    </div>
+
+    <div class="card shadow-sm mb-3 border-{{ $todayPriority['level'] === 'danger' ? 'danger' : ($todayPriority['level'] === 'warning' ? 'warning' : 'primary') }}">
+        <div class="card-body py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <div class="small text-muted text-uppercase fw-semibold">Today Priority</div>
+                <div class="fw-semibold">{{ $todayPriority['title'] }}</div>
+                <div class="small text-muted">{{ $todayPriority['body'] }}</div>
+            </div>
+            <a class="btn btn-sm btn-{{ $todayPriority['level'] === 'danger' ? 'danger' : ($todayPriority['level'] === 'warning' ? 'warning' : 'primary') }}" href="{{ $todayPriority['route'] }}">{{ $todayPriority['action'] }}</a>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        @foreach([
+            ['label' => 'Overdue Approvals', 'value' => $kpis['overdue_approvals'], 'route' => route('academics.dean-os.attention', 'overdue_dean_approvals')],
+            ['label' => 'Open Actions', 'value' => $kpis['open_actions'], 'route' => route('academics.dean-os.reviews')],
+            ['label' => 'Critical Program Risks', 'value' => $kpis['critical_program_risks'], 'route' => route('academics.dean-os.program-risk')],
+            ['label' => 'Handoff Blockers', 'value' => $kpis['handoff_blockers'], 'route' => route('academics.dean-os.handoff')],
+            ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => route('academics.dean-os.attention', 'action_items_overdue')],
+        ] as $metric)
+            <div class="col-6 col-xl">
+                <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100">
+                    <div class="card-body py-2">
+                        <div class="small text-muted">{{ $metric['label'] }}</div>
+                        <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                    </div>
+                </a>
+            </div>
+        @endforeach
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap gap-2">
+                @foreach([
+                    ['Plan', route('academics.dean-os.planning.index')],
+                    ['Govern', route('academics.dean-os.approval-cockpit.index')],
+                    ['Deliver', route('academics.dean-os.faculty-workload.index')],
+                    ['Assess', route('academics.dean-os.exam-readiness.index')],
+                    ['Improve', route('academics.dean-os.quality-command.index')],
+                    ['Student Success', route('academics.dean-os.student-success.index')],
+                    ['Induction', route('academics.dean-os.induction.index')],
+                    ['Analytics', route('academics.dean-os.analytics.index')],
+                    ['Policy Audit', route('academics.dean-os.policy-audit.index')],
+                ] as [$label, $url])
+                    <a href="{{ $url }}" class="btn btn-sm btn-outline-secondary">{{ $label }}</a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Branch Health</span><a href="{{ route('academics.dean-os.branch-health') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>Branch</th><th>Risk</th><th>Open Actions</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach($branchHealth as $branch)
+                            <tr>
+                                <td><div class="fw-semibold">{{ $branch['label'] }}</div><div class="small text-muted">{{ collect($branch['metrics'])->map(fn($v,$k)=>$k.': '.$v)->join(' | ') }}</div></td>
+                                <td><span class="badge text-bg-{{ $branch['band'] === 'critical' ? 'danger' : ($branch['band'] === 'high' ? 'warning' : 'light') }}">{{ $branch['band'] }}</span></td>
+                                <td>{{ $branch['open_actions'] }} open, {{ $branch['overdue_actions'] }} overdue</td>
+                                <td class="text-end"><a href="{{ $branch['route'] }}" class="btn btn-sm btn-outline-secondary">Source</a></td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Dean Attention</span><a href="{{ route('academics.dean-os.attention', 'overdue_dean_approvals') }}" class="btn btn-sm btn-outline-primary">Queues</a></div>
+                <div class="list-group list-group-flush">
+                    @forelse($criticalItems as $item)
+                        <a href="{{ $item['route'] }}" class="list-group-item list-group-item-action py-2">
+                            <div class="d-flex justify-content-between gap-2"><span class="fw-semibold small">{{ $item['title'] }}</span><span class="badge text-bg-{{ $item['severity'] === 'critical' ? 'danger' : 'warning' }}">{{ $item['severity'] }}</span></div>
+                            <div class="small text-muted">{{ $item['subtitle'] }}</div>
+                        </a>
+                    @empty
+                        <div class="list-group-item text-muted">No critical attention items.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-7">
+            <div class="card shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Program Risk Heatmap</span><a href="{{ route('academics.dean-os.program-risk') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Program</th><th>Band</th><th>Reasons</th></tr></thead>
+                        <tbody>
+                        @foreach($programRisks->take(6) as $risk)
+                            <tr>
+                                <td class="fw-semibold">{{ $risk['program']->code }}</td>
+                                <td><span class="badge text-bg-{{ $risk['band'] === 'critical' ? 'danger' : ($risk['band'] === 'high' ? 'warning' : 'light') }}">{{ $risk['band'] }} {{ $risk['score'] }}</span></td>
+                                <td class="small text-muted">{{ $risk['reasons']->join(', ') ?: 'No major risk signals' }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Review Actions</span><a href="{{ route('academics.dean-os.reviews') }}" class="btn btn-sm btn-outline-primary">Manage</a></div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Action</th><th>Owner</th><th>Status</th></tr></thead>
+                        <tbody>
+                        @forelse($actions as $action)
+                            <tr><td class="small fw-semibold">{{ $action->title }}</td><td class="small">{{ $action->owner?->name ?? 'Unassigned' }}</td><td><span class="badge text-bg-light">{{ $action->status }}</span></td></tr>
+                        @empty
+                            <tr><td colspan="3" class="text-muted text-center py-3">No open Dean actions.</td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
