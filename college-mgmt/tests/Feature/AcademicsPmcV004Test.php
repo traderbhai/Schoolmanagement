@@ -121,4 +121,18 @@ class AcademicsPmcV004Test extends TestCase
         $student->assignRole('student');
         $this->actingAs($student)->get(route('academics.pmc.command'))->assertForbidden();
     }
+
+    public function test_v004_write_scope_requires_concrete_context_for_pmc_managers(): void
+    {
+        $this->seedPmcFixture();
+        $manager = User::where('email', 'pmc.manager@college.com')->firstOrFail();
+
+        $response = $this->actingAs($manager)->post(route('academics.pmc.planning.store'), [
+            'title' => 'Unauthorized planning test',
+            'cycle_type' => 'annual_plan',
+            'academic_year' => '2026',
+        ]);
+
+        $response->assertForbidden();
+    }
 }

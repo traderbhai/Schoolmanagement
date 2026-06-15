@@ -12,4 +12,5 @@ class AcademicPmcStudentCourseAllocation extends Model
     public function student() { return $this->belongsTo(Student::class); }
     public function subject() { return $this->belongsTo(Subject::class); }
     public function term() { return $this->belongsTo(Term::class); }
+    public function groupMemberships() { return $this->hasMany(AcademicPmcCourseGroupMember::class, 'student_course_allocation_id'); }
 }

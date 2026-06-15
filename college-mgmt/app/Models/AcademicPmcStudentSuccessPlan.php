@@ -13,4 +13,6 @@ class AcademicPmcStudentSuccessPlan extends Model
     public function student() { return $this->belongsTo(Student::class); }
     public function program() { return $this->belongsTo(Program::class); }
     public function mentor() { return $this->belongsTo(User::class, 'mentor_user_id'); }
+    public function interventions() { return $this->hasMany(AcademicPmcStudentIntervention::class, 'student_success_plan_id'); }
+    public function parentEscalations() { return $this->hasMany(AcademicPmcParentEscalation::class, 'student_success_plan_id'); }
 }

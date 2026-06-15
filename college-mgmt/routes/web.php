@@ -136,12 +136,17 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         Route::post('v004/records/{record}/work-item', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'createWorkItemFromRecord'])->name('v004.records.work-item');
         Route::patch('v004/approvals/{approval}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'decideApproval'])->name('v004.approvals.decide');
         Route::post('v004/automation/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'refreshAutomation'])->name('v004.automation.refresh');
+        Route::post('curriculum-validations/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'refreshCurriculumValidations'])->name('curriculum-validations.refresh');
 
         Route::prefix('planning')->name('planning.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'planning')->name('index');
+            Route::post('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storePlanningCycle'])->name('store');
+            Route::patch('cycles/{cycle}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updatePlanningCycleStatus'])->name('cycles.update');
         });
         Route::prefix('semester-readiness')->name('semester-readiness.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'semester-readiness')->name('index');
+            Route::patch('items/{item}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updateReadinessItem'])->name('items.update');
+            Route::post('items/{item}/work-item', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'createWorkItemFromReadiness'])->name('items.work-item');
         });
         Route::prefix('academic-calendar')->name('academic-calendar.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'academic-calendar')->name('index');
@@ -175,18 +180,25 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         });
         Route::prefix('course-delivery')->name('course-delivery.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'course-delivery')->name('index');
+            Route::post('refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'refreshCourseDeliveryCheckpoints'])->name('refresh');
+            Route::post('checkpoints/{checkpoint}/remedial-actions', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeRemedialAction'])->name('remedial-actions.store');
         });
         Route::prefix('delivery-risk')->name('delivery-risk.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'delivery-risk')->name('index');
         });
         Route::prefix('remedial-planning')->name('remedial-planning.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'remedial-planning')->name('index');
+            Route::patch('actions/{action}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updateRemedialAction'])->name('actions.update');
         });
         Route::prefix('student-success-v004')->name('student-success-v004.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'student-success-v004')->name('index');
+            Route::post('refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'refreshStudentSuccessSignals'])->name('refresh');
+            Route::post('plans/{plan}/interventions', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeStudentIntervention'])->name('interventions.store');
+            Route::post('plans/{plan}/parent-escalations', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeParentEscalation'])->name('parent-escalations.store');
         });
         Route::prefix('interventions')->name('interventions.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'interventions')->name('index');
+            Route::patch('{intervention}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'updateStudentIntervention'])->name('update');
         });
         Route::prefix('mentor-governance')->name('mentor-governance.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Surface'])->defaults('surface', 'mentor-governance')->name('index');
@@ -199,12 +211,16 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         });
         Route::prefix('meeting-minutes')->name('meeting-minutes.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+            Route::patch('{minutes}/approve', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'approvePmcMinutes'])->name('approve');
         });
         Route::prefix('decisions')->name('decisions.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
         });
         Route::prefix('action-governance')->name('action-governance.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Reviews'])->name('index');
+            Route::post('actions/{item}/dependencies', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storePmcActionDependency'])->name('dependencies.store');
+            Route::post('actions/{item}/evidence', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storePmcActionEvidence'])->name('evidence.store');
+            Route::patch('actions/{item}/verify', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'verifyPmcActionClosure'])->name('actions.verify');
         });
         Route::prefix('approvals')->name('approvals.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004Approvals'])->name('index');
@@ -228,16 +244,53 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004PolicyAudit'])->name('index');
         });
         Route::get('timetable-os', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Dashboard'])->name('timetable-os.index');
+        Route::get('official-timetable', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v044OfficialTimetable'])->name('official-timetable.index');
+        Route::get('data-reconciliation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v092DataReconciliation'])->name('data-reconciliation.index');
+        Route::get('data-reconciliation/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v095ExportDataReconciliation'])->name('data-reconciliation.export');
+        Route::get('data-reconciliation/runs/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v102ExportDataReconciliationRuns'])->name('data-reconciliation.runs.export');
+        Route::get('data-reconciliation/audit/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v107ExportDataReconciliationAudit'])->name('data-reconciliation.audit.export');
+        Route::patch('data-reconciliation/runs/{run}/mark-failed', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v104MarkReconciliationRunFailed'])->name('data-reconciliation.runs.mark-failed');
+        Route::post('data-reconciliation/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v092RefreshDataReconciliation'])->name('data-reconciliation.refresh');
+        Route::post('data-reconciliation/{check}/repair', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v093RepairDataReconciliation'])->name('data-reconciliation.repair');
+        Route::get('faculty-availability-requests', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v046FacultyAvailability'])->name('faculty-availability-requests.index');
+        Route::post('faculty-availability-requests', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v046SubmitFacultyAvailability'])->name('faculty-availability-requests.store');
+        Route::patch('faculty-availability-requests/{availability}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v046DecideFacultyAvailability'])->name('faculty-availability-requests.decide');
+        Route::post('faculty-load-reviews/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v047RefreshFacultyLoadReviews'])->name('faculty-load-reviews.refresh');
+        Route::patch('faculty-load-reviews/{review}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v047DecideFacultyLoadReview'])->name('faculty-load-reviews.decide');
+        Route::post('room-readiness-reviews/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v048RefreshRoomReadinessReviews'])->name('room-readiness-reviews.refresh');
+        Route::patch('room-readiness-reviews/{review}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v048DecideRoomReadinessReview'])->name('room-readiness-reviews.decide');
         Route::post('course-allocation/bulk-core', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreAllocationBatch'])->name('course-allocation.bulk-core');
+        Route::post('elective-allocation/process', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v042AllocateElectives'])->name('elective-allocation.process');
+        Route::post('course-allocation-exceptions', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v050RequestCourseAllocationException'])->name('course-allocation-exceptions.store');
+        Route::patch('course-allocation-exceptions/{exception}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v050DecideCourseAllocationException'])->name('course-allocation-exceptions.decide');
         Route::post('course-groups', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreGroup'])->name('course-groups.store');
+        Route::post('course-groups/auto-build', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v042AutoBuildGroups'])->name('course-groups.auto-build');
+        Route::post('course-group-adjustments', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v051RequestCourseGroupAdjustment'])->name('course-group-adjustments.store');
+        Route::patch('course-group-adjustments/{adjustment}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v051DecideCourseGroupAdjustment'])->name('course-group-adjustments.decide');
         Route::post('sections', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreGroup'])->name('sections.store');
         Route::post('section-faculty-allocation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041AssignFaculty'])->name('section-faculty-allocation.assign');
+        Route::post('section-faculty-allocation/{assignment}/acknowledgements', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v052RequestFacultyAssignmentAcknowledgement'])->name('faculty-assignment-acknowledgements.request');
+        Route::patch('faculty-assignment-acknowledgements/{acknowledgement}/respond', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v052RespondFacultyAssignmentAcknowledgement'])->name('faculty-assignment-acknowledgements.respond');
+        Route::patch('faculty-assignment-acknowledgements/{acknowledgement}/review', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v052ReviewFacultyAssignmentAcknowledgement'])->name('faculty-assignment-acknowledgements.review');
         Route::post('locked-slots', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041StoreLockedSlot'])->name('locked-slots.store');
         Route::post('timetable-generator', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Generate'])->name('timetable-generator.generate');
+        Route::post('timetable-generator/{run}/validate', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v042ValidateGeneration'])->name('timetable-generator.validate');
+        Route::post('timetable-generator/{run}/impact-preview', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v069RefreshGenerationImpact'])->name('timetable-generator.impact-preview');
+        Route::post('timetable-generator-items/{item}/apply-alternative', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v066ApplySolverAlternative'])->name('timetable-generator-items.apply-alternative');
+        Route::post('timetable-generator-items/{item}/move', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v068MoveGeneratedItem'])->name('timetable-generator-items.move');
+        Route::post('timetable-generator/{run}/publish', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v043PublishRun'])->name('timetable-generator.publish');
+        Route::post('timetable-constraints/{constraint}/resolution-actions', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v045CreateResolutionAction'])->name('timetable-constraints.resolution-actions.store');
+        Route::patch('timetable-resolution-actions/{action}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v045CloseResolutionAction'])->name('timetable-resolution-actions.close');
+        Route::post('timetable-versions-v041/{version}/freeze', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v043FreezeVersion'])->name('timetable-versions-v041.freeze');
+        Route::post('timetable-versions-v041/{version}/unfreeze', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v043UnfreezeVersion'])->name('timetable-versions-v041.unfreeze');
+        Route::post('timetable-versions-v041/{version}/rollback', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v043RollbackVersion'])->name('timetable-versions-v041.rollback');
         Route::post('timetable-change-requests', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041RequestChange'])->name('timetable-change-requests.store');
         Route::patch('timetable-change-requests/{change}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041DecideChange'])->name('timetable-change-requests.decide');
         Route::post('substitution-intelligence', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041RecommendSubstitution'])->name('substitution-intelligence.recommend');
         Route::post('timetable-notifications', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041LogNotification'])->name('timetable-notifications.store');
+        Route::patch('timetable-notifications/{notification}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v074UpdateNotificationStatus'])->name('timetable-notifications.update-status');
+        Route::post('timetable-notifications/{notification}/retry', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v075RetryNotification'])->name('timetable-notifications.retry');
+        Route::patch('student-course-basket-acknowledgements/{acknowledgement}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v090ReviewStudentBasketAcknowledgement'])->name('student-course-basket-acknowledgements.review');
         foreach ([
             'course-allocation',
             'elective-allocation',
@@ -1138,6 +1191,9 @@ Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|ad
 
     // Timetable
     Route::get('timetable', [Teacher\TimetableController::class, 'index'])->name('timetable.index');
+    Route::get('pmc-timetable', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v044FacultyTimetable'])->name('pmc-timetable.index');
+    Route::get('pmc-availability', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v046MyAvailability'])->name('pmc-availability.index');
+    Route::post('pmc-availability', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v046SubmitFacultyAvailability'])->name('pmc-availability.store');
 
     // Study Materials
     Route::get('materials',          [Teacher\MaterialController::class, 'index'])->name('materials.index');
@@ -1198,6 +1254,11 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::delete('subjects/{enrollment}', [\App\Http\Controllers\Student\SubjectRegistrationController::class, 'destroy'])->name('subjects.drop');
     // P9-3: Timetable
     Route::get('timetable', [\App\Http\Controllers\Student\TimetableController::class, 'index'])->name('timetable');
+    Route::get('pmc-timetable', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v044StudentTimetable'])->name('pmc-timetable');
+    Route::get('pmc-course-basket', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v090StudentCourseBasket'])->name('pmc-course-basket');
+    Route::post('pmc-course-basket/acknowledgements', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v090SubmitStudentBasketAcknowledgement'])->name('pmc-course-basket.acknowledge');
+    Route::get('pmc-elective-choices', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v091StudentElectiveChoices'])->name('pmc-elective-choices');
+    Route::post('pmc-elective-choices', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v091SubmitStudentElectiveChoices'])->name('pmc-elective-choices.store');
 
     // Phase 5: Official Academic Transcript
     Route::get('transcript/download', [Student\TranscriptController::class, 'download'])->name('transcript.download');

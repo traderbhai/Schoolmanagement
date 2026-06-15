@@ -10,4 +10,6 @@ class AcademicPmcTimetableGenerationRun extends Model
     protected $casts = ['input_summary' => 'array', 'metadata' => 'array'];
     public function items() { return $this->hasMany(AcademicPmcTimetableGenerationItem::class, 'generation_run_id'); }
     public function program() { return $this->belongsTo(Program::class); }
+    public function batch() { return $this->belongsTo(Batch::class); }
+    public function term() { return $this->belongsTo(Term::class); }
 }

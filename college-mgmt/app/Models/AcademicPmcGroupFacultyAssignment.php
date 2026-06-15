@@ -10,4 +10,5 @@ class AcademicPmcGroupFacultyAssignment extends Model
     protected $casts = ['is_backup' => 'boolean', 'metadata' => 'array'];
     public function courseGroup() { return $this->belongsTo(AcademicPmcCourseGroup::class, 'course_group_id'); }
     public function teacher() { return $this->belongsTo(Teacher::class); }
+    public function acknowledgements() { return $this->hasMany(AcademicPmcFacultyAssignmentAcknowledgement::class, 'group_faculty_assignment_id'); }
 }

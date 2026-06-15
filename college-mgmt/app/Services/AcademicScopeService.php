@@ -92,6 +92,31 @@ class AcademicScopeService
             ->values();
     }
 
+    public function scopedIdsFor(User $user, string $scopeType, bool $requireManage = false): ?array
+    {
+        $baseQuery = AcademicScopeAssignment::query()
+            ->currentlyActive()
+            ->where('user_id', $user->id)
+            ->where('scope_type', $scopeType);
+
+        if ($requireManage) {
+            $baseQuery->where('can_manage', true);
+        }
+
+        if ($baseQuery->clone()->whereNull('scope_id')->exists()) {
+            return null;
+        }
+
+        $ids = $baseQuery->pluck('scope_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $ids ?: [];
+    }
+
     public function canAccess(User $user, string $scopeType, int|string|null $scopeId = null, ?string $scopeCode = null, bool $write = false): bool
     {
         if ($this->academics->canSeeAll($user)) {

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AcademicPmcCurriculumPlan;
+use App\Models\AcademicPmcCurriculumValidation;
 use App\Models\AcademicPmcExportLog;
 use App\Models\AcademicPmcFacultyLoadPlan;
 use App\Models\AcademicPmcReviewMeeting;
@@ -10,6 +11,10 @@ use App\Models\AcademicPmcSavedView;
 use App\Models\AcademicPmcStudentSuccessPlan;
 use App\Models\AcademicPmcTimetableControl;
 use App\Models\AcademicPmcWorkItem;
+use App\Models\CoPoMapping;
+use App\Models\CourseOutcome;
+use App\Models\ProgramSubject;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -51,10 +56,42 @@ class AcademicPmcV003Service
     {
         return [
             'plans' => AcademicPmcCurriculumPlan::with(['program', 'owner'])->latest()->paginate(15),
+            'validations' => AcademicPmcCurriculumValidation::with(['curriculumPlan', 'program', 'subject', 'owner'])
+                ->orderByRaw("case when severity = 'critical' then 0 when severity = 'high' then 1 when severity = 'medium' then 2 else 3 end")
+                ->latest()
+                ->paginate(15, ['*'], 'validations_page'),
             'work' => $this->workbench('curriculum'),
             'pending_approval' => AcademicPmcCurriculumPlan::whereIn('approval_status', ['pmc_review', 'dean_review'])->count(),
             'rollout_due' => AcademicPmcCurriculumPlan::where('rollout_due_at', '<=', now()->addDays(14))->count(),
+            'validation_blockers' => AcademicPmcCurriculumValidation::whereIn('status', ['blocked', 'failed', 'pending'])->count(),
         ];
+    }
+
+    public function refreshCurriculumValidations(User $actor): array
+    {
+        $plans = AcademicPmcCurriculumPlan::with(['program', 'owner'])->get();
+        $createdOrUpdated = 0;
+
+        foreach ($plans as $plan) {
+            $subjects = $this->subjectsForPlan($plan);
+            if ($subjects->isEmpty()) {
+                $createdOrUpdated += $this->upsertCurriculumValidation($plan, null, 'subject_mapping', 'blocked', 'critical', 20, 'No subjects mapped to curriculum plan', 'PMC must map at least one active subject to this program/term before rollout.', $actor);
+                continue;
+            }
+
+            $scores = [];
+            foreach ($subjects as $subject) {
+                $scores[] = $this->validateSyllabus($plan, $subject, $actor);
+                $scores[] = $this->validateCreditRule($plan, $subject, $actor);
+                $scores[] = $this->validateCourseOutcomes($plan, $subject, $actor);
+                $scores[] = $this->validateCoPoMapping($plan, $subject, $actor);
+            }
+            $scores[] = $this->validateRolloutReadiness($plan, $subjects, $actor);
+            $createdOrUpdated += count($scores);
+            $plan->update(['readiness_score' => (int) round(collect($scores)->avg() ?: 0)]);
+        }
+
+        return ['plans' => $plans->count(), 'validations' => $createdOrUpdated];
     }
 
     public function faculty(): array
@@ -129,6 +166,156 @@ class AcademicPmcV003Service
     public function createReview(User $actor, array $data): AcademicPmcReviewMeeting
     {
         return AcademicPmcReviewMeeting::create($data + ['chair_user_id' => $data['chair_user_id'] ?? $actor->id]);
+    }
+
+    private function subjectsForPlan(AcademicPmcCurriculumPlan $plan): Collection
+    {
+        $programSubjectIds = ProgramSubject::query()
+            ->when($plan->program_id, fn ($q) => $q->where('program_id', $plan->program_id))
+            ->when($plan->term_id, fn ($q) => $q->where('term_id', $plan->term_id))
+            ->where('is_active', true)
+            ->pluck('subject_id');
+
+        $subjects = Subject::query()
+            ->where('is_active', true)
+            ->when($plan->program_id, fn ($q) => $q->where('program_id', $plan->program_id))
+            ->when($programSubjectIds->isNotEmpty(), fn ($q) => $q->whereIn('id', $programSubjectIds))
+            ->get();
+
+        if ($subjects->isEmpty() && $programSubjectIds->isNotEmpty()) {
+            return Subject::whereIn('id', $programSubjectIds)->where('is_active', true)->get();
+        }
+
+        return $subjects;
+    }
+
+    private function validateSyllabus(AcademicPmcCurriculumPlan $plan, Subject $subject, User $actor): int
+    {
+        $hasSyllabus = filled($subject->description);
+        $metadata = $plan->metadata ?? [];
+        $hasVersion = ! empty($metadata['syllabus_version']) || str_contains(strtolower((string) $plan->title), 'version');
+
+        return $this->upsertCurriculumValidation(
+            $plan,
+            $subject,
+            'syllabus_version',
+            $hasSyllabus && $hasVersion ? 'passed' : 'blocked',
+            $hasSyllabus && $hasVersion ? 'low' : 'high',
+            $hasSyllabus && $hasVersion ? 100 : 45,
+            'Syllabus version readiness for ' . $subject->code,
+            $hasSyllabus && $hasVersion ? 'Versioned syllabus evidence is present.' : 'Add syllabus text and version/change-log evidence before publishing.',
+            $actor
+        );
+    }
+
+    private function validateCreditRule(AcademicPmcCurriculumPlan $plan, Subject $subject, User $actor): int
+    {
+        $rules = $plan->credit_rules ?? [];
+        $min = (int) ($rules['min_subject_credits'] ?? 1);
+        $max = (int) ($rules['max_subject_credits'] ?? ($rules['max_credits_per_subject'] ?? 6));
+        $credits = (int) ($subject->credits ?? 0);
+        $valid = $credits >= $min && $credits <= $max;
+
+        return $this->upsertCurriculumValidation(
+            $plan,
+            $subject,
+            'credit_rule',
+            $valid ? 'passed' : 'failed',
+            $valid ? 'low' : 'critical',
+            $valid ? 100 : 20,
+            'Credit rule validation for ' . $subject->code,
+            $valid ? "{$credits} credits are within allowed range {$min}-{$max}." : "{$credits} credits are outside allowed range {$min}-{$max}.",
+            $actor
+        );
+    }
+
+    private function validateCourseOutcomes(AcademicPmcCurriculumPlan $plan, Subject $subject, User $actor): int
+    {
+        $coCount = CourseOutcome::where('subject_id', $subject->id)->where('is_active', true)->count();
+        $valid = $coCount > 0;
+
+        return $this->upsertCurriculumValidation(
+            $plan,
+            $subject,
+            'course_outcomes',
+            $valid ? 'passed' : 'blocked',
+            $valid ? 'low' : 'high',
+            $valid ? 100 : 30,
+            'Course outcome readiness for ' . $subject->code,
+            $valid ? "{$coCount} active course outcome(s) are defined." : 'Define active course outcomes before PMC rollout approval.',
+            $actor
+        );
+    }
+
+    private function validateCoPoMapping(AcademicPmcCurriculumPlan $plan, Subject $subject, User $actor): int
+    {
+        $coIds = CourseOutcome::where('subject_id', $subject->id)->where('is_active', true)->pluck('id');
+        $mapped = $coIds->isNotEmpty() && CoPoMapping::whereIn('course_outcome_id', $coIds)->where('correlation_level', '>', 0)->exists();
+
+        return $this->upsertCurriculumValidation(
+            $plan,
+            $subject,
+            'co_po_mapping',
+            $mapped ? 'passed' : 'blocked',
+            $mapped ? 'low' : 'critical',
+            $mapped ? 100 : 25,
+            'CO-PO mapping readiness for ' . $subject->code,
+            $mapped ? 'At least one active CO has PO/PSO mapping evidence.' : 'Complete CO-PO/PSO mapping before Dean/IQAC sign-off.',
+            $actor
+        );
+    }
+
+    private function validateRolloutReadiness(AcademicPmcCurriculumPlan $plan, Collection $subjects, User $actor): int
+    {
+        $openBlockers = AcademicPmcCurriculumValidation::where('curriculum_plan_id', $plan->id)
+            ->whereIn('status', ['blocked', 'failed', 'pending'])
+            ->count();
+        $ready = $openBlockers === 0 && $subjects->isNotEmpty();
+
+        return $this->upsertCurriculumValidation(
+            $plan,
+            null,
+            'rollout_readiness',
+            $ready ? 'passed' : 'blocked',
+            $ready ? 'low' : 'high',
+            $ready ? 100 : 50,
+            'Curriculum rollout readiness',
+            $ready ? 'All subject-level curriculum validations are clear.' : "{$openBlockers} curriculum blocker(s) remain before rollout.",
+            $actor
+        );
+    }
+
+    private function upsertCurriculumValidation(AcademicPmcCurriculumPlan $plan, ?Subject $subject, string $type, string $status, string $severity, int $score, string $title, string $details, User $actor): int
+    {
+        AcademicPmcCurriculumValidation::updateOrCreate(
+            [
+                'curriculum_plan_id' => $plan->id,
+                'subject_id' => $subject?->id,
+                'validation_type' => $type,
+            ],
+            [
+                'program_id' => $plan->program_id ?: $subject?->program_id,
+                'batch_id' => $plan->batch_id,
+                'term_id' => $plan->term_id,
+                'status' => $status,
+                'severity' => $severity,
+                'score' => $score,
+                'title' => $title,
+                'details' => $details,
+                'recommended_action' => $status === 'passed' ? 'No action required.' : $details,
+                'owner_user_id' => $plan->owner_user_id ?: $actor->id,
+                'due_at' => $status === 'passed' ? null : now()->addDays($severity === 'critical' ? 2 : 5),
+                'resolved_at' => $status === 'passed' ? now() : null,
+                'evidence' => [
+                    'subject_code' => $subject?->code,
+                    'plan_title' => $plan->title,
+                    'computed_by' => $actor->id,
+                ],
+                'metadata' => ['version' => 'PMC OS v0.055'],
+            ]
+        );
+
+        return $score;
     }
 
     public function reports(): Collection

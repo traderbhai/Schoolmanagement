@@ -1,8 +1,8 @@
 <form method="POST" action="{{ route('academics.pmc.section-faculty-allocation.assign') }}" class="card shadow-sm">@csrf
     <div class="card-header py-2 fw-semibold">Assign Faculty To Group</div>
     <div class="card-body vstack gap-2">
-        <input class="form-control form-control-sm" name="course_group_id" placeholder="Course group ID" required>
-        <input class="form-control form-control-sm" name="teacher_id" placeholder="Teacher ID" required>
+        <select class="form-select form-select-sm" name="course_group_id" required><option value="">Select section/group</option>@foreach($selectorOptions['courseGroups'] ?? [] as $group)<option value="{{ $group->id }}">{{ $group->name }} - {{ $group->subject?->code ?: $group->subject?->name }}</option>@endforeach</select>
+        <select class="form-select form-select-sm" name="teacher_id" required><option value="">Select faculty</option>@foreach($selectorOptions['teachers'] ?? [] as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->user?->name ?? ('Teacher #' . $teacher->id) }} - {{ $teacher->employee_id }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="assignment_role" required>
             @foreach(['primary','co_faculty','lab_faculty','tutorial_faculty','backup','area_chair_recommended'] as $role)<option value="{{ $role }}">{{ str($role)->headline() }}</option>@endforeach
         </select>
