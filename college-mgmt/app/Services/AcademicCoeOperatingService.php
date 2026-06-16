@@ -103,7 +103,7 @@ class AcademicCoeOperatingService
                 'status' => 'Marks pending',
                 'action' => route('exam-cell.grade-sheet', $exam),
             ])->merge($this->failedResultsQuery($programIds)->with(['student.user', 'exam.subject'])->limit(15)->get()->map(fn (ExamResult $result) => [
-                'title' => $result->student?->user?->name ?? 'Student #' . $result->student_id,
+                'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Below pass mark',
                 'action' => route('exam-cell.results'),
@@ -134,7 +134,7 @@ class AcademicCoeOperatingService
                 'fee_blocks' => ExamRegistration::where('fee_cleared', false)->whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query, $programIds))->count(),
             ],
             'items' => $blocked->map(fn (ExamRegistration $registration) => [
-                'title' => $registration->student?->user?->name ?? 'Student #' . $registration->student_id,
+                'title' => $this->studentLabel($registration->student, $registration->student_id),
                 'subtitle' => ($registration->exam?->name ?? 'Exam') . ' - ' . ($registration->exam?->program?->code ?? 'Program'),
                 'status' => $this->registrationStatus($registration),
                 'action' => route('exam-cell.hall-tickets', ['exam_id' => $registration->exam_id]),
@@ -161,7 +161,7 @@ class AcademicCoeOperatingService
                 'result_records' => ExamResult::whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query, $programIds))->count(),
             ],
             'items' => $drafts->map(fn (AcademicTranscript $transcript) => [
-                'title' => $transcript->student?->user?->name ?? 'Student #' . $transcript->student_id,
+                'title' => $this->studentLabel($transcript->student, $transcript->student_id),
                 'subtitle' => $transcript->academic_year . ' - CGPA ' . ($transcript->cgpa ?? 'pending'),
                 'status' => ucfirst($transcript->status),
                 'action' => route('academic.transcripts.index'),
@@ -194,7 +194,7 @@ class AcademicCoeOperatingService
                 'under_review_appeals' => $appeals->where('status', 'under_review')->count(),
             ],
             'items' => $appeals->map(fn (MarksAppeal $appeal) => [
-                'title' => $appeal->student?->user?->name ?? 'Student #' . $appeal->student_id,
+                'title' => $this->studentLabel($appeal->student, $appeal->student_id),
                 'subtitle' => ($appeal->examResult?->exam?->subject?->code ?? 'Result') . ' - ' . $appeal->reason,
                 'status' => ucfirst(str_replace('_', ' ', $appeal->status)),
                 'action' => route('exam-cell.marks-appeals'),
@@ -300,5 +300,17 @@ class AcademicCoeOperatingService
             'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned CoE work',
             'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit CoE scope assigned yet',
         ];
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
     }
 }

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ApprovalWorkflow;
+use App\Models\Attendance;
+use App\Models\Course;
 use App\Models\CurriculumChange;
 use App\Models\Department;
 use App\Models\Exam;
@@ -10,6 +12,8 @@ use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\TimetableEntry;
 use App\Models\User;
 use App\Services\AcademicAttentionService;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
@@ -118,6 +122,54 @@ class AcademicsOsV011Test extends TestCase
             ->assertSee('Curriculum changes pending')
             ->assertSee('Filtered Source List')
             ->assertSee('Add applied case lab');
+    }
+
+    public function test_attention_queues_show_people_names_instead_of_raw_ids(): void
+    {
+        $fixture = $this->academicFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+
+        $facultyUser = User::factory()->create(['name' => 'Prof Real Workload']);
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $teacher = Teacher::factory()->create([
+            'user_id' => $facultyUser->id,
+            'department_id' => $fixture['department']->id,
+            'employee_id' => 'FAC-REAL-01',
+        ]);
+
+        foreach (range(1, 5) as $day) {
+            TimetableEntry::factory()->create([
+                'semester_id' => $fixture['semester']->id,
+                'course_id' => $course->id,
+                'program_id' => $fixture['program']->id,
+                'subject_id' => $fixture['subject']->id,
+                'teacher_id' => $teacher->id,
+                'day_of_week' => $day,
+                'is_active' => true,
+            ]);
+        }
+
+        $studentUser = User::factory()->create(['name' => 'Ananya Attendance Risk']);
+        $student = Student::factory()->create([
+            'user_id' => $studentUser->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+        ]);
+        $entry = TimetableEntry::where('teacher_id', $teacher->id)->firstOrFail();
+        Attendance::create(['student_id' => $student->id, 'timetable_entry_id' => $entry->id, 'date' => now()->subDays(2), 'status' => 'absent']);
+        Attendance::create(['student_id' => $student->id, 'timetable_entry_id' => $entry->id, 'date' => now()->subDay(), 'status' => 'late']);
+
+        $this->actingAs($dean)
+            ->get(route('academics.attention.queue', 'faculty_workload'))
+            ->assertOk()
+            ->assertSee('Prof Real Workload')
+            ->assertDontSee('Teacher #'.$teacher->id);
+
+        $this->actingAs($dean)
+            ->get(route('academics.attention.queue', 'attendance_risk'))
+            ->assertOk()
+            ->assertSee('Ananya Attendance Risk')
+            ->assertDontSee('Student #'.$student->id);
     }
 
     public function test_attention_service_respects_program_scope_for_program_leadership(): void

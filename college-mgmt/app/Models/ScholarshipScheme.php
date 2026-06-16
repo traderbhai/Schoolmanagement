@@ -9,11 +9,15 @@ class ScholarshipScheme extends Model
 {
     protected $fillable = [
         'program_id', 'name', 'scheme_code', 'type',
-        'criteria', 'max_amount', 'available_seats', 'is_active',
+        'criteria', 'min_cgpa', 'max_family_income', 'requires_document',
+        'max_amount', 'available_seats', 'is_active',
     ];
 
     protected $casts = [
         'max_amount'       => 'decimal:2',
+        'min_cgpa'         => 'decimal:2',
+        'max_family_income'=> 'decimal:2',
+        'requires_document'=> 'boolean',
         'available_seats'  => 'integer',
         'is_active'        => 'boolean',
     ];

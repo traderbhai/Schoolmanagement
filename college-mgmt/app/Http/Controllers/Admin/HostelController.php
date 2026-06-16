@@ -100,6 +100,8 @@ class HostelController extends Controller
 
     public function roomUpdate(Request $r, HostelBlock $block, HostelRoom $room)
     {
+        abort_unless((int) $room->hostel_block_id === (int) $block->id, 404);
+
         $r->validate([
             'room_number' => 'required|string|max:20',
             'floor'       => 'required|integer|min:0',
@@ -108,6 +110,18 @@ class HostelController extends Controller
             'monthly_fee' => 'nullable|numeric|min:0',
             'status'      => 'required|in:available,occupied,maintenance,reserved',
         ]);
+
+        $activeAllocations = HostelAllocation::where('hostel_room_id', $room->id)
+            ->where('status', 'active')
+            ->count();
+
+        if ((int) $r->capacity < $activeAllocations) {
+            return back()->withErrors(['capacity' => 'Room capacity cannot be reduced below active occupants.']);
+        }
+
+        if ($activeAllocations > 0 && in_array($r->status, ['maintenance', 'reserved'], true)) {
+            return back()->withErrors(['status' => 'Occupied rooms cannot be moved to maintenance or reserved. Vacate or transfer students first.']);
+        }
 
         $room->update($r->only('room_number', 'floor', 'room_type', 'capacity', 'monthly_fee', 'status'));
 
@@ -155,8 +169,12 @@ class HostelController extends Controller
             return back()->withErrors(['bed_number' => 'Bed number cannot exceed room capacity.']);
         }
 
-        if ($room->status === 'maintenance') {
-            return back()->withErrors(['hostel_room_id' => 'Room is under maintenance and cannot be allocated.']);
+        if (! $room->block?->is_active) {
+            return back()->withErrors(['hostel_room_id' => 'Inactive hostel blocks cannot receive new allocations.']);
+        }
+
+        if (! in_array($room->status, ['available', 'occupied'], true)) {
+            return back()->withErrors(['hostel_room_id' => 'Only available or partially occupied rooms can be allocated.']);
         }
 
         // Room has capacity
@@ -251,8 +269,12 @@ class HostelController extends Controller
             return back()->withErrors(['bed_number' => 'Bed number cannot exceed room capacity.']);
         }
 
-        if ($targetRoom->status === 'maintenance') {
-            return back()->withErrors(['hostel_room_id' => 'Room is under maintenance and cannot receive transfers.']);
+        if (! $targetRoom->block?->is_active) {
+            return back()->withErrors(['hostel_room_id' => 'Inactive hostel blocks cannot receive transfers.']);
+        }
+
+        if (! in_array($targetRoom->status, ['available', 'occupied'], true)) {
+            return back()->withErrors(['hostel_room_id' => 'Only available or partially occupied rooms can receive transfers.']);
         }
 
         $activeCount = HostelAllocation::where('hostel_room_id', $targetRoom->id)
@@ -426,6 +448,10 @@ class HostelController extends Controller
             return back()->with('error', 'Only pending outpass requests can be approved.');
         }
 
+        if ($op->out_datetime && $op->out_datetime->isPast()) {
+            return back()->with('error', 'Expired outpass requests cannot be approved. Reject it and ask the student to submit a fresh request.');
+        }
+
         $op->update([
             'status'      => 'approved',
             'approved_by' => auth()->id(),
@@ -459,6 +485,10 @@ class HostelController extends Controller
             return back()->with('error', 'Only approved outpasses can be marked returned.');
         }
 
+        if ($op->out_datetime && now()->lt($op->out_datetime)) {
+            return back()->with('error', 'Student cannot be marked returned before the approved out time.');
+        }
+
         $op->update([
             'actual_return' => now(),
             'status'        => 'returned',
@@ -488,16 +518,24 @@ class HostelController extends Controller
 
     public function complaintUpdate(Request $r, HostelComplaint $complaint)
     {
-        $r->validate([
+        $data = $r->validate([
             'status'           => 'required|in:open,in_progress,resolved,closed',
             'assigned_to'      => 'nullable|exists:users,id',
-            'resolution_notes' => 'nullable|string',
+            'resolution_notes' => 'nullable|string|max:3000',
         ]);
 
-        $data = $r->only('status', 'assigned_to', 'resolution_notes');
+        $resolutionNotes = trim((string) ($data['resolution_notes'] ?? $complaint->resolution_notes ?? ''));
 
-        if (in_array($r->status, ['resolved', 'closed']) && ! $complaint->resolved_at) {
+        if (in_array($data['status'], ['resolved', 'closed'], true) && $resolutionNotes === '') {
+            return back()->withErrors(['resolution_notes' => 'Resolution notes are required before resolving or closing a hostel complaint.']);
+        }
+
+        if (in_array($data['status'], ['resolved', 'closed'], true) && ! $complaint->resolved_at) {
             $data['resolved_at'] = now();
+        }
+
+        if (! in_array($data['status'], ['resolved', 'closed'], true)) {
+            $data['resolved_at'] = null;
         }
 
         $complaint->update($data);

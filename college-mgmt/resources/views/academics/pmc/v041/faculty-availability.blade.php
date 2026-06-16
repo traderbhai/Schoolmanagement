@@ -71,7 +71,7 @@
                 <div class="card-header py-2 fw-semibold">Submit Availability</div>
                 <div class="card-body vstack gap-2">
                     @if(request()->routeIs('academics.pmc.*'))
-                        <select class="form-select form-select-sm" name="teacher_id"><option value="">Select faculty</option>@foreach($selectorOptions['teachers'] ?? [] as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->user?->name ?? ('Teacher #' . $teacher->id) }} - {{ $teacher->employee_id }}</option>@endforeach</select>
+                        <select class="form-select form-select-sm" name="teacher_id"><option value="">Select faculty</option>@foreach($selectorOptions['teachers'] ?? [] as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->user?->name ?? $teacher->employee_id ?? 'Unassigned faculty' }}{{ $teacher->employee_id ? ' - ' . $teacher->employee_id : '' }}</option>@endforeach</select>
                     @endif
                     <select class="form-select form-select-sm" name="term_id"><option value="">Any term</option>@foreach($selectorOptions['terms'] ?? [] as $term)<option value="{{ $term->id }}">{{ $term->name }} - {{ $term->program?->code }}</option>@endforeach</select>
                     <input class="form-control form-control-sm" name="available_days" placeholder="Available days e.g. 1,2,4">

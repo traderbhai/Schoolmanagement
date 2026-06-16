@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam};
+use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam, Enrollment, Student, StudentSubjectEnrollment, Term};
 use App\Models\{Assignment, Quiz, LeaveApplication, AcademicEvent, SubjectAnnouncement};
 use App\Services\TimetableService;
 
@@ -108,7 +108,26 @@ class DashboardController extends Controller
         $upcomingExams = collect();
         try {
             if ($student->program_id) {
+                $examEligibility = $this->examEligibilityScope($student);
                 $upcomingExams = Exam::where('program_id', $student->program_id)
+                    ->where(function ($query) use ($examEligibility) {
+                        $query->whereNull('subject_id');
+
+                        if ($examEligibility['subject_ids'] !== []) {
+                            $query->orWhereIn('subject_id', $examEligibility['subject_ids']);
+                        }
+                    })
+                    ->where(function ($query) use ($examEligibility) {
+                        $query->where(fn($scope) => $scope->whereNull('term_id')->whereNull('semester_id'));
+
+                        if ($examEligibility['term_ids'] !== []) {
+                            $query->orWhereIn('term_id', $examEligibility['term_ids']);
+                        }
+
+                        if ($examEligibility['semester_ids'] !== []) {
+                            $query->orWhereIn('semester_id', $examEligibility['semester_ids']);
+                        }
+                    })
                     ->where('exam_date', '>', now())
                     ->with('subject')
                     ->orderBy('exam_date')
@@ -141,5 +160,43 @@ class DashboardController extends Controller
             'attendanceOverall', 'lowAttendanceSubjects', 'sgpa', 'cgpa', 'feeOutstanding',
             'upcomingAssignments', 'pendingAssignmentCount', 'upcomingExams', 'upcomingEvents', 'pendingLeaves'
         ));
+    }
+
+    private function examEligibilityScope(Student $student): array
+    {
+        $canonical = StudentSubjectEnrollment::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->get(['subject_id', 'term_id']);
+        $canonicalTermIds = $canonical->pluck('term_id')->filter()->map(fn($id) => (int) $id)->unique()->values();
+        $canonicalTerms = $canonicalTermIds->isEmpty()
+            ? collect()
+            : Term::whereIn('id', $canonicalTermIds)->get(['id', 'term_number', 'name']);
+        $mappedSemesterIds = $canonicalTerms->flatMap(function (Term $term) {
+            return Semester::where('number', $term->term_number)
+                ->orWhere('name', $term->name)
+                ->pluck('id');
+        });
+
+        $legacy = Enrollment::where('student_id', $student->id)
+            ->whereIn('status', ['active', 'enrolled'])
+            ->get(['subject_id', 'semester_id']);
+
+        return [
+            'subject_ids' => $canonical->pluck('subject_id')
+                ->merge($legacy->pluck('subject_id'))
+                ->filter()
+                ->map(fn($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
+            'term_ids' => $canonicalTermIds->all(),
+            'semester_ids' => $legacy->pluck('semester_id')
+                ->merge($mappedSemesterIds)
+                ->filter()
+                ->map(fn($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all(),
+        ];
     }
 }

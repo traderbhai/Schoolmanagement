@@ -5,8 +5,12 @@ namespace Tests\Feature;
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
 use App\Models\Program;
+use App\Models\ProgramSubject;
 use App\Models\RoleProgramAssignment;
 use App\Models\Student;
+use App\Models\StudentSubjectEnrollment;
+use App\Models\Subject;
+use App\Models\Term;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -96,5 +100,133 @@ class ProgramChairDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->post(route('chair.approve', $foreignApproval), ['remarks' => 'Looks fine'])
             ->assertForbidden();
+    }
+
+    public function test_program_chair_can_override_assigned_program_elective_with_audit_reason(): void
+    {
+        $program = Program::factory()->create();
+        $term = Term::factory()->create(['program_id' => $program->id, 'term_number' => 1, 'is_current' => true]);
+        $oldSubject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Old Elective']);
+        $newSubject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'New Elective']);
+        ProgramSubject::create([
+            'program_id' => $program->id,
+            'subject_id' => $oldSubject->id,
+            'term_id' => $term->id,
+            'type' => 'elective',
+            'credits' => 3,
+            'is_active' => true,
+        ]);
+        ProgramSubject::create([
+            'program_id' => $program->id,
+            'subject_id' => $newSubject->id,
+            'term_id' => $term->id,
+            'type' => 'elective',
+            'credits' => 3,
+            'is_active' => true,
+        ]);
+        $student = Student::factory()->create(['program_id' => $program->id, 'current_term_id' => $term->id]);
+        $enrollment = StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $oldSubject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'elective',
+            'status' => 'active',
+        ]);
+        $chair = $this->chairUser($program);
+
+        $this->actingAs($chair)
+            ->from(route('chair.students.elective-override'))
+            ->post(route('chair.students.elective-override.change', $enrollment), [
+                'new_subject_id' => $newSubject->id,
+                'reason' => 'Student shifted elective after counselling.',
+            ])
+            ->assertRedirect(route('chair.students.elective-override'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('student_subject_enrollments', [
+            'id' => $enrollment->id,
+            'subject_id' => $newSubject->id,
+            'previous_subject_id' => $oldSubject->id,
+            'override_reason' => 'Student shifted elective after counselling.',
+            'overridden_by' => $chair->id,
+        ]);
+    }
+
+    public function test_program_chair_elective_override_blocks_out_of_scope_invalid_and_duplicate_changes(): void
+    {
+        $assignedProgram = Program::factory()->create();
+        $foreignProgram = Program::factory()->create();
+        $term = Term::factory()->create(['program_id' => $assignedProgram->id, 'term_number' => 1, 'is_current' => true]);
+        $assignedSubject = Subject::factory()->create(['program_id' => $assignedProgram->id]);
+        $replacementSubject = Subject::factory()->create(['program_id' => $assignedProgram->id]);
+        $duplicateSubject = Subject::factory()->create(['program_id' => $assignedProgram->id]);
+        $foreignSubject = Subject::factory()->create(['program_id' => $foreignProgram->id]);
+
+        foreach ([$assignedSubject, $replacementSubject, $duplicateSubject] as $subject) {
+            ProgramSubject::create([
+                'program_id' => $assignedProgram->id,
+                'subject_id' => $subject->id,
+                'term_id' => $term->id,
+                'type' => 'elective',
+                'credits' => 3,
+                'is_active' => true,
+            ]);
+        }
+
+        $student = Student::factory()->create(['program_id' => $assignedProgram->id, 'current_term_id' => $term->id]);
+        $enrollment = StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $assignedSubject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'elective',
+            'status' => 'active',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $duplicateSubject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'elective',
+            'status' => 'active',
+        ]);
+
+        $foreignStudent = Student::factory()->create(['program_id' => $foreignProgram->id]);
+        $foreignEnrollment = StudentSubjectEnrollment::create([
+            'student_id' => $foreignStudent->id,
+            'subject_id' => $foreignSubject->id,
+            'term_id' => null,
+            'enrollment_type' => 'elective',
+            'status' => 'active',
+        ]);
+        $chair = $this->chairUser($assignedProgram);
+
+        $this->actingAs($chair)
+            ->post(route('chair.students.elective-override.change', $foreignEnrollment), [
+                'new_subject_id' => $replacementSubject->id,
+                'reason' => 'Out of scope.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->from(route('chair.students.elective-override'))
+            ->post(route('chair.students.elective-override.change', $enrollment), [
+                'new_subject_id' => $foreignSubject->id,
+                'reason' => 'Wrong program.',
+            ])
+            ->assertRedirect(route('chair.students.elective-override'))
+            ->assertSessionHasErrors('new_subject_id');
+
+        $this->actingAs($chair)
+            ->from(route('chair.students.elective-override'))
+            ->post(route('chair.students.elective-override.change', $enrollment), [
+                'new_subject_id' => $duplicateSubject->id,
+                'reason' => 'Duplicate active subject.',
+            ])
+            ->assertRedirect(route('chair.students.elective-override'))
+            ->assertSessionHasErrors('new_subject_id');
+
+        $this->assertDatabaseHas('student_subject_enrollments', [
+            'id' => $enrollment->id,
+            'subject_id' => $assignedSubject->id,
+        ]);
     }
 }

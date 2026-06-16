@@ -5,8 +5,8 @@
         <tbody>
             @forelse($allocationExceptions as $exception)
                 <tr>
-                    <td>{{ $exception->student?->user?->name ?? 'Student #' . $exception->student_id }}</td>
-                    <td><div class="fw-semibold">{{ $exception->subject?->name ?? 'Subject #' . $exception->subject_id }}</div><div class="small text-muted">{{ $exception->term?->name ?? 'Term #' . $exception->term_id }}</div></td>
+                    <td>{{ $exception->student?->user?->name ?? $exception->student?->enrollment_number ?? $exception->student?->roll_number ?? $exception->student?->student_id ?? 'Unassigned student' }}</td>
+                    <td><div class="fw-semibold">{{ $exception->subject?->name ?? $exception->subject?->code ?? 'Unassigned subject' }}</div><div class="small text-muted">{{ $exception->term?->name ?? 'Unassigned term' }}</div></td>
                     <td>{{ str_replace('_', ' ', $exception->exception_type) }}<div class="small text-muted">{{ $exception->requires_dean_approval ? 'Dean approval required' : 'PMC approval' }}</div></td>
                     <td>{{ str_replace('_', ' ', $exception->status) }}<div class="small text-muted">{{ $exception->decider?->name ?? $exception->requester?->name ?? 'Pending' }}</div></td>
                     <td>{{ collect($exception->validation_flags ?: [])->join(', ') ?: 'clear' }}</td>

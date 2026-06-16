@@ -148,6 +148,13 @@ class PmcStudentController extends Controller {
 
     public function approveLeave(Request $request, LeaveApplication $leave) {
         $request->validate(['remarks' => 'nullable|string|max:300']);
+
+        abort_unless(in_array((int) $leave->student?->program_id, $this->programIds(), true), 403);
+
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Only pending leave applications can be approved.');
+        }
+
         $leave->update([
             'status'         => 'approved',
             'reviewed_by'    => Auth::id(),
@@ -159,6 +166,13 @@ class PmcStudentController extends Controller {
 
     public function rejectLeave(Request $request, LeaveApplication $leave) {
         $request->validate(['remarks' => 'required|string|max:300']);
+
+        abort_unless(in_array((int) $leave->student?->program_id, $this->programIds(), true), 403);
+
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Only pending leave applications can be rejected.');
+        }
+
         $leave->update([
             'status'         => 'rejected',
             'reviewed_by'    => Auth::id(),
@@ -186,25 +200,43 @@ class PmcStudentController extends Controller {
     }
 
     public function approveCondonation(Request $request, AttendanceCondonation $condonation) {
+        abort_unless(in_array((int) $condonation->student?->program_id, $this->programIds(), true), 403);
+
+        if ($condonation->status !== 'pending') {
+            return back()->with('error', 'Only pending condonation requests can be approved.');
+        }
+
+        $requested = max(1, (int) ($condonation->sessions_requested ?: $condonation->sessions_condoned ?: 1));
+
         $request->validate([
-            'sessions_condoned' => 'required|integer|min:1',
+            'sessions_condoned' => 'required|integer|min:1|max:' . $requested,
             'remarks'           => 'nullable|string|max:300',
         ]);
+
         $condonation->update([
             'status'            => 'approved',
             'sessions_condoned' => $request->sessions_condoned,
             'approved_by'       => Auth::id(),
             'remarks'           => $request->remarks,
+            'reviewed_at'       => now(),
         ]);
         return back()->with('success', 'Condonation approved.');
     }
 
     public function rejectCondonation(Request $request, AttendanceCondonation $condonation) {
         $request->validate(['remarks' => 'required|string|max:300']);
+
+        abort_unless(in_array((int) $condonation->student?->program_id, $this->programIds(), true), 403);
+
+        if ($condonation->status !== 'pending') {
+            return back()->with('error', 'Only pending condonation requests can be rejected.');
+        }
+
         $condonation->update([
             'status'      => 'rejected',
             'approved_by' => Auth::id(),
             'remarks'     => $request->remarks,
+            'reviewed_at' => now(),
         ]);
         return back()->with('success', 'Condonation rejected.');
     }
@@ -227,14 +259,32 @@ class PmcStudentController extends Controller {
     }
 
     public function updateGrievance(Request $request, StudentGrievance $grievance) {
-        $request->validate([
+        $programIds = $this->programIds();
+        abort_unless(in_array((int) $grievance->program_id, array_map('intval', $programIds), true), 403);
+
+        $data = $request->validate([
             'status'           => 'required|in:open,under_review,escalated,resolved',
             'resolution_notes' => 'nullable|string|max:1000',
         ]);
+
+        if (in_array($grievance->status, ['resolved', 'closed'], true)) {
+            return back()->with('error', 'Resolved or closed grievance history cannot be changed from Program Chair operations.');
+        }
+
+        if ($data['status'] === 'escalated' && ! in_array($grievance->status, ['open', 'under_review'], true)) {
+            return back()->with('error', 'Only open or under review grievances can be escalated.');
+        }
+
+        $resolutionNotes = trim((string) ($data['resolution_notes'] ?? ''));
+        if ($data['status'] === 'resolved' && $resolutionNotes === '') {
+            return back()->withErrors(['resolution_notes' => 'Resolution notes are required before resolving a grievance.']);
+        }
+
         $grievance->update([
-            'status'           => $request->status,
-            'resolution_notes' => $request->resolution_notes,
-            'resolved_at'      => $request->status === 'resolved' ? now() : null,
+            'status'           => $data['status'],
+            'resolution_notes' => $data['resolution_notes'] ?? null,
+            'resolved_by'      => $data['status'] === 'resolved' ? Auth::id() : null,
+            'resolved_at'      => $data['status'] === 'resolved' ? now() : null,
         ]);
         return back()->with('success', 'Grievance updated.');
     }
@@ -269,14 +319,58 @@ class PmcStudentController extends Controller {
     }
 
     public function changeElective(Request $request, StudentSubjectEnrollment $enrollment) {
-        $request->validate([
+        $data = $request->validate([
             'new_subject_id' => 'required|exists:subjects,id',
             'reason'         => 'required|string|max:300',
         ]);
 
-        $enrollment->update(['subject_id' => $request->new_subject_id]);
-        // Log the reason in session flash for now
-        return back()->with('success', 'Elective changed. Reason: ' . $request->reason);
+        $enrollment->load('student');
+        $programIds = array_map('intval', $this->programIds());
+        abort_unless(in_array((int) $enrollment->student?->program_id, $programIds, true), 403);
+
+        if ($enrollment->enrollment_type !== 'elective' || $enrollment->status !== 'active') {
+            return back()->with('error', 'Only active elective enrollments can be changed from elective override.');
+        }
+
+        if ((int) $enrollment->subject_id === (int) $data['new_subject_id']) {
+            return back()->withErrors(['new_subject_id' => 'Select a different elective subject.']);
+        }
+
+        $newProgramSubject = ProgramSubject::where('program_id', $enrollment->student->program_id)
+            ->where('subject_id', $data['new_subject_id'])
+            ->where('type', 'elective')
+            ->where('is_active', true)
+            ->when($enrollment->term_id, fn($query) => $query->where('term_id', $enrollment->term_id))
+            ->first();
+
+        if (! $newProgramSubject) {
+            return back()->withErrors(['new_subject_id' => 'Replacement subject must be an active elective for the same program and term.']);
+        }
+
+        $duplicate = StudentSubjectEnrollment::where('student_id', $enrollment->student_id)
+            ->where('subject_id', $data['new_subject_id'])
+            ->where(function ($query) use ($enrollment) {
+                $enrollment->term_id
+                    ? $query->where('term_id', $enrollment->term_id)
+                    : $query->whereNull('term_id');
+            })
+            ->where('id', '!=', $enrollment->id)
+            ->where('status', 'active')
+            ->exists();
+
+        if ($duplicate) {
+            return back()->withErrors(['new_subject_id' => 'Student already has an active enrollment for this subject in the same term.']);
+        }
+
+        $enrollment->update([
+            'previous_subject_id' => $enrollment->subject_id,
+            'subject_id'          => $data['new_subject_id'],
+            'override_reason'     => $data['reason'],
+            'overridden_by'       => Auth::id(),
+            'overridden_at'       => now(),
+        ]);
+
+        return back()->with('success', 'Elective changed with override reason recorded.');
     }
 
     // ── Promotion processing ──────────────────────────────────────────────────

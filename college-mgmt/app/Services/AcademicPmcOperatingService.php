@@ -11,6 +11,7 @@ use App\Models\ProgramSubject;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
+use App\Models\Teacher;
 use App\Models\TimetableEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -116,7 +117,7 @@ class AcademicPmcOperatingService
                 'status' => 'Unassigned',
                 'action' => route('chair.curriculum.assignments'),
             ])->merge($loads->map(fn ($load) => [
-                'title' => $load->teacher?->user?->name ?? 'Faculty #' . $load->teacher_id,
+                'title' => $this->teacherLabel($load->teacher, $load->teacher_id),
                 'subtitle' => ($load->program?->code ?? 'Program') . ' - ' . $load->subject_count . ' subjects',
                 'status' => 'Workload review',
                 'action' => route('chair.faculty.workload'),
@@ -140,6 +141,10 @@ class AcademicPmcOperatingService
                 ->having('conflict_count', '>', 1),
             $programIds
         )->limit(25)->get();
+        $teacherMap = Teacher::with('user')
+            ->whereIn('id', $conflicts->pluck('teacher_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
 
         return [
             'title' => 'Timetable Readiness',
@@ -156,8 +161,8 @@ class AcademicPmcOperatingService
                 'status' => ucfirst($entry->status ?? 'draft'),
                 'action' => route('chair.timetable.builder'),
             ])->merge($conflicts->map(fn ($conflict) => [
-                'title' => 'Teacher #' . $conflict->teacher_id . ' conflict',
-                'subtitle' => 'Day ' . $conflict->day_of_week . ', slot #' . $conflict->timetable_slot_id,
+                'title' => $this->teacherLabel($teacherMap->get($conflict->teacher_id), $conflict->teacher_id) . ' conflict',
+                'subtitle' => 'Day ' . $conflict->day_of_week . ', slot ' . ($conflict->timetable_slot_id ?: 'pending'),
                 'status' => 'Conflict',
                 'action' => route('chair.timetable.builder'),
             ]))->values(),
@@ -170,7 +175,7 @@ class AcademicPmcOperatingService
         $visibleStudentIds = $this->applyProgramScope(Student::query(), $programIds)->pluck('id');
 
         $attendanceRisk = Attendance::query()
-            ->with('student.program')
+            ->with(['student.user', 'student.program'])
             ->selectRaw('student_id, count(*) as exception_count')
             ->whereIn('student_id', $visibleStudentIds)
             ->whereIn('status', ['absent', 'late'])
@@ -179,13 +184,13 @@ class AcademicPmcOperatingService
             ->limit(25)
             ->get();
 
-        $weakPerformance = ExamResult::with(['student.program', 'exam.subject'])
+        $weakPerformance = ExamResult::with(['student.user', 'student.program', 'exam.subject'])
             ->whereIn('student_id', $visibleStudentIds)
             ->whereHas('exam', fn (Builder $query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
             ->limit(25)
             ->get();
 
-        $pendingLeaves = LeaveApplication::with('student.program')
+        $pendingLeaves = LeaveApplication::with(['student.user', 'student.program'])
             ->where('status', 'pending')
             ->whereIn('student_id', $visibleStudentIds)
             ->limit(25)
@@ -201,17 +206,17 @@ class AcademicPmcOperatingService
                 'unassigned_mentors' => $this->applyProgramScope(Student::whereNull('mentor_id'), $programIds)->count(),
             ],
             'items' => $attendanceRisk->map(fn ($row) => [
-                'title' => $row->student?->user?->name ?? 'Student #' . $row->student_id,
+                'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => ($row->student?->program?->code ?? 'Program') . ' - ' . $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
                 'action' => route('chair.students.at-risk'),
             ])->merge($weakPerformance->map(fn (ExamResult $result) => [
-                'title' => $result->student?->user?->name ?? 'Student #' . $result->student_id,
+                'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
                 'action' => route('chair.reports.subject-performance'),
             ]))->merge($pendingLeaves->map(fn (LeaveApplication $leave) => [
-                'title' => $leave->student?->user?->name ?? 'Student #' . $leave->student_id,
+                'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
                 'action' => route('chair.students.leaves'),
@@ -306,5 +311,28 @@ class AcademicPmcOperatingService
             'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned PMC work',
             'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit PMC program scope assigned yet',
         ];
+    }
+
+    private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string
+    {
+        if (! $teacher) {
+            return 'Unassigned faculty';
+        }
+
+        return $teacher->user?->name
+            ?? $teacher->employee_id
+            ?? 'Faculty record ' . $fallbackId;
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
     }
 }

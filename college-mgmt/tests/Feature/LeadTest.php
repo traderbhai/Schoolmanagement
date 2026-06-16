@@ -73,6 +73,35 @@ class LeadTest extends TestCase
         $this->assertNotNull($lead->converted_at);
     }
 
+    public function test_lead_conversion_route_stores_readable_source_note(): void
+    {
+        Role::firstOrCreate(['name' => 'applicant', 'guard_name' => 'web']);
+
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $lead = Lead::factory()->create([
+            'name' => 'Readable Lead',
+            'email' => 'readable-lead@example.com',
+            'phone' => '9999999999',
+            'status' => 'interested',
+            'source' => 'web_form',
+        ]);
+        $program = Program::factory()->create();
+
+        $this->actingAs($officer)->post(route('admission.leads.convert', $lead), [
+            'program_id' => $program->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('applicants', [
+            'program_id' => $program->id,
+            'notes' => 'Converted from lead Readable Lead - readable-lead@example.com',
+        ]);
+        $this->assertDatabaseMissing('applicants', [
+            'notes' => 'Converted from Lead #'.$lead->id.' (web_form)',
+        ]);
+    }
+
     public function test_officer_can_view_leads(): void
     {
         $officer = User::factory()->create();

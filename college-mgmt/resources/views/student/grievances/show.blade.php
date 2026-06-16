@@ -33,7 +33,7 @@
             </div>
             @endif
         </div>
-        @if(in_array($grievance->status, ['open', 'under_review', 'escalated', 'resolved']))
+        @if($grievance->status === 'resolved')
         <div class="card-footer text-end">
             <form method="POST" action="{{ route('student.grievances.close', $grievance) }}" class="d-inline" onsubmit="return confirm('Close this grievance?')">
                 @csrf

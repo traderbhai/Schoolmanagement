@@ -247,15 +247,21 @@
                             <td class="text-end fw-semibold">{{ $item->current_stock }}</td>
                             <td class="text-end">{{ $item->reorder_level }}</td>
                             <td>
-                                @if($item->is_low_stock)
+                                @if($item->status !== 'active')
+                                    <span class="badge bg-secondary">Inactive</span>
+                                @elseif($item->is_low_stock)
                                     <span class="badge bg-danger">Low Stock</span>
                                 @else
                                     <span class="badge bg-success">OK</span>
                                 @endif
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#receiveStock{{ $item->id }}">Receive</button>
-                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#issueStock{{ $item->id }}">Issue</button>
+                                @if($item->status === 'active')
+                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#receiveStock{{ $item->id }}">Receive</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#issueStock{{ $item->id }}">Issue</button>
+                                @else
+                                    <span class="text-muted small">No stock movement</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

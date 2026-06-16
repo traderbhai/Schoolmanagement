@@ -11,4 +11,5 @@ class AdmissionLeadScore extends Model
     protected $casts = ['explanation' => 'array', 'scored_at' => 'datetime'];
 
     public function lead() { return $this->belongsTo(Lead::class); }
+    public function scorer() { return $this->belongsTo(User::class, 'scored_by'); }
 }

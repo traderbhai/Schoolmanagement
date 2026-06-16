@@ -243,6 +243,113 @@ class AdmissionDepartmentOsTest extends TestCase
         $this->assertSame(1, AdmissionPaymentGatewayEvent::where('event_id', 'evt_adm_001')->count());
     }
 
+    public function test_gateway_webhook_does_not_update_payment_when_order_and_payment_identifiers_conflict(): void
+    {
+        $firstApplicant = $this->applicant('selected');
+        $secondApplicant = $this->applicant('selected');
+        $firstInstallment = AdmissionFeeInstallment::create([
+            'program_id' => $firstApplicant->program_id,
+            'batch_id' => $firstApplicant->batch_id,
+            'name' => 'Admission Fee',
+            'amount' => 20000,
+            'installment_number' => 1,
+            'is_active' => true,
+        ]);
+        $secondInstallment = AdmissionFeeInstallment::create([
+            'program_id' => $secondApplicant->program_id,
+            'batch_id' => $secondApplicant->batch_id,
+            'name' => 'Admission Fee',
+            'amount' => 20000,
+            'installment_number' => 1,
+            'is_active' => true,
+        ]);
+        $firstPayment = AdmissionPayment::create([
+            'applicant_id' => $firstApplicant->id,
+            'admission_fee_installment_id' => $firstInstallment->id,
+            'amount_paid' => 20000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'status' => 'pending',
+            'submitted_by' => $firstApplicant->user_id,
+            'provider' => 'razorpay_mock',
+            'gateway_order_id' => 'order_conflict_first',
+            'gateway_status' => 'created',
+        ]);
+        $secondPayment = AdmissionPayment::create([
+            'applicant_id' => $secondApplicant->id,
+            'admission_fee_installment_id' => $secondInstallment->id,
+            'amount_paid' => 20000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'status' => 'pending',
+            'submitted_by' => $secondApplicant->user_id,
+            'provider' => 'razorpay_mock',
+            'gateway_order_id' => 'order_conflict_second',
+            'gateway_payment_id' => 'pay_conflict_second',
+            'gateway_status' => 'created',
+        ]);
+
+        $this->postJson(route('admission.gateway.webhook'), [
+            'provider' => 'razorpay_mock',
+            'event_id' => 'evt_conflict_identifier',
+            'event' => 'payment.captured',
+            'order_id' => $firstPayment->gateway_order_id,
+            'payment_id' => $secondPayment->gateway_payment_id,
+            'status' => 'captured',
+        ])->assertOk();
+
+        $this->assertSame('pending', $firstPayment->fresh()->status);
+        $this->assertNull($firstPayment->fresh()->gateway_payment_id);
+        $this->assertSame('pending', $secondPayment->fresh()->status);
+        $this->assertNotNull(
+            AdmissionPaymentGatewayEvent::where('provider', 'razorpay_mock')
+                ->where('event_id', 'evt_conflict_identifier')
+                ->firstOrFail()
+                ->processed_at
+        );
+    }
+
+    public function test_gateway_webhook_payment_id_lookup_is_provider_scoped(): void
+    {
+        $applicant = $this->applicant('selected');
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $applicant->program_id,
+            'batch_id' => $applicant->batch_id,
+            'name' => 'Admission Fee',
+            'amount' => 15000,
+            'installment_number' => 1,
+            'is_active' => true,
+        ]);
+        $payment = AdmissionPayment::create([
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 15000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'status' => 'pending',
+            'submitted_by' => $applicant->user_id,
+            'provider' => 'razorpay_mock',
+            'gateway_order_id' => 'order_provider_scoped',
+            'gateway_payment_id' => 'pay_shared_provider_id',
+            'gateway_status' => 'created',
+        ]);
+
+        $this->postJson(route('admission.gateway.webhook'), [
+            'provider' => 'stripe_sandbox',
+            'event_id' => 'evt_wrong_provider',
+            'event' => 'payment.captured',
+            'payment_id' => 'pay_shared_provider_id',
+            'status' => 'captured',
+        ])->assertOk();
+
+        $this->assertSame('pending', $payment->fresh()->status);
+        $this->assertSame('created', $payment->fresh()->gateway_status);
+        $this->assertDatabaseHas('admission_payment_gateway_events', [
+            'provider' => 'stripe_sandbox',
+            'event_id' => 'evt_wrong_provider',
+        ]);
+    }
+
     public function test_admin_can_configure_reusable_department_hierarchy(): void
     {
         $admin = $this->userWithRole('admin');

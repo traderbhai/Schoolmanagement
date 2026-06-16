@@ -34,9 +34,13 @@
           <td class="text-end pe-3">
             @if($leave->status === 'pending')
             <button class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:.75rem;"
-                onclick="openReview({{ $leave->id }},'approved')">Approve</button>
+                data-review-url="{{ route('hod.leaves.review', $leave) }}"
+                data-review-action="approved"
+                onclick="openReview(this)">Approve</button>
             <button class="btn btn-xs btn-outline-danger py-0 px-2 ms-1" style="font-size:.75rem;"
-                onclick="openReview({{ $leave->id }},'rejected')">Reject</button>
+                data-review-url="{{ route('hod.leaves.review', $leave) }}"
+                data-review-action="rejected"
+                onclick="openReview(this)">Reject</button>
             @else
             <span class="text-muted small">{{ $leave->review_remarks ?? '—' }}</span>
             @endif
@@ -76,8 +80,9 @@
 @endsection
 @push('scripts')
 <script>
-function openReview(leaveId, action) {
-    document.getElementById('reviewForm').action = '/hod/leaves/' + leaveId + '/review';
+function openReview(button) {
+    const action = button.dataset.reviewAction;
+    document.getElementById('reviewForm').action = button.dataset.reviewUrl;
     document.getElementById('reviewAction').value = action;
     document.getElementById('reviewSubmitBtn').textContent = action === 'approved' ? 'Approve' : 'Reject';
     document.getElementById('reviewSubmitBtn').className = 'btn btn-sm btn-' + (action === 'approved' ? 'success' : 'danger');

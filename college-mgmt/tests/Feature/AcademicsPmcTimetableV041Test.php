@@ -77,6 +77,30 @@ class AcademicsPmcTimetableV041Test extends TestCase
         }
     }
 
+    public function test_v041_pages_render_operational_labels_instead_of_raw_id_fallbacks(): void
+    {
+        $chair = $this->seedFixture();
+
+        foreach ([
+            'academics.pmc.course-allocation.index',
+            'academics.pmc.student-course-baskets.index',
+            'academics.pmc.course-groups.index',
+            'academics.pmc.section-faculty-allocation.index',
+            'academics.pmc.locked-slots.index',
+            'academics.pmc.substitution-intelligence.index',
+            'academics.pmc.official-timetable.index',
+            'academics.pmc.timetable-versions-v041.index',
+        ] as $route) {
+            $response = $this->actingAs($chair)->get(route($route))->assertOk();
+
+            foreach (['Student #', 'Teacher #', 'Faculty #', 'Subject #', 'Term #', 'Room #', 'Slot #'] as $rawFallback) {
+                $response->assertDontSee($rawFallback);
+            }
+
+            $response->assertDontSee('<td>#', false);
+        }
+    }
+
     public function test_v041_operational_flows_create_core_records(): void
     {
         $chair = $this->seedFixture();

@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Exam;
-use App\Models\Enrollment;
+use App\Models\{Exam, Student};
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdmitCardController extends Controller
@@ -16,19 +15,7 @@ class AdmitCardController extends Controller
             abort(403, 'No student profile linked to this account.');
         }
 
-        // Verify the student is enrolled in this exam's program/semester
-        $enrolled = Enrollment::where('student_id', $student->id)
-            ->when($exam->semester_id, fn($q) => $q->where('semester_id', $exam->semester_id))
-            ->exists();
-
-        // Fallback: check same program if no semester on exam
-        if (!$enrolled) {
-            $enrolled = $student->program_id === $exam->program_id;
-        }
-
-        if (!$enrolled) {
-            abort(403, 'You are not enrolled for this exam.');
-        }
+        abort_unless($this->isEligibleForExam($student, $exam), 403, 'You are not enrolled for this exam.');
 
         $exam->load(['program', 'subject', 'classroom', 'semester.academicYear', 'term']);
 
@@ -48,13 +35,37 @@ class AdmitCardController extends Controller
             abort(403, 'No student profile linked to this account.');
         }
 
-        // Upcoming exams for the student's program
         $upcomingExams = Exam::where('program_id', $student->program_id)
             ->where('exam_date', '>=', now()->toDateString())
             ->with(['subject', 'classroom', 'semester'])
             ->orderBy('exam_date')
-            ->get();
+            ->get()
+            ->filter(fn($exam) => $this->isEligibleForExam($student, $exam))
+            ->values();
 
         return view('student.admit-cards', compact('student', 'upcomingExams'));
+    }
+
+    private function isEligibleForExam(Student $student, Exam $exam): bool
+    {
+        if ((int) $student->program_id !== (int) $exam->program_id) {
+            return false;
+        }
+
+        if (!$exam->subject_id) {
+            return true;
+        }
+
+        return $student->subjectEnrollments()
+            ->where('subject_id', $exam->subject_id)
+            ->where('status', 'active')
+            ->when($exam->term_id, fn($q) => $q->where('term_id', $exam->term_id))
+            ->exists()
+            || $student->enrollments()
+                ->where('subject_id', $exam->subject_id)
+                ->whereIn('status', ['enrolled', 'active'])
+                ->when($exam->term_id, fn($q) => $q->where('term_id', $exam->term_id))
+                ->when($exam->semester_id, fn($q) => $q->where('semester_id', $exam->semester_id))
+                ->exists();
     }
 }

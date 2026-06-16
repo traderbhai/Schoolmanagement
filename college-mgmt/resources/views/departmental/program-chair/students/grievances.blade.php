@@ -15,6 +15,7 @@
         <option value="under_review" @selected(request('status')==='under_review')>Under Review</option>
         <option value="escalated"    @selected(request('status')==='escalated')>Escalated</option>
         <option value="resolved"     @selected(request('status')==='resolved')>Resolved</option>
+        <option value="closed"       @selected(request('status')==='closed')>Closed</option>
       </select>
     </div>
     <div class="col-auto"><a href="{{ route('chair.students.grievances') }}" class="btn btn-outline-secondary">Clear</a></div>
@@ -43,20 +44,26 @@
                 </td>
                 <td class="small text-muted">{{ $g->created_at->format('d M Y') }}</td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('griev-{{ $g->id }}').classList.toggle('d-none')">Update</button>
-                  <div id="griev-{{ $g->id }}" class="d-none mt-2" style="width:280px">
-                    <form method="POST" action="{{ route('chair.students.grievances.update', $g) }}">
-                      @csrf
-                      <select name="status" class="form-select form-select-sm mb-1">
-                        <option value="open"         @selected($g->status==='open')>Open</option>
-                        <option value="under_review" @selected($g->status==='under_review')>Under Review</option>
-                        <option value="escalated"    @selected($g->status==='escalated')>Escalate to HOD</option>
-                        <option value="resolved"     @selected($g->status==='resolved')>Resolved</option>
-                      </select>
-                      <textarea name="resolution_notes" class="form-control form-control-sm mb-1" rows="2" placeholder="Resolution notes">{{ $g->resolution_notes }}</textarea>
-                      <button type="submit" class="btn btn-sm btn-primary w-100">Save</button>
-                    </form>
-                  </div>
+                  @if(in_array($g->status, ['resolved', 'closed'], true))
+                    <span class="text-muted small">History locked</span>
+                  @else
+                    <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('griev-{{ $g->id }}').classList.toggle('d-none')">Update</button>
+                    <div id="griev-{{ $g->id }}" class="d-none mt-2" style="width:280px">
+                      <form method="POST" action="{{ route('chair.students.grievances.update', $g) }}">
+                        @csrf
+                        <select name="status" class="form-select form-select-sm mb-1">
+                          <option value="open"         @selected($g->status==='open')>Open</option>
+                          <option value="under_review" @selected($g->status==='under_review')>Under Review</option>
+                          @if(in_array($g->status, ['open', 'under_review'], true))
+                            <option value="escalated" @selected($g->status==='escalated')>Escalate to HOD</option>
+                          @endif
+                          <option value="resolved"     @selected($g->status==='resolved')>Resolved</option>
+                        </select>
+                        <textarea name="resolution_notes" class="form-control form-control-sm mb-1" rows="2" maxlength="1000" placeholder="Resolution notes required when resolving">{{ $g->resolution_notes }}</textarea>
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Save</button>
+                      </form>
+                    </div>
+                  @endif
                 </td>
               </tr>
             @empty

@@ -48,9 +48,20 @@ class GrievanceController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
         ]);
 
-        if ($data['status'] === 'resolved' && !$grievance->resolved_at) {
+        $resolutionNotes = trim((string) ($data['resolution_notes'] ?? $grievance->resolution_notes ?? ''));
+
+        if (in_array($data['status'], ['resolved', 'closed'], true) && $resolutionNotes === '') {
+            return back()->withErrors(['resolution_notes' => 'Resolution notes are required before resolving or closing a grievance.']);
+        }
+
+        if (in_array($data['status'], ['resolved', 'closed'], true) && !$grievance->resolved_at) {
             $data['resolved_at'] = now();
             $data['resolved_by'] = auth()->id();
+        }
+
+        if (! in_array($data['status'], ['resolved', 'closed'], true)) {
+            $data['resolved_at'] = null;
+            $data['resolved_by'] = null;
         }
 
         $grievance->update($data);

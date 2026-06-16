@@ -55,7 +55,7 @@ class AcademicsPmcV002Test extends TestCase
 
     public function test_pmc_source_lists_are_database_backed_and_link_to_existing_modules(): void
     {
-        $this->seedPmcFixture();
+        $fixture = $this->seedPmcFixture();
         $chair = User::where('email', 'chair@college.com')->firstOrFail();
 
         $this->actingAs($chair)
@@ -64,6 +64,7 @@ class AcademicsPmcV002Test extends TestCase
             ->assertSee('Student Monitoring')
             ->assertSee('Filtered Source List')
             ->assertSee('Aarav Sharma')
+            ->assertDontSee('Student #'.$fixture['student']->id)
             ->assertSee(route('chair.students.at-risk'), false);
 
         $this->actingAs($chair)

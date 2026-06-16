@@ -30,7 +30,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
                         <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required>
-                            <option value="">— Select Subject —</option>
+                            <option value="">Select Subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
                                     {{ $subject->name }} ({{ $subject->code }})
@@ -46,14 +46,14 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Material Type <span class="text-danger">*</span></label>
                         <select name="type" class="form-select @error('type') is-invalid @enderror" required>
-                            <option value="">— Select Type —</option>
-                            <option value="lecture_note"     {{ old('type') === 'lecture_note'     ? 'selected' : '' }}>Lecture Note</option>
-                            <option value="reference"        {{ old('type') === 'reference'        ? 'selected' : '' }}>Reference</option>
-                            <option value="video"            {{ old('type') === 'video'            ? 'selected' : '' }}>Video</option>
-                            <option value="link"             {{ old('type') === 'link'             ? 'selected' : '' }}>Link</option>
-                            <option value="assignment_sheet" {{ old('type') === 'assignment_sheet' ? 'selected' : '' }}>Assignment Sheet</option>
-                            <option value="lab_manual"       {{ old('type') === 'lab_manual'       ? 'selected' : '' }}>Lab Manual</option>
-                            <option value="other"            {{ old('type') === 'other'            ? 'selected' : '' }}>Other</option>
+                            <option value="">Select Type</option>
+                            <option value="pre_read"  {{ old('type') === 'pre_read'  ? 'selected' : '' }}>Pre-Read</option>
+                            <option value="post_read" {{ old('type') === 'post_read' ? 'selected' : '' }}>Post-Read</option>
+                            <option value="notes"     {{ old('type') === 'notes'     ? 'selected' : '' }}>Notes</option>
+                            <option value="reference" {{ old('type') === 'reference' ? 'selected' : '' }}>Reference</option>
+                            <option value="slides"    {{ old('type') === 'slides'    ? 'selected' : '' }}>Slides</option>
+                            <option value="video"     {{ old('type') === 'video'     ? 'selected' : '' }}>Video</option>
+                            <option value="other"     {{ old('type') === 'other'     ? 'selected' : '' }}>Other</option>
                         </select>
                         @error('type')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -65,7 +65,7 @@
                         <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
                         <input type="text" name="title" value="{{ old('title') }}"
                                class="form-control @error('title') is-invalid @enderror"
-                               placeholder="e.g. Unit 3 – Sorting Algorithms" required>
+                               placeholder="e.g. Unit 3 - Sorting Algorithms" required>
                         @error('title')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

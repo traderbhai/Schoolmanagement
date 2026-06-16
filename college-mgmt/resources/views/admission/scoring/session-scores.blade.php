@@ -52,7 +52,7 @@
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom">
             <div>
-                <strong>{{ $applicant->user->name ?? 'Applicant #'.$applicant->id }}</strong>
+                <strong>{{ $applicant->user?->name ?? $applicant->application_number ?? 'Unassigned applicant' }}</strong>
                 <span class="text-muted ms-2 small">{{ $applicant->application_number }}</span>
                 @if($sa->panel_number)
                     <span class="badge bg-secondary ms-2">Panel {{ $sa->panel_number }}</span>
@@ -122,7 +122,7 @@
             @foreach($absentApplicants as $sa)
             <li class="list-group-item text-muted opacity-75 d-flex align-items-center gap-2">
                 <i class="bi bi-person-x"></i>
-                {{ $sa->applicant->user->name ?? 'Applicant #'.$sa->applicant->id }}
+                {{ $sa->applicant->user?->name ?? $sa->applicant->application_number ?? 'Unassigned applicant' }}
                 <span class="badge bg-secondary ms-1">{{ ucfirst($sa->attendance_status) }}</span>
             </li>
             @endforeach

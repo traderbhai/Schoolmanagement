@@ -133,19 +133,19 @@
         </div>
 
         <div class="topbar-right">
-            <div class="topbar-search d-none d-md-flex">
+            <form method="GET" action="{{ route('teacher.students.index') }}" class="topbar-search d-none d-md-flex">
                 <i class="bi bi-search search-icon"></i>
-                <input type="search" placeholder="Search students, teachers..." aria-label="Global search">
-            </div>
+                <input type="search" name="search" value="{{ request('search') }}" placeholder="Search assigned students..." aria-label="Search assigned students">
+            </form>
 
             <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
                 <i class="bi bi-moon-fill" id="themeIcon"></i>
             </button>
 
-            <button class="notif-btn" aria-label="Notifications" title="Notifications">
+            <a href="{{ route('notifications.index') }}" class="notif-btn text-decoration-none" aria-label="Notifications" title="Notifications">
                 <i class="bi bi-bell"></i>
                 <span class="notif-badge"></span>
-            </button>
+            </a>
 
             <div class="dropdown">
                 <button class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
@@ -159,7 +159,7 @@
                         </div>
                     </li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>View Profile</a></li>
+                    <li><a class="dropdown-item" href="{{ route('teacher.profile') }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}">

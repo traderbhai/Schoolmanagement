@@ -9,13 +9,16 @@ use App\Models\TransportRoute;
 use App\Models\TransportStop;
 use App\Models\TransportVehicle;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TransportController extends Controller
 {
     public function index()
     {
         $routes = TransportRoute::with('stops')->orderBy('name')->get();
-        $vehicles = TransportVehicle::orderBy('registration_number')->get();
+        $vehicles = TransportVehicle::withCount(['assignments as active_assignments_count' => fn ($query) => $query->where('status', 'active')])
+            ->orderBy('registration_number')
+            ->get();
         $assignments = TransportAssignment::with(['student.user', 'route', 'stop', 'vehicle'])
             ->where('status', 'active')
             ->latest()
@@ -81,6 +84,44 @@ class TransportController extends Controller
         return back()->with('success', 'Transport vehicle added.');
     }
 
+    public function vehicleUpdate(Request $request, TransportVehicle $vehicle)
+    {
+        $data = $request->validate([
+            'registration_number' => [
+                'required',
+                'string',
+                'max:30',
+                Rule::unique('transport_vehicles', 'registration_number')->ignore($vehicle->id),
+            ],
+            'vehicle_type' => 'required|string|max:40',
+            'capacity' => 'required|integer|min:1|max:200',
+            'driver_name' => 'required|string|max:120',
+            'driver_phone' => 'nullable|string|max:30',
+            'attendant_name' => 'nullable|string|max:120',
+            'status' => 'required|in:active,maintenance,inactive',
+        ]);
+
+        $activeAssignments = TransportAssignment::where('transport_vehicle_id', $vehicle->id)
+            ->where('status', 'active')
+            ->count();
+
+        if ((int) $data['capacity'] < $activeAssignments) {
+            return back()->withErrors([
+                'capacity' => "Vehicle capacity cannot be lower than the current active assignment count ({$activeAssignments}).",
+            ])->withInput();
+        }
+
+        if ($data['status'] !== 'active' && $activeAssignments > 0) {
+            return back()->withErrors([
+                'status' => "Vehicle cannot be marked {$data['status']} while {$activeAssignments} active assignment(s) are linked.",
+            ])->withInput();
+        }
+
+        $vehicle->update($data);
+
+        return back()->with('success', 'Transport vehicle updated.');
+    }
+
     public function assignmentStore(Request $request)
     {
         $data = $request->validate([
@@ -106,6 +147,9 @@ class TransportController extends Controller
             $stop = TransportStop::findOrFail($data['transport_stop_id']);
             if ((int) $stop->transport_route_id !== (int) $route->id) {
                 return back()->withErrors(['transport_stop_id' => 'Selected stop does not belong to the selected route.']);
+            }
+            if (!$stop->is_active) {
+                return back()->withErrors(['transport_stop_id' => 'Selected stop is inactive.']);
             }
         }
 
@@ -145,6 +189,10 @@ class TransportController extends Controller
 
         if ($assignment->status !== 'active') {
             return back()->with('error', 'Only active transport assignments can be ended.');
+        }
+
+        if ($assignment->start_date && $assignment->start_date->greaterThan($data['end_date'])) {
+            return back()->withErrors(['end_date' => 'End date cannot be before the assignment start date.']);
         }
 
         $assignment->update([

@@ -22,6 +22,11 @@ class ApplicantScholarshipController extends Controller
 
         $scheme = ScholarshipScheme::findOrFail($validated['scheme_id']);
 
+        $eligibilityError = $this->awardEligibilityError($applicant, $scheme);
+        if ($eligibilityError) {
+            return back()->withErrors(['scheme_id' => $eligibilityError]);
+        }
+
         // Validate amount does not exceed scheme max
         if ($validated['awarded_amount'] > $scheme->max_amount) {
             return back()->withErrors(['awarded_amount' => 'Amount exceeds scheme maximum of ₹' . number_format($scheme->max_amount, 2)]);
@@ -121,5 +126,64 @@ class ApplicantScholarshipController extends Controller
         $totalDisbursed     = ApplicantScholarship::where('status', 'disbursed')->sum('awarded_amount');
 
         return view('admission.scholarship-disbursements.index', compact('pending', 'programs', 'totalPendingAmount', 'totalDisbursed'));
+    }
+
+    private function awardEligibilityError(Applicant $applicant, ScholarshipScheme $scheme): ?string
+    {
+        if (! $scheme->is_active) {
+            return 'This scholarship scheme is inactive.';
+        }
+
+        if ($scheme->program_id && (int) $scheme->program_id !== (int) $applicant->program_id) {
+            return 'This scholarship scheme is not available for the applicant program.';
+        }
+
+        $cgpa = $this->applicantCgpa($applicant);
+        if ($scheme->min_cgpa !== null && ($cgpa === null || $cgpa < (float) $scheme->min_cgpa)) {
+            return 'Applicant does not meet the minimum CGPA requirement of '.number_format((float) $scheme->min_cgpa, 2).'.';
+        }
+
+        $familyIncome = $this->applicantFamilyIncome($applicant);
+        if ($scheme->max_family_income !== null && $familyIncome === null) {
+            return 'Applicant family income is required for this scholarship scheme.';
+        }
+
+        if ($scheme->max_family_income !== null && $familyIncome > (float) $scheme->max_family_income) {
+            return 'Applicant family income exceeds the scholarship limit of Rs. '.number_format((float) $scheme->max_family_income, 0).'.';
+        }
+
+        if ($scheme->requires_document && ! $applicant->documents()->where('status', 'verified')->exists()) {
+            return 'A verified applicant document is required before awarding this scholarship.';
+        }
+
+        return null;
+    }
+
+    private function applicantCgpa(Applicant $applicant): ?float
+    {
+        $data = $applicant->academic_data ?? [];
+        foreach (['cgpa', 'last_cgpa', 'graduation_cgpa', 'percentage', 'last_percentage'] as $key) {
+            if (isset($data[$key]) && is_numeric($data[$key])) {
+                $value = (float) $data[$key];
+                return $value > 10 ? round($value / 10, 2) : $value;
+            }
+        }
+
+        return $applicant->scores()->exists()
+            ? round((float) $applicant->scores()->avg('score'), 2)
+            : null;
+    }
+
+    private function applicantFamilyIncome(Applicant $applicant): ?float
+    {
+        $data = $applicant->family_data ?? [];
+        foreach (['annual_income', 'family_income', 'parent_income', 'guardian_income'] as $key) {
+            if (! empty($data[$key])) {
+                $numeric = preg_replace('/[^0-9.]/', '', (string) $data[$key]);
+                return $numeric === '' ? null : (float) $numeric;
+            }
+        }
+
+        return null;
     }
 }

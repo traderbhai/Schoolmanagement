@@ -18,7 +18,7 @@
                         <span class="badge bg-primary-subtle text-primary">{{ $subject->code ?? '' }}</span>
                     </div>
                     <p class="text-muted small mb-3">
-                        {{ $subject->teachers->first()?->name ?? 'Faculty not assigned' }}
+                        {{ !empty($subject->faculty_names) ? implode(', ', $subject->faculty_names) : 'Faculty not assigned' }}
                     </p>
                     <div class="d-flex gap-2 flex-wrap">
                         <a href="{{ route('student.courses.show', $subject) }}" class="btn btn-sm btn-outline-primary">

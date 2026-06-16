@@ -6,8 +6,8 @@
   <form method="GET" class="d-flex gap-2">
     <select name="type" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
       <option value="">All Types</option>
-      @foreach(['seminar','workshop','job-fair','guest-lecture','other'] as $t)
-      <option value="{{ $t }}" {{ request('type')===$t?'selected':'' }}>{{ ucwords(str_replace('-',' ',$t)) }}</option>
+      @foreach(\App\Models\CareerEvent::TYPE_LABELS as $t => $label)
+      <option value="{{ $t }}" {{ request('type')===$t?'selected':'' }}>{{ $label }}</option>
       @endforeach
     </select>
   </form>
@@ -23,7 +23,7 @@
         @forelse($events as $e)
         <tr>
           <td class="ps-3 fw-medium">{{ $e->title }}</td>
-          <td class="small text-muted">{{ ucwords(str_replace('-',' ',$e->event_type)) }}</td>
+          <td class="small text-muted">{{ \App\Models\CareerEvent::TYPE_LABELS[$e->event_type] ?? ucwords(str_replace('_',' ',$e->event_type)) }}</td>
           <td class="small">{{ $e->event_date->format('d M Y') }}</td>
           <td class="small text-muted">{{ $e->venue ?? '—' }}</td>
           <td>{{ $e->seats ?? '∞' }}</td>
@@ -35,12 +35,18 @@
             <a href="{{ route('cmc.events.edit', $e) }}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" title="Edit">
               <i class="bi bi-pencil"></i>
             </a>
+            @if(($e->registrations_count ?? 0) > 0)
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" disabled title="Registered events cannot be deleted">
+              <i class="bi bi-shield-lock"></i>
+            </button>
+            @else
             <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1"
                 data-bs-toggle="modal" data-bs-target="#deleteModal"
                 data-action="{{ route('cmc.events.destroy', $e) }}"
                 data-name="{{ $e->title }}" title="Delete">
               <i class="bi bi-trash3"></i>
             </button>
+            @endif
           </td>
         </tr>
         @empty

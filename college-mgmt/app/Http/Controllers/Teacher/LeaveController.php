@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class LeaveController extends Controller
 {
@@ -36,9 +37,25 @@ class LeaveController extends Controller
 
         $teacher = $this->getTeacher();
 
-        $from = \Carbon\Carbon::parse($request->from_date);
-        $to   = \Carbon\Carbon::parse($request->to_date);
+        $from = Carbon::parse($request->from_date)->startOfDay();
+        $to   = Carbon::parse($request->to_date)->startOfDay();
         $days = $from->diffInDays($to) + 1;
+
+        $overlap = $teacher->leaveApplications()
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereDate('from_date', '<=', $to->toDateString())
+            ->whereDate('to_date', '>=', $from->toDateString())
+            ->first();
+
+        if ($overlap) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'from_date' => 'This leave overlaps an existing open leave request from '
+                        . $overlap->from_date->format('d M Y') . ' to '
+                        . $overlap->to_date->format('d M Y') . '.',
+                ]);
+        }
 
         $teacher->leaveApplications()->create([
             'leave_type' => $request->leave_type,

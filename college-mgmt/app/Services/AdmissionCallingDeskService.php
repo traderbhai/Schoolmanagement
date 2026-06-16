@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AdmissionObjectionEvent;
 use App\Models\AdmissionScriptTemplate;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class AdmissionCallingDeskService
             'attempts_today' => DB::table('admission_call_attempts')->whereDate('attempted_at', today())->count(),
             'contact_rate' => $this->rate('connected'),
             'callback_due' => DB::table('admission_reminder_schedules')->where('reason', 'callback_retry')->where('due_at', '<=', now())->count(),
-            'objections' => DB::table('admission_objection_events')->latest()->limit(8)->get(),
+            'objections' => AdmissionObjectionEvent::with(['subject', 'type'])->latest()->limit(8)->get(),
             'parent_due' => DB::table('admission_parent_journeys')->where('next_due_at', '<=', now())->count(),
         ];
     }

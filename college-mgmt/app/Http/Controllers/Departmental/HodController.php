@@ -258,6 +258,10 @@ class HodController extends Controller
         $departmentId = $this->hodDepartmentId($this->hodTeacher());
         abort_unless($departmentId === null || (int) $leave->student?->program?->department_id === $departmentId, 403);
 
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Only pending leave applications can be reviewed.');
+        }
+
         $leave->update([
             'status'         => $request->action,
             'reviewed_by'    => auth()->id(),

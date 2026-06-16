@@ -444,6 +444,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::patch('document-requests/{documentRequest}/reject', [Admin\StudentDocumentRequestController::class, 'reject'])->name('document-requests.reject');
     Route::post('document-requests/{documentRequest}/fulfill', [Admin\StudentDocumentRequestController::class, 'fulfill'])->name('document-requests.fulfill');
     Route::get('document-requests/{documentRequest}/download', [Admin\StudentDocumentRequestController::class, 'download'])->name('document-requests.download');
+    Route::get('fee-payment-requests', [Admin\FeeController::class, 'paymentRequests'])->name('fees.payment-requests.index');
+    Route::patch('fee-payment-requests/{feePaymentRequest}/verify', [Admin\FeeController::class, 'verifyPaymentRequest'])->name('fees.payment-requests.verify');
+    Route::patch('fee-payment-requests/{feePaymentRequest}/reject', [Admin\FeeController::class, 'rejectPaymentRequest'])->name('fees.payment-requests.reject');
+    Route::get('fee-payment-requests/{feePaymentRequest}/proof', [Admin\FeeController::class, 'paymentRequestProof'])->name('fees.payment-requests.proof');
     Route::resource('timetable-slots', Admin\TimetableSlotController::class);
     Route::resource('notices',       Admin\NoticeController::class);
     Route::resource('parents',       Admin\ParentController::class);
@@ -494,6 +498,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::patch('student-scholarships/{application}/approve', [Admin\StudentScholarshipApplicationController::class, 'approve'])->name('student-scholarships.approve');
     Route::patch('student-scholarships/{application}/reject', [Admin\StudentScholarshipApplicationController::class, 'reject'])->name('student-scholarships.reject');
     Route::patch('student-scholarships/{application}/disburse', [Admin\StudentScholarshipApplicationController::class, 'disburse'])->name('student-scholarships.disburse');
+    Route::get('student-scholarships/{application}/proof', [Admin\StudentScholarshipApplicationController::class, 'downloadProof'])->name('student-scholarships.proof');
 
     // Applicants (P2 portal)
     Route::get('applicants', [Admin\ApplicantController::class, 'index'])->name('applicants.index');
@@ -660,6 +665,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::post('transport/vehicles', [Admin\TransportController::class, 'vehicleStore'])
         ->middleware('department.feature:TRANSPORT,transport.vehicles')
         ->name('transport.vehicles.store');
+    Route::patch('transport/vehicles/{vehicle}', [Admin\TransportController::class, 'vehicleUpdate'])
+        ->middleware('department.feature:TRANSPORT,transport.vehicles')
+        ->name('transport.vehicles.update');
     Route::middleware('department.feature:TRANSPORT,transport.student_assignments')->group(function () {
         Route::post('transport/assignments', [Admin\TransportController::class, 'assignmentStore'])->name('transport.assignments.store');
         Route::post('transport/assignments/{assignment}/end', [Admin\TransportController::class, 'assignmentEnd'])->name('transport.assignments.end');
@@ -687,6 +695,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
         Route::post('library/issue', [Admin\LibraryController::class, 'issueBook'])->name('library.issue');
         Route::post('library/issues/{issue}/return', [Admin\LibraryController::class, 'returnBook'])->name('library.issues.return');
         Route::get('library/issues', [Admin\LibraryController::class, 'issues'])->name('library.issues');
+        Route::get('library/reservations', [Admin\LibraryController::class, 'reservations'])->name('library.reservations');
+        Route::post('library/reservations/{reservation}/fulfill', [Admin\LibraryController::class, 'fulfillReservation'])->name('library.reservations.fulfill');
+        Route::post('library/reservations/{reservation}/cancel', [Admin\LibraryController::class, 'cancelReservation'])->name('library.reservations.cancel');
         Route::get('library/fines', [Admin\LibraryController::class, 'fineCollection'])->name('library.fines');
         Route::post('library/fines/{issue}/pay', [Admin\LibraryController::class, 'finePay'])->name('library.fines.pay');
     });
@@ -875,6 +886,7 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('selection-committee', [Admission\SelectionCommitteeController::class, 'index'])->name('selection-committee.index');
     Route::post('selection-committee/decide', [Admission\SelectionCommitteeController::class, 'decide'])->name('selection-committee.decide');
     Route::get('offer-seat-control', [Admission\OfferSeatControlController::class, 'index'])->name('offer-rounds.index');
+    Route::get('offer-rounds', fn () => redirect()->route('admission.offer-rounds.index'))->name('offer-rounds.redirect');
     Route::post('offer-rounds', [Admission\OfferSeatControlController::class, 'createRound'])->name('offer-rounds.store');
     Route::post('offer-rounds/{roundId}/publish', [Admission\OfferSeatControlController::class, 'publishRound'])->name('offer-rounds.publish');
     Route::post('waitlist', [Admission\OfferSeatControlController::class, 'addWaitlist'])->name('waitlist.store');
@@ -1361,6 +1373,7 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::middleware('department.feature:CMC,cmc.companies_drives')->group(function () {
         Route::get('career-events', [\App\Http\Controllers\Student\CareerEventController::class, 'index'])->name('career-events.index');
         Route::post('career-events/{event}/register', [\App\Http\Controllers\Student\CareerEventController::class, 'register'])->name('career-events.register');
+        Route::delete('career-events/{event}/register', [\App\Http\Controllers\Student\CareerEventController::class, 'cancel'])->name('career-events.cancel');
     });
 
     // Sprint 4
@@ -1392,6 +1405,12 @@ Route::prefix('student')->name('student.')->middleware(['auth', 'role:student|ad
     Route::get('library', [\App\Http\Controllers\Student\LibraryController::class, 'index'])
         ->middleware('department.feature:LIB,library.catalog')
         ->name('library.index');
+    Route::post('library/reservations', [\App\Http\Controllers\Student\LibraryController::class, 'reserve'])
+        ->middleware('department.feature:LIB,library.catalog')
+        ->name('library.reservations.store');
+    Route::post('library/reservations/{reservation}/cancel', [\App\Http\Controllers\Student\LibraryController::class, 'cancelReservation'])
+        ->middleware('department.feature:LIB,library.catalog')
+        ->name('library.reservations.cancel');
 });
 
 // ── Parent routes ────────────────────────────────────────────────────────────
@@ -1648,6 +1667,7 @@ Route::middleware(['auth', 'role:admin|cmc|dean_academics|program_chair'])->pref
         Route::put('events/{event}', [Departmental\CmcController::class, 'updateEvent'])->name('events.update');
         Route::delete('events/{event}', [Departmental\CmcController::class, 'destroyEvent'])->name('events.destroy');
         Route::get('events/{event}/registrations', [Departmental\CmcController::class, 'eventRegistrations'])->name('events.registrations');
+        Route::patch('events/{event}/registrations/{registration}/attendance', [Departmental\CmcController::class, 'updateEventAttendance'])->name('events.registrations.attendance');
     });
     Route::middleware('department.feature:CMC,cmc.analytics_exports')->group(function () {
         Route::get('analytics', [Departmental\CmcController::class, 'analytics'])->name('analytics');

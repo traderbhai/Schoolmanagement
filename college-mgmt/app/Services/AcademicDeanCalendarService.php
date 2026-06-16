@@ -30,11 +30,20 @@ class AcademicDeanCalendarService
         }
 
         return DB::table('admission_handoff_records')
-            ->whereIn('status', ['blocked', 'ready_for_academics', 'returned_for_correction'])
-            ->latest('updated_at')
+            ->leftJoin('applicants', 'applicants.id', '=', 'admission_handoff_records.applicant_id')
+            ->leftJoin('users', 'users.id', '=', 'applicants.user_id')
+            ->whereIn('admission_handoff_records.status', ['blocked', 'ready_for_academics', 'returned_for_correction'])
+            ->select('admission_handoff_records.*', 'applicants.application_number', 'users.name as applicant_name')
+            ->latest('admission_handoff_records.updated_at')
             ->limit(20)
             ->get()
-            ->map(fn ($h) => $this->event('Handoff', 'Applicant #' . $h->applicant_id . ' ' . str_replace('_', ' ', $h->status), $h->updated_at, $h->status, route('academics.dean-os.handoff')));
+            ->map(function ($h) {
+                $label = $h->applicant_name
+                    ?: $h->application_number
+                    ?: 'Applicant record ' . $h->applicant_id;
+
+                return $this->event('Handoff', $label . ' - ' . str_replace('_', ' ', $h->status), $h->updated_at, $h->status, route('academics.dean-os.handoff'));
+            });
     }
 
     private function event(string $type, string $title, mixed $date, string $status, string $route): array

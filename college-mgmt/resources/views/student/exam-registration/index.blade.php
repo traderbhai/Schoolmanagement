@@ -49,14 +49,14 @@
                         $canReg = $attOk && $feeOk && !$reg;
                     @endphp
                     <tr>
-                        <td class="fw-semibold">{{ $exam->title }}</td>
-                        <td class="text-muted small">{{ $exam->subject->name ?? '—' }}</td>
-                        <td class="small">{{ $exam->exam_date ? \Carbon\Carbon::parse($exam->exam_date)->format('d M Y') : '—' }}</td>
+                        <td class="fw-semibold">{{ $exam->name }}</td>
+                        <td class="text-muted small">{{ $exam->subject->name ?? '-' }}</td>
+                        <td class="small">{{ $exam->exam_date ? \Carbon\Carbon::parse($exam->exam_date)->format('d M Y') : '-' }}</td>
                         <td>
                             @if($attPct !== null)
                                 <span class="badge {{ $attPct >= 75 ? 'bg-success' : 'bg-danger' }}">{{ round($attPct) }}%</span>
                             @else
-                                <span class="text-muted small">—</span>
+                                <span class="text-muted small">No records yet</span>
                             @endif
                         </td>
                         <td>

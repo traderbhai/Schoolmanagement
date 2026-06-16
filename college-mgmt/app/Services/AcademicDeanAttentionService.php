@@ -104,7 +104,7 @@ class AcademicDeanAttentionService
             ->having('exception_count', '>=', 2)
             ->limit(25)
             ->get()
-            ->map(fn ($row) => $this->item($row->student?->user?->name ?? 'Student #' . $row->student_id, $row->exception_count . ' attendance exceptions in last 30 days', 'high', 'attendance', 'Program team', null, route('dean.attendance'), 'Assign intervention'));
+            ->map(fn ($row) => $this->item($this->studentLabel($row->student, $row->student_id), $row->exception_count . ' attendance exceptions in last 30 days', 'high', 'attendance', 'Program team', null, route('dean.attendance'), 'Assign intervention'));
     }
 
     private function weakPerformance(): Collection
@@ -113,7 +113,7 @@ class AcademicDeanAttentionService
             ->whereHas('exam', fn ($query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
             ->limit(25)
             ->get()
-            ->map(fn (ExamResult $result) => $this->item($result->student?->user?->name ?? 'Student #' . $result->student_id, ($result->exam?->subject?->code ?? 'Exam') . ' below pass mark', 'high', 'program', 'Program Director', null, route('dean.academics'), 'Review performance support'));
+            ->map(fn (ExamResult $result) => $this->item($this->studentLabel($result->student, $result->student_id), ($result->exam?->subject?->code ?? 'Exam') . ' below pass mark', 'high', 'program', 'Program Director', null, route('dean.academics'), 'Review performance support'));
     }
 
     private function curriculumDelays(): Collection
@@ -175,7 +175,7 @@ class AcademicDeanAttentionService
             ->where(fn ($q) => $q->where('status', '!=', 'approved')->orWhere('attendance_eligible', false)->orWhere('fee_cleared', false))
             ->limit(25)
             ->get()
-            ->map(fn (ExamRegistration $registration) => $this->item($registration->student?->user?->name ?? 'Student #' . $registration->student_id, ($registration->exam?->name ?? 'Exam') . ' hall ticket blocked', 'high', 'coe', 'Exam Officer', null, route('academics.coe.hall-ticket-readiness'), 'Clear hall ticket blocker'));
+            ->map(fn (ExamRegistration $registration) => $this->item($this->studentLabel($registration->student, $registration->student_id), ($registration->exam?->name ?? 'Exam') . ' hall ticket blocked', 'high', 'coe', 'Exam Officer', null, route('academics.coe.hall-ticket-readiness'), 'Clear hall ticket blocker'));
     }
 
     private function obeGaps(): Collection
@@ -198,7 +198,7 @@ class AcademicDeanAttentionService
             ->having('avg_rating', '<', 3.5)
             ->limit(25)
             ->get()
-            ->map(fn ($row) => $this->item($row->subject?->name ?? 'Subject #' . $row->subject_id, 'Average feedback ' . round($row->avg_rating, 1) . ' from ' . $row->response_count . ' responses', 'medium', 'course_delivery', 'Course Coordinator', null, route('academics.course-delivery.course-engagement'), 'Create feedback action plan'));
+            ->map(fn ($row) => $this->item($this->subjectLabel($row->subject, $row->subject_id), 'Average feedback ' . round($row->avg_rating, 1) . ' from ' . $row->response_count . ' responses', 'medium', 'course_delivery', 'Course Coordinator', null, route('academics.course-delivery.course-engagement'), 'Create feedback action plan'));
     }
 
     private function handoffBlockers(): Collection
@@ -215,7 +215,7 @@ class AcademicDeanAttentionService
             ->latest('admission_handoff_records.updated_at')
             ->limit(25)
             ->get()
-            ->map(fn ($row) => $this->item($row->applicant_name ?? 'Applicant #' . $row->applicant_id, ($row->application_number ?? 'Application') . ' - ' . str_replace('_', ' ', $row->status), $row->status === 'blocked' ? 'critical' : 'high', 'handoff', 'Admission/Academics', null, route('academics.dean-os.handoff'), 'Clear handoff blocker'));
+            ->map(fn ($row) => $this->item($this->applicantLabel($row), ($row->application_number ?? 'Application') . ' - ' . str_replace('_', ' ', $row->status), $row->status === 'blocked' ? 'critical' : 'high', 'handoff', 'Admission/Academics', null, route('academics.dean-os.handoff'), 'Clear handoff blocker'));
     }
 
     private function overdueActions(): Collection
@@ -227,5 +227,34 @@ class AcademicDeanAttentionService
             ->limit(25)
             ->get()
             ->map(fn (AcademicDeanActionItem $action) => $this->item($action->title, $action->description ?? 'Dean action item overdue', 'critical', $action->source_type, $action->owner?->name, $action->due_at?->toDateString(), route('academics.dean-os.reviews'), 'Close or escalate action'));
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
+    }
+
+    private function subjectLabel(?Subject $subject, mixed $fallbackId): string
+    {
+        if (! $subject) {
+            return 'Unassigned subject';
+        }
+
+        return $subject->name
+            ?? $subject->code
+            ?? 'Subject record ' . $fallbackId;
+    }
+
+    private function applicantLabel(object $row): string
+    {
+        return $row->applicant_name
+            ?: ($row->application_number ?: 'Applicant record ' . $row->applicant_id);
     }
 }

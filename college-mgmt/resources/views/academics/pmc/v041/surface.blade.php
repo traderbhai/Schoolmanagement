@@ -68,7 +68,7 @@
             <div class="card shadow-sm mt-3">
                 <div class="card-header py-2 fw-semibold">Elective Choices</div>
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Student</th><th>Subject</th><th>Rank</th><th>Score</th><th>Status</th></tr></thead><tbody>
-                    @forelse($electiveChoices as $choice)<tr><td>{{ $choice->student?->user?->name ?? 'Student #' . $choice->student_id }}</td><td>{{ $choice->subject?->name ?? 'Subject #' . $choice->subject_id }}</td><td>{{ $choice->preference_rank }}</td><td>{{ $choice->priority_score }}</td><td>{{ $choice->status }}</td></tr>@empty<tr><td colspan="5" class="text-muted">No elective choice-window records.</td></tr>@endforelse
+                    @forelse($electiveChoices as $choice)<tr><td>{{ $choice->student?->user?->name ?? $choice->student?->enrollment_number ?? $choice->student?->roll_number ?? $choice->student?->student_id ?? 'Unassigned student' }}</td><td>{{ $choice->subject?->name ?? $choice->subject?->code ?? 'Unassigned subject' }}</td><td>{{ $choice->preference_rank }}</td><td>{{ $choice->priority_score }}</td><td>{{ $choice->status }}</td></tr>@empty<tr><td colspan="5" class="text-muted">No elective choice-window records.</td></tr>@endforelse
                 </tbody></table></div><div class="card-footer py-2">{{ $electiveChoices->links() }}</div>
             </div>
         @endisset
@@ -107,8 +107,8 @@
             <div class="table-responsive"><table class="table table-sm align-middle mb-0">
                 <thead><tr><th>Student</th><th>Subject</th><th>Type</th><th>Approval</th><th>Basket</th><th>Flags</th></tr></thead>
                 <tbody>@forelse($allocations as $allocation)<tr>
-                    <td>{{ $allocation->student?->user?->name ?? 'Student #' . $allocation->student_id }}</td>
-                    <td>{{ $allocation->subject?->name ?? 'Subject #' . $allocation->subject_id }}</td>
+                    <td>{{ $allocation->student?->user?->name ?? $allocation->student?->enrollment_number ?? $allocation->student?->roll_number ?? $allocation->student?->student_id ?? 'Unassigned student' }}</td>
+                    <td>{{ $allocation->subject?->name ?? $allocation->subject?->code ?? 'Unassigned subject' }}</td>
                     <td>{{ $allocation->allocation_type }}</td>
                     <td>{{ $allocation->approval_status }}</td>
                     <td>{{ $allocation->basket_status }}</td>

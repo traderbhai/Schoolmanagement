@@ -55,7 +55,7 @@ class AcademicsCoeV003Test extends TestCase
 
     public function test_coe_source_lists_are_database_backed_and_linked_to_exam_cell_workflows(): void
     {
-        $this->seedCoeFixture();
+        $fixture = $this->seedCoeFixture();
         $exam = User::where('email', 'exam@college.com')->firstOrFail();
 
         $this->actingAs($exam)
@@ -64,6 +64,7 @@ class AcademicsCoeV003Test extends TestCase
             ->assertSee('Hall Ticket Readiness')
             ->assertSee('Filtered Source List')
             ->assertSee('Kavya Nair')
+            ->assertDontSee('Student #'.$fixture['student']->id)
             ->assertSee(route('exam-cell.hall-tickets'), false);
 
         $this->actingAs($exam)

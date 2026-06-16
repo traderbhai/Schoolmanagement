@@ -5,16 +5,20 @@ namespace Tests\Feature;
 use App\Models\AcademicDeanActionItem;
 use App\Models\AcademicDeanExportLog;
 use App\Models\AcademicDeanReviewMeeting;
+use App\Models\Attendance;
+use App\Models\Course;
 use App\Models\Department;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Models\TimetableEntry;
 use App\Models\User;
 use App\Services\AcademicDeanAttentionService;
 use App\Services\AcademicDeanRiskService;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -28,17 +32,17 @@ class AcademicsDeanV007Test extends TestCase
         $program = Program::factory()->create(['department_id' => $department->id, 'code' => 'PGDM', 'name' => 'PGDM', 'is_active' => true]);
         $subject = Subject::factory()->create(['department_id' => $department->id, 'program_id' => $program->id, 'code' => 'MGT101', 'name' => 'Management Foundations', 'is_active' => true]);
         $studentUser = User::factory()->create(['name' => 'Aarav Dean Risk']);
-        Student::factory()->create([
+        $student = Student::factory()->create([
             'user_id' => $studentUser->id,
             'department_id' => $department->id,
             'program_id' => $program->id,
             'status' => 'active',
         ]);
-        Semester::factory()->create(['number' => 1, 'is_current' => true]);
+        $semester = Semester::factory()->create(['number' => 1, 'is_current' => true]);
 
         $this->seed(AcademicsOperatingDemoSeeder::class);
 
-        return compact('department', 'program', 'subject');
+        return compact('department', 'program', 'subject', 'semester', 'student');
     }
 
     public function test_dean_can_open_command_os_with_branch_health_and_risk(): void
@@ -72,8 +76,19 @@ class AcademicsDeanV007Test extends TestCase
 
     public function test_dean_attention_and_program_risk_are_database_backed(): void
     {
-        $this->seedDeanFixture();
+        $fixture = $this->seedDeanFixture();
         $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $entry = TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+        ]);
+        Attendance::create(['student_id' => $fixture['student']->id, 'timetable_entry_id' => $entry->id, 'date' => now()->subDays(2), 'status' => 'absent']);
+        Attendance::create(['student_id' => $fixture['student']->id, 'timetable_entry_id' => $entry->id, 'date' => now()->subDay(), 'status' => 'late']);
 
         $queue = app(AcademicDeanAttentionService::class)->queue('action_items_overdue');
         $this->assertGreaterThan(0, $queue['count']);
@@ -86,6 +101,12 @@ class AcademicsDeanV007Test extends TestCase
             ->assertOk()
             ->assertSee('Program Risk Heatmap')
             ->assertSee('PGDM');
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.attention', 'attendance_risk'))
+            ->assertOk()
+            ->assertSee('Aarav Dean Risk')
+            ->assertDontSee('Student #'.$fixture['student']->id);
     }
 
     public function test_dean_can_create_review_action_update_action_and_export(): void
@@ -143,9 +164,20 @@ class AcademicsDeanV007Test extends TestCase
     {
         $this->seedDeanFixture();
         $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $handoff = DB::table('admission_handoff_records')
+            ->leftJoin('applicants', 'applicants.id', '=', 'admission_handoff_records.applicant_id')
+            ->leftJoin('users', 'users.id', '=', 'applicants.user_id')
+            ->whereIn('admission_handoff_records.status', ['blocked', 'ready_for_academics', 'returned_for_correction'])
+            ->select('admission_handoff_records.applicant_id', 'users.name as applicant_name', 'applicants.application_number')
+            ->first();
 
         $this->actingAs($dean)->get(route('academics.dean-os.handoff'))->assertOk()->assertSee('Admission To Academics Handoff');
-        $this->actingAs($dean)->get(route('academics.dean-os.calendar'))->assertOk()->assertSee('Dean Academic Calendar');
+        $calendarResponse = $this->actingAs($dean)->get(route('academics.dean-os.calendar'))->assertOk()->assertSee('Dean Academic Calendar');
+        if ($handoff) {
+            $calendarResponse
+                ->assertSee($handoff->applicant_name ?: $handoff->application_number)
+                ->assertDontSee('Applicant #'.$handoff->applicant_id);
+        }
         $this->actingAs($dean)->get(route('academics.dean-os.reports'))->assertOk()->assertSee('Dean Reports')->assertSee('Dean branch health');
         $this->actingAs($dean)->get(route('dean.dashboard'))->assertOk()->assertSee('Dean OS');
     }

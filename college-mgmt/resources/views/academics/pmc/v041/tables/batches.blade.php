@@ -13,7 +13,7 @@
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
         <thead><tr><th>Student</th><th>Subject</th><th>Type</th><th>Approval</th><th>Basket</th></tr></thead>
         <tbody>@forelse($allocations as $allocation)<tr>
-            <td>{{ $allocation->student?->user?->name ?? 'Student #' . $allocation->student_id }}</td><td>{{ $allocation->subject?->name ?? 'Subject #' . $allocation->subject_id }}</td><td>{{ $allocation->allocation_type }}</td><td>{{ $allocation->approval_status }}</td><td>{{ $allocation->basket_status }}</td>
+            <td>{{ $allocation->student?->user?->name ?? $allocation->student?->enrollment_number ?? $allocation->student?->roll_number ?? $allocation->student?->student_id ?? 'Unassigned student' }}</td><td>{{ $allocation->subject?->name ?? $allocation->subject?->code ?? 'Unassigned subject' }}</td><td>{{ $allocation->allocation_type }}</td><td>{{ $allocation->approval_status }}</td><td>{{ $allocation->basket_status }}</td>
         </tr>@empty<tr><td colspan="5" class="text-muted">No student course allocations.</td></tr>@endforelse</tbody>
     </table></div><div class="card-footer py-2">{{ $allocations->links() }}</div>
 </div>

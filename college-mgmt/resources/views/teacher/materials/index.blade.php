@@ -32,12 +32,12 @@
                         <label class="form-label small mb-1">Type</label>
                         <select name="type" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
                             <option value="">All Types</option>
-                            <option value="lecture_note"    {{ request('type') === 'lecture_note'    ? 'selected' : '' }}>Lecture Note</option>
+                            <option value="pre_read"        {{ request('type') === 'pre_read'        ? 'selected' : '' }}>Pre-Read</option>
+                            <option value="post_read"       {{ request('type') === 'post_read'       ? 'selected' : '' }}>Post-Read</option>
+                            <option value="notes"           {{ request('type') === 'notes'           ? 'selected' : '' }}>Notes</option>
                             <option value="reference"       {{ request('type') === 'reference'       ? 'selected' : '' }}>Reference</option>
+                            <option value="slides"          {{ request('type') === 'slides'          ? 'selected' : '' }}>Slides</option>
                             <option value="video"           {{ request('type') === 'video'           ? 'selected' : '' }}>Video</option>
-                            <option value="link"            {{ request('type') === 'link'            ? 'selected' : '' }}>Link</option>
-                            <option value="assignment_sheet"{{ request('type') === 'assignment_sheet'? 'selected' : '' }}>Assignment Sheet</option>
-                            <option value="lab_manual"      {{ request('type') === 'lab_manual'      ? 'selected' : '' }}>Lab Manual</option>
                             <option value="other"           {{ request('type') === 'other'           ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
@@ -55,21 +55,21 @@
 
     @php
         $typeBadges = [
-            'lecture_note'     => 'bg-primary',
+            'pre_read'         => 'bg-primary',
+            'post_read'        => 'bg-info text-dark',
+            'notes'            => 'bg-success',
             'reference'        => 'bg-secondary',
+            'slides'           => 'bg-warning text-dark',
             'video'            => 'bg-danger',
-            'link'             => 'bg-info text-dark',
-            'assignment_sheet' => 'bg-warning text-dark',
-            'lab_manual'       => 'bg-success',
             'other'            => 'bg-dark',
         ];
         $typeLabels = [
-            'lecture_note'     => 'Lecture Note',
+            'pre_read'         => 'Pre-Read',
+            'post_read'        => 'Post-Read',
+            'notes'            => 'Notes',
             'reference'        => 'Reference',
+            'slides'           => 'Slides',
             'video'            => 'Video',
-            'link'             => 'Link',
-            'assignment_sheet' => 'Assignment Sheet',
-            'lab_manual'       => 'Lab Manual',
             'other'            => 'Other',
         ];
     @endphp
@@ -121,8 +121,8 @@
                                         @endif
                                     </td>
                                     <td class="text-muted small text-nowrap">
-                                        @if($material->file_path && $material->file_size)
-                                            {{ number_format($material->file_size / 1024, 1) }} KB
+                                        @if($material->file_path && $material->file_size_kb)
+                                            {{ number_format($material->file_size_kb, 1) }} KB
                                         @elseif($material->external_url)
                                             <span class="text-info"><i class="bi bi-link-45deg"></i> URL</span>
                                         @else

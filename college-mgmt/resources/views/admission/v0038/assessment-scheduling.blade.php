@@ -34,7 +34,7 @@
                             <label class="form-label small">Resource / Room</label>
                             <select name="resource_id" class="form-select form-select-sm">
                                 <option value="">No resource</option>
-                                @foreach($resources as $resource)<option value="{{ $resource->id }}">{{ $resource->name }} · cap {{ $resource->capacity }}</option>@endforeach
+                                @foreach($resources as $resource)<option value="{{ $resource->id }}">{{ $resource->name }} - cap {{ $resource->capacity }}</option>@endforeach
                             </select>
                         </div>
                         <div class="col-6"><label class="form-label small">Code</label><input name="slot_code" class="form-control form-control-sm" value="PGDM-{{ now()->format('Hi') }}"></div>
@@ -65,7 +65,7 @@
                                         @csrf
                                         <input type="hidden" name="slot_id" value="{{ $slot->id }}">
                                         <select name="applicant_id" class="form-select form-select-sm" aria-label="Applicant">
-                                            @foreach($applicants as $applicant)<option value="{{ $applicant->id }}">{{ $applicant->application_number }} · {{ $applicant->user?->name }}</option>@endforeach
+                                            @foreach($applicants as $applicant)<option value="{{ $applicant->id }}">{{ $applicant->application_number }} - {{ $applicant->user?->name }}</option>@endforeach
                                         </select>
                                         <button class="btn btn-sm btn-outline-primary">Assign</button>
                                     </form>
@@ -100,8 +100,8 @@
                         <tbody>
                         @foreach($invitations as $invite)
                             <tr>
-                                <td>{{ $invite->panel_id }}</td>
-                                <td>{{ $invite->user_id }}</td>
+                                <td>{{ $panelNames[$invite->panel_id] ?? 'Panel pending' }}</td>
+                                <td>{{ $userNames[$invite->user_id] ?? 'Evaluator pending' }}</td>
                                 <td>{{ $invite->status }}</td>
                                 <td>
                                     <form method="POST" action="{{ route('admission.assessment-evaluator-invitations.respond') }}" class="d-inline">
@@ -150,7 +150,7 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('admission.assessment-submissions.store') }}" class="row g-2">
                         @csrf
-                        <div class="col-12"><select name="applicant_id" class="form-select form-select-sm" aria-label="Applicant for submission">@foreach($applicants as $applicant)<option value="{{ $applicant->id }}">{{ $applicant->application_number }} · {{ $applicant->user?->name }}</option>@endforeach</select></div>
+                        <div class="col-12"><select name="applicant_id" class="form-select form-select-sm" aria-label="Applicant for submission">@foreach($applicants as $applicant)<option value="{{ $applicant->id }}">{{ $applicant->application_number }} - {{ $applicant->user?->name }}</option>@endforeach</select></div>
                         <div class="col-6"><select name="submission_type" class="form-select form-select-sm"><option>case_analysis</option><option>wat</option><option>presentation</option></select></div>
                         <div class="col-6"><select name="status" class="form-select form-select-sm"><option>received</option><option>late</option><option>missing</option></select></div>
                         <div class="col-12"><input name="artifact_url" class="form-control form-control-sm" placeholder="Submission link placeholder"></div>
@@ -169,8 +169,8 @@
                 <tbody>
                 @foreach($assignments as $assignment)
                     <tr>
-                        <td>#{{ $assignment->id }}</td>
-                        <td>{{ $assignment->applicant_id }}</td>
+                        <td>{{ $assignment->slot_id ? 'Slot '.$assignment->slot_id : 'Assessment slot' }}</td>
+                        <td>{{ $applicantNames[$assignment->applicant_id] ?? 'Applicant pending' }}</td>
                         <td>{{ $assignment->status }}</td>
                         <td>
                             <form method="POST" action="{{ route('admission.assessment-slots.check-in') }}" class="d-flex gap-1">
@@ -196,7 +196,7 @@
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Assessment resource conflicts">
                 <thead><tr><th>Resource</th><th>Starts</th><th>Ends</th><th>Status</th></tr></thead>
-                <tbody>@forelse($conflicts as $conflict)<tr><td>{{ $conflict->resource_id }}</td><td>{{ $conflict->starts_at }}</td><td>{{ $conflict->ends_at }}</td><td>Conflict</td></tr>@empty<tr><td colspan="4" class="text-muted text-center">No resource conflicts.</td></tr>@endforelse</tbody>
+                <tbody>@forelse($conflicts as $conflict)<tr><td>{{ $resourceNames[$conflict->resource_id] ?? 'Resource pending' }}</td><td>{{ $conflict->starts_at }}</td><td>{{ $conflict->ends_at }}</td><td>Conflict</td></tr>@empty<tr><td colspan="4" class="text-muted text-center">No resource conflicts.</td></tr>@endforelse</tbody>
             </table>
         </div>
     </div>

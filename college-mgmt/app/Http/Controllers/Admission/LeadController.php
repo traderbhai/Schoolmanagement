@@ -222,12 +222,14 @@ class LeadController extends Controller
             $user->assignRole('applicant');
         }
 
+        $leadLabel = trim(($lead->name ?: 'Unnamed lead') . ' - ' . ($lead->email ?: $lead->phone ?: $lead->source_label ?: 'No contact on file'));
+
         $applicant = \App\Models\Applicant::create([
             'user_id'    => $user->id,
             'program_id' => $validated['program_id'],
             'batch_id'   => $validated['batch_id'] ?? null,
             'status'     => 'draft',
-            'notes'      => "Converted from Lead #{$lead->id} ({$lead->source_label})",
+            'notes'      => "Converted from lead {$leadLabel}",
         ]);
 
         $lead->convertToApplicant($applicant);

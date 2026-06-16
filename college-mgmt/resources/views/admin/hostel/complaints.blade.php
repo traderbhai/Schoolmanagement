@@ -126,8 +126,8 @@
                                                 </select>
                                             </div>
                                             <div class="col-12">
-                                                <label class="form-label">Resolution Notes</label>
-                                                <textarea name="resolution_notes" class="form-control" rows="3">{{ $c->resolution_notes }}</textarea>
+                                                <label class="form-label">Resolution Notes <span class="text-muted small">(required for resolved/closed)</span></label>
+                                                <textarea name="resolution_notes" class="form-control" rows="3" maxlength="3000" placeholder="Record action taken, staff response, and final resolution before closing.">{{ $c->resolution_notes }}</textarea>
                                             </div>
                                         </div>
                                         <div class="mt-3 text-end">

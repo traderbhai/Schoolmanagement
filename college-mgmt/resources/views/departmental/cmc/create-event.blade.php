@@ -16,8 +16,8 @@
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Event Type <span class="text-danger">*</span></label>
           <select name="event_type" class="form-select" required>
-            @foreach(['seminar','workshop','job-fair','guest-lecture','other'] as $t)
-            <option value="{{ $t }}" {{ old('event_type')===$t?'selected':'' }}>{{ ucwords(str_replace('-',' ',$t)) }}</option>
+            @foreach(\App\Models\CareerEvent::TYPE_LABELS as $t => $label)
+            <option value="{{ $t }}" {{ old('event_type')===$t?'selected':'' }}>{{ $label }}</option>
             @endforeach
           </select>
         </div>

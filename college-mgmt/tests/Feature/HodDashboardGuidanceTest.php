@@ -9,6 +9,7 @@ use App\Models\Program;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Models\LeaveApplication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -99,5 +100,32 @@ class HodDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->post(route('hod.approve', $foreignApproval), ['remarks' => 'Approved'])
             ->assertForbidden();
+    }
+
+    public function test_hod_leave_review_modal_uses_named_route_action(): void
+    {
+        $department = Department::factory()->create(['name' => 'Computer Science']);
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $student = Student::factory()->create(['program_id' => $program->id]);
+        $faculty = Teacher::factory()->create(['department_id' => $department->id]);
+        $leave = LeaveApplication::create([
+            'student_id' => $student->id,
+            'teacher_id' => $faculty->id,
+            'leave_type' => 'medical',
+            'from_date' => now()->addDay()->toDateString(),
+            'to_date' => now()->addDays(2)->toDateString(),
+            'days' => 2,
+            'reason' => 'Medical consultation.',
+            'status' => 'pending',
+        ]);
+        $user = $this->hodUser($department);
+
+        $this->actingAs($user)
+            ->get(route('hod.leaves'))
+            ->assertStatus(200)
+            ->assertSee(route('hod.leaves.review', $leave), false)
+            ->assertSee('data-review-action="approved"', false)
+            ->assertSee('data-review-action="rejected"', false)
+            ->assertSee('onclick="openReview(this)"', false);
     }
 }

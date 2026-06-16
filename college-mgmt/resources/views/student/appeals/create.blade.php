@@ -12,10 +12,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Select Result <span class="text-danger">*</span></label>
                     <select name="exam_result_id" class="form-select @error('exam_result_id') is-invalid @enderror" required>
-                        <option value="">— choose a result —</option>
+                        <option value="">Choose a result</option>
                         @foreach($results as $result)
                         <option value="{{ $result->id }}" {{ old('exam_result_id')==$result->id?'selected':'' }}>
-                            {{ $result->exam->subject->name ?? '?' }} — {{ $result->exam->title ?? '?' }}
+                            {{ $result->exam->subject->name ?? '?' }} - {{ $result->exam->name ?? '?' }}
                             ({{ $result->marks_obtained }}/{{ $result->exam->total_marks ?? '?' }})
                         </option>
                         @endforeach
@@ -32,7 +32,7 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
                     <select name="reason" class="form-select @error('reason') is-invalid @enderror" required>
-                        <option value="">— select reason —</option>
+                        <option value="">Select reason</option>
                         <option value="totalling_error" {{ old('reason')=='totalling_error'?'selected':'' }}>Totalling / Calculation Error</option>
                         <option value="unmarked_question" {{ old('reason')=='unmarked_question'?'selected':'' }}>Unmarked Question</option>
                         <option value="wrong_entry" {{ old('reason')=='wrong_entry'?'selected':'' }}>Wrong Entry in System</option>

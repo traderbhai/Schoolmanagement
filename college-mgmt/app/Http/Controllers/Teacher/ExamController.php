@@ -6,6 +6,27 @@ use Illuminate\Http\Request;
 
 class ExamController extends Controller
 {
+    private function ensureTeacherForExam(Exam $exam): void
+    {
+        $teacher = auth()->user()->teacher;
+        abort_unless($teacher, 403);
+
+        $teaches = TimetableEntry::where('teacher_id', $teacher->id)
+            ->where('subject_id', $exam->subject_id)
+            ->where('is_active', true)
+            ->exists();
+        abort_unless($teaches, 403, 'You do not teach this subject.');
+    }
+
+    private function enrolledStudentIdsForExam(Exam $exam)
+    {
+        return Student::whereHas('enrollments', fn($q) =>
+            $q->where('semester_id', $exam->semester_id)
+              ->where('subject_id', $exam->subject_id)
+              ->where('status', 'active')
+        )->pluck('id');
+    }
+
     public function index()
     {
         $teacher = auth()->user()->teacher;
@@ -24,15 +45,12 @@ class ExamController extends Controller
 
     public function enterResults(Exam $exam)
     {
-        $teacher = auth()->user()->teacher;
-        // Verify teacher teaches this subject
-        $teaches = TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('subject_id', $exam->subject_id)->exists();
-        abort_unless($teaches, 403, 'You do not teach this subject.');
+        $this->ensureTeacherForExam($exam);
 
         $students = Student::whereHas('enrollments', fn($q) =>
             $q->where('semester_id', $exam->semester_id)
               ->where('subject_id', $exam->subject_id)
+              ->where('status', 'active')
         )->with(['user',
             'examResults' => fn($q) => $q->where('exam_id', $exam->id)
         ])->orderBy('roll_number')->get();
@@ -42,13 +60,27 @@ class ExamController extends Controller
 
     public function saveResults(Request $request, Exam $exam)
     {
-        $teacher = auth()->user()->teacher;
-        $teaches = TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('subject_id', $exam->subject_id)->exists();
-        abort_unless($teaches, 403);
+        $this->ensureTeacherForExam($exam);
+
+        $request->validate([
+            'results' => 'required|array',
+            'results.*.is_absent' => 'nullable|boolean',
+            'results.*.marks_obtained' => 'nullable|numeric|min:0|max:' . (float) $exam->total_marks,
+            'results.*.remarks' => 'nullable|string|max:500',
+        ]);
+
+        $allowedStudentIds = $this->enrolledStudentIdsForExam($exam)->map(fn ($id) => (string) $id)->all();
+        $submittedStudentIds = array_map('strval', array_keys($request->results));
+        abort_unless(empty(array_diff($submittedStudentIds, $allowedStudentIds)), 403, 'Results include students outside this exam subject.');
 
         foreach ($request->results as $studentId => $result) {
             $isAbsent = !empty($result['is_absent']);
+            if (! $isAbsent && ! array_key_exists('marks_obtained', $result)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(["results.{$studentId}.marks_obtained" => 'Marks are required unless the student is marked absent.']);
+            }
+
             ExamResult::updateOrCreate(
                 ['exam_id' => $exam->id, 'student_id' => $studentId],
                 [

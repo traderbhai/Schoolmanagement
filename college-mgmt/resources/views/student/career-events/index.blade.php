@@ -23,7 +23,16 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <span class="badge bg-primary-subtle text-primary">{{ ucwords(str_replace('_',' ',$event->event_type)) }}</span>
                         @if($registered)
-                            <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Registered</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Registered</span>
+                                @if($event->isOpen())
+                                    <form method="POST" action="{{ route('student.career-events.cancel', $event) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                    </form>
+                                @endif
+                            </div>
                         @elseif($event->isOpen())
                             <form method="POST" action="{{ route('student.career-events.register', $event) }}">
                                 @csrf

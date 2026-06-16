@@ -123,6 +123,10 @@ class AssetController extends Controller
 
     public function stockReceive(Request $request, InventoryItem $item)
     {
+        if ($item->status !== 'active') {
+            return back()->with('error', 'Only active inventory items can receive stock.');
+        }
+
         $data = $request->validate([
             'quantity' => 'required|integer|min:1',
             'vendor_name' => 'nullable|string|max:160',
@@ -150,6 +154,10 @@ class AssetController extends Controller
 
     public function stockIssue(Request $request, InventoryItem $item)
     {
+        if ($item->status !== 'active') {
+            return back()->with('error', 'Only active inventory items can be issued.');
+        }
+
         $data = $request->validate([
             'quantity' => 'required|integer|min:1',
             'issued_to_user_id' => 'nullable|exists:users,id',
@@ -208,7 +216,7 @@ class AssetController extends Controller
     public function returnAssignment(Request $request, AssetAssignment $assignment)
     {
         $data = $request->validate([
-            'returned_on' => 'required|date',
+            'returned_on' => 'required|date|after_or_equal:'.$assignment->assigned_on->toDateString(),
             'condition' => 'required|in:new,good,needs_repair,damaged',
             'remarks' => 'nullable|string|max:1000',
         ]);

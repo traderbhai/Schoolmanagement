@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Departmental;
 use App\Http\Controllers\Controller;
 use App\Models\{PlacementDrive, Placement, Student, Program, Company, CareerEvent, CareerEventRegistration};
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CmcController extends Controller
 {
@@ -272,8 +273,8 @@ class CmcController extends Controller
 
     public function events(Request $request)
     {
-        $query = CareerEvent::with('organizer')->latest('event_date');
-        if ($request->filled('type')) $query->where('event_type', $request->type);
+        $query = CareerEvent::with('organizer')->withCount('registrations')->latest('event_date');
+        if ($request->filled('type') && array_key_exists($request->type, CareerEvent::TYPE_LABELS)) $query->where('event_type', $request->type);
         $events = $query->paginate(25)->withQueryString();
         return view('departmental.cmc.events', compact('events'));
     }
@@ -287,12 +288,12 @@ class CmcController extends Controller
     {
         $data = $request->validate([
             'title'                 => 'required|string|max:255',
-            'event_type'            => 'required|string|max:100',
-            'event_date'            => 'required|date',
+            'event_type'            => ['required', Rule::in(array_keys(CareerEvent::TYPE_LABELS))],
+            'event_date'            => 'required|date|after_or_equal:today',
             'venue'                 => 'nullable|string|max:255',
             'description'           => 'nullable|string|max:2000',
             'seats'                 => 'nullable|integer|min:1',
-            'registration_deadline' => 'nullable|date',
+            'registration_deadline' => 'nullable|date|before_or_equal:event_date',
             'is_published'          => 'boolean',
         ]);
         $data['organizer_id'] = auth()->id();
@@ -310,14 +311,22 @@ class CmcController extends Controller
     {
         $data = $request->validate([
             'title'                 => 'required|string|max:255',
-            'event_type'            => 'required|string|max:100',
+            'event_type'            => ['required', Rule::in(array_keys(CareerEvent::TYPE_LABELS))],
             'event_date'            => 'required|date',
             'venue'                 => 'nullable|string|max:255',
             'description'           => 'nullable|string|max:2000',
             'seats'                 => 'nullable|integer|min:1',
-            'registration_deadline' => 'nullable|date',
+            'registration_deadline' => 'nullable|date|before_or_equal:event_date',
             'is_published'          => 'boolean',
         ]);
+
+        $registeredCount = $event->registrations()->count();
+        if (($data['seats'] ?? null) !== null && (int) $data['seats'] < $registeredCount) {
+            return back()
+                ->withErrors(['seats' => "Seats cannot be lower than the current registration count ({$registeredCount})."])
+                ->withInput();
+        }
+
         $data['is_published'] = $request->boolean('is_published');
         $event->update($data);
         return redirect()->route('cmc.events')->with('success', 'Event updated.');
@@ -325,6 +334,10 @@ class CmcController extends Controller
 
     public function destroyEvent(CareerEvent $event)
     {
+        if ($event->registrations()->exists()) {
+            return back()->with('error', 'Cannot delete a career event after students have registered. Unpublish it instead to preserve registration and attendance history.');
+        }
+
         $event->delete();
         return back()->with('success', 'Event deleted.');
     }
@@ -335,5 +348,20 @@ class CmcController extends Controller
         $registrations = CareerEventRegistration::where('career_event_id', $event->id)
             ->with(['student.user'])->latest()->get();
         return view('departmental.cmc.event-registrations', compact('event', 'registrations'));
+    }
+
+    public function updateEventAttendance(Request $request, CareerEvent $event, CareerEventRegistration $registration)
+    {
+        abort_unless((int) $registration->career_event_id === (int) $event->id, 404);
+
+        $data = $request->validate([
+            'attended' => 'required|boolean',
+        ]);
+
+        $registration->update([
+            'attended' => (bool) $data['attended'],
+        ]);
+
+        return back()->with('success', 'Event attendance updated.');
     }
 }

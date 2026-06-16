@@ -72,8 +72,8 @@
                                 </select>
                             </div>
                             <div class="col-12">
-                                <label class="form-label small fw-semibold">Resolution / Response Notes</label>
-                                <textarea name="resolution_notes" rows="5" class="form-control form-control-sm" placeholder="Describe actions taken, staff response, and final resolution when applicable.">{{ old('resolution_notes', $grievance->resolution_notes) }}</textarea>
+                                <label class="form-label small fw-semibold">Resolution / Response Notes <span class="text-muted fw-normal">(required for resolved/closed)</span></label>
+                                <textarea name="resolution_notes" rows="5" maxlength="3000" class="form-control form-control-sm" placeholder="Describe actions taken, staff response, and final resolution before resolving or closing.">{{ old('resolution_notes', $grievance->resolution_notes) }}</textarea>
                             </div>
                         </div>
 

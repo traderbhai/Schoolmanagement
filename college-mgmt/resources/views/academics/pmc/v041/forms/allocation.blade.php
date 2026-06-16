@@ -25,7 +25,7 @@
 <form method="POST" action="{{ route('academics.pmc.course-allocation-exceptions.store') }}" class="card shadow-sm mt-3">@csrf
     <div class="card-header py-2 fw-semibold">Course Basket Exception</div>
     <div class="card-body vstack gap-2">
-        <select class="form-select form-select-sm" name="student_id" required><option value="">Select student</option>@foreach($selectorOptions['students'] ?? [] as $student)<option value="{{ $student->id }}">{{ $student->user?->name ?? $student->student_id ?? ('Student #' . $student->id) }}</option>@endforeach</select>
+        <select class="form-select form-select-sm" name="student_id" required><option value="">Select student</option>@foreach($selectorOptions['students'] ?? [] as $student)<option value="{{ $student->id }}">{{ $student->user?->name ?? $student->enrollment_number ?? $student->roll_number ?? $student->student_id ?? 'Unassigned student' }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="subject_id" required><option value="">Select subject</option>@foreach($selectorOptions['subjects'] ?? [] as $subject)<option value="{{ $subject->id }}">{{ $subject->code ?: $subject->name }} - {{ $subject->name }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="term_id"><option value="">Any term</option>@foreach($selectorOptions['terms'] ?? [] as $term)<option value="{{ $term->id }}">{{ $term->name }} - {{ $term->program?->code }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="exception_type">

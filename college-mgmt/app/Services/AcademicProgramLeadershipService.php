@@ -158,17 +158,17 @@ class AcademicProgramLeadershipService
                 'mentor_gaps' => $this->applyProgramScope(Student::whereNull('mentor_id'), $programIds)->count(),
             ],
             'items' => collect($attendanceRisk->map(fn ($row) => [
-                'title' => $row->student?->user?->name ?? 'Student #' . $row->student_id,
+                'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
                 'action' => route('chair.students.at-risk'),
             ])->values())->concat($weakPerformance->map(fn (ExamResult $result) => [
-                'title' => $result->student?->user?->name ?? 'Student #' . $result->student_id,
+                'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
                 'action' => route('chair.reports.subject-performance'),
             ])->values())->concat($pendingLeaves->map(fn (LeaveApplication $leave) => [
-                'title' => $leave->student?->user?->name ?? 'Student #' . $leave->student_id,
+                'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
                 'action' => route('chair.students.leaves'),
@@ -289,5 +289,17 @@ class AcademicProgramLeadershipService
             'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned program work',
             'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit program scope assigned yet',
         ];
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
     }
 }

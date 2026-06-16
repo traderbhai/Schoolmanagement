@@ -73,7 +73,7 @@
                             @forelse($allocations as $allocation)
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $allocation->subject?->name ?? 'Subject #' . $allocation->subject_id }}</div>
+                                        <div class="fw-semibold">{{ $allocation->subject?->name ?? $allocation->subject?->code ?? 'Unassigned subject' }}</div>
                                         <div class="small text-muted">{{ $allocation->subject?->code }} &middot; {{ $allocation->allocation_source }}</div>
                                     </td>
                                     <td>{{ $allocation->term?->name ?? '-' }}</td>
@@ -115,10 +115,10 @@
                             @forelse($timetableItems as $item)
                                 <tr>
                                     <td>{{ ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][$item->day_of_week] ?? 'Day ' . $item->day_of_week }}</td>
-                                    <td>{{ $item->slot?->name ?? 'Slot #' . $item->timetable_slot_id }}</td>
+                                    <td>{{ $item->slot?->name ?? 'Unassigned slot' }}</td>
                                     <td><div class="fw-semibold">{{ $item->courseGroup?->name }}</div><div class="small text-muted">{{ $item->courseGroup?->subject?->name }}</div></td>
-                                    <td>{{ $item->teacher?->user?->name ?? 'Faculty #' . $item->teacher_id }}</td>
-                                    <td>{{ $item->classroom?->name ?? 'Room #' . $item->classroom_id }}</td>
+                                    <td>{{ $item->teacher?->user?->name ?? $item->teacher?->employee_id ?? 'Unassigned faculty' }}</td>
+                                    <td>{{ $item->classroom?->name ?? $item->classroom?->room_number ?? 'Unassigned room' }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="5" class="text-muted">No scheduled classes are available for your allocated groups yet.</td></tr>

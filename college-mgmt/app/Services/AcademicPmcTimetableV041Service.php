@@ -1198,10 +1198,12 @@ class AcademicPmcTimetableV041Service
             $teacher = Teacher::findOrFail($requestedTeacherId);
         }
 
-        $termIds = $this->policy->scopedTermIds($actor);
-        $requestedTermId = (int) ($data['term_id'] ?? 0);
-        if (is_array($termIds) && $requestedTermId > 0 && ! in_array($requestedTermId, $termIds, true)) {
-            abort(403, 'The selected term is outside your scope.');
+        if (! $actor->teacher) {
+            $termIds = $this->policy->scopedTermIds($actor);
+            $requestedTermId = (int) ($data['term_id'] ?? 0);
+            if (is_array($termIds) && $requestedTermId > 0 && ! in_array($requestedTermId, $termIds, true)) {
+                abort(403, 'The selected term is outside your scope.');
+            }
         }
 
         $request = AcademicPmcFacultyAvailabilityRequest::create([
@@ -3187,7 +3189,7 @@ class AcademicPmcTimetableV041Service
 
         return [
             'teacher_id' => $candidate->id,
-            'teacher_name' => $candidate->user?->name ?? 'Teacher #' . $candidate->id,
+            'teacher_name' => $candidate->user?->name ?? $candidate->employee_id ?? 'Unassigned faculty',
             'score' => max(0, min(100, $score)),
             'reasons' => array_values(array_unique($reasons)),
             'conflict_checks' => $checks,

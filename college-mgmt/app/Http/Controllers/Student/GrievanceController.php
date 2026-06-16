@@ -58,8 +58,9 @@ class GrievanceController extends Controller {
     public function close(StudentGrievance $grievance) {
         $student = $this->student();
         abort_if($grievance->student_id !== $student->id, 403);
-        abort_unless(in_array($grievance->status, ['open', 'under_review', 'escalated', 'resolved'], true), 422, 'This grievance is already closed.');
-        $grievance->update(['status' => 'closed', 'resolved_at' => now()]);
+        abort_unless($grievance->status === 'resolved', 422, 'Only resolved grievances can be closed by the student.');
+
+        $grievance->update(['status' => 'closed']);
         return back()->with('success', 'Grievance closed.');
     }
 

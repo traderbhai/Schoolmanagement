@@ -152,6 +152,31 @@ class AssetWorkflowTest extends TestCase
         $this->assertSame(0, AssetAssignment::count());
     }
 
+    public function test_admin_cannot_return_asset_before_assignment_date(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'assigned']);
+
+        $assignment = AssetAssignment::create([
+            'institute_asset_id' => $asset->id,
+            'assigned_to_user_id' => $teacher->id,
+            'assigned_by' => $admin->id,
+            'assigned_on' => '2026-06-13',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assignments.return', $assignment), [
+                'returned_on' => '2026-06-12',
+                'condition' => 'good',
+            ])
+            ->assertSessionHasErrors('returned_on');
+
+        $this->assertSame('active', $assignment->fresh()->status);
+        $this->assertSame('assigned', $asset->fresh()->status);
+    }
+
     public function test_asset_register_page_shows_assets_and_assignment_context(): void
     {
         $admin = $this->userWithRole('admin');
@@ -252,6 +277,36 @@ class AssetWorkflowTest extends TestCase
             ->assertSessionHasErrors('quantity');
 
         $this->assertSame(5, $item->fresh()->current_stock);
+    }
+
+    public function test_inactive_inventory_item_cannot_receive_or_issue_stock(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $item = $this->inventoryItem([
+            'current_stock' => 8,
+            'status' => 'inactive',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.stock-items.receive', $item), [
+                'quantity' => 5,
+                'movement_date' => '2026-06-13',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only active inventory items can receive stock.');
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.stock-items.issue', $item), [
+                'quantity' => 2,
+                'issued_to_user_id' => $teacher->id,
+                'movement_date' => '2026-06-13',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only active inventory items can be issued.');
+
+        $this->assertSame(8, $item->fresh()->current_stock);
+        $this->assertSame(0, InventoryMovement::count());
     }
 
     public function test_asset_register_page_shows_low_stock_and_recent_stock_movements(): void

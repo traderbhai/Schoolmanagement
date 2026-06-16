@@ -2,7 +2,7 @@
 @section('title', 'OBE Attainment Dashboard')
 @section('page-title', 'Attainment Dashboard')
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="#">OBE Framework</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('academic.obe.co.index') }}">OBE Framework</a></li>
     <li class="breadcrumb-item active">Attainment</li>
 @endsection
 

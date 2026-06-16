@@ -84,7 +84,7 @@
                             @forelse($choices as $choice)
                                 <tr>
                                     <td>{{ $choice->preference_rank }}</td>
-                                    <td><div class="fw-semibold">{{ $choice->subject?->name ?? 'Subject #' . $choice->subject_id }}</div><div class="small text-muted">{{ $choice->subject?->code }} &middot; {{ $choice->term?->name }}</div></td>
+                                    <td><div class="fw-semibold">{{ $choice->subject?->name ?? $choice->subject?->code ?? 'Unassigned subject' }}</div><div class="small text-muted">{{ $choice->subject?->code }} &middot; {{ $choice->term?->name }}</div></td>
                                     <td>{{ $choice->priority_score }}</td>
                                     <td><span class="badge text-bg-{{ $choice->status === 'allocated' ? 'success' : ($choice->status === 'waitlisted' ? 'warning' : 'secondary') }}">{{ str($choice->status)->headline() }}</span></td>
                                     <td class="small">{{ $choice->decision_reason ?? '-' }}</td>

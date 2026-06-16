@@ -291,10 +291,10 @@ class AcademicsPmcTimetableV092Test extends TestCase
 
         $this->actingAs($fixture['chair'])
             ->get(route('academics.pmc.data-reconciliation.index', [
-                'audit_to' => now()->subDay()->toDateString(),
+                'audit_to' => now()->subDays(30)->toDateString(),
             ]))
             ->assertOk()
-            ->assertSee('Audit filter summary: All actions; To=' . now()->subDay()->toDateString())
+            ->assertSee('Audit filter summary: All actions; To=' . now()->subDays(30)->toDateString())
             ->assertSee('No reconciliation audit activity has been recorded yet.')
             ->assertDontSee('Demo stale scheduler run was closed after process check.');
 

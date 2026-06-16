@@ -36,4 +36,20 @@ class CareerEventController extends Controller {
 
         return back()->with('success', 'Registered for "' . $event->title . '".');
     }
+
+    public function cancel(CareerEvent $event) {
+        $student = Auth::user()->student;
+        abort_unless($student, 403);
+        abort_if($event->event_date && $event->event_date->isPast() && ! $event->event_date->isToday(), 422, 'Past event registrations cannot be cancelled.');
+        abort_if($event->registration_deadline && $event->registration_deadline->isPast() && ! $event->registration_deadline->isToday(), 422, 'Cancellation is closed for this event.');
+
+        $deleted = CareerEventRegistration::where('career_event_id', $event->id)
+            ->where('student_id', $student->id)
+            ->where('attended', false)
+            ->delete();
+
+        abort_unless($deleted > 0, 422, 'No cancellable registration found for this event.');
+
+        return back()->with('success', 'Registration cancelled for "' . $event->title . '".');
+    }
 }

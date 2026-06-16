@@ -54,10 +54,7 @@ class AdmissionPaymentGatewayService
             return $event;
         }
 
-        $payment = AdmissionPayment::query()
-            ->where('gateway_order_id', $orderId)
-            ->when($paymentId, fn ($query) => $query->orWhere('gateway_payment_id', $paymentId))
-            ->first();
+        $payment = $this->resolvePaymentForWebhook($provider, $orderId, $paymentId);
 
         if ($payment) {
             $gatewayStatus = $this->gatewayStatus($payload, $eventType);
@@ -95,5 +92,26 @@ class AdmissionPaymentGatewayService
         return Arr::get($payload, 'status')
             ?: Arr::get($payload, 'payload.payment.entity.status')
             ?: (str_contains($eventType, 'captured') ? 'captured' : 'updated');
+    }
+
+    private function resolvePaymentForWebhook(string $provider, ?string $orderId, ?string $paymentId): ?AdmissionPayment
+    {
+        $byOrder = $orderId
+            ? AdmissionPayment::where('provider', $provider)->where('gateway_order_id', $orderId)->first()
+            : null;
+
+        $byPayment = $paymentId
+            ? AdmissionPayment::where('provider', $provider)->where('gateway_payment_id', $paymentId)->first()
+            : null;
+
+        if ($byOrder && $byPayment && $byOrder->id !== $byPayment->id) {
+            return null;
+        }
+
+        if ($byOrder) {
+            return $byOrder;
+        }
+
+        return $orderId ? null : $byPayment;
     }
 }

@@ -13,7 +13,7 @@ class ClassroomFactory extends Factory
     {
         return [
             'name'         => 'Room ' . $this->faker->unique()->numerify('###'),
-            'room_number'  => $this->faker->numerify('R###'),
+            'room_number'  => $this->faker->unique()->numerify('R###'),
             'capacity'     => $this->faker->randomElement([30, 40, 60]),
             'type'         => 'lecture',
             'is_active'    => true,

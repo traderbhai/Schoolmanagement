@@ -6,6 +6,7 @@
   <h4 class="mb-4">Attendance Condonation Requests</h4>
 
   @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
@@ -35,7 +36,7 @@
                 </td>
                 <td>{{ $c->subject->name ?? '—' }}</td>
                 <td class="small" style="max-width:180px">{{ Str::limit($c->reason, 50) }}</td>
-                <td class="text-center">{{ $c->sessions_requested }}</td>
+                <td class="text-center">{{ $c->sessions_requested ?: 'Review' }}</td>
                 <td>
                   <span class="badge bg-{{ $c->status==='approved'?'success':($c->status==='rejected'?'danger':'warning text-dark') }}">
                     {{ ucfirst($c->status) }}
@@ -50,7 +51,7 @@
                         @csrf
                         <div class="input-group input-group-sm mb-1">
                           <span class="input-group-text">Sessions</span>
-                          <input type="number" name="sessions_condoned" class="form-control" min="1" max="{{ $c->sessions_requested }}" value="{{ $c->sessions_requested }}" required>
+                          <input type="number" name="sessions_condoned" class="form-control" min="1" max="{{ max(1, (int) $c->sessions_requested) }}" value="{{ max(1, (int) $c->sessions_requested) }}" required>
                         </div>
                         <input type="text" name="remarks" class="form-control form-control-sm mb-1" placeholder="Remarks">
                         <button type="submit" class="btn btn-sm btn-success w-100">Approve</button>

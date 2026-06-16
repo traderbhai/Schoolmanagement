@@ -102,6 +102,28 @@ class CmcDashboardGuidanceTest extends TestCase
         $this->assertSame('Technical interview scheduled.', $placement->remarks);
     }
 
+    public function test_drive_applications_modal_uses_route_backed_safe_dataset_values(): void
+    {
+        $drive = $this->drive();
+        $student = Student::factory()->create();
+        $placement = Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'shortlisted',
+            'offered_package' => 6.75,
+            'remarks' => 'Candidate said "yes" and it\'s final.',
+        ]);
+
+        $this->actingAs($this->cmcUser())
+            ->get(route('cmc.drives.applications', $drive))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.placements.update-status', $placement), false)
+            ->assertSee('data-status="shortlisted"', false)
+            ->assertSee('data-package="6.75"', false)
+            ->assertSee('Candidate said &quot;yes&quot; and it&#039;s final.', false)
+            ->assertSee('onclick="openUpdate(this)"', false);
+    }
+
     public function test_cmc_placement_stats_use_selected_placements_and_drive_company(): void
     {
         $company = $this->company(['name' => 'FutureSoft']);

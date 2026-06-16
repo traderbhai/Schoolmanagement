@@ -29,7 +29,11 @@
           <td class="small text-muted">{{ $app->remarks ?? '—' }}</td>
           <td class="text-end pe-3">
             <button class="btn btn-sm btn-outline-secondary py-0 px-2"
-                onclick="openUpdate({{ $app->id }}, '{{ $status }}', '{{ $app->offered_package }}', '{{ $app->remarks }}')">
+                data-update-url="{{ route('cmc.placements.update-status', $app) }}"
+                data-status="{{ $status }}"
+                data-package="{{ $app->offered_package }}"
+                data-remarks="{{ $app->remarks }}"
+                onclick="openUpdate(this)">
               <i class="bi bi-pencil"></i>
             </button>
           </td>
@@ -79,11 +83,11 @@
 @endsection
 @push('scripts')
 <script>
-function openUpdate(id, status, pkg, remarks) {
-    document.getElementById('updateForm').action = '/cmc/placements/' + id + '/status';
-    document.getElementById('updateStatus').value = status;
-    document.getElementById('updatePackage').value = pkg || '';
-    document.getElementById('updateRemarks').value = remarks || '';
+function openUpdate(button) {
+    document.getElementById('updateForm').action = button.dataset.updateUrl;
+    document.getElementById('updateStatus').value = button.dataset.status;
+    document.getElementById('updatePackage').value = button.dataset.package || '';
+    document.getElementById('updateRemarks').value = button.dataset.remarks || '';
     new bootstrap.Modal(document.getElementById('updateModal')).show();
 }
 </script>

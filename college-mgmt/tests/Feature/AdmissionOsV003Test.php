@@ -110,6 +110,8 @@ class AdmissionOsV003Test extends TestCase
             'program_id' => $program->id,
         ]);
         $this->assertSame($partner->id, $partnerLead->admission_partner_id);
+        $this->assertNull($partnerLead->email);
+        $this->assertSame('9999999999', $partnerLead->phone);
 
         $flags = app(AdmissionDataQualityService::class)->scanLead(Lead::factory()->create([
             'program_id' => $program->id,
@@ -126,6 +128,34 @@ class AdmissionOsV003Test extends TestCase
         app(AdmissionApprovalService::class)->approve($approval, $head);
         $this->assertSame('approved', $approval->fresh()->status);
         $this->assertSame('high', $lead->fresh()->priority);
+    }
+
+    public function test_partner_lead_submission_requires_real_contact_method(): void
+    {
+        $head = $this->admissionUser('admission_head');
+        $this->member($head, 'admission_head');
+        $partner = AdmissionPartner::create(['name' => 'Verified Channel', 'status' => 'approved']);
+
+        $this->actingAs($head)
+            ->post(route('admission.partners.leads.store', $partner), [
+                'name' => 'No Contact Partner Lead',
+            ])
+            ->assertSessionHasErrors(['email', 'phone']);
+
+        $this->actingAs($head)
+            ->post(route('admission.partners.leads.store', $partner), [
+                'name' => 'Phone Only Partner Lead',
+                'phone' => '8888888888',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('leads', [
+            'name' => 'Phone Only Partner Lead',
+            'email' => null,
+            'phone' => '8888888888',
+            'admission_partner_id' => $partner->id,
+        ]);
+        $this->assertFalse(Lead::where('email', 'like', '%@placeholder.local')->exists());
     }
 
     public function test_v003_staff_routes_render_for_admission_head(): void
@@ -148,6 +178,32 @@ class AdmissionOsV003Test extends TestCase
         ] as $routeName) {
             $this->actingAs($head)->get(route($routeName))->assertOk();
         }
+    }
+
+    public function test_lead_scoring_page_uses_lead_selector_and_score_context(): void
+    {
+        $head = $this->admissionUser('admission_head');
+        $this->member($head, 'admission_head');
+        $program = Program::factory()->create(['name' => 'PGDM Admission']);
+        $lead = Lead::factory()->create([
+            'name' => 'Scoring Candidate',
+            'email' => 'scoring.candidate@example.com',
+            'program_id' => $program->id,
+            'source' => 'referral',
+            'status' => 'interested',
+            'priority' => 'high',
+        ]);
+
+        app(AdmissionLeadScoringService::class)->score($lead, $head, ['manual_priority_points' => 5]);
+
+        $this->actingAs($head)
+            ->get(route('admission.scoring.index'))
+            ->assertOk()
+            ->assertSee('Select lead')
+            ->assertSee('Scoring Candidate')
+            ->assertSee('PGDM Admission')
+            ->assertSee('Source Quality')
+            ->assertDontSee('Lead ID');
     }
 
     public function test_demo_seeder_populates_v003_admission_operating_data(): void

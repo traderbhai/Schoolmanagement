@@ -14,8 +14,10 @@ class ResultController extends Controller
         $student = auth()->user()->student;
         if (!$student) return redirect()->route('student.dashboard');
 
-        $semesters = Semester::whereHas('enrollments', fn($q) => $q->where('student_id', $student->id))
-            ->with('academicYear')->orderByDesc('number')->get();
+        $semesters = $this->gradeService->semestersForStudent($student->id)
+            ->load('academicYear')
+            ->sortByDesc('number')
+            ->values();
 
         $currentSemester = Semester::current();
         $semesterId = $request->semester_id ?? optional($currentSemester)->id ?? optional($semesters->first())->id;

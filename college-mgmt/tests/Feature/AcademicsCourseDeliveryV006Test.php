@@ -57,7 +57,7 @@ class AcademicsCourseDeliveryV006Test extends TestCase
 
     public function test_course_delivery_source_lists_are_database_backed(): void
     {
-        $this->seedCourseFixture();
+        $fixture = $this->seedCourseFixture();
         $faculty = User::where('email', 'pmc.faculty@college.com')->firstOrFail();
 
         $this->actingAs($faculty)
@@ -72,7 +72,8 @@ class AcademicsCourseDeliveryV006Test extends TestCase
             ->get(route('academics.course-delivery.attendance-interventions'))
             ->assertOk()
             ->assertSee('Attendance Interventions')
-            ->assertSee('Riya Sharma');
+            ->assertSee('Riya Sharma')
+            ->assertDontSee('Student #'.$fixture['student']->id);
     }
 
     public function test_course_delivery_service_respects_faculty_assignment_scope(): void

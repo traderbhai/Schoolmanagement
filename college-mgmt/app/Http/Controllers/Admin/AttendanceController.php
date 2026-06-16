@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, TimetableEntry, Student, Semester, Course};
+use App\Models\{Attendance, TimetableEntry, Student, Semester, Course, Term};
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -45,11 +45,9 @@ class AttendanceController extends Controller
         ]);
 
         $entry = TimetableEntry::with(['course','subject'])->findOrFail($request->timetable_entry_id);
-        $students = Student::whereHas('enrollments', fn($q) =>
-            $q->where('semester_id', $entry->semester_id)->where('subject_id', $entry->subject_id)
-        )->with(['user',
+        $students = $this->eligibleStudentsForEntry($entry)->with(['user',
             'attendances' => fn($q) => $q->where('timetable_entry_id', $entry->id)->where('date', $request->date)
-        ])->get();
+        ])->orderBy('roll_number')->get();
 
         return view('admin.attendance.mark', compact('entry','students','request'));
     }
@@ -60,6 +58,11 @@ class AttendanceController extends Controller
             'date'               => 'required|date',
             'attendance'         => 'required|array',
         ]);
+
+        $entry = TimetableEntry::findOrFail($request->timetable_entry_id);
+        $allowedStudentIds = $this->eligibleStudentsForEntry($entry)->pluck('id')->map(fn($id) => (string) $id)->all();
+        $submittedStudentIds = array_map('strval', array_keys($request->attendance));
+        abort_unless(empty(array_diff($submittedStudentIds, $allowedStudentIds)), 403, 'Attendance includes students outside this class roster.');
 
         foreach ($request->attendance as $studentId => $status) {
             Attendance::updateOrCreate(
@@ -74,9 +77,16 @@ class AttendanceController extends Controller
     public function report(Request $request) {
         $report = null;
         if ($request->student_id && $request->semester_id) {
+            $termIds = $this->termIdsForSemester((int) $request->semester_id);
             $report = Attendance::with(['timetableEntry.subject'])
                 ->where('student_id', $request->student_id)
-                ->whereHas('timetableEntry', fn($q) => $q->where('semester_id', $request->semester_id))
+                ->whereHas('timetableEntry', function ($q) use ($request, $termIds) {
+                    $q->where('semester_id', $request->semester_id);
+
+                    if ($termIds !== []) {
+                        $q->orWhereIn('term_id', $termIds);
+                    }
+                })
                 ->get()
                 ->groupBy('timetableEntry.subject.name');
         }
@@ -89,7 +99,16 @@ class AttendanceController extends Controller
     {
         $query = Attendance::with(['student.user', 'timetableEntry.subject'])
             ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
-            ->when($r->semester_id, fn($q) => $q->whereHas('timetableEntry', fn($sq) => $sq->where('semester_id', $r->semester_id)))
+            ->when($r->semester_id, function ($q) use ($r) {
+                $termIds = $this->termIdsForSemester((int) $r->semester_id);
+                $q->whereHas('timetableEntry', function ($sq) use ($r, $termIds) {
+                    $sq->where('semester_id', $r->semester_id);
+
+                    if ($termIds !== []) {
+                        $sq->orWhereIn('term_id', $termIds);
+                    }
+                });
+            })
             ->when($r->date_from, fn($q) => $q->whereDate('date', '>=', $r->date_from))
             ->when($r->date_to, fn($q) => $q->whereDate('date', '<=', $r->date_to))
             ->orderBy('date', 'desc');
@@ -126,15 +145,79 @@ class AttendanceController extends Controller
         if ($r->student_id && $r->semester_id) {
             $student = Student::with('user', 'course', 'department')->findOrFail($r->student_id);
             $semester = Semester::with('academicYear')->findOrFail($r->semester_id);
+            $termIds = $this->termIdsForSemester((int) $r->semester_id);
 
             $report = Attendance::with(['timetableEntry.subject'])
                 ->where('student_id', $r->student_id)
-                ->whereHas('timetableEntry', fn($q) => $q->where('semester_id', $r->semester_id))
+                ->whereHas('timetableEntry', function ($q) use ($r, $termIds) {
+                    $q->where('semester_id', $r->semester_id);
+
+                    if ($termIds !== []) {
+                        $q->orWhereIn('term_id', $termIds);
+                    }
+                })
                 ->get()
                 ->groupBy('timetableEntry.subject.name');
         }
 
         $pdf = Pdf::loadView('admin.attendance.pdf-report', compact('report', 'student', 'semester', 'r'));
         return $pdf->setPaper('a4')->stream('attendance-report.pdf');
+    }
+
+    private function eligibleStudentsForEntry(TimetableEntry $entry)
+    {
+        $termIds = $this->termIdsForEntry($entry);
+
+        return Student::where(function ($query) use ($entry, $termIds) {
+            $query->whereHas('enrollments', function ($q) use ($entry) {
+                $q->where('semester_id', $entry->semester_id)
+                    ->where('subject_id', $entry->subject_id)
+                    ->whereIn('status', ['active', 'enrolled']);
+            })->orWhereHas('subjectEnrollments', function ($q) use ($entry, $termIds) {
+                $q->where('subject_id', $entry->subject_id)
+                    ->where('status', 'active');
+
+                $termIds === []
+                    ? $q->whereRaw('1 = 0')
+                    : $q->whereIn('term_id', $termIds);
+            });
+        });
+    }
+
+    private function termIdsForEntry(TimetableEntry $entry): array
+    {
+        if ($entry->term_id) {
+            return [(int) $entry->term_id];
+        }
+
+        if (! $entry->semester_id) {
+            return [];
+        }
+
+        $semester = $entry->semester ?: Semester::find($entry->semester_id);
+        if (! $semester) {
+            return [];
+        }
+
+        return Term::query()
+            ->when($entry->program_id, fn($q) => $q->where('program_id', $entry->program_id))
+            ->when($entry->batch_id, fn($q) => $q->where('batch_id', $entry->batch_id))
+            ->where(fn($q) => $q->where('term_number', $semester->number)->orWhere('name', $semester->name))
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+    }
+
+    private function termIdsForSemester(int $semesterId): array
+    {
+        $semester = Semester::find($semesterId);
+        if (! $semester) {
+            return [];
+        }
+
+        return Term::where(fn($q) => $q->where('term_number', $semester->number)->orWhere('name', $semester->name))
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
     }
 }

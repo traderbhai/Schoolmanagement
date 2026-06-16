@@ -34,6 +34,7 @@
                             <th>Code</th>
                             <th>Type</th>
                             <th>Program</th>
+                            <th>Eligibility</th>
                             <th class="text-end">Max Amount (₹)</th>
                             <th class="text-center">Seats</th>
                             <th class="text-center">Status</th>
@@ -47,6 +48,20 @@
                             <td class="font-monospace small">{{ $scheme->scheme_code }}</td>
                             <td><span class="{{ $scheme->type_badge }}">{{ $scheme->type_label }}</span></td>
                             <td>{{ $scheme->program->name ?? 'All Programs' }}</td>
+                            <td class="small">
+                                @if($scheme->min_cgpa)
+                                    <div>CGPA >= {{ $scheme->min_cgpa }}</div>
+                                @endif
+                                @if($scheme->max_family_income)
+                                    <div>Income <= Rs. {{ number_format((float) $scheme->max_family_income, 0) }}</div>
+                                @endif
+                                @if($scheme->requires_document)
+                                    <div>Proof required</div>
+                                @endif
+                                @if(!$scheme->min_cgpa && !$scheme->max_family_income && !$scheme->requires_document)
+                                    <span class="text-muted">Text criteria only</span>
+                                @endif
+                            </td>
                             <td class="text-end fw-semibold">₹{{ number_format($scheme->max_amount, 0) }}</td>
                             <td class="text-center">
                                 @if($scheme->available_seats)

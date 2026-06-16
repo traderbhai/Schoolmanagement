@@ -32,13 +32,13 @@ class FeeDemandController extends Controller
             'student_id' => 'required|exists:students,id',
             'term_id' => 'required|exists:terms,id',
             'total_amount' => 'required|numeric|min:0',
-            'scholarship_deduction' => 'nullable|numeric|min:0',
+            'scholarship_deduction' => 'nullable|numeric|min:0|lte:total_amount',
             'due_date' => 'required|date',
             'status' => 'required|in:pending,partially_paid,fully_paid,overdue',
         ]);
 
         $validated['scholarship_deduction'] = $validated['scholarship_deduction'] ?? 0;
-        $validated['final_amount'] = $validated['total_amount'] - $validated['scholarship_deduction'];
+        $validated['final_amount'] = max(0, $validated['total_amount'] - $validated['scholarship_deduction']);
 
         FeeDemand::create($validated);
 
@@ -64,13 +64,13 @@ class FeeDemandController extends Controller
     {
         $validated = $request->validate([
             'total_amount' => 'required|numeric|min:0',
-            'scholarship_deduction' => 'nullable|numeric|min:0',
+            'scholarship_deduction' => 'nullable|numeric|min:0|lte:total_amount',
             'due_date' => 'required|date',
             'status' => 'required|in:pending,partially_paid,fully_paid,overdue',
         ]);
 
         $validated['scholarship_deduction'] = $validated['scholarship_deduction'] ?? 0;
-        $validated['final_amount'] = $validated['total_amount'] - $validated['scholarship_deduction'];
+        $validated['final_amount'] = max(0, $validated['total_amount'] - $validated['scholarship_deduction']);
 
         $feeDemand->update($validated);
 
@@ -116,18 +116,7 @@ class FeeDemandController extends Controller
                 continue;
             }
 
-            // Check for scholarship discount
-            $scholarship = \App\Models\ApplicantScholarship::whereHas('applicant', fn($q) =>
-                $q->whereHas('enrollments', fn($eq) => $eq->where('student_id', $student->id))
-            )->where('status', 'awarded')->first();
-
-            $discount = 0;
-            if ($scholarship && $scholarship->scheme) {
-                $pct = $scholarship->scheme->discount_percentage ?? 0;
-                $maxDiscount = $scholarship->scheme->max_amount ?? 0;
-                $discountByPct = ($totalFee * $pct) / 100;
-                $discount = $maxDiscount > 0 ? min($discountByPct, $maxDiscount) : $discountByPct;
-            }
+            $discount = $this->studentAdmissionScholarshipDeduction($student, (float) $totalFee);
 
             $finalAmount = max(0, $totalFee - $discount);
 
@@ -173,5 +162,22 @@ class FeeDemandController extends Controller
         $feeDemand->delete();
         return redirect()->route('academic.fee-demands.index')
             ->with('success', 'Fee demand deleted successfully');
+    }
+
+    private function studentAdmissionScholarshipDeduction(Student $student, float $totalFee): float
+    {
+        $applicantIds = \App\Models\EnrollmentConfirmation::where('student_id', $student->id)
+            ->where('status', 'completed')
+            ->pluck('applicant_id');
+
+        if ($applicantIds->isEmpty()) {
+            return 0.0;
+        }
+
+        $awardedAmount = \App\Models\ApplicantScholarship::whereIn('applicant_id', $applicantIds)
+            ->whereIn('status', ['awarded', 'disbursed'])
+            ->sum('awarded_amount');
+
+        return min((float) $awardedAmount, $totalFee);
     }
 }

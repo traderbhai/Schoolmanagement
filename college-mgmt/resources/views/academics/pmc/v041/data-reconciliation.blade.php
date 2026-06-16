@@ -83,7 +83,7 @@
                 </div>
                 <div class="col-md-4 d-flex gap-1">
                     <button class="btn btn-sm btn-outline-primary">Filter Runs</button>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except('run_status')) }}">All Runs</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['run_status', 'audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">All Runs</a>
                     <a class="btn btn-sm btn-outline-success" href="{{ route('academics.pmc.data-reconciliation.runs.export', ['run_status' => request('run_status')]) }}">Export Runs</a>
                 </div>
                 <div class="col-md-5 small text-muted">Run filter summary: {{ request('run_status') ? 'Run status=' . request('run_status') : 'All run history' }}</div>
@@ -131,6 +131,16 @@
                 </div>
                 <a class="btn btn-sm btn-outline-success" href="{{ route('academics.pmc.data-reconciliation.audit.export', ['audit_action' => request('audit_action'), 'audit_actor_id' => request('audit_actor_id'), 'audit_from' => request('audit_from'), 'audit_to' => request('audit_to')]) }}">Export Audit Trail</a>
             </div>
+            @php
+                $auditSummary = request('audit_action')
+                    ? 'Action=' . str(request('audit_action'))->replace('_', ' ')->headline()
+                    : 'All actions';
+                $auditSummary .= request('audit_from') ? '; From=' . request('audit_from') : '';
+                $auditSummary .= request('audit_to') ? '; To=' . request('audit_to') : '';
+                $auditSummary .= request('audit_actor_id')
+                    ? '; Actor=' . (optional($auditActors->firstWhere('id', (int) request('audit_actor_id')))->name ?? 'Selected actor')
+                    : '';
+            @endphp
             <form class="row g-2 align-items-end mb-2">
                 <input type="hidden" name="status" value="{{ request('status') }}">
                 <input type="hidden" name="group" value="{{ request('group') }}">
@@ -169,13 +179,7 @@
                     <button class="btn btn-sm btn-outline-primary">Filter Audit</button>
                     <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">All Audit</a>
                 </div>
-                <div class="col-md-2 small text-muted">
-                    Audit filter summary:
-                    {{ request('audit_action') ? 'Action=' . str(request('audit_action'))->replace('_', ' ')->headline() : 'All actions' }}
-                    {{ request('audit_from') ? '; From=' . request('audit_from') : '' }}
-                    {{ request('audit_to') ? '; To=' . request('audit_to') : '' }}
-                    {{ request('audit_actor_id') ? '; Actor=' . (optional($auditActors->firstWhere('id', (int) request('audit_actor_id')))->name ?? 'Selected actor') : '' }}
-                </div>
+                <div class="col-md-2 small text-muted">Audit filter summary: {{ $auditSummary }}</div>
             </form>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">

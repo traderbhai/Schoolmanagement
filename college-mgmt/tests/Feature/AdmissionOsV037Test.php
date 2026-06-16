@@ -198,6 +198,14 @@ class AdmissionOsV037Test extends TestCase
         $head = User::where('email', 'head@college.com')->firstOrFail();
 
         $this->actingAs($head)
+            ->get(route('admission.saved-views.index', ['surface' => 'counsellor_desk']))
+            ->assertOk()
+            ->assertSee('Work surface')
+            ->assertSee('Owner scope')
+            ->assertSee('Visible filter summary')
+            ->assertDontSee('Filters JSON');
+
+        $this->actingAs($head)
             ->post(route('admission.saved-views.store'), [
                 'surface' => 'counsellor_desk',
                 'name' => 'High Priority Parent Calls',
@@ -205,6 +213,24 @@ class AdmissionOsV037Test extends TestCase
             ])
             ->assertRedirect();
         $this->assertTrue(AdmissionSavedView::where('name', 'High Priority Parent Calls')->exists());
+
+        $this->actingAs($head)
+            ->post(route('admission.saved-views.store'), [
+                'surface' => 'calling_desk',
+                'name' => 'Overdue Team Callbacks',
+                'filters' => [
+                    'status' => 'overdue',
+                    'priority' => 'high',
+                    'owner_scope' => 'team',
+                    'date_range' => 'today',
+                    'sort' => 'due_soon',
+                ],
+            ])
+            ->assertRedirect();
+
+        $structuredView = AdmissionSavedView::where('name', 'Overdue Team Callbacks')->firstOrFail();
+        $this->assertSame('overdue', $structuredView->filters['status']);
+        $this->assertSame('team', $structuredView->filters['owner_scope']);
 
         $this->actingAs($head)->get(route('admission.v037.exports', 'normalization'))->assertOk();
         $this->actingAs($head)->get(route('admission.accessibility-audit.index'))->assertOk()->assertSee('Admission Accessibility Audit');

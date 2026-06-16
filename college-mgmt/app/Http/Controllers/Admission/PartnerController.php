@@ -45,8 +45,8 @@ class PartnerController extends Controller
     {
         $service->submitLead($partner, $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'required_without:phone', 'email'],
+            'phone' => ['nullable', 'required_without:email', 'string', 'max:50'],
             'program_id' => ['nullable', 'exists:programs,id'],
             'partner_reference' => ['nullable', 'string', 'max:255'],
             'priority' => ['nullable', 'in:urgent,high,normal,low'],

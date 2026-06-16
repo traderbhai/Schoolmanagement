@@ -52,11 +52,11 @@
                     @forelse($items as $item)
                         <tr>
                             <td>{{ ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][$item->day_of_week] ?? 'Day ' . $item->day_of_week }}</td>
-                            <td>{{ $item->slot?->name ?? 'Slot #' . $item->timetable_slot_id }}</td>
+                            <td>{{ $item->slot?->name ?? 'Unassigned slot' }}</td>
                             <td><div class="fw-semibold">{{ $item->courseGroup?->name }}</div><div class="small text-muted">{{ $item->courseGroup?->group_type }}</div></td>
-                            <td>{{ $item->courseGroup?->subject?->name ?? 'Subject #' . $item->courseGroup?->subject_id }}</td>
-                            <td>{{ $item->teacher?->user?->name ?? 'Faculty #' . $item->teacher_id }}</td>
-                            <td>{{ $item->classroom?->name ?? 'Room #' . $item->classroom_id }}</td>
+                            <td>{{ $item->courseGroup?->subject?->name ?? $item->courseGroup?->subject?->code ?? 'Unassigned subject' }}</td>
+                            <td>{{ $item->teacher?->user?->name ?? $item->teacher?->employee_id ?? 'Unassigned faculty' }}</td>
+                            <td>{{ $item->classroom?->name ?? $item->classroom?->room_number ?? 'Unassigned room' }}</td>
                             <td>{{ $item->is_locked ? 'locked' : $item->status }}</td>
                         </tr>
                     @empty

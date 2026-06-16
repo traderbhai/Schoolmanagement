@@ -2,12 +2,15 @@
 namespace App\Http\Controllers\Parent;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeDemand, FeePayment, Semester};
+use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeDemand, FeePayment, Semester, Term, Enrollment};
+use App\Services\GradeService;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
+    public function __construct(private GradeService $gradeService) {}
 
     private function getParent(): ParentProfile
     {
@@ -22,15 +25,26 @@ class DashboardController extends Controller
         $children = $parent->students;
 
         $childrenData = $children->map(function ($student) {
-            $totalAtt   = Attendance::where('student_id', $student->id)->count();
-            $presentAtt = Attendance::where('student_id', $student->id)->whereIn('status', ['present', 'late'])->count();
+            $subjectIds = $this->enrolledSubjectIds($student);
+            $attendanceQuery = Attendance::where('student_id', $student->id)
+                ->whereHas('timetableEntry', fn($q) => $q->whereIn('subject_id', $subjectIds));
+            $totalAtt = (clone $attendanceQuery)->count();
+            $presentAtt = (clone $attendanceQuery)->whereIn('status', ['present', 'late'])->count();
             $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100) : null;
 
             $currentSemester = Semester::current();
             $sgpa = null;
             if ($currentSemester) {
+                $termIds = $this->termIdsForSemester($student, $currentSemester->id);
                 $results = ExamResult::with('exam')
-                    ->whereHas('exam', fn($q) => $q->where('semester_id', $currentSemester->id))
+                    ->whereHas('exam', function ($q) use ($currentSemester, $termIds) {
+                        $q->where('semester_id', $currentSemester->id);
+
+                        if ($termIds !== []) {
+                            $q->orWhereIn('term_id', $termIds);
+                        }
+                    })
+                    ->whereHas('exam', fn($q) => $q->whereIn('subject_id', $subjectIds))
                     ->where('student_id', $student->id)
                     ->where('is_absent', false)
                     ->get();
@@ -86,15 +100,27 @@ class DashboardController extends Controller
         $parent = $this->getParent();
         abort_unless($parent->students->contains($student), 403);
 
-        $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
+        $semesters = $this->gradeService->semestersForStudent($student->id)
+            ->load('academicYear')
+            ->sortByDesc('number')
+            ->values();
         $currentSemester = Semester::current() ?? $semesters->first();
         $semesterId = request('semester_id') ?? optional($currentSemester)->id;
 
         $report = [];
         if ($semesterId) {
+            $termIds = $this->termIdsForSemester($student, (int) $semesterId);
+            $subjectIds = $this->enrolledSubjectIds($student);
             $attendances = Attendance::with(['timetableEntry.subject', 'timetableEntry.slot'])
                 ->where('student_id', $student->id)
-                ->whereHas('timetableEntry', fn($q) => $q->where('semester_id', $semesterId))
+                ->whereHas('timetableEntry', function ($q) use ($semesterId, $termIds) {
+                    $q->where('semester_id', $semesterId);
+
+                    if ($termIds !== []) {
+                        $q->orWhereIn('term_id', $termIds);
+                    }
+                })
+                ->whereHas('timetableEntry', fn($q) => $q->whereIn('subject_id', $subjectIds))
                 ->get();
 
             $grouped = $attendances->groupBy(fn($a) => $a->timetableEntry->subject->name ?? 'Unknown');
@@ -124,14 +150,26 @@ class DashboardController extends Controller
         $parent = $this->getParent();
         abort_unless($parent->students->contains($student), 403);
 
-        $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
+        $semesters = $this->gradeService->semestersForStudent($student->id)
+            ->load('academicYear')
+            ->sortByDesc('number')
+            ->values();
         $currentSemester = Semester::current() ?? $semesters->first();
         $semesterId = request('semester_id') ?? optional($currentSemester)->id;
 
         $results = [];
         if ($semesterId) {
+            $termIds = $this->termIdsForSemester($student, (int) $semesterId);
+            $subjectIds = $this->enrolledSubjectIds($student);
             $results = ExamResult::with('exam.subject')
-                ->whereHas('exam', fn($q) => $q->where('semester_id', $semesterId))
+                ->whereHas('exam', function ($q) use ($semesterId, $termIds) {
+                    $q->where('semester_id', $semesterId);
+
+                    if ($termIds !== []) {
+                        $q->orWhereIn('term_id', $termIds);
+                    }
+                })
+                ->whereHas('exam', fn($q) => $q->whereIn('subject_id', $subjectIds))
                 ->where('student_id', $student->id)
                 ->get();
         }
@@ -239,5 +277,33 @@ class DashboardController extends Controller
             || ($demand->status === 'pending'
                 && $demand->due_date
                 && $demand->due_date->lt(now()->startOfDay()));
+    }
+
+    private function termIdsForSemester(Student $student, int $semesterId): array
+    {
+        $semester = Semester::find($semesterId);
+        if (! $semester) {
+            return [];
+        }
+
+        return Term::query()
+            ->when($student->program_id, fn($q) => $q->where('program_id', $student->program_id))
+            ->when($student->batch_id, fn($q) => $q->where('batch_id', $student->batch_id))
+            ->where(fn($q) => $q->where('term_number', $semester->number)->orWhere('name', $semester->name))
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+    }
+
+    private function enrolledSubjectIds(Student $student): array
+    {
+        return $student->subjectEnrollments()
+            ->where('status', 'active')
+            ->pluck('subject_id')
+            ->merge(Enrollment::where('student_id', $student->id)->whereIn('status', ['active', 'enrolled'])->pluck('subject_id'))
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

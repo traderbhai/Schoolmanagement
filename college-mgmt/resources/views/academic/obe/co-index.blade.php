@@ -2,7 +2,7 @@
 @section('title', 'Course Outcomes (CO)')
 @section('page-title', 'Course Outcomes')
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="#">OBE Framework</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('academic.obe.co.index') }}">OBE Framework</a></li>
     <li class="breadcrumb-item active">Course Outcomes</li>
 @endsection
 

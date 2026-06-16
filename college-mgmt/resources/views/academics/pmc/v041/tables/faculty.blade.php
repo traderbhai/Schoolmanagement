@@ -2,7 +2,7 @@
     <div class="card-header py-2 fw-semibold">Faculty Assigned To Exact Groups</div>
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
         <thead><tr><th>Group</th><th>Faculty</th><th>Role</th><th>Hours</th><th>Status</th><th>Ack</th></tr></thead>
-        <tbody>@forelse($assignments as $assignment)<tr><td>{{ $assignment->courseGroup?->name }}</td><td>{{ $assignment->teacher?->user?->name ?? 'Teacher #' . $assignment->teacher_id }}</td><td>{{ $assignment->assignment_role }}</td><td>{{ $assignment->weekly_hours }}</td><td>{{ $assignment->approval_status }}</td><td><form method="POST" action="{{ route('academics.pmc.faculty-assignment-acknowledgements.request', $assignment) }}">@csrf<button class="btn btn-sm btn-outline-primary">Request</button></form></td></tr>@empty<tr><td colspan="6" class="text-muted">No group faculty assignments.</td></tr>@endforelse</tbody>
+        <tbody>@forelse($assignments as $assignment)<tr><td>{{ $assignment->courseGroup?->name }}</td><td>{{ $assignment->teacher?->user?->name ?? $assignment->teacher?->employee_id ?? 'Unassigned faculty' }}</td><td>{{ $assignment->assignment_role }}</td><td>{{ $assignment->weekly_hours }}</td><td>{{ $assignment->approval_status }}</td><td><form method="POST" action="{{ route('academics.pmc.faculty-assignment-acknowledgements.request', $assignment) }}">@csrf<button class="btn btn-sm btn-outline-primary">Request</button></form></td></tr>@empty<tr><td colspan="6" class="text-muted">No group faculty assignments.</td></tr>@endforelse</tbody>
     </table></div><div class="card-footer py-2">{{ $assignments->links() }}</div>
 </div>
 @isset($acknowledgements)
@@ -11,7 +11,7 @@
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
         <thead><tr><th>Faculty</th><th>Assignment</th><th>Status</th><th>Faculty Response</th><th>PMC Review</th></tr></thead>
         <tbody>@forelse($acknowledgements as $ack)<tr>
-            <td>{{ $ack->teacher?->user?->name ?? 'Teacher #' . $ack->teacher_id }}</td>
+            <td>{{ $ack->teacher?->user?->name ?? $ack->teacher?->employee_id ?? 'Unassigned faculty' }}</td>
             <td><div class="fw-semibold">{{ $ack->assignment?->courseGroup?->name }}</div><div class="small text-muted">{{ $ack->assignment?->assignment_role }}</div></td>
             <td>
                 {{ str_replace('_', ' ', $ack->status) }}

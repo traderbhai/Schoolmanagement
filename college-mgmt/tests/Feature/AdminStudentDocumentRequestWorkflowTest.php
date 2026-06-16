@@ -3,6 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\DocumentRequest;
+use App\Models\Book;
+use App\Models\BookCopy;
+use App\Models\BookIssue;
+use App\Models\FeeDemand;
+use App\Models\HostelAllocation;
+use App\Models\HostelBlock;
+use App\Models\HostelFeeDemand;
+use App\Models\HostelRoom;
 use App\Models\Notification;
 use App\Models\Program;
 use App\Models\Student;
@@ -38,6 +46,34 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
             'user_id' => $user->id,
             'program_id' => Program::factory()->create(['name' => 'BCA'])->id,
             'enrollment_number' => 'ENR-1001',
+            'status' => 'active',
+        ]);
+    }
+
+    private function hostelAllocation(Student $student): HostelAllocation
+    {
+        $block = HostelBlock::create([
+            'name' => 'NOC Hostel Block',
+            'gender' => 'mixed',
+            'total_floors' => 2,
+            'is_active' => true,
+        ]);
+
+        $room = HostelRoom::create([
+            'hostel_block_id' => $block->id,
+            'room_number' => 'NOC-101',
+            'floor' => 1,
+            'room_type' => 'single',
+            'capacity' => 1,
+            'monthly_fee' => 7500,
+            'status' => 'occupied',
+        ]);
+
+        return HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subMonth()->toDateString(),
             'status' => 'active',
         ]);
     }
@@ -172,6 +208,178 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
                 'notes' => '',
             ])
             ->assertSessionHasErrors('notes');
+    }
+
+    public function test_admin_cannot_approve_noc_until_library_clearance_is_complete(): void
+    {
+        $student = $this->student();
+        $admin = $this->admin();
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'pending',
+        ]);
+        $book = Book::create([
+            'title' => 'Library Clearance Book',
+            'author' => 'Library',
+            'isbn' => 'NOC-' . uniqid(),
+            'total_copies' => 1,
+            'available_copies' => 0,
+            'is_active' => true,
+        ]);
+        $copy = BookCopy::create([
+            'book_id' => $book->id,
+            'accession_number' => 'NOC-' . uniqid(),
+            'is_available' => false,
+        ]);
+        BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'issued',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.document-requests.approve', $request), [
+                'notes' => 'Clear NOC',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'NOC cannot be processed until library clearance is complete: Has unreturned books.');
+
+        $this->assertSame('pending', $request->fresh()->status);
+    }
+
+    public function test_admin_cannot_approve_noc_until_fee_clearance_is_complete(): void
+    {
+        $student = $this->student();
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'pending',
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 12000,
+            'penalty_amount' => 500,
+            'status' => 'overdue',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patch(route('admin.document-requests.approve', $request), [
+                'notes' => 'Clear NOC',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'NOC cannot be processed until fee clearance is complete: INR 12,500.00 remains open.');
+
+        $this->assertSame('pending', $request->fresh()->status);
+    }
+
+    public function test_paid_fee_demand_does_not_block_noc_approval(): void
+    {
+        Mail::fake();
+        $student = $this->student();
+        $admin = $this->admin();
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'pending',
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 12000,
+            'penalty_amount' => 500,
+            'status' => 'fully_paid',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.document-requests.approve', $request), [
+                'notes' => 'All no-dues checks clear.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Document request approved for processing.');
+
+        $request->refresh();
+        $this->assertSame('approved', $request->status);
+        $this->assertSame($admin->id, $request->reviewed_by);
+    }
+
+    public function test_admin_cannot_approve_noc_until_hostel_fee_clearance_is_complete(): void
+    {
+        $student = $this->student();
+        $allocation = $this->hostelAllocation($student);
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'pending',
+        ]);
+
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => now()->format('Y-m'),
+            'amount' => 7500,
+            'status' => 'pending',
+            'due_date' => now()->addDays(10)->toDateString(),
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patch(route('admin.document-requests.approve', $request), [
+                'notes' => 'Clear NOC',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'NOC cannot be processed until hostel fee clearance is complete: INR 7,500.00 remains open.');
+
+        $this->assertSame('pending', $request->fresh()->status);
+    }
+
+    public function test_paid_or_waived_hostel_fee_demands_do_not_block_noc_approval(): void
+    {
+        Mail::fake();
+        $student = $this->student();
+        $admin = $this->admin();
+        $allocation = $this->hostelAllocation($student);
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'pending',
+        ]);
+
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => now()->subMonth()->format('Y-m'),
+            'amount' => 7500,
+            'status' => 'paid',
+            'due_date' => now()->subMonth()->endOfMonth()->toDateString(),
+            'paid_at' => now()->subDays(5),
+        ]);
+
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => now()->format('Y-m'),
+            'amount' => 7500,
+            'status' => 'waived',
+            'due_date' => now()->addDays(10)->toDateString(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.document-requests.approve', $request), [
+                'notes' => 'All no-dues checks clear.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Document request approved for processing.');
+
+        $request->refresh();
+        $this->assertSame('approved', $request->status);
+        $this->assertSame($admin->id, $request->reviewed_by);
     }
 
     public function test_document_request_notifications_link_to_student_documents(): void

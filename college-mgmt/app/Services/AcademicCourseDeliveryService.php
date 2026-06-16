@@ -74,7 +74,7 @@ class AcademicCourseDeliveryService
                 'unassigned_scoped_subjects' => $unassigned->count(),
             ],
             'items' => $assignments->map(fn (SubjectFacultyAssignment $assignment) => [
-                'title' => $assignment->subject?->name ?? 'Subject #' . $assignment->subject_id,
+                'title' => $this->subjectLabel($assignment->subject, $assignment->subject_id),
                 'subtitle' => ($assignment->subject?->program?->code ?? $assignment->program?->code ?? 'Program') . ' - ' . ($assignment->teacher?->user?->name ?? 'Faculty pending'),
                 'status' => $assignment->is_primary ? 'Primary faculty' : 'Co-faculty',
                 'action' => route('teacher.timetable.index'),
@@ -165,12 +165,12 @@ class AcademicCourseDeliveryService
                 'mentor_unassigned' => Student::whereIn('id', $studentIds)->whereNull('mentor_id')->count(),
             ],
             'items' => $risk->map(fn ($row) => [
-                'title' => $row->student?->user?->name ?? 'Student #' . $row->student_id,
+                'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => $row->exception_count . ' absent/late records in scoped courses',
                 'status' => 'Follow-up due',
                 'action' => route('chair.students.at-risk'),
             ])->merge($recentExceptions->map(fn (Attendance $attendance) => [
-                'title' => $attendance->student?->user?->name ?? 'Student #' . $attendance->student_id,
+                'title' => $this->studentLabel($attendance->student, $attendance->student_id),
                 'subtitle' => ($attendance->timetableEntry?->subject?->code ?? 'Subject') . ' - ' . $attendance->date?->toDateString(),
                 'status' => ucfirst($attendance->status),
                 'action' => route('teacher.attendance.mark'),
@@ -207,7 +207,7 @@ class AcademicCourseDeliveryService
                 'status' => 'Reply due',
                 'action' => route('student.discussions.show', [$discussion->subject_id, $discussion]),
             ])->merge($lowFeedback->map(fn ($row) => [
-                'title' => $row->subject?->name ?? 'Subject #' . $row->subject_id,
+                'title' => $this->subjectLabel($row->subject, $row->subject_id),
                 'subtitle' => 'Average feedback ' . round((float) $row->avg_rating, 1) . ' from ' . $row->response_count . ' responses',
                 'status' => 'Feedback action',
                 'action' => route('chair.faculty.feedback'),
@@ -246,12 +246,12 @@ class AcademicCourseDeliveryService
                 'meetings_this_week' => MentorMeeting::whereIn('student_id', $studentIds)->whereBetween('meeting_date', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             ],
             'items' => $meetings->map(fn (MentorMeeting $meeting) => [
-                'title' => $meeting->student?->user?->name ?? 'Student #' . $meeting->student_id,
+                'title' => $this->studentLabel($meeting->student, $meeting->student_id),
                 'subtitle' => $meeting->topic . ' - ' . $meeting->meeting_date?->toDateString(),
                 'status' => ucfirst($meeting->status),
                 'action' => route('teacher.mentor.index'),
             ])->merge($mentorStudents->map(fn (Student $student) => [
-                'title' => $student->user?->name ?? 'Student #' . $student->id,
+                'title' => $this->studentLabel($student, $student->id),
                 'subtitle' => 'Assigned mentee - ' . ($student->program?->code ?? 'Program'),
                 'status' => 'Mentor watch',
                 'action' => route('teacher.mentor.index'),
@@ -385,5 +385,28 @@ class AcademicCourseDeliveryService
             'label' => $teacher ? 'Faculty course scope' : ($scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Course-delivery scope'),
             'detail' => $teacher ? 'Assigned subjects and active mentees' : ($scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit course scope assigned yet'),
         ];
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
+    }
+
+    private function subjectLabel(?Subject $subject, mixed $fallbackId): string
+    {
+        if (! $subject) {
+            return 'Unassigned subject';
+        }
+
+        return $subject->name
+            ?? $subject->code
+            ?? 'Subject record ' . $fallbackId;
     }
 }

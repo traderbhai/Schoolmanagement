@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Book, BookCopy, BookIssue, LibraryMembership, Student, Teacher, User};
+use App\Models\{Book, BookCopy, BookIssue, LibraryMembership, LibraryReservation, Student, Teacher, User};
 use App\Services\LibraryFineService;
 use Illuminate\Http\Request;
 
@@ -105,13 +105,24 @@ class LibraryController extends Controller
 
     public function issueBook(Request $r)
     {
+        $this->expireStaleReservations();
+
         $data = $r->validate([
             'book_copy_id'  => 'nullable|exists:book_copies,id',
             'book_id'       => 'nullable|exists:books,id',
-            'borrower_type' => 'required|in:student,teacher',
-            'borrower_id'   => 'required|integer',
+            'borrower_key'  => 'nullable|string',
+            'borrower_type' => 'required_without:borrower_key|in:student,teacher',
+            'borrower_id'   => 'required_without:borrower_key|integer',
             'due_date'      => 'required|date|after:today',
         ]);
+
+        if (! empty($data['borrower_key'])) {
+            [$data['borrower_type'], $data['borrower_id']] = explode(':', $data['borrower_key'], 2) + [null, null];
+        }
+
+        if (! in_array($data['borrower_type'] ?? null, ['student', 'teacher'], true) || ! ctype_digit((string) ($data['borrower_id'] ?? ''))) {
+            return back()->withErrors(['borrower_id' => 'Select a valid borrower.']);
+        }
 
         if (empty($data['book_copy_id']) && empty($data['book_id'])) {
             return back()->withErrors(['book_copy_id' => 'Select a book copy or book to issue.']);
@@ -129,6 +140,10 @@ class LibraryController extends Controller
             return back()->withErrors(['borrower_id' => 'Library membership has expired.']);
         }
 
+        if ($membership && $data['due_date'] > now()->addDays((int) $membership->max_days_allowed)->toDateString()) {
+            return back()->withErrors(['due_date' => "Due date cannot exceed {$membership->max_days_allowed} day(s) for this membership."]);
+        }
+
         $activeIssues = BookIssue::where($borrowerColumn, $borrower->id)->whereIn('status', ['issued', 'overdue'])->count();
         $maxBooks = $membership?->max_books_allowed ?? 2;
         if ($activeIssues >= $maxBooks) {
@@ -143,6 +158,17 @@ class LibraryController extends Controller
             return back()->with('error', 'No available copy for this book.');
         }
 
+        $copy->load('book');
+        if (! $copy->book?->is_active || in_array($copy->condition_status, ['damaged', 'lost'], true)) {
+            return back()->withErrors(['book_copy_id' => 'Selected copy is not issuable.']);
+        }
+
+        $reservation = $this->matchingPendingReservation($copy->book_id, $data['borrower_type'], (int) $borrower->id);
+        $earliestReservation = $this->earliestPendingReservation($copy->book_id);
+        if ($earliestReservation && ! $reservation) {
+            return back()->withErrors(['book_copy_id' => 'This title is reserved for another borrower. Fulfil or cancel the reservation first.']);
+        }
+
         BookIssue::create([
             'book_copy_id' => $copy->id,
             $borrowerColumn => $borrower->id,
@@ -153,6 +179,7 @@ class LibraryController extends Controller
         ]);
         $copy->update(['is_available' => false]);
         Book::where('id', $copy->book_id)->decrement('available_copies');
+        $reservation?->update(['status' => 'fulfilled']);
         return back()->with('success', 'Book issued successfully.');
     }
 
@@ -173,10 +200,119 @@ class LibraryController extends Controller
 
     public function issues(Request $r)
     {
+        $this->expireStaleReservations();
+
         $query = BookIssue::with(['bookCopy.book','student.user','teacher.user']);
         if ($r->filled('status')) $query->where('status', $r->status);
         $issues = $query->latest()->paginate(20)->withQueryString();
-        return view('admin.library.issues', compact('issues'));
+        $availableCopies = BookCopy::with('book')
+            ->where('is_available', true)
+            ->whereHas('book', fn ($book) => $book->where('is_active', true))
+            ->orderBy('accession_number')
+            ->limit(200)
+            ->get();
+        $students = Student::with('user')
+            ->where('status', 'active')
+            ->orderBy('roll_number')
+            ->limit(200)
+            ->get();
+        $teachers = Teacher::with('user')
+            ->where('status', 'active')
+            ->orderBy('employee_id')
+            ->limit(200)
+            ->get();
+
+        return view('admin.library.issues', compact('issues', 'availableCopies', 'students', 'teachers'));
+    }
+
+    public function reservations(Request $r)
+    {
+        $this->expireStaleReservations();
+
+        $query = LibraryReservation::with(['book', 'student.user', 'teacher.user']);
+        if ($r->filled('status') && $r->status !== 'all') {
+            $query->where('status', $r->status);
+        }
+        if ($r->filled('search')) {
+            $search = $r->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('book', fn ($book) => $book->where('title', 'like', "%{$search}%")->orWhere('isbn', 'like', "%{$search}%"))
+                    ->orWhereHas('student.user', fn ($user) => $user->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('teacher.user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $reservations = $query->latest('reserved_at')->paginate(20)->withQueryString();
+        $availableCopiesByBook = BookCopy::where('is_available', true)
+            ->whereNotIn('condition_status', ['damaged', 'lost'])
+            ->selectRaw('book_id, count(*) as available_count')
+            ->groupBy('book_id')
+            ->pluck('available_count', 'book_id');
+
+        return view('admin.library.reservations', compact('reservations', 'availableCopiesByBook'));
+    }
+
+    public function fulfillReservation(Request $r, LibraryReservation $reservation)
+    {
+        $this->expireStaleReservations();
+
+        if ($reservation->status !== 'pending') {
+            return back()->withErrors(['reservation' => 'Only pending reservations can be fulfilled.']);
+        }
+
+        $reservation->load(['book', 'student', 'teacher']);
+        $borrower = $reservation->student ?: $reservation->teacher;
+        $borrowerType = $reservation->student ? 'student' : 'teacher';
+        if (! $borrower) {
+            return back()->withErrors(['reservation' => 'Reservation borrower no longer exists.']);
+        }
+
+        $membership = LibraryMembership::where('user_id', $borrower->user_id)->where('is_active', true)->first();
+        if ($membership && $membership->expiry_date && $membership->expiry_date->isPast()) {
+            return back()->withErrors(['reservation' => 'Borrower membership has expired.']);
+        }
+
+        $borrowerColumn = $borrowerType === 'student' ? 'student_id' : 'teacher_id';
+        $maxBooks = $membership?->max_books_allowed ?? 2;
+        $activeIssues = BookIssue::where($borrowerColumn, $borrower->id)->whereIn('status', ['issued', 'overdue'])->count();
+        if ($activeIssues >= $maxBooks) {
+            return back()->withErrors(['reservation' => "Borrower already has the maximum {$maxBooks} active issue(s)."]);
+        }
+
+        $copy = BookCopy::where('book_id', $reservation->book_id)
+            ->where('is_available', true)
+            ->whereNotIn('condition_status', ['damaged', 'lost'])
+            ->first();
+
+        if (! $copy) {
+            return back()->withErrors(['reservation' => 'No issuable copy is available for this reservation.']);
+        }
+
+        $maxDays = (int) ($membership?->max_days_allowed ?? 14);
+        BookIssue::create([
+            'book_copy_id' => $copy->id,
+            $borrowerColumn => $borrower->id,
+            'issued_by' => auth()->id(),
+            'issued_at' => now(),
+            'due_date' => now()->addDays($maxDays)->toDateString(),
+            'status' => 'issued',
+        ]);
+        $copy->update(['is_available' => false]);
+        Book::where('id', $copy->book_id)->decrement('available_copies');
+        $reservation->update(['status' => 'fulfilled']);
+
+        return back()->with('success', 'Reservation fulfilled and book issued.');
+    }
+
+    public function cancelReservation(Request $r, LibraryReservation $reservation)
+    {
+        if ($reservation->status !== 'pending') {
+            return back()->withErrors(['reservation' => 'Only pending reservations can be cancelled.']);
+        }
+
+        $reservation->update(['status' => 'cancelled']);
+
+        return back()->with('success', 'Reservation cancelled.');
     }
 
     public function memberships(Request $r)
@@ -211,5 +347,31 @@ class LibraryController extends Controller
     {
         $issue->update(['fine_paid' => true]);
         return back()->with('success', 'Fine of Rs. ' . number_format((float) $issue->fine_amount, 2) . ' marked as paid.');
+    }
+
+    private function expireStaleReservations(): void
+    {
+        LibraryReservation::where('status', 'pending')
+            ->whereDate('expires_at', '<', now()->toDateString())
+            ->update(['status' => 'expired']);
+    }
+
+    private function earliestPendingReservation(int $bookId): ?LibraryReservation
+    {
+        return LibraryReservation::where('book_id', $bookId)
+            ->where('status', 'pending')
+            ->orderBy('reserved_at')
+            ->first();
+    }
+
+    private function matchingPendingReservation(int $bookId, string $borrowerType, int $borrowerId): ?LibraryReservation
+    {
+        $column = $borrowerType === 'student' ? 'student_id' : 'teacher_id';
+
+        return LibraryReservation::where('book_id', $bookId)
+            ->where($column, $borrowerId)
+            ->where('status', 'pending')
+            ->orderBy('reserved_at')
+            ->first();
     }
 }

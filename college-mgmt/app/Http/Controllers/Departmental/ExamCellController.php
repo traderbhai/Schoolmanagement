@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, ExamResult, Program, Student, Enrollment, Subject, Term, Batch, Classroom};
+use App\Models\{Exam, ExamAnomalyLog, ExamResult, MarksAppeal, Program, Student, Subject, Term, Classroom};
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExamCellController extends Controller
@@ -148,7 +147,7 @@ class ExamCellController extends Controller
     {
         $exams = Exam::with(['program', 'subject'])->orderByDesc('exam_date')->get()
             ->map(function ($exam) {
-                $enrolled = Student::where('program_id', $exam->program_id)->where('status', 'active')->count();
+                $enrolled = $this->eligibleStudentQuery($exam)->count();
                 $entered  = $exam->results()->count();
                 $exam->enrolled       = $enrolled;
                 $exam->entered        = $entered;
@@ -163,7 +162,7 @@ class ExamCellController extends Controller
     {
         $exam->load(['program', 'subject', 'term']);
 
-        $students = Student::where('program_id', $exam->program_id)->where('status', 'active')
+        $students = $this->eligibleStudentQuery($exam)
             ->with(['user'])->get()
             ->map(function ($student) use ($exam) {
                 $student->result = ExamResult::where('exam_id', $exam->id)->where('student_id', $student->id)->first();
@@ -177,11 +176,37 @@ class ExamCellController extends Controller
     {
         $request->validate([
             'marks'   => 'required|array',
-            'marks.*' => 'nullable|numeric|min:0',
+            'marks.*' => 'nullable|numeric|min:0|max:' . (float) $exam->total_marks,
+            'absent' => 'nullable|array',
+            'absent.*' => 'integer',
         ]);
 
+        $eligibleStudentIds = $this->eligibleStudentQuery($exam)->pluck('id')->map(fn($id) => (string) $id)->all();
+        $absentStudentIds = collect($request->input('absent', []))
+            ->map(fn($id) => (string) $id)
+            ->unique()
+            ->values();
+        $submittedStudentIds = collect(array_keys($request->marks ?? []))
+            ->merge($request->input('absent', []))
+            ->map(fn($id) => (string) $id)
+            ->unique()
+            ->values();
+        if ($submittedStudentIds->diff($eligibleStudentIds)->isNotEmpty()) {
+            return back()->withErrors(['marks' => 'Marks can be saved only for students enrolled in this exam subject and term.']);
+        }
+
         foreach ($request->marks as $studentId => $marks) {
-            if ($marks === null || $marks === '') continue;
+            $studentKey = (string) $studentId;
+            if ($absentStudentIds->contains($studentKey)) {
+                continue;
+            }
+
+            if ($marks === null || $marks === '') {
+                return back()
+                    ->withInput()
+                    ->withErrors(["marks.{$studentId}" => 'Marks are required unless the student is marked absent.']);
+            }
+
             ExamResult::updateOrCreate(
                 ['exam_id' => $exam->id, 'student_id' => $studentId],
                 ['marks_obtained' => $marks, 'is_absent' => false]
@@ -193,7 +218,7 @@ class ExamCellController extends Controller
             foreach ($request->absent as $studentId) {
                 ExamResult::updateOrCreate(
                     ['exam_id' => $exam->id, 'student_id' => $studentId],
-                    ['marks_obtained' => 0, 'is_absent' => true]
+                    ['marks_obtained' => null, 'is_absent' => true]
                 );
             }
         }
@@ -203,11 +228,49 @@ class ExamCellController extends Controller
 
     public function publishResults(Request $request, Exam $exam)
     {
-        $columns = \Illuminate\Support\Facades\Schema::getColumnListing('exams');
-        if (in_array('published_at', $columns)) {
-            $exam->update(['published_at' => now()]);
+        if ($exam->published_at) {
+            return back()->with('error', 'Results are already published for this exam.');
         }
-        ExamResult::where('exam_id', $exam->id)->update(['remarks' => 'Published']);
+
+        $eligibleStudentIds = $this->eligibleStudentQuery($exam)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->values();
+
+        if ($eligibleStudentIds->isEmpty()) {
+            return back()->with('error', 'Results cannot be published because no eligible students were found for this exam.');
+        }
+
+        $enteredStudentIds = ExamResult::where('exam_id', $exam->id)
+            ->whereIn('student_id', $eligibleStudentIds)
+            ->pluck('student_id')
+            ->map(fn($id) => (int) $id)
+            ->values();
+
+        $missingCount = $eligibleStudentIds->diff($enteredStudentIds)->count();
+        if ($missingCount > 0) {
+            return back()->with('error', "Results cannot be published until marks or absence are entered for {$missingCount} eligible student(s).");
+        }
+
+        $openAnomalyCount = ExamAnomalyLog::where('exam_id', $exam->id)
+            ->whereNull('resolved_at')
+            ->count();
+        if ($openAnomalyCount > 0) {
+            return back()->with('error', "Results cannot be published while {$openAnomalyCount} exam anomaly case(s) are unresolved.");
+        }
+
+        $openAppealCount = MarksAppeal::whereHas('examResult', fn($query) => $query->where('exam_id', $exam->id))
+            ->whereIn('status', ['pending', 'under_review'])
+            ->count();
+        if ($openAppealCount > 0) {
+            return back()->with('error', "Results cannot be published while {$openAppealCount} marks appeal(s) are pending review.");
+        }
+
+        $exam->forceFill([
+            'published_at' => now(),
+            'published_by' => auth()->id(),
+        ])->save();
+
         return redirect()->route('exam-cell.grade-sheet', $exam)->with('success', 'Results published successfully.');
     }
 
@@ -220,8 +283,7 @@ class ExamCellController extends Controller
 
         if ($request->filled('exam_id')) {
             $selectedExam = Exam::with(['subject', 'program', 'classroom'])->findOrFail($request->exam_id);
-            $students = Student::where('program_id', $selectedExam->program_id)
-                ->where('status', 'active')->with('user')->get();
+            $students = $this->eligibleStudentQuery($selectedExam)->with('user')->get();
         }
 
         return view('departmental.exam-cell.hall-tickets', compact('programs', 'exams', 'students', 'selectedExam'));
@@ -229,6 +291,8 @@ class ExamCellController extends Controller
 
     public function downloadHallTicket(Exam $exam, Student $student)
     {
+        abort_unless($this->eligibleStudentQuery($exam)->whereKey($student->id)->exists(), 403);
+
         $exam->load(['subject', 'program', 'classroom', 'term']);
         $student->load('user');
 
@@ -241,7 +305,7 @@ class ExamCellController extends Controller
     {
         $appeals = collect();
         try {
-            $appeals = \App\Models\MarksAppeal::with(['student.user', 'exam.subject'])
+            $appeals = \App\Models\MarksAppeal::with(['student.user', 'examResult.exam.subject'])
                 ->latest()->paginate(25)->withQueryString();
         } catch (\Exception $e) {}
 
@@ -256,21 +320,42 @@ class ExamCellController extends Controller
             'revised_marks' => 'nullable|numeric|min:0',
         ]);
 
-        try {
-            $appeal = \App\Models\MarksAppeal::findOrFail($appealId);
-            $appeal->update([
-                'status'        => $request->action,
-                'reviewer_id'   => auth()->id(),
-                'remarks'       => $request->remarks,
-                'revised_marks' => $request->revised_marks,
-                'reviewed_at'   => now(),
-            ]);
-            if ($request->action === 'approved' && $request->revised_marks !== null) {
-                ExamResult::where('exam_id', $appeal->exam_id)
-                    ->where('student_id', $appeal->student_id)
-                    ->update(['marks_obtained' => $request->revised_marks]);
+        $appeal = \App\Models\MarksAppeal::with('examResult.exam')->findOrFail($appealId);
+        if (in_array($appeal->status, ['resolved', 'rejected'], true)) {
+            return back()->with('error', 'Reviewed marks appeal history cannot be changed.');
+        }
+
+        $action = $request->action;
+        $remarks = trim((string) $request->remarks);
+
+        if (in_array($action, ['approved', 'rejected'], true) && $remarks === '') {
+            return back()->withErrors(['remarks' => 'Review remarks are required before a final appeal decision.']);
+        }
+
+        if ($action === 'approved') {
+            if ($request->revised_marks === null || $request->revised_marks === '') {
+                return back()->withErrors(['revised_marks' => 'Revised marks are required when approving an appeal.']);
             }
-        } catch (\Exception $e) {}
+
+            $totalMarks = $appeal->examResult?->exam?->total_marks;
+            if ($totalMarks !== null && (float) $request->revised_marks > (float) $totalMarks) {
+                return back()->withErrors(['revised_marks' => 'Revised marks cannot exceed the exam total marks.']);
+            }
+        }
+
+        $status = $request->action === 'approved' ? 'resolved' : $request->action;
+
+        $appeal->update([
+            'status'         => $status,
+            'reviewed_by'    => auth()->id(),
+            'review_remarks' => $remarks !== '' ? $remarks : null,
+            'revised_marks'  => $action === 'approved' ? $request->revised_marks : null,
+            'reviewed_at'    => now(),
+        ]);
+
+        if ($request->action === 'approved' && $request->revised_marks !== null) {
+            $appeal->examResult?->update(['marks_obtained' => $request->revised_marks]);
+        }
 
         return back()->with('success', 'Appeal reviewed.');
     }
@@ -334,5 +419,29 @@ class ExamCellController extends Controller
             'route' => route('exam-cell.exams'),
             'action' => 'View Exams',
         ];
+    }
+
+    private function eligibleStudentQuery(Exam $exam)
+    {
+        $query = Student::query()
+            ->where('status', 'active')
+            ->where('program_id', $exam->program_id);
+
+        if ($exam->subject_id) {
+            $query->where(function ($studentQuery) use ($exam) {
+                $studentQuery->whereHas('subjectEnrollments', function ($enrollmentQuery) use ($exam) {
+                        $enrollmentQuery->where('subject_id', $exam->subject_id)
+                            ->where('status', 'active')
+                            ->when($exam->term_id, fn($q) => $q->where('term_id', $exam->term_id));
+                    })
+                    ->orWhereHas('enrollments', function ($enrollmentQuery) use ($exam) {
+                        $enrollmentQuery->where('subject_id', $exam->subject_id)
+                            ->whereIn('status', ['enrolled', 'active'])
+                            ->when($exam->term_id, fn($q) => $q->where('term_id', $exam->term_id));
+                    });
+            });
+        }
+
+        return $query->orderBy('enrollment_number');
     }
 }

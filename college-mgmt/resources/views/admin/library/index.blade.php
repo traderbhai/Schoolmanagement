@@ -60,6 +60,9 @@
         <a href="{{ route('admin.library.issues') }}" class="btn btn-outline-primary"><i class="bi bi-list-check me-1"></i>All Issues</a>
     </div>
     <div class="col-auto">
+        <a href="{{ route('admin.library.reservations') }}" class="btn btn-outline-primary"><i class="bi bi-bookmark-check me-1"></i>Reservations</a>
+    </div>
+    <div class="col-auto">
         <a href="{{ route('admin.library.issues') }}?status=overdue" class="btn btn-outline-danger"><i class="bi bi-exclamation-circle me-1"></i>Overdue Issues</a>
     </div>
     <div class="col-auto">

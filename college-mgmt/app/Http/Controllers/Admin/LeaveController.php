@@ -42,6 +42,10 @@ class LeaveController extends Controller
     {
         $request->validate(['admin_remarks' => 'nullable|string|max:1000']);
 
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Only pending leave applications can be approved.');
+        }
+
         $leave->update([
             'status'        => 'approved',
             'admin_remarks' => $request->admin_remarks,
@@ -55,7 +59,11 @@ class LeaveController extends Controller
 
     public function reject(Request $request, LeaveApplication $leave)
     {
-        $request->validate(['admin_remarks' => 'nullable|string|max:1000']);
+        $request->validate(['admin_remarks' => 'required|string|max:1000']);
+
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Only pending leave applications can be rejected.');
+        }
 
         $leave->update([
             'status'        => 'rejected',
@@ -70,6 +78,10 @@ class LeaveController extends Controller
 
     public function destroy(LeaveApplication $leave)
     {
+        if ($leave->status !== 'pending') {
+            return back()->with('error', 'Reviewed leave history cannot be deleted.');
+        }
+
         $leave->delete();
         return redirect()->route('admin.leaves.index')->with('success', 'Leave application deleted.');
     }

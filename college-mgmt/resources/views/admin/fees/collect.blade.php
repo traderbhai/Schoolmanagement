@@ -133,21 +133,60 @@
 </div>
 
 @if($selectedStudent)
-{{-- Fee Structure Breakdown --}}
+{{-- Demand / Fee Breakdown --}}
 <div class="card mt-3">
     <div class="card-header fw-semibold" style="font-size:.9rem">
-        <i class="bi bi-list-ul me-1 text-primary"></i>Fee Structure Breakdown for {{ $selectedStudent->user->name }}
+        <i class="bi bi-list-ul me-1 text-primary"></i>Fee Demand Breakdown for {{ $selectedStudent->user->name }}
     </div>
     <div class="card-body p-0">
-        @php
-            $currentYear = \App\Models\AcademicYear::where('is_current', true)->first();
-            $studentFees = \App\Models\FeeStructure::where('course_id', $selectedStudent->course_id)
-                ->when($currentYear, fn($q) => $q->where('academic_year_id', $currentYear->id))
-                ->get();
-            $studentPayments = \App\Models\FeePayment::where('student_id', $selectedStudent->id)->where('status','paid')->get();
-        @endphp
-        @if($studentFees->isEmpty())
-        <div class="p-3 text-muted small">No fee structures found for this student's course.</div>
+        @if($studentDemands->isNotEmpty())
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Term</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th class="text-end">Demand</th>
+                    <th class="text-end">Penalty</th>
+                    <th class="text-end">Outstanding</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach($studentDemands as $demand)
+                @php
+                    $isActiveDemand = in_array($demand->status, ['pending', 'partially_paid', 'overdue'], true);
+                    $penalty = $isActiveDemand ? (float) ($demand->penalty_amount ?? 0) : 0;
+                    $outstanding = $isActiveDemand ? (float) $demand->final_amount + $penalty : 0;
+                    $statusClass = match($demand->status) {
+                        'fully_paid' => 'success',
+                        'partially_paid' => 'warning',
+                        'overdue' => 'danger',
+                        default => 'secondary',
+                    };
+                @endphp
+                <tr>
+                    <td>{{ $demand->term->name ?? 'Term' }}</td>
+                    <td>{{ $demand->due_date?->format('d M Y') ?? '-' }}</td>
+                    <td><span class="badge bg-{{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $demand->status)) }}</span></td>
+                    <td class="text-end">â‚¹{{ number_format($demand->final_amount, 2) }}</td>
+                    <td class="text-end">â‚¹{{ number_format($penalty, 2) }}</td>
+                    <td class="text-end fw-semibold {{ $outstanding > 0 ? 'text-danger' : 'text-success' }}">
+                        â‚¹{{ number_format($outstanding, 2) }}
+                    </td>
+                </tr>
+            @endforeach
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="3" class="fw-bold">Outstanding Total</td>
+                    <td class="text-end fw-bold">â‚¹{{ number_format($studentDemands->sum('final_amount'), 2) }}</td>
+                    <td class="text-end fw-bold">â‚¹{{ number_format($studentDemands->whereIn('status', ['pending', 'partially_paid', 'overdue'])->sum('penalty_amount'), 2) }}</td>
+                    <td class="text-end fw-bold text-danger">â‚¹{{ number_format($balanceDue, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        @elseif($studentFees->isEmpty())
+        <div class="p-3 text-muted small">No fee demands or fee structures found for this student's course.</div>
         @else
         <table class="table table-sm mb-0">
             <thead class="table-light">

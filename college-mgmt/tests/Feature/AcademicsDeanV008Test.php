@@ -125,6 +125,12 @@ class AcademicsDeanV008Test extends TestCase
         $this->actingAs($dean)->post(route('academics.dean-os.risk-history.capture'))->assertRedirect();
         $snapshot = AcademicDeanRiskSnapshot::latest()->firstOrFail();
 
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.risk-settings.index'))
+            ->assertOk()
+            ->assertSee($snapshot->program?->code ?? $snapshot->program?->name)
+            ->assertDontSee('#'.$snapshot->program_id);
+
         $this->actingAs($dean)->post(route('academics.dean-os.risk-mitigation.store'), [
             'risk_snapshot_id' => $snapshot->id,
             'plan' => 'Mitigate by assigning owner and weekly review.',

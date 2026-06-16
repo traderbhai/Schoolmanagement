@@ -63,7 +63,7 @@
                             <option value="">— All Batches —</option>
                             @foreach($batches as $b)
                                 <option value="{{ $b->id }}" @selected(old('batch_id') == $b->id)>
-                                    Batch #{{ $b->id }} ({{ $b->program?->code ?? '?' }})
+                                    {{ $b->code ?: $b->name ?: 'Unnamed batch' }} ({{ $b->program?->code ?? 'Program pending' }})
                                 </option>
                             @endforeach
                         </select>

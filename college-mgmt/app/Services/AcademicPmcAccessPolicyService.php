@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Models\AcademicPmcOperatingRecord;
+use App\Models\Batch;
+use App\Models\Subject;
+use App\Models\Term;
 use App\Models\User;
 
 class AcademicPmcAccessPolicyService
@@ -48,18 +51,8 @@ class AcademicPmcAccessPolicyService
             'subject' => $context['subject_id'] ?? null,
         ];
 
-        $hasConcreteScope = false;
-        foreach ($checks as $scopeType => $scopeId) {
-            if ($scopeId === null || $scopeId === '') {
-                continue;
-            }
-            $hasConcreteScope = true;
-            if (! $this->scopes->canAccess($user, $scopeType, (int) $scopeId, null, true)) {
-                return false;
-            }
-        }
-
-        if ($hasConcreteScope) {
+        $concreteChecks = array_filter($checks, fn ($scopeId) => $scopeId !== null && $scopeId !== '');
+        if ($concreteChecks && $this->contextCoveredByManagedScope($user, $concreteChecks)) {
             return true;
         }
 
@@ -156,6 +149,63 @@ class AcademicPmcAccessPolicyService
         }
 
         return $hasScopedRecord;
+    }
+
+    private function contextCoveredByManagedScope(User $user, array $checks): bool
+    {
+        foreach ($checks as $scopeType => $scopeId) {
+            if ($this->scopes->canAccess($user, $scopeType, (int) $scopeId, null, true)) {
+                return $this->contextConsistentWithScope($scopeType, (int) $scopeId, $checks);
+            }
+        }
+
+        return false;
+    }
+
+    private function contextConsistentWithScope(string $scopeType, int $scopeId, array $checks): bool
+    {
+        $programId = isset($checks['program']) ? (int) $checks['program'] : null;
+        $batchId = isset($checks['batch']) ? (int) $checks['batch'] : null;
+        $termId = isset($checks['term']) ? (int) $checks['term'] : null;
+        $subjectId = isset($checks['subject']) ? (int) $checks['subject'] : null;
+
+        $batch = $batchId ? Batch::find($batchId) : null;
+        $term = $termId ? Term::find($termId) : null;
+        $subject = $subjectId ? Subject::find($subjectId) : null;
+
+        if ($batchId && ! $batch) {
+            return false;
+        }
+        if ($termId && ! $term) {
+            return false;
+        }
+        if ($subjectId && ! $subject) {
+            return false;
+        }
+        if ($programId && $batch && (int) $batch->program_id !== $programId) {
+            return false;
+        }
+        if ($programId && $term && $term->program_id && (int) $term->program_id !== $programId) {
+            return false;
+        }
+        if ($batchId && $term && $term->batch_id && (int) $term->batch_id !== $batchId) {
+            return false;
+        }
+        if ($programId && $subject && (int) $subject->program_id !== $programId) {
+            return false;
+        }
+
+        return match ($scopeType) {
+            'program' => $programId === $scopeId
+                || ($batch && (int) $batch->program_id === $scopeId)
+                || ($term && (int) $term->program_id === $scopeId)
+                || ($subject && (int) $subject->program_id === $scopeId),
+            'batch' => $batchId === $scopeId
+                || ($term && (int) $term->batch_id === $scopeId),
+            'term' => $termId === $scopeId,
+            'subject' => $subjectId === $scopeId,
+            default => false,
+        };
     }
 
     private function scopedIds(User $user, string $scopeType, bool $requireManage = false): ?array

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\Enrollment;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
@@ -19,10 +20,51 @@ class QuizController extends Controller
         return $student;
     }
 
+    private function ensureEnrolled($student, Quiz $quiz): void
+    {
+        abort_unless($this->isEnrolledForQuiz($student, $quiz), 403, 'You are not enrolled in this subject.');
+    }
+
+    private function isEnrolledForQuiz($student, Quiz $quiz): bool
+    {
+        $canonical = $student->subjectEnrollments()
+            ->where('subject_id', $quiz->subject_id)
+            ->where('status', 'active')
+            ->when($quiz->term_id, fn ($query) => $query->where(function ($termQuery) use ($quiz) {
+                $termQuery->whereNull('term_id')->orWhere('term_id', $quiz->term_id);
+            }))
+            ->exists();
+
+        if ($canonical) {
+            return true;
+        }
+
+        return Enrollment::where('student_id', $student->id)
+            ->where('subject_id', $quiz->subject_id)
+            ->whereIn('status', ['active', 'enrolled'])
+            ->when($quiz->term_id, fn ($query) => $query->where(function ($termQuery) use ($quiz) {
+                $termQuery->whereNull('term_id')->orWhere('term_id', $quiz->term_id);
+            }))
+            ->exists();
+    }
+
+    private function enrolledSubjectIds($student)
+    {
+        $canonical = $student->subjectEnrollments()
+            ->where('status', 'active')
+            ->pluck('subject_id');
+
+        $legacy = Enrollment::where('student_id', $student->id)
+            ->whereIn('status', ['active', 'enrolled'])
+            ->pluck('subject_id');
+
+        return $canonical->merge($legacy)->unique()->values();
+    }
+
     public function index()
     {
         $student = $this->getStudent();
-        $subjectIds = $student->subjects()->pluck('subjects.id');
+        $subjectIds = $this->enrolledSubjectIds($student);
 
         $quizzes = Quiz::with('subject')
             ->whereIn('subject_id', $subjectIds)
@@ -42,6 +84,7 @@ class QuizController extends Controller
     {
         $student = $this->getStudent();
         abort_unless($quiz->is_published, 404);
+        $this->ensureEnrolled($student, $quiz);
 
         $attempt = QuizAttempt::where('quiz_id', $quiz->id)
             ->where('student_id', $student->id)
@@ -59,6 +102,7 @@ class QuizController extends Controller
     {
         $student = $this->getStudent();
         abort_unless($quiz->isActive(), 403, 'This quiz is not currently active.');
+        $this->ensureEnrolled($student, $quiz);
 
         $existing = QuizAttempt::where('quiz_id', $quiz->id)
             ->where('student_id', $student->id)
@@ -85,6 +129,7 @@ class QuizController extends Controller
     public function submitAttempt(Request $request, Quiz $quiz)
     {
         $student = $this->getStudent();
+        $this->ensureEnrolled($student, $quiz);
 
         $attempt = QuizAttempt::where('quiz_id', $quiz->id)
             ->where('student_id', $student->id)
@@ -100,11 +145,13 @@ class QuizController extends Controller
                 $isCorrect = false;
 
                 if ($question->type === 'mcq' && $selectedOptionId) {
-                    $isCorrect = $question->options()
-                        ->where('id', $selectedOptionId)
-                        ->where('is_correct', true)
-                        ->exists();
-                    if ($isCorrect) $score += $question->marks;
+                    $selectedOption = $question->options()->where('id', $selectedOptionId)->first();
+                    if (! $selectedOption) {
+                        $selectedOptionId = null;
+                    } else {
+                        $isCorrect = (bool) $selectedOption->is_correct;
+                        if ($isCorrect) $score += $question->marks;
+                    }
                 }
 
                 QuizAnswer::create([
@@ -129,6 +176,7 @@ class QuizController extends Controller
     public function result(Quiz $quiz)
     {
         $student = $this->getStudent();
+        $this->ensureEnrolled($student, $quiz);
 
         $attempt = QuizAttempt::with(['answers.question', 'answers.option'])
             ->where('quiz_id', $quiz->id)

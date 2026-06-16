@@ -31,11 +31,15 @@ class ScholarshipSchemeController extends Controller
             'scheme_code'     => 'required|string|max:50|unique:scholarship_schemes,scheme_code',
             'type'            => 'required|in:merit,need_based,government,aicte,institution',
             'criteria'        => 'nullable|string|max:2000',
+            'min_cgpa'        => 'nullable|numeric|min:0|max:10',
+            'max_family_income' => 'nullable|numeric|min:0',
+            'requires_document' => 'boolean',
             'max_amount'      => 'required|numeric|min:0',
             'available_seats' => 'nullable|integer|min:1',
             'is_active'       => 'boolean',
         ]);
         $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['requires_document'] = $request->boolean('requires_document');
 
         ScholarshipScheme::create($validated);
 
@@ -57,11 +61,15 @@ class ScholarshipSchemeController extends Controller
             'scheme_code'     => 'required|string|max:50|unique:scholarship_schemes,scheme_code,' . $scholarshipScheme->id,
             'type'            => 'required|in:merit,need_based,government,aicte,institution',
             'criteria'        => 'nullable|string|max:2000',
+            'min_cgpa'        => 'nullable|numeric|min:0|max:10',
+            'max_family_income' => 'nullable|numeric|min:0',
+            'requires_document' => 'boolean',
             'max_amount'      => 'required|numeric|min:0',
             'available_seats' => 'nullable|integer|min:1',
             'is_active'       => 'boolean',
         ]);
         $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['requires_document'] = $request->boolean('requires_document');
 
         $scholarshipScheme->update($validated);
 

@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, ExamResult, Semester, Subject, Classroom, Student};
+use App\Models\{Exam, ExamResult, Semester, Subject, Classroom, Student, StudentSubjectEnrollment, Enrollment, Term};
 use Illuminate\Http\Request;
 
 class ExamController extends Controller
@@ -65,25 +65,90 @@ class ExamController extends Controller
 
     public function enterResults(Exam $exam) {
         $exam->load(['subject','semester']);
-        $students = Student::whereHas('enrollments', fn($q) =>
-            $q->where('semester_id', $exam->semester_id)->where('subject_id', $exam->subject_id)
-        )->with(['user','examResults' => fn($q) => $q->where('exam_id',$exam->id)])->get();
+        $students = $this->eligibleStudentsForExam($exam)
+            ->with(['user','examResults' => fn($q) => $q->where('exam_id',$exam->id)])
+            ->orderBy('roll_number')
+            ->get();
         return view('admin.exams.results', compact('exam','students'));
     }
 
     public function saveResults(Request $request, Exam $exam) {
-        $request->validate(['results' => 'required|array']);
+        $request->validate([
+            'results' => 'required|array',
+            'results.*.is_absent' => 'nullable|boolean',
+            'results.*.marks' => 'nullable|numeric|min:0|max:' . (float) $exam->total_marks,
+            'results.*.marks_obtained' => 'nullable|numeric|min:0|max:' . (float) $exam->total_marks,
+            'results.*.grade' => 'nullable|string|max:10',
+            'results.*.remarks' => 'nullable|string|max:500',
+        ]);
+
+        $allowedStudentIds = $this->eligibleStudentsForExam($exam)->pluck('id')->map(fn($id) => (string) $id)->all();
+        $submittedStudentIds = array_map('strval', array_keys($request->results));
+        abort_unless(empty(array_diff($submittedStudentIds, $allowedStudentIds)), 403, 'Results include students outside this exam roster.');
+
         foreach ($request->results as $studentId => $result) {
             $isAbsent = !empty($result['is_absent']);
+            $marks = $result['marks_obtained'] ?? $result['marks'] ?? null;
+            if (! $isAbsent && $marks === null) {
+                return back()
+                    ->withInput()
+                    ->withErrors(["results.{$studentId}.marks" => 'Marks are required unless the student is marked absent.']);
+            }
+
             \App\Models\ExamResult::updateOrCreate(
                 ['exam_id' => $exam->id, 'student_id' => $studentId],
                 [
-                    'marks_obtained' => $isAbsent ? null : ($result['marks_obtained'] ?? null),
+                    'marks_obtained' => $isAbsent ? null : $marks,
                     'is_absent'      => $isAbsent,
+                    'grade'          => $isAbsent ? null : ($result['grade'] ?? null),
                     'remarks'        => $result['remarks'] ?? null,
                 ]
             );
         }
         return redirect()->route('admin.exams.show', $exam)->with('success', 'Results saved.');
+    }
+
+    private function eligibleStudentsForExam(Exam $exam)
+    {
+        $termIds = $this->termIdsForExam($exam);
+
+        return Student::where('program_id', $exam->program_id)
+            ->where(function ($query) use ($exam, $termIds) {
+                $query->whereHas('enrollments', function ($q) use ($exam) {
+                    $q->where('subject_id', $exam->subject_id)
+                        ->where('semester_id', $exam->semester_id)
+                        ->whereIn('status', ['active', 'enrolled']);
+                })->orWhereHas('subjectEnrollments', function ($q) use ($exam, $termIds) {
+                    $q->where('subject_id', $exam->subject_id)
+                        ->where('status', 'active');
+
+                    $termIds === []
+                        ? $q->whereRaw('1 = 0')
+                        : $q->whereIn('term_id', $termIds);
+                });
+            });
+    }
+
+    private function termIdsForExam(Exam $exam): array
+    {
+        if ($exam->term_id) {
+            return [(int) $exam->term_id];
+        }
+
+        if (! $exam->semester_id) {
+            return [];
+        }
+
+        $semester = $exam->semester ?: Semester::find($exam->semester_id);
+        if (! $semester) {
+            return [];
+        }
+
+        return Term::query()
+            ->when($exam->program_id, fn($q) => $q->where('program_id', $exam->program_id))
+            ->where(fn($q) => $q->where('term_number', $semester->number)->orWhere('name', $semester->name))
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->all();
     }
 }

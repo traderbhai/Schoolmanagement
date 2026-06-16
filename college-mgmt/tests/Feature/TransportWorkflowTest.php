@@ -182,6 +182,159 @@ class TransportWorkflowTest extends TestCase
             ->assertSessionHasErrors('transport_vehicle_id');
     }
 
+    public function test_transport_assignment_rejects_inactive_stop_and_hides_inactive_options(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $inactiveRoute = TransportRoute::create([
+            'name' => 'Inactive South Route',
+            'code' => 'ISR-01',
+            'start_point' => 'South Depot',
+            'end_point' => 'Campus',
+            'distance_km' => 11,
+            'monthly_fee' => 2200,
+            'is_active' => false,
+        ]);
+        $inactiveStop = TransportStop::create([
+            'transport_route_id' => $route->id,
+            'name' => 'Closed Stop',
+            'sequence' => 2,
+            'pickup_time' => '08:30',
+            'drop_time' => '17:45',
+            'is_active' => false,
+        ]);
+        $inactiveVehicle = $this->vehicle([
+            'registration_number' => 'DL01BUS9999',
+            'status' => 'maintenance',
+        ]);
+        $student = $this->student('Inactive Stop Student');
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.assignments.store'), [
+                'student_id' => $student->id,
+                'transport_route_id' => $route->id,
+                'transport_stop_id' => $inactiveStop->id,
+                'transport_vehicle_id' => null,
+                'start_date' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('transport_stop_id');
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.transport.index'))
+            ->assertStatus(200);
+
+        $response->assertSee('<option value="' . $route->id . '">North Campus Route</option>', false);
+        $response->assertSee('<option value="' . $stop->id . '">NCR-01 - City Center</option>', false);
+        $response->assertDontSee('<option value="' . $inactiveRoute->id . '">Inactive South Route</option>', false);
+        $response->assertDontSee('<option value="' . $inactiveStop->id . '">NCR-01 - Closed Stop</option>', false);
+        $response->assertDontSee('<option value="' . $inactiveVehicle->id . '">DL01BUS9999</option>', false);
+
+        $this->assertSame('maintenance', $inactiveVehicle->fresh()->status);
+        $this->assertFalse($inactiveRoute->fresh()->is_active);
+    }
+
+    public function test_admin_can_update_vehicle_when_capacity_and_status_are_safe(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $vehicle = $this->vehicle([
+            'capacity' => 3,
+            'driver_name' => 'Old Driver',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.transport.vehicles.update', $vehicle), [
+                'registration_number' => 'DL01BUS1234',
+                'vehicle_type' => 'mini_bus',
+                'capacity' => 4,
+                'driver_name' => 'Updated Driver',
+                'driver_phone' => '9000000000',
+                'attendant_name' => 'Updated Attendant',
+                'status' => 'active',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Transport vehicle updated.');
+
+        $vehicle->refresh();
+        $this->assertSame('mini_bus', $vehicle->vehicle_type);
+        $this->assertSame(4, $vehicle->capacity);
+        $this->assertSame('Updated Driver', $vehicle->driver_name);
+        $this->assertSame('9000000000', $vehicle->driver_phone);
+        $this->assertSame('Updated Attendant', $vehicle->attendant_name);
+    }
+
+    public function test_admin_cannot_reduce_vehicle_capacity_below_active_assignments_or_deactivate_assigned_vehicle(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $vehicle = $this->vehicle(['capacity' => 3]);
+        $firstStudent = $this->student('Assigned One');
+        $secondStudent = $this->student('Assigned Two');
+
+        foreach ([$firstStudent, $secondStudent] as $student) {
+            TransportAssignment::create([
+                'student_id' => $student->id,
+                'transport_route_id' => $route->id,
+                'transport_stop_id' => $stop->id,
+                'transport_vehicle_id' => $vehicle->id,
+                'start_date' => now()->toDateString(),
+                'monthly_fee' => 2750,
+                'status' => 'active',
+            ]);
+        }
+
+        $payload = [
+            'registration_number' => $vehicle->registration_number,
+            'vehicle_type' => $vehicle->vehicle_type,
+            'capacity' => 1,
+            'driver_name' => $vehicle->driver_name,
+            'driver_phone' => $vehicle->driver_phone,
+            'attendant_name' => $vehicle->attendant_name,
+            'status' => 'active',
+        ];
+
+        $this->actingAs($admin)
+            ->patch(route('admin.transport.vehicles.update', $vehicle), $payload)
+            ->assertSessionHasErrors('capacity');
+
+        $this->assertSame(3, $vehicle->fresh()->capacity);
+
+        $payload['capacity'] = 3;
+        $payload['status'] = 'maintenance';
+
+        $this->actingAs($admin)
+            ->patch(route('admin.transport.vehicles.update', $vehicle), $payload)
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('active', $vehicle->fresh()->status);
+    }
+
+    public function test_transport_index_shows_vehicle_fleet_update_controls_and_assignment_counts(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $vehicle = $this->vehicle(['capacity' => 2]);
+        $student = $this->student('Fleet Count Student');
+
+        TransportAssignment::create([
+            'student_id' => $student->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'transport_vehicle_id' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.transport.index'))
+            ->assertStatus(200)
+            ->assertSee('Vehicle Fleet')
+            ->assertSee(route('admin.transport.vehicles.update', $vehicle), false)
+            ->assertSee('DL01BUS1234')
+            ->assertSee('Active Assignments')
+            ->assertSee('Fleet Count Student');
+    }
+
     public function test_admin_can_end_active_transport_assignment(): void
     {
         $admin = $this->userWithRole('admin');
@@ -207,6 +360,32 @@ class TransportWorkflowTest extends TestCase
         $assignment->refresh();
         $this->assertSame('inactive', $assignment->status);
         $this->assertNotNull($assignment->end_date);
+    }
+
+    public function test_admin_cannot_end_transport_assignment_before_start_date(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $student = $this->student();
+
+        $assignment = TransportAssignment::create([
+            'student_id' => $student->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'start_date' => now()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.assignments.end', $assignment), [
+                'end_date' => now()->subDay()->toDateString(),
+            ])
+            ->assertSessionHasErrors('end_date');
+
+        $assignment->refresh();
+        $this->assertSame('active', $assignment->status);
+        $this->assertNull($assignment->end_date);
     }
 
     public function test_student_can_view_active_transport_assignment(): void

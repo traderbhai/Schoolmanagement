@@ -16,6 +16,11 @@ class AnnouncementController extends Controller
             ->pluck('subject_id')->unique()->toArray();
     }
 
+    private function ensureTeachesSubject(int $subjectId): void
+    {
+        abort_unless(in_array($subjectId, $this->teacherSubjectIds(), true), 403, 'You do not teach this subject.');
+    }
+
     public function index()
     {
         $announcements = SubjectAnnouncement::whereIn('subject_id', $this->teacherSubjectIds())
@@ -36,6 +41,7 @@ class AnnouncementController extends Controller
             'body'       => 'required|string',
             'is_pinned'  => 'boolean',
         ]);
+        $this->ensureTeachesSubject((int) $request->subject_id);
 
         SubjectAnnouncement::create([
             'subject_id' => $request->subject_id,

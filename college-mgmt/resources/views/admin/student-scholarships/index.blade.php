@@ -152,6 +152,11 @@
                                 @endif
                             </div>
                             <div class="small text-muted">CGPA: {{ $application->cgpa_at_application ?? 'Not available' }}</div>
+                            @if($application->documents_path)
+                                <a href="{{ route('admin.student-scholarships.proof', $application) }}" class="small">Download proof</a>
+                            @elseif($application->scheme?->requires_document)
+                                <div class="small text-danger">Proof missing</div>
+                            @endif
                         </td>
                         <td class="small text-muted">{{ \Illuminate\Support\Str::limit($application->reason, 160) }}</td>
                         <td>

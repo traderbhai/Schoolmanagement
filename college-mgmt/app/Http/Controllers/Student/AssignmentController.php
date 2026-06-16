@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
-use App\Models\Subject;
+use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
@@ -19,11 +18,52 @@ class AssignmentController extends Controller
         return $student;
     }
 
+    private function isEnrolledForAssignment($student, Assignment $assignment): bool
+    {
+        $canonical = $student->subjectEnrollments()
+            ->where('subject_id', $assignment->subject_id)
+            ->where('status', 'active')
+            ->when($assignment->term_id, fn ($query) => $query->where(function ($termQuery) use ($assignment) {
+                $termQuery->whereNull('term_id')->orWhere('term_id', $assignment->term_id);
+            }))
+            ->exists();
+
+        if ($canonical) {
+            return true;
+        }
+
+        return Enrollment::where('student_id', $student->id)
+            ->where('subject_id', $assignment->subject_id)
+            ->whereIn('status', ['active', 'enrolled'])
+            ->when($assignment->term_id, fn ($query) => $query->where(function ($termQuery) use ($assignment) {
+                $termQuery->whereNull('term_id')->orWhere('term_id', $assignment->term_id);
+            }))
+            ->exists();
+    }
+
+    private function ensureEnrolled($student, Assignment $assignment): void
+    {
+        abort_unless($this->isEnrolledForAssignment($student, $assignment), 403, 'You are not enrolled in this subject.');
+    }
+
+    private function enrolledSubjectIds($student)
+    {
+        $canonical = $student->subjectEnrollments()
+            ->where('status', 'active')
+            ->pluck('subject_id');
+
+        $legacy = Enrollment::where('student_id', $student->id)
+            ->whereIn('status', ['active', 'enrolled'])
+            ->pluck('subject_id');
+
+        return $canonical->merge($legacy)->unique()->values();
+    }
+
     public function index()
     {
         $student = $this->getStudent();
 
-        $subjectIds = $student->subjects()->pluck('subjects.id');
+        $subjectIds = $this->enrolledSubjectIds($student);
 
         $assignments = Assignment::with(['subject', 'submissions' => fn($q) => $q->where('student_id', $student->id)])
             ->whereIn('subject_id', $subjectIds)
@@ -42,6 +82,7 @@ class AssignmentController extends Controller
     {
         $student = $this->getStudent();
         abort_unless($assignment->is_published, 404);
+        $this->ensureEnrolled($student, $assignment);
 
         $submission = AssignmentSubmission::where('assignment_id', $assignment->id)
             ->where('student_id', $student->id)
@@ -54,6 +95,7 @@ class AssignmentController extends Controller
     {
         $student = $this->getStudent();
         abort_unless($assignment->is_published, 403);
+        $this->ensureEnrolled($student, $assignment);
 
         if (! $assignment->allow_late_submission && $assignment->due_at->isPast()) {
             return back()->with('error', 'Submission deadline has passed.');

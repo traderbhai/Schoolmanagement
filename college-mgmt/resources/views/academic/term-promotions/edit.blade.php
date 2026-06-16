@@ -29,7 +29,7 @@
                     <div class="col-md-6">
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select" required>
-                            @foreach(['pending','approved','rejected'] as $s)
+                            @foreach(['pending','on_hold'] as $s)
                                 <option value="{{ $s }}" {{ old('status',$termPromotion->status)==$s?'selected':'' }}>{{ ucfirst($s) }}</option>
                             @endforeach
                         </select>

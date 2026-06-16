@@ -24,12 +24,31 @@ class TermPromotionController extends Controller
 
     public function update(Request $request, TermPromotion $termPromotion)
     {
-        $request->validate(['status' => 'required|in:approved,rejected,pending']);
+        if (! $termPromotion->isReviewable()) {
+            return redirect()->route('academic.term-promotions.show', $termPromotion)
+                ->with('error', 'Reviewed promotion history cannot be edited.');
+        }
+
+        $data = $request->validate([
+            'cgpa' => 'nullable|numeric|min:0|max:10',
+            'attendance_percentage' => 'nullable|numeric|min:0|max:100',
+            'meets_academic_criteria' => 'nullable|boolean',
+            'meets_attendance_criteria' => 'nullable|boolean',
+            'status' => 'required|in:pending,on_hold',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
         $termPromotion->update([
-            'status'        => $request->status,
-            'remarks'       => $request->remarks,
-            'processed_by'  => auth()->id(),
-            'processed_at'  => now(),
+            'cgpa' => $data['cgpa'] ?? null,
+            'attendance_percentage' => $data['attendance_percentage'] ?? null,
+            'meets_academic_criteria' => array_key_exists('meets_academic_criteria', $data)
+                ? (bool) $data['meets_academic_criteria']
+                : $termPromotion->meets_academic_criteria,
+            'meets_attendance_criteria' => array_key_exists('meets_attendance_criteria', $data)
+                ? (bool) $data['meets_attendance_criteria']
+                : $termPromotion->meets_attendance_criteria,
+            'status' => $data['status'],
+            'remarks' => $data['remarks'] ?? null,
         ]);
         return redirect()->route('academic.term-promotions.index')->with('success', 'Promotion updated.');
     }
@@ -99,8 +118,16 @@ class TermPromotionController extends Controller
 
     public function approve(TermPromotion $termPromotion)
     {
+        if (! $termPromotion->isReviewable()) {
+            return back()->with('error', 'Only pending or on-hold promotions can be approved.');
+        }
+
         if (!$termPromotion->canPromote()) {
             return back()->with('error', 'Student does not meet promotion criteria');
+        }
+
+        if (! $termPromotion->studentIsStillInCurrentTerm()) {
+            return back()->with('error', 'Student is no longer in the source term for this promotion.');
         }
 
         $termPromotion->approve();
@@ -112,6 +139,10 @@ class TermPromotionController extends Controller
     {
         $validated = $request->validate(['remarks' => 'required|string|max:500']);
 
+        if (! $termPromotion->isReviewable()) {
+            return back()->with('error', 'Only pending or on-hold promotions can be rejected.');
+        }
+
         $termPromotion->reject($validated['remarks']);
 
         return back()->with('success', 'Promotion rejected successfully');
@@ -119,14 +150,26 @@ class TermPromotionController extends Controller
 
     public function bulkApprove(Request $request)
     {
-        $promotionIds = $request->get('promotion_ids', []);
+        $data = $request->validate([
+            'promotion_ids' => 'required|array|min:1',
+            'promotion_ids.*' => 'integer|exists:term_promotions,id',
+        ]);
 
-        TermPromotion::whereIn('id', $promotionIds)->each(function (TermPromotion $tp) {
-            if ($tp->canPromote()) {
+        $approved = 0;
+        TermPromotion::with('student')
+            ->whereIn('id', $data['promotion_ids'])
+            ->get()
+            ->each(function (TermPromotion $tp) use (&$approved) {
+            if ($tp->isReviewable() && $tp->canPromote() && $tp->studentIsStillInCurrentTerm()) {
                 $tp->approve();
+                $approved++;
             }
         });
 
-        return back()->with('success', 'Promotions processed successfully');
+        if ($approved === 0) {
+            return back()->with('error', 'No selected promotions were eligible for approval.');
+        }
+
+        return back()->with('success', "{$approved} promotion record" . ($approved === 1 ? '' : 's') . ' approved successfully.');
     }
 }

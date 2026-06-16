@@ -36,7 +36,7 @@
     <div class="card-body vstack gap-2">
         <select class="form-select form-select-sm" name="course_group_id" required><option value="">Source group</option>@foreach($selectorOptions['courseGroups'] ?? [] as $group)<option value="{{ $group->id }}">{{ $group->name }} - {{ str($group->group_type)->headline() }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="target_course_group_id"><option value="">Target group if needed</option>@foreach($selectorOptions['courseGroups'] ?? [] as $group)<option value="{{ $group->id }}">{{ $group->name }} - {{ str($group->group_type)->headline() }}</option>@endforeach</select>
-        <select class="form-select form-select-sm" name="student_id"><option value="">Student for move</option>@foreach($selectorOptions['students'] ?? [] as $student)<option value="{{ $student->id }}">{{ $student->user?->name ?? $student->student_id ?? ('Student #' . $student->id) }}</option>@endforeach</select>
+        <select class="form-select form-select-sm" name="student_id"><option value="">Student for move</option>@foreach($selectorOptions['students'] ?? [] as $student)<option value="{{ $student->id }}">{{ $student->user?->name ?? $student->enrollment_number ?? $student->roll_number ?? $student->student_id ?? 'Unassigned student' }}</option>@endforeach</select>
         <select class="form-select form-select-sm" name="adjustment_type">
             <option value="rebalance">rebalance</option>
             <option value="split">split</option>

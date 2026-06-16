@@ -18,6 +18,6 @@
 <div class="card shadow-sm">
     <div class="card-header py-2 fw-semibold">Group Memberships</div>
     <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Group</th><th>Student</th><th>Status</th></tr></thead><tbody>
-        @forelse($memberships as $member)<tr><td>{{ $member->courseGroup?->name }}</td><td>{{ $member->student?->user?->name ?? 'Student #' . $member->student_id }}</td><td>{{ $member->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted">No group memberships.</td></tr>@endforelse
+        @forelse($memberships as $member)<tr><td>{{ $member->courseGroup?->name }}</td><td>{{ $member->student?->user?->name ?? $member->student?->enrollment_number ?? $member->student?->roll_number ?? $member->student?->student_id ?? 'Unassigned student' }}</td><td>{{ $member->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted">No group memberships.</td></tr>@endforelse
     </tbody></table></div><div class="card-footer py-2">{{ $memberships->links() }}</div>
 </div>

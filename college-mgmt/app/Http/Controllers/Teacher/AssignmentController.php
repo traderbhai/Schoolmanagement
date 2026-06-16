@@ -17,6 +17,30 @@ class AssignmentController extends Controller
             ->pluck('subject_id')->unique()->toArray();
     }
 
+    private function ensureTeachesSubject(int $subjectId): void
+    {
+        abort_unless(in_array($subjectId, $this->teacherSubjectIds(), true), 403, 'You do not teach this subject.');
+    }
+
+    private function assignmentRosterQuery(Assignment $assignment)
+    {
+        return Student::where(function ($query) use ($assignment) {
+            $query->whereHas('subjectEnrollments', function ($enrollment) use ($assignment) {
+                $enrollment->where('subject_id', $assignment->subject_id)
+                    ->where('status', 'active')
+                    ->when($assignment->term_id, fn ($termQuery) => $termQuery->where(function ($nested) use ($assignment) {
+                        $nested->whereNull('term_id')->orWhere('term_id', $assignment->term_id);
+                    }));
+            })->orWhereHas('enrollments', function ($enrollment) use ($assignment) {
+                $enrollment->where('subject_id', $assignment->subject_id)
+                    ->whereIn('status', ['active', 'enrolled'])
+                    ->when($assignment->term_id, fn ($termQuery) => $termQuery->where(function ($nested) use ($assignment) {
+                        $nested->whereNull('term_id')->orWhere('term_id', $assignment->term_id);
+                    }));
+            });
+        });
+    }
+
     public function index()
     {
         $assignments = Assignment::whereIn('subject_id', $this->teacherSubjectIds())
@@ -50,6 +74,7 @@ class AssignmentController extends Controller
             'late_penalty_percent' => 'nullable|integer|min:0|max:100',
             'attachment'           => 'nullable|file|max:10240',
         ]);
+        $this->ensureTeachesSubject((int) $request->subject_id);
 
         $path = $request->hasFile('attachment')
             ? $request->file('attachment')->store('assignments', 'public') : null;
@@ -81,9 +106,7 @@ class AssignmentController extends Controller
             ->latest('submitted_at')
             ->get();
 
-        // Students who haven't submitted
-        $enrolledStudents = Student::whereHas('enrollments', fn($q) =>
-            $q->where('subject_id', $assignment->subject_id))->with('user')->get();
+        $enrolledStudents = $this->assignmentRosterQuery($assignment)->with('user')->get();
 
         $submittedIds = $submissions->pluck('student_id')->toArray();
         $notSubmitted = $enrolledStudents->whereNotIn('id', $submittedIds);
@@ -93,8 +116,11 @@ class AssignmentController extends Controller
 
     public function grade(Request $request, AssignmentSubmission $submission)
     {
+        abort_unless($submission->assignment && $submission->assignment->created_by === auth()->id(), 403);
+        abort_unless($this->assignmentRosterQuery($submission->assignment)->whereKey($submission->student_id)->exists(), 403);
+
         $request->validate([
-            'marks_obtained' => 'required|numeric|min:0',
+            'marks_obtained' => 'required|numeric|min:0|max:'.$submission->assignment->max_marks,
             'feedback'       => 'nullable|string|max:500',
         ]);
 

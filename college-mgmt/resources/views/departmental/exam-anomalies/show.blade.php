@@ -14,6 +14,9 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
 
     @php $sev = ['critical'=>'danger','high'=>'warning','medium'=>'info','low'=>'secondary'][$anomalyLog->severity] ?? 'secondary'; @endphp
 
@@ -61,6 +64,11 @@
                                 <option value="debarred">Debar Student</option>
                                 <option value="cancelled">Cancel Exam</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Resolution Notes <span class="text-danger">*</span></label>
+                            <textarea name="resolution_notes" class="form-control form-control-sm @error('resolution_notes') is-invalid @enderror" rows="3" required>{{ old('resolution_notes') }}</textarea>
+                            @error('resolution_notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <button type="submit" class="btn btn-warning btn-sm w-100">Resolve Anomaly</button>
                     </form>

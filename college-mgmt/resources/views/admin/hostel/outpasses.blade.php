@@ -39,7 +39,11 @@
             </thead>
             <tbody>
                 @forelse($outpasses as $op)
-                    @php $statusColors = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','returned'=>'info']; @endphp
+                    @php
+                        $statusColors = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','returned'=>'info'];
+                        $isExpiredPending = $op->status === 'pending' && $op->out_datetime && $op->out_datetime->isPast();
+                        $canMarkReturned = $op->status === 'approved' && (! $op->out_datetime || now()->greaterThanOrEqualTo($op->out_datetime));
+                    @endphp
                     <tr>
                         <td>{{ $op->student?->user?->name ?? '—' }}</td>
                         <td>
@@ -53,16 +57,24 @@
                         <td><span class="badge bg-{{ $statusColors[$op->status] ?? 'secondary' }}">{{ ucfirst($op->status) }}</span></td>
                         <td>
                             @if($op->status === 'pending')
-                                <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-xs btn-success btn-sm">Approve</button>
-                                </form>
+                                @if($isExpiredPending)
+                                    <span class="badge bg-secondary me-1">Expired</span>
+                                @else
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-xs btn-success btn-sm">Approve</button>
+                                    </form>
+                                @endif
                                 <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $op->id }}">Reject</button>
                             @elseif($op->status === 'approved')
-                                <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-info">Mark Returned</button>
-                                </form>
+                                @if($canMarkReturned)
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-info">Mark Returned</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted small">Not out yet</span>
+                                @endif
                             @endif
                         </td>
                     </tr>

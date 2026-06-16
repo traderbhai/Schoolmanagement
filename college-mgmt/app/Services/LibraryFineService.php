@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Models\BookIssue;
 use App\Models\LibraryMembership;
+use Illuminate\Database\Eloquent\Builder;
 
 class LibraryFineService
 {
@@ -34,19 +35,25 @@ class LibraryFineService
 
     public function checkNocEligibility(int $userId): array
     {
-        $activeIssues = BookIssue::whereHas('student', fn($q) => $q->where('user_id', $userId))
-            ->orWhereHas('teacher', fn($q) => $q->where('user_id', $userId))
+        $activeIssues = $this->issuesForUser($userId)
             ->whereIn('status', ['issued','overdue'])
             ->exists();
         if ($activeIssues) {
             return ['eligible' => false, 'reason' => 'Has unreturned books'];
         }
-        $unpaidFines = BookIssue::whereHas('student', fn($q) => $q->where('user_id', $userId))
-            ->orWhereHas('teacher', fn($q) => $q->where('user_id', $userId))
+        $unpaidFines = $this->issuesForUser($userId)
             ->where('fine_paid', false)->where('fine_amount', '>', 0)->exists();
         if ($unpaidFines) {
             return ['eligible' => false, 'reason' => 'Has unpaid library fines'];
         }
         return ['eligible' => true, 'reason' => null];
+    }
+
+    private function issuesForUser(int $userId): Builder
+    {
+        return BookIssue::where(function (Builder $query) use ($userId) {
+            $query->whereHas('student', fn (Builder $student) => $student->where('user_id', $userId))
+                ->orWhereHas('teacher', fn (Builder $teacher) => $teacher->where('user_id', $userId));
+        });
     }
 }

@@ -2,7 +2,7 @@
 @section('title', 'CO-PO Mapping Matrix')
 @section('page-title', 'CO-PO Mapping Matrix')
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="#">OBE Framework</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('academic.obe.co.index') }}">OBE Framework</a></li>
     <li class="breadcrumb-item active">CO-PO Matrix</li>
 @endsection
 

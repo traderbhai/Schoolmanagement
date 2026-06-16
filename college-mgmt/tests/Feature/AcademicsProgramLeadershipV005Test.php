@@ -55,7 +55,7 @@ class AcademicsProgramLeadershipV005Test extends TestCase
 
     public function test_program_leadership_source_lists_are_database_backed_and_linked(): void
     {
-        $this->seedProgramFixture();
+        $fixture = $this->seedProgramFixture();
         $chair = User::where('email', 'chair@college.com')->firstOrFail();
 
         $this->actingAs($chair)
@@ -64,6 +64,7 @@ class AcademicsProgramLeadershipV005Test extends TestCase
             ->assertSee('Student Success')
             ->assertSee('Filtered Source List')
             ->assertSee('Kabir Malhotra')
+            ->assertDontSee('Student #'.$fixture['student']->id)
             ->assertSee(route('chair.students.at-risk'), false);
 
         $this->actingAs($chair)

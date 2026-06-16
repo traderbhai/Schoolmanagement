@@ -14,6 +14,9 @@
         <div class="text-muted" style="font-size:.82rem">Manage fee structures and payments</div>
     </div>
     <div class="d-flex gap-2">
+        <a href="{{ route('admin.fees.payment-requests.index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-upload me-1"></i>Payment Proofs
+        </a>
         <a href="{{ route('admin.fees.report') }}" class="btn btn-outline-secondary">
             <i class="bi bi-graph-up me-1"></i>Fee Report
         </a>

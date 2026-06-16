@@ -71,6 +71,7 @@
                     $deadlinePassed = $drive->last_apply_date && $drive->last_apply_date->lt(now()->startOfDay());
                     $deadlineSoon = $drive->last_apply_date && ! $deadlinePassed && $drive->last_apply_date->lte(now()->addDays(3)->endOfDay());
                     $badge = $drive->status === 'ongoing' ? 'bg-warning text-dark' : 'bg-info';
+                    $eligibility = $drive->student_eligibility ?? ['eligible' => true, 'reason' => null, 'detail' => null];
                 @endphp
                 <div class="col-md-6 col-lg-4">
                     <div class="card h-100 border-0 shadow-sm">
@@ -91,6 +92,9 @@
                             <div class="text-muted" style="font-size:.8rem">
                                 @if($drive->min_cgpa)
                                     <div><i class="bi bi-mortarboard me-1"></i>Min CGPA: {{ $drive->min_cgpa }}</div>
+                                @endif
+                                @if(!$eligibility['eligible'] && !empty($eligibility['detail']))
+                                    <div class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i>{{ $eligibility['detail'] }}</div>
                                 @endif
                                 @if($drive->drive_date)
                                     <div><i class="bi bi-calendar me-1"></i>Drive Date: {{ $drive->drive_date->format('d M Y') }}</div>
@@ -118,6 +122,10 @@
                             @elseif($deadlinePassed)
                                 <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                     Deadline passed
+                                </button>
+                            @elseif(!$eligibility['eligible'])
+                                <button class="btn btn-sm btn-outline-danger w-100" disabled>
+                                    {{ $eligibility['reason'] ?? 'Not eligible' }}
                                 </button>
                             @else
                                 <form method="POST" action="{{ route('student.placements.apply', $drive) }}">

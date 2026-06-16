@@ -38,6 +38,50 @@ class AdmissionOsV038Test extends TestCase
         ] as $route => $text) {
             $this->actingAs($head)->get(route($route))->assertOk()->assertSee($text)->assertDontSee('QueryException');
         }
+
+        $this->actingAs($head)
+            ->get('/admission/offer-rounds')
+            ->assertRedirect(route('admission.offer-rounds.index'));
+
+        $objection = DB::table('admission_objection_events')->firstOrFail();
+        $objectionSubject = $objection->subject_type === Lead::class
+            ? Lead::findOrFail($objection->subject_id)
+            : Applicant::with('user')->findOrFail($objection->subject_id);
+        $objectionLabel = $objectionSubject instanceof Lead
+            ? $objectionSubject->name
+            : ($objectionSubject->user?->name ?? $objectionSubject->application_number);
+        $this->actingAs($head)
+            ->get(route('admission.calling-desk.index'))
+            ->assertOk()
+            ->assertSee($objectionLabel)
+            ->assertDontSee(class_basename($objection->subject_type).' #'.$objection->subject_id);
+
+        $slotAssignment = DB::table('admission_assessment_slot_assignments')->firstOrFail();
+        $slotApplicant = Applicant::with('user')->findOrFail($slotAssignment->applicant_id);
+        $conflict = app(AdmissionAssessmentResourceService::class)->conflicts()->first();
+        $resourceName = DB::table('admission_assessment_resources')->where('id', $conflict->resource_id)->value('name');
+        $invitation = DB::table('admission_evaluator_invitations')->firstOrFail();
+        $evaluatorName = User::findOrFail($invitation->user_id)->name;
+        $this->actingAs($head)
+            ->get(route('admission.assessment-slots.index'))
+            ->assertOk()
+            ->assertSee($slotApplicant->application_number)
+            ->assertSee($slotApplicant->user->name)
+            ->assertSee($resourceName)
+            ->assertSee($evaluatorName)
+            ->assertDontSee('<td>#'.$slotAssignment->id.'</td>', false)
+            ->assertDontSee('<td>'.$slotAssignment->applicant_id.'</td>', false)
+            ->assertDontSee('<td>'.$conflict->resource_id.'</td>', false)
+            ->assertDontSee('<td>'.$invitation->user_id.'</td>', false);
+
+        $decision = DB::table('admission_selection_committee_decisions')->firstOrFail();
+        $decisionApplicant = Applicant::with('user')->findOrFail($decision->applicant_id);
+        $this->actingAs($head)
+            ->get(route('admission.selection-committee.index'))
+            ->assertOk()
+            ->assertSee($decisionApplicant->application_number)
+            ->assertSee($decisionApplicant->user->name)
+            ->assertDontSee('<td>#'.$decision->applicant_id.'</td>', false);
     }
 
     public function test_calling_desk_outcome_creates_attempt_log_script_and_reminder(): void
@@ -89,9 +133,18 @@ class AdmissionOsV038Test extends TestCase
     {
         $this->seed(\Database\Seeders\MasterDemoSeeder::class);
         $head = User::where('email', 'head@college.com')->firstOrFail();
+        $waitlistEntry = DB::table('admission_waitlist_entries')->where('status', 'waiting')->first();
+        $waitlistedApplicant = Applicant::with('user')->findOrFail($waitlistEntry->applicant_id);
 
         $this->assertTrue(DB::table('admission_offer_rounds')->exists());
         $this->assertTrue(DB::table('admission_waitlist_entries')->where('status', 'waiting')->exists());
+
+        $this->actingAs($head)
+            ->get(route('admission.offer-rounds.index'))
+            ->assertOk()
+            ->assertSee($waitlistedApplicant->user->name)
+            ->assertSee($waitlistedApplicant->application_number)
+            ->assertDontSee('Applicant '.$waitlistedApplicant->id);
 
         $hold = DB::table('admission_seat_holds')->where('status', 'held')->first();
         app(AdmissionSeatControlService::class)->release($hold->id, 'Feature test release', $head);
@@ -115,6 +168,13 @@ class AdmissionOsV038Test extends TestCase
         $this->assertFalse(app(AdmissionCommunicationSafetyService::class)->canSend($lead, $template));
         $this->assertGreaterThanOrEqual(1, $preview->blocked_count);
         $this->assertDatabaseHas('admission_consent_records', ['subject_type' => Lead::class, 'subject_id' => $lead->id, 'channel' => 'whatsapp', 'status' => 'opt_out']);
+
+        $this->actingAs($head)
+            ->get(route('admission.communication-safety.index'))
+            ->assertOk()
+            ->assertSee($lead->name)
+            ->assertDontSee('Lead #'.$lead->id)
+            ->assertDontSee('Template #');
     }
 
     public function test_vendor_health_retry_queue_and_quick_search(): void

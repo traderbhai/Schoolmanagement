@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 class FeeController extends Controller
 {
+    private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
     public function index()
     {
         $student = auth()->user()->student;
@@ -46,9 +48,17 @@ class FeeController extends Controller
             ->latest()
             ->get();
 
-        $totalPendingDemands = $feeDemands->where('status', 'pending')->sum('final_amount');
-        $totalPenalties = $feeDemands->sum('penalty_amount');
-        $outstandingTotal = $totalPendingDemands + $totalPenalties;
+        $activeDemands = $feeDemands->whereIn('status', self::ACTIVE_DEMAND_STATUSES);
+        $totalPenalties = $activeDemands->sum(fn($demand) => (float) ($demand->penalty_amount ?? 0));
+        $outstandingTotal = $activeDemands->sum(
+            fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0)
+        );
+
+        if ($feeDemands->isNotEmpty()) {
+            $totalDue = $feeDemands->sum(fn($demand) => (float) $demand->final_amount) + $totalPenalties;
+            $balance = $outstandingTotal;
+            $nextDueAmount = $activeDemands->sortBy('due_date')->first()?->final_amount ?? 0;
+        }
 
         $hostelFeeDemands = HostelFeeDemand::with('allocation.room.block')
             ->where('student_id', $student->id)

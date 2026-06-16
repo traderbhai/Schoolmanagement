@@ -13,6 +13,7 @@ class PlacementController extends Controller
     public function index()
     {
         $student = auth()->user()->student;
+        $studentCgpa = $student ? (float) $student->calculateCGPA() : null;
 
         $myApplicationDriveIds = $student
             ? Placement::where('student_id', $student->id)->pluck('drive_id')->toArray()
@@ -21,7 +22,11 @@ class PlacementController extends Controller
         $drives = PlacementDrive::with('company')
             ->whereIn('status', self::VISIBLE_DRIVE_STATUSES)
             ->orderBy('drive_date')
-            ->get();
+            ->get()
+            ->map(function (PlacementDrive $drive) use ($student, $studentCgpa) {
+                $drive->student_eligibility = $this->driveEligibility($student, $drive, $studentCgpa);
+                return $drive;
+            });
 
         $myApplications = $student
             ? Placement::with(['drive.company'])
@@ -32,7 +37,7 @@ class PlacementController extends Controller
 
         $placementPriority = $this->placementPriority($student, $drives, $myApplications);
 
-        return view('student.placements', compact('drives', 'myApplications', 'myApplicationDriveIds', 'student', 'placementPriority'));
+        return view('student.placements', compact('drives', 'myApplications', 'myApplicationDriveIds', 'student', 'studentCgpa', 'placementPriority'));
     }
 
     public function myApplications()
@@ -65,6 +70,11 @@ class PlacementController extends Controller
             return redirect()->route('student.placements')->with('error', 'The application deadline for this drive has passed.');
         }
 
+        $eligibility = $this->driveEligibility($student, $drive, (float) $student->calculateCGPA());
+        if (! $eligibility['eligible']) {
+            return redirect()->route('student.placements')->with('error', $eligibility['reason']);
+        }
+
         // Check if already applied
         $exists = Placement::where('drive_id', $drive->id)
             ->where('student_id', $student->id)
@@ -81,6 +91,27 @@ class PlacementController extends Controller
         ]);
 
         return redirect()->route('student.placements')->with('success', 'Application submitted successfully.');
+    }
+
+    private function driveEligibility($student, PlacementDrive $drive, ?float $studentCgpa = null): array
+    {
+        if (! $student) {
+            return ['eligible' => false, 'reason' => 'Student profile not found.'];
+        }
+
+        if ($drive->min_cgpa !== null && $drive->min_cgpa !== '') {
+            $requiredCgpa = (float) $drive->min_cgpa;
+            $actualCgpa = $studentCgpa ?? (float) $student->calculateCGPA();
+            if ($actualCgpa < $requiredCgpa) {
+                return [
+                    'eligible' => false,
+                    'reason' => 'You do not meet the minimum CGPA requirement for this drive.',
+                    'detail' => 'Required CGPA ' . number_format($requiredCgpa, 2) . '; your CGPA ' . number_format($actualCgpa, 2) . '.',
+                ];
+            }
+        }
+
+        return ['eligible' => true, 'reason' => null, 'detail' => null];
     }
 
     private function placementPriority($student, $drives, $myApplications): array

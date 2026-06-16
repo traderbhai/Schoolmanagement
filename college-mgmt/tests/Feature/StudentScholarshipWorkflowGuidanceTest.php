@@ -3,12 +3,20 @@
 namespace Tests\Feature;
 
 use App\Models\Notification;
+use App\Models\ParentProfile;
 use App\Models\Program;
 use App\Models\ScholarshipScheme;
+use App\Models\Enrollment;
+use App\Models\Exam;
+use App\Models\ExamResult;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentScholarshipApplication;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -53,6 +61,41 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
         ], $overrides));
     }
 
+    private function resultForCgpa(Student $student, float $marks): void
+    {
+        $semester = Semester::factory()->create(['number' => 1]);
+        $subject = Subject::factory()->create(['program_id' => $student->program_id, 'credits' => 4]);
+        Enrollment::create([
+            'student_id' => $student->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+        ]);
+        $exam = Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'semester_id' => $semester->id,
+            'subject_id' => $subject->id,
+            'total_marks' => 10,
+            'passing_marks' => 4,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $exam->id,
+            'student_id' => $student->id,
+            'marks_obtained' => $marks,
+            'is_absent' => false,
+        ]);
+    }
+
+    private function parentIncome(Student $student, string $income): void
+    {
+        $parent = ParentProfile::create([
+            'user_id' => User::factory()->create()->id,
+            'relation' => 'father',
+            'annual_income' => $income,
+        ]);
+        $student->parents()->attach($parent->id);
+    }
+
     public function test_student_can_apply_with_reason_and_track_application(): void
     {
         $program = Program::factory()->create();
@@ -95,6 +138,98 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
             ->assertForbidden();
 
         $this->assertDatabaseCount('student_scholarship_applications', 0);
+    }
+
+    public function test_student_cannot_apply_when_structured_scholarship_eligibility_is_not_met(): void
+    {
+        $program = Program::factory()->create();
+        $student = $this->student($program);
+        $this->resultForCgpa($student, 6.5);
+        $this->parentIncome($student, '300000');
+        $scheme = $this->scheme([
+            'program_id' => $program->id,
+            'min_cgpa' => 7.5,
+            'max_family_income' => 500000,
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.scholarships.index'))
+            ->assertOk()
+            ->assertSee('Not Eligible')
+            ->assertSee('Minimum CGPA requirement not met');
+
+        $this->actingAs($student->user)
+            ->post(route('student.scholarships.apply', $scheme), [
+                'reason' => str_repeat('This reason is long enough for validation. ', 2),
+            ])
+            ->assertSessionHasErrors('eligibility');
+
+        $this->assertDatabaseCount('student_scholarship_applications', 0);
+    }
+
+    public function test_student_cannot_apply_when_family_income_exceeds_scheme_limit(): void
+    {
+        $program = Program::factory()->create();
+        $student = $this->student($program);
+        $this->resultForCgpa($student, 8.5);
+        $this->parentIncome($student, '800000');
+        $scheme = $this->scheme([
+            'program_id' => $program->id,
+            'min_cgpa' => 7.5,
+            'max_family_income' => 500000,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.scholarships.apply', $scheme), [
+                'reason' => str_repeat('This reason is long enough for validation. ', 2),
+            ])
+            ->assertSessionHasErrors('eligibility');
+
+        $this->assertDatabaseCount('student_scholarship_applications', 0);
+    }
+
+    public function test_required_scholarship_proof_is_stored_and_available_to_admin(): void
+    {
+        Storage::fake('local');
+
+        $admin = $this->userWithRole('admin');
+        $program = Program::factory()->create();
+        $student = $this->student($program);
+        $this->resultForCgpa($student, 8.5);
+        $this->parentIncome($student, '300000');
+        $scheme = $this->scheme([
+            'program_id' => $program->id,
+            'min_cgpa' => 7.5,
+            'max_family_income' => 500000,
+            'requires_document' => true,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.scholarships.apply', $scheme), [
+                'reason' => str_repeat('This reason is long enough for validation. ', 2),
+            ])
+            ->assertSessionHasErrors('proof_document');
+
+        $this->actingAs($student->user)
+            ->post(route('student.scholarships.apply', $scheme), [
+                'reason' => str_repeat('This reason is long enough for validation. ', 2),
+                'proof_document' => UploadedFile::fake()->create('income-proof.pdf', 64, 'application/pdf'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Application for "' . $scheme->name . '" submitted successfully.');
+
+        $application = StudentScholarshipApplication::firstOrFail();
+        $this->assertNotNull($application->documents_path);
+        Storage::disk('local')->assertExists($application->documents_path);
+
+        $this->actingAs($admin)
+            ->get(route('admin.student-scholarships.index'))
+            ->assertOk()
+            ->assertSee('Download proof');
+
+        $this->actingAs($admin)
+            ->get(route('admin.student-scholarships.proof', $application))
+            ->assertOk();
     }
 
     public function test_admin_can_review_approve_and_disburse_student_scholarship(): void

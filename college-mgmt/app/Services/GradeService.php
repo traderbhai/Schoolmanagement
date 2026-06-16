@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\{Student, Semester, ExamResult, Enrollment};
+use App\Models\{Student, Semester, ExamResult, Enrollment, StudentSubjectEnrollment, Term};
 
 class GradeService
 {
@@ -30,22 +30,53 @@ class GradeService
 
     public function calculateStudentSemesterReport(int $studentId, int $semesterId): array
     {
-        $enrollments = Enrollment::with(['subject'])
+        $semester = Semester::find($semesterId);
+        $termIds = $this->termIdsForSemester($studentId, $semester);
+
+        $legacySubjects = Enrollment::with(['subject'])
             ->where('student_id', $studentId)
             ->where('semester_id', $semesterId)
-            ->where('status', 'active')
-            ->get();
+            ->whereIn('status', ['active', 'enrolled'])
+            ->get()
+            ->pluck('subject')
+            ->filter();
+
+        $canonicalQuery = StudentSubjectEnrollment::with('subject')
+            ->where('student_id', $studentId)
+            ->where('status', 'active');
+
+        if ($termIds === []) {
+            $canonicalQuery->whereRaw('1 = 0');
+        } else {
+            $canonicalQuery->whereIn('term_id', $termIds);
+        }
+
+        $canonicalSubjects = $canonicalQuery
+            ->get()
+            ->pluck('subject')
+            ->filter();
+
+        $subjects = $legacySubjects
+            ->merge($canonicalSubjects)
+            ->unique('id')
+            ->values();
 
         $report = [];
         $totalCredits = 0;
         $earnedPoints = 0.0;
         $totalCreditsAttempted = 0;
 
-        foreach ($enrollments as $enrollment) {
-            $subject = $enrollment->subject;
-            $results = ExamResult::whereHas('exam', fn($q) =>
-                $q->where('semester_id', $semesterId)->where('subject_id', $subject->id)
-            )->where('student_id', $studentId)->with('exam')->get();
+        foreach ($subjects as $subject) {
+            $results = ExamResult::whereHas('exam', function ($q) use ($semesterId, $termIds, $subject) {
+                $q->where('subject_id', $subject->id)
+                    ->where(function ($scope) use ($semesterId, $termIds) {
+                        $scope->where('semester_id', $semesterId);
+
+                        if ($termIds !== []) {
+                            $scope->orWhereIn('term_id', $termIds);
+                        }
+                    });
+            })->where('student_id', $studentId)->with('exam')->get();
 
             if ($results->isEmpty()) {
                 $report[] = [
@@ -102,9 +133,7 @@ class GradeService
 
     public function calculateCGPA(int $studentId): float
     {
-        $semesters = \App\Models\Semester::whereHas('enrollments', function ($q) use ($studentId) {
-            $q->where('student_id', $studentId);
-        })->get();
+        $semesters = $this->semestersForStudent($studentId);
         $totalPoints  = 0.0;
         $totalCredits = 0;
 
@@ -117,5 +146,51 @@ class GradeService
         }
 
         return $totalCredits > 0 ? round($totalPoints / $totalCredits, 2) : 0.0;
+    }
+
+    public function semestersForStudent(int $studentId): \Illuminate\Support\Collection
+    {
+        $legacySemesters = Semester::whereHas('enrollments', function ($q) use ($studentId) {
+            $q->where('student_id', $studentId);
+        })->get();
+
+        $canonicalTerms = StudentSubjectEnrollment::where('student_id', $studentId)
+            ->where('status', 'active')
+            ->whereNotNull('term_id')
+            ->with('term')
+            ->get()
+            ->pluck('term')
+            ->filter();
+
+        $canonicalSemesters = $canonicalTerms->flatMap(function (Term $term) {
+            return Semester::where('number', $term->term_number)
+                ->orWhere('name', $term->name)
+                ->get();
+        });
+
+        return $legacySemesters
+            ->merge($canonicalSemesters)
+            ->unique('id')
+            ->sortBy('number')
+            ->values();
+    }
+
+    private function termIdsForSemester(int $studentId, ?Semester $semester): array
+    {
+        if (!$semester) {
+            return [];
+        }
+
+        return StudentSubjectEnrollment::where('student_id', $studentId)
+            ->where('status', 'active')
+            ->whereNotNull('term_id')
+            ->whereHas('term', function ($query) use ($semester) {
+                $query->where('term_number', $semester->number)
+                    ->orWhere('name', $semester->name);
+            })
+            ->pluck('term_id')
+            ->unique()
+            ->values()
+            ->all();
     }
 }

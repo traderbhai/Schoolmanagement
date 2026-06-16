@@ -26,7 +26,7 @@ class AdmissionPartnerService
 
         return Lead::create([
             'name' => $data['name'],
-            'email' => $data['email'] ?? 'partner-lead-' . uniqid() . '@placeholder.local',
+            'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'program_id' => $data['program_id'] ?? null,
             'source' => 'agent',

@@ -16,7 +16,7 @@
     @else
     <div class="list-group shadow-sm">
         @foreach($subjects as $subject)
-        @php $submitted = in_array($subject->id, $submittedIds); @endphp
+        @php $submitted = (bool) ($subject->feedback_submitted ?? false); @endphp
         <div class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
             <div>
                 <div class="fw-semibold">{{ $subject->name }}</div>

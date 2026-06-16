@@ -13,10 +13,20 @@ class SelectionCommitteeController extends Controller
 {
     public function index()
     {
+        $decisions = DB::table('admission_selection_committee_decisions')->latest()->limit(30)->get();
+        $scores = DB::table('admission_assessment_normalized_scores')->latest()->limit(30)->get();
+        $applicantNames = Applicant::with('user')
+            ->whereIn('id', $decisions->pluck('applicant_id')->merge($scores->pluck('applicant_id'))->filter()->unique())
+            ->get()
+            ->mapWithKeys(fn (Applicant $applicant) => [
+                $applicant->id => trim(($applicant->application_number ?: 'Application') . ' - ' . ($applicant->user?->name ?: 'Applicant')),
+            ]);
+
         return view('admission.v0038.selection-committee', [
             'candidates' => Applicant::with(['user', 'program', 'payments', 'documents'])->whereIn('status', ['shortlisted', 'selected', 'under_review'])->paginate(15),
-            'decisions' => DB::table('admission_selection_committee_decisions')->latest()->limit(30)->get(),
-            'scores' => DB::table('admission_assessment_normalized_scores')->latest()->limit(30)->get(),
+            'decisions' => $decisions,
+            'scores' => $scores,
+            'applicantNames' => $applicantNames,
         ]);
     }
 

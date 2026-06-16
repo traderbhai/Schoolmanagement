@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdmissionAssessmentPanel;
 use App\Models\Applicant;
 use App\Models\SelectionSession;
+use App\Models\User;
 use App\Services\AdmissionAssessmentResourceService;
 use App\Services\AdmissionAssessmentSlotService;
 use App\Services\AdmissionAssessmentSubmissionService;
@@ -18,18 +19,33 @@ class AssessmentSchedulingController extends Controller
 {
     public function index()
     {
+        $assignments = DB::table('admission_assessment_slot_assignments')->latest()->limit(20)->get();
+        $invitations = DB::table('admission_evaluator_invitations')->latest()->limit(20)->get();
+        $conflicts = app(AdmissionAssessmentResourceService::class)->conflicts();
+        $applicants = Applicant::with('user')->latest()->limit(100)->get();
+        $resources = DB::table('admission_assessment_resources')->where('is_active', true)->get();
+        $panels = AdmissionAssessmentPanel::with('members.user')->latest()->limit(15)->get();
+        $evaluators = User::role(['evaluator', 'teacher', 'admission_head', 'admission_manager'])->orderBy('name')->limit(100)->get();
+        $invitedUsers = User::whereIn('id', $invitations->pluck('user_id')->filter()->unique())->get();
+
         return view('admission.v0038.assessment-scheduling', [
-            'panels' => AdmissionAssessmentPanel::with('members.user')->latest()->limit(15)->get(),
+            'panels' => $panels,
             'sessions' => SelectionSession::latest()->limit(15)->get(),
             'slots' => DB::table('admission_assessment_slots')->latest()->paginate(15),
-            'resources' => DB::table('admission_assessment_resources')->where('is_active', true)->get(),
-            'applicants' => Applicant::with('user')->latest()->limit(100)->get(),
-            'evaluators' => \App\Models\User::role(['evaluator', 'teacher', 'admission_head', 'admission_manager'])->orderBy('name')->limit(100)->get(),
-            'assignments' => DB::table('admission_assessment_slot_assignments')->latest()->limit(20)->get(),
-            'invitations' => DB::table('admission_evaluator_invitations')->latest()->limit(20)->get(),
-            'conflicts' => app(AdmissionAssessmentResourceService::class)->conflicts(),
+            'resources' => $resources,
+            'applicants' => $applicants,
+            'evaluators' => $evaluators,
+            'assignments' => $assignments,
+            'invitations' => $invitations,
+            'conflicts' => $conflicts,
             'gdGroups' => DB::table('admission_gd_groups')->latest()->limit(20)->get(),
             'submissions' => DB::table('admission_assessment_submissions')->latest()->limit(20)->get(),
+            'applicantNames' => $applicants->mapWithKeys(fn (Applicant $applicant) => [
+                $applicant->id => trim(($applicant->application_number ?: 'Application') . ' - ' . ($applicant->user?->name ?: 'Applicant')),
+            ]),
+            'panelNames' => $panels->pluck('name', 'id'),
+            'resourceNames' => $resources->pluck('name', 'id'),
+            'userNames' => $evaluators->merge($invitedUsers)->pluck('name', 'id'),
         ]);
     }
 

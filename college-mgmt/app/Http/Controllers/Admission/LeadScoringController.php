@@ -13,7 +13,15 @@ class LeadScoringController extends Controller
     public function index()
     {
         return view('admission.v003.scoring', [
-            'scores' => AdmissionLeadScore::with('lead')->latest('scored_at')->limit(100)->get(),
+            'leads' => Lead::with('program')
+                ->whereIn('status', ['new', 'contacted', 'interested'])
+                ->latest('updated_at')
+                ->limit(100)
+                ->get(),
+            'scores' => AdmissionLeadScore::with(['lead.program', 'scorer'])
+                ->latest('scored_at')
+                ->limit(100)
+                ->get(),
         ]);
     }
 

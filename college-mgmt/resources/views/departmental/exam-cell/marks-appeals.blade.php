@@ -19,16 +19,19 @@
       </thead>
       <tbody>
         @foreach($appeals as $appeal)
-        @php $colors=['pending'=>'warning','approved'=>'success','rejected'=>'danger','under_review'=>'info']; @endphp
+        @php $colors=['pending'=>'warning','resolved'=>'success','rejected'=>'danger','under_review'=>'info']; @endphp
         <tr>
           <td class="ps-3 fw-medium">{{ $appeal->student?->user?->name ?? '—' }}</td>
-          <td class="small">{{ $appeal->exam?->subject?->name ?? '—' }}</td>
-          <td>{{ $appeal->result?->marks_obtained ?? '—' }}</td>
+          <td class="small">{{ $appeal->examResult?->exam?->subject?->name ?? '-' }}</td>
+          <td>{{ $appeal->examResult?->marks_obtained ?? '-' }}</td>
           <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $appeal->reason ?? '—' }}</td>
           <td><span class="badge bg-{{ $colors[$appeal->status ?? 'pending'] ?? 'secondary' }}">{{ ucfirst($appeal->status ?? 'pending') }}</span></td>
           <td class="text-end pe-3">
             @if(($appeal->status ?? 'pending') === 'pending' || ($appeal->status ?? '') === 'under_review')
-            <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openReview({{ $appeal->id }}, {{ $appeal->result?->marks_obtained ?? 0 }})">
+            <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                    data-review-url="{{ route('exam-cell.marks-appeals.review', $appeal) }}"
+                    data-current-marks="{{ $appeal->examResult?->marks_obtained ?? 0 }}"
+                    onclick="openReview(this)">
               Review
             </button>
             @endif
@@ -80,9 +83,9 @@
 @endsection
 @push('scripts')
 <script>
-function openReview(id, currentMarks) {
-    document.getElementById('reviewForm').action = '/exam-cell/marks-appeals/' + id + '/review';
-    document.getElementById('revisedMarks').value = currentMarks;
+function openReview(button) {
+    document.getElementById('reviewForm').action = button.dataset.reviewUrl;
+    document.getElementById('revisedMarks').value = button.dataset.currentMarks || 0;
     new bootstrap.Modal(document.getElementById('reviewModal')).show();
 }
 </script>

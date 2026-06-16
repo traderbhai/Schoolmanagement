@@ -17,6 +17,11 @@ class MaterialController extends Controller
             ->pluck('subject_id')->unique()->toArray();
     }
 
+    private function ensureTeachesSubject(int $subjectId): void
+    {
+        abort_unless(in_array($subjectId, $this->teacherSubjectIds(), true), 403, 'You do not teach this subject.');
+    }
+
     public function index(Request $request)
     {
         $teacher    = auth()->user()->teacher;
@@ -49,11 +54,12 @@ class MaterialController extends Controller
         $request->validate([
             'subject_id'   => 'required|exists:subjects,id',
             'title'        => 'required|string|max:255',
-            'type'         => 'required|in:lecture_note,reference,video,link,assignment_sheet,lab_manual,other',
+            'type'         => 'required|in:pre_read,post_read,notes,reference,slides,video,other',
             'description'  => 'nullable|string|max:1000',
             'file'         => 'nullable|file|max:20480',
             'external_url' => 'nullable|url|max:500',
         ]);
+        $this->ensureTeachesSubject((int) $request->subject_id);
 
         $path = null;
         $sizeKb = null;

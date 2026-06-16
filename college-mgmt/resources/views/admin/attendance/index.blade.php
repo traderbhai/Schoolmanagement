@@ -80,7 +80,7 @@
                         <select id="report-student" class="form-select form-select-sm">
                             <option value="">— Select Student —</option>
                             @foreach($students as $st)
-                                <option value="{{ $st->id }}">{{ $st->user->name ?? 'Student #'.$st->id }}</option>
+                                <option value="{{ $st->id }}">{{ $st->user?->name ?? $st->enrollment_number ?? $st->roll_number ?? $st->student_id ?? 'Unassigned student' }}</option>
                             @endforeach
                         </select>
                     </div>

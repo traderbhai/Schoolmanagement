@@ -94,7 +94,8 @@
                 <tbody>
                     @foreach($feeDemands as $demand)
                     @php
-                        $isOverdue = $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending';
+                        $isOverdue = $demand->status === 'overdue'
+                            || ($demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending');
                     @endphp
                     <tr>
                         <td>{{ $demand->term->name ?? '-' }}</td>

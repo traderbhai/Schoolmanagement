@@ -1514,7 +1514,7 @@
                             </div>
                         </div>
                     </li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>View Profile</a></li>
+                    <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>View Profile</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}">

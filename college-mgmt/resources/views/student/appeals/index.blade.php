@@ -35,11 +35,11 @@
                     @foreach($appeals as $appeal)
                     @php $badge = match($appeal->status) { 'resolved'=>'success','rejected'=>'danger','under_review'=>'info',default=>'warning' }; @endphp
                     <tr>
-                        <td class="fw-semibold">{{ $appeal->examResult->exam->subject->name ?? '—' }}</td>
-                        <td class="text-muted small">{{ $appeal->examResult->exam->title ?? '—' }}</td>
+                        <td class="fw-semibold">{{ $appeal->examResult->exam->subject->name ?? '-' }}</td>
+                        <td class="text-muted small">{{ $appeal->examResult->exam->name ?? '-' }}</td>
                         <td>{{ $appeal->marks_claimed }}</td>
                         <td><span class="badge bg-{{ $badge }}">{{ ucwords(str_replace('_',' ',$appeal->status)) }}</span></td>
-                        <td>{{ $appeal->revised_marks ?? '—' }}</td>
+                        <td>{{ $appeal->revised_marks ?? '-' }}</td>
                         <td class="text-muted small">{{ $appeal->created_at->format('d M Y') }}</td>
                     </tr>
                     @endforeach

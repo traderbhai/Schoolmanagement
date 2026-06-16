@@ -19,15 +19,50 @@ class OfferSeatControlController extends Controller
 {
     public function index()
     {
+        $applicantColumns = [
+            'a.application_number as applicant_application_number',
+            'u.name as applicant_name',
+            'u.email as applicant_email',
+        ];
+
         return view('admission.v0038.offer-seat-control', [
             'programs' => Program::orderBy('name')->get(),
             'batches' => Batch::orderByDesc('start_date')->get(),
-            'selectedApplicants' => Applicant::with('user')->whereIn('status', ['selected', 'shortlisted'])->limit(30)->get(),
+            'selectedApplicants' => Applicant::with(['user', 'program'])
+                ->whereIn('status', ['selected', 'shortlisted', 'submitted', 'under_review'])
+                ->latest()
+                ->limit(75)
+                ->get(),
             'rounds' => DB::table('admission_offer_rounds')->latest()->paginate(10),
-            'waitlist' => DB::table('admission_waitlist_entries')->orderBy('rank')->limit(30)->get(),
-            'holds' => DB::table('admission_seat_holds')->latest()->limit(30)->get(),
-            'deferrals' => DB::table('admission_deferrals')->latest()->limit(20)->get(),
-            'joiningTasks' => DB::table('admission_joining_kit_tasks')->latest()->limit(30)->get(),
+            'waitlist' => DB::table('admission_waitlist_entries as w')
+                ->leftJoin('applicants as a', 'a.id', '=', 'w.applicant_id')
+                ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+                ->select(array_merge(['w.*'], $applicantColumns))
+                ->orderBy('w.rank')
+                ->limit(30)
+                ->get(),
+            'holds' => DB::table('admission_seat_holds as h')
+                ->leftJoin('applicants as a', 'a.id', '=', 'h.applicant_id')
+                ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+                ->select(array_merge(['h.*'], $applicantColumns))
+                ->latest('h.created_at')
+                ->limit(30)
+                ->get(),
+            'deferrals' => DB::table('admission_deferrals as d')
+                ->leftJoin('applicants as a', 'a.id', '=', 'd.applicant_id')
+                ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+                ->leftJoin('batches as b', 'b.id', '=', 'd.to_batch_id')
+                ->select(array_merge(['d.*'], $applicantColumns, ['b.name as target_batch_name']))
+                ->latest('d.created_at')
+                ->limit(20)
+                ->get(),
+            'joiningTasks' => DB::table('admission_joining_kit_tasks as j')
+                ->leftJoin('applicants as a', 'a.id', '=', 'j.applicant_id')
+                ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
+                ->select(array_merge(['j.*'], $applicantColumns))
+                ->latest('j.created_at')
+                ->limit(30)
+                ->get(),
         ]);
     }
 

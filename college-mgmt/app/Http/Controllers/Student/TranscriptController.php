@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\Semester;
 use App\Services\GradeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -18,10 +17,10 @@ class TranscriptController extends Controller
             abort(403, 'No student profile linked to this account.');
         }
 
-        $semesters = Semester::whereHas('enrollments', fn($q) => $q->where('student_id', $student->id))
-            ->with('academicYear')
-            ->orderBy('number')
-            ->get();
+        $semesters = $this->gradeService->semestersForStudent($student->id)
+            ->load('academicYear')
+            ->sortBy('number')
+            ->values();
 
         $semesterReports = [];
         foreach ($semesters as $semester) {

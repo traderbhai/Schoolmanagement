@@ -17,6 +17,7 @@ use App\Models\ProgramOutcome;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
+use App\Models\Teacher;
 use App\Models\TimetableEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -195,10 +196,14 @@ class AcademicAttentionService
     private function facultyWorkload(?Collection $programIds): array
     {
         $query = $this->applyProgramScope(TimetableEntry::query()->selectRaw('teacher_id, count(*) as load_count')->where('is_active', true)->groupBy('teacher_id')->having('load_count', '>=', 5), $programIds);
+        $teacherMap = Teacher::with('user')
+            ->whereIn('id', (clone $query)->pluck('teacher_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
 
         return $this->queuePayload('faculty_workload', 'Faculty workload imbalance', 'Faculty with heavy timetable load requiring review.', 'pmc', 'medium', $query, fn ($row) => [
-            'title' => 'Teacher #' . $row->teacher_id,
-            'subtitle' => $row->load_count . ' timetable slots',
+            'title' => $this->teacherLabel($teacherMap->get($row->teacher_id), $row->teacher_id),
+            'subtitle' => $row->load_count . ' timetable slots' . ($teacherMap->get($row->teacher_id)?->employee_id ? ' - ' . $teacherMap->get($row->teacher_id)->employee_id : ''),
             'status' => 'Review load',
             'due' => null,
         ]);
@@ -214,10 +219,14 @@ class AcademicAttentionService
             ->whereIn('student_id', $studentIds->pluck('id'))
             ->groupBy('student_id')
             ->having('absence_count', '>=', 2);
+        $studentMap = Student::with(['user', 'program'])
+            ->whereIn('id', (clone $query)->pluck('student_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
 
         return $this->queuePayload('attendance_risk', 'At-risk students', 'Students with repeated absent or late attendance signals.', 'pmc', 'high', $query, fn ($row) => [
-            'title' => 'Student #' . $row->student_id,
-            'subtitle' => $row->absence_count . ' attendance exceptions',
+            'title' => $this->studentLabel($studentMap->get($row->student_id), $row->student_id),
+            'subtitle' => $row->absence_count . ' attendance exceptions' . ($studentMap->get($row->student_id)?->program?->code ? ' - ' . $studentMap->get($row->student_id)->program->code : ''),
             'status' => 'Intervention due',
             'due' => null,
         ]);
@@ -388,5 +397,28 @@ class AcademicAttentionService
             'items' => collect(),
             'route' => route('academics.attention.queue', ['queue' => $key]),
         ];
+    }
+
+    private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string
+    {
+        if (! $teacher) {
+            return 'Unassigned faculty';
+        }
+
+        return $teacher->user?->name
+            ?? $teacher->employee_id
+            ?? 'Faculty record ' . $fallbackId;
+    }
+
+    private function studentLabel(?Student $student, mixed $fallbackId): string
+    {
+        if (! $student) {
+            return 'Unassigned student';
+        }
+
+        return $student->user?->name
+            ?? $student->enrollment_number
+            ?? $student->roll_number
+            ?? 'Student record ' . $fallbackId;
     }
 }

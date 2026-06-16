@@ -11,7 +11,11 @@ class AttendanceCondonation extends Model
 
     protected $fillable = [
         'student_id', 'subject_id', 'term_id', 'reason',
-        'sessions_condoned', 'status', 'approved_by', 'remarks',
+        'sessions_requested', 'sessions_condoned', 'status', 'approved_by', 'remarks', 'reviewed_at',
+    ];
+
+    protected $casts = [
+        'reviewed_at' => 'datetime',
     ];
 
     public function student() { return $this->belongsTo(Student::class); }

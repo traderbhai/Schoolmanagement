@@ -10,6 +10,7 @@ use App\Models\OutpassRequest;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -129,6 +130,84 @@ class HostelWorkflowGuidanceTest extends TestCase
             ->assertSessionHasErrors('hostel_room_id');
     }
 
+    public function test_admin_cannot_allocate_to_reserved_room_or_inactive_block(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $room = $this->room(['status' => 'reserved']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.store'), [
+                'student_id' => $student->id,
+                'hostel_room_id' => $room->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('hostel_room_id');
+
+        $room->update(['status' => 'available']);
+        $room->block->update(['is_active' => false]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.store'), [
+                'student_id' => $student->id,
+                'hostel_room_id' => $room->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('hostel_room_id');
+
+        $this->assertSame(0, HostelAllocation::where('student_id', $student->id)->count());
+    }
+
+    public function test_admin_cannot_reduce_room_capacity_below_active_occupants_or_mark_occupied_room_unusable(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $room = $this->room(['capacity' => 2, 'status' => 'occupied']);
+
+        foreach (['First Occupant', 'Second Occupant'] as $index => $name) {
+            HostelAllocation::create([
+                'hostel_room_id' => $room->id,
+                'student_id' => $this->student($name)->id,
+                'bed_number' => $index + 1,
+                'allocated_from' => now()->subWeek()->toDateString(),
+                'status' => 'active',
+                'allocated_by' => $admin->id,
+            ]);
+        }
+
+        $payload = [
+            'room_number' => $room->room_number,
+            'floor' => $room->floor,
+            'room_type' => $room->room_type,
+            'capacity' => 1,
+            'monthly_fee' => $room->monthly_fee,
+            'status' => 'occupied',
+        ];
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.rooms.update', [$room->block, $room]), $payload)
+            ->assertSessionHasErrors('capacity');
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.rooms.update', [$room->block, $room]), array_merge($payload, [
+                'capacity' => 2,
+                'status' => 'maintenance',
+            ]))
+            ->assertSessionHasErrors('status');
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.rooms.update', [$room->block, $room]), array_merge($payload, [
+                'capacity' => 2,
+                'status' => 'reserved',
+            ]))
+            ->assertSessionHasErrors('status');
+
+        $room->refresh();
+        $this->assertSame(2, $room->capacity);
+        $this->assertSame('occupied', $room->status);
+    }
+
     public function test_admin_can_transfer_active_allocation_to_new_room(): void
     {
         $admin = $this->userWithRole('admin');
@@ -217,6 +296,45 @@ class HostelWorkflowGuidanceTest extends TestCase
         $this->assertSame('active', $allocation->fresh()->status);
     }
 
+    public function test_admin_cannot_transfer_to_reserved_room_or_inactive_block(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Transfer Reserved Student');
+        $sourceRoom = $this->room(['room_number' => '301']);
+        $targetRoom = $this->room(['room_number' => '302', 'status' => 'reserved']);
+
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $sourceRoom->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subMonth()->toDateString(),
+            'status' => 'active',
+            'allocated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.transfer', $allocation), [
+                'hostel_room_id' => $targetRoom->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('hostel_room_id');
+
+        $targetRoom->update(['status' => 'available']);
+        $targetRoom->block->update(['is_active' => false]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.transfer', $allocation), [
+                'hostel_room_id' => $targetRoom->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('hostel_room_id');
+
+        $this->assertSame('active', $allocation->fresh()->status);
+        $this->assertSame(1, HostelAllocation::where('student_id', $student->id)->count());
+    }
+
     public function test_student_cannot_create_duplicate_open_outpass(): void
     {
         $student = $this->student();
@@ -251,6 +369,8 @@ class HostelWorkflowGuidanceTest extends TestCase
 
     public function test_outpass_state_transitions_are_guarded(): void
     {
+        Carbon::setTestNow('2026-06-16 10:00:00');
+
         $admin = $this->userWithRole('admin');
         $student = $this->student();
         $room = $this->room();
@@ -266,8 +386,8 @@ class HostelWorkflowGuidanceTest extends TestCase
             'student_id' => $student->id,
             'hostel_allocation_id' => $allocation->id,
             'reason' => 'Project work',
-            'out_datetime' => now()->addDay(),
-            'expected_return' => now()->addDay()->addHours(4),
+            'out_datetime' => now()->addHour(),
+            'expected_return' => now()->addHours(4),
             'status' => 'pending',
         ]);
 
@@ -291,6 +411,8 @@ class HostelWorkflowGuidanceTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('error', 'Only pending outpass requests can be rejected.');
 
+        Carbon::setTestNow('2026-06-16 11:30:00');
+
         $this->actingAs($admin)
             ->post(route('admin.hostel.outpasses.return', $outpass))
             ->assertRedirect()
@@ -298,6 +420,80 @@ class HostelWorkflowGuidanceTest extends TestCase
 
         $this->assertSame('returned', $outpass->fresh()->status);
         $this->assertNotNull($outpass->fresh()->actual_return);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_admin_cannot_approve_expired_pending_outpass(): void
+    {
+        Carbon::setTestNow('2026-06-16 10:00:00');
+
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $room = $this->room();
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $outpass = OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Already missed appointment',
+            'out_datetime' => now()->subHour(),
+            'expected_return' => now()->addHour(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.outpasses.approve', $outpass))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Expired outpass requests cannot be approved. Reject it and ask the student to submit a fresh request.');
+
+        $this->assertSame('pending', $outpass->fresh()->status);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_admin_cannot_mark_outpass_returned_before_out_time(): void
+    {
+        Carbon::setTestNow('2026-06-16 10:00:00');
+
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $room = $this->room();
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $outpass = OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Evening visit',
+            'out_datetime' => now()->addHours(2),
+            'expected_return' => now()->addHours(5),
+            'status' => 'approved',
+            'approved_by' => $admin->id,
+            'approved_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.outpasses.return', $outpass))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Student cannot be marked returned before the approved out time.');
+
+        $outpass->refresh();
+        $this->assertSame('approved', $outpass->status);
+        $this->assertNull($outpass->actual_return);
+
+        Carbon::setTestNow();
     }
 
     public function test_student_can_submit_and_track_hostel_complaint(): void
@@ -389,5 +585,88 @@ class HostelWorkflowGuidanceTest extends TestCase
             ->assertSee('Food quality issue')
             ->assertSee($student->user->name)
             ->assertSee('A Block');
+    }
+
+    public function test_admin_cannot_resolve_or_close_hostel_complaint_without_resolution_notes(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $room = $this->room();
+
+        $complaint = HostelComplaint::create([
+            'student_id' => $student->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'Water leakage',
+            'description' => 'There is a water leakage near the washroom area.',
+            'category' => 'maintenance',
+            'priority' => 'high',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.complaints.update', $complaint), [
+                'status' => 'resolved',
+            ])
+            ->assertSessionHasErrors('resolution_notes');
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.complaints.update', $complaint), [
+                'status' => 'closed',
+                'resolution_notes' => '   ',
+            ])
+            ->assertSessionHasErrors('resolution_notes');
+
+        $complaint->refresh();
+        $this->assertSame('open', $complaint->status);
+        $this->assertNull($complaint->resolved_at);
+    }
+
+    public function test_admin_can_resolve_and_reopen_hostel_complaint_with_audit_context(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $warden = $this->userWithRole('hostel_warden');
+        $student = $this->student();
+        $room = $this->room();
+
+        $complaint = HostelComplaint::create([
+            'student_id' => $student->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'Food quality issue',
+            'description' => 'Dinner quality was poor and needs review by the hostel team.',
+            'category' => 'food',
+            'priority' => 'medium',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.complaints.update', $complaint), [
+                'status' => 'resolved',
+                'assigned_to' => $warden->id,
+                'resolution_notes' => 'Mess vendor was warned and replacement dinner was arranged.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Complaint updated.');
+
+        $complaint->refresh();
+        $this->assertSame('resolved', $complaint->status);
+        $this->assertSame($warden->id, $complaint->assigned_to);
+        $this->assertSame('Mess vendor was warned and replacement dinner was arranged.', $complaint->resolution_notes);
+        $this->assertNotNull($complaint->resolved_at);
+
+        $this->actingAs($admin)
+            ->put(route('admin.hostel.complaints.update', $complaint), [
+                'status' => 'in_progress',
+                'assigned_to' => $warden->id,
+                'resolution_notes' => 'Student reported repeat issue, reopened for follow-up.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Complaint updated.');
+
+        $complaint->refresh();
+        $this->assertSame('in_progress', $complaint->status);
+        $this->assertNull($complaint->resolved_at);
+        $this->assertSame('Student reported repeat issue, reopened for follow-up.', $complaint->resolution_notes);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Program;
 use App\Models\StudentScholarshipApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class StudentScholarshipApplicationController extends Controller
 {
@@ -147,6 +148,18 @@ class StudentScholarshipApplicationController extends Controller
         $this->notifyStudent($application->fresh(['student.user', 'scheme']), 'Scholarship disbursed');
 
         return back()->with('success', 'Scholarship marked as disbursed.');
+    }
+
+    public function downloadProof(StudentScholarshipApplication $application)
+    {
+        abort_unless($application->documents_path, 404);
+        abort_unless(Storage::disk('local')->exists($application->documents_path), 404);
+
+        return response()->download(
+            Storage::disk('local')->path($application->documents_path),
+            'scholarship-proof-'.$application->id.'.'.pathinfo($application->documents_path, PATHINFO_EXTENSION),
+            ['Content-Type' => 'application/octet-stream']
+        );
     }
 
     private function notifyStudent(StudentScholarshipApplication $application, string $title): void

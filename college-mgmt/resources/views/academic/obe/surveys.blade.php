@@ -2,7 +2,7 @@
 @section('title', 'OBE Surveys (Indirect Assessment)')
 @section('page-title', 'OBE Surveys')
 @section('breadcrumb')
-    <li class="breadcrumb-item"><a href="#">OBE Framework</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('academic.obe.co.index') }}">OBE Framework</a></li>
     <li class="breadcrumb-item active">Surveys</li>
 @endsection
 

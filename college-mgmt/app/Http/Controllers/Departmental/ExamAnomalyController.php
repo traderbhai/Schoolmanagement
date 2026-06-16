@@ -34,8 +34,21 @@ class ExamAnomalyController extends Controller {
         return view('departmental.exam-anomalies.show', compact('anomalyLog'));
     }
     public function resolve(Request $request, ExamAnomalyLog $anomalyLog) {
-        $request->validate(['action_taken'=>'required|in:warning,debarred,cancelled,none']);
-        $anomalyLog->update(['action_taken'=>$request->action_taken,'resolved_by'=>auth()->id(),'resolved_at'=>now()]);
+        $request->validate([
+            'action_taken'=>'required|in:warning,debarred,cancelled,none',
+            'resolution_notes' => 'required|string|max:2000',
+        ]);
+
+        if ($anomalyLog->resolved_at) {
+            return back()->with('error', 'Resolved anomaly history cannot be changed.');
+        }
+
+        $anomalyLog->update([
+            'action_taken'=>$request->action_taken,
+            'resolution_notes' => $request->resolution_notes,
+            'resolved_by'=>auth()->id(),
+            'resolved_at'=>now(),
+        ]);
         return back()->with('success','Anomaly resolved.');
     }
 }

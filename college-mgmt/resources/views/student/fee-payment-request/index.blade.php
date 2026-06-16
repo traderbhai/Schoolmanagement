@@ -13,7 +13,7 @@
     <div class="alert alert-warning mb-4">
         <strong>Outstanding Fee Demands:</strong>
         @foreach($demands as $d)
-        <span class="badge bg-danger ms-1">{{ $d->description ?? 'Demand' }}: ₹{{ number_format($d->amount,0) }}</span>
+        <span class="badge bg-danger ms-1">{{ $d->term?->name ?? 'Fee Demand' }}: INR {{ number_format((float) $d->final_amount + (float) ($d->penalty_amount ?? 0), 0) }}</span>
         @endforeach
     </div>
     @endif
@@ -29,7 +29,7 @@
             <tbody>
                 @foreach($requests as $r)
                 <tr>
-                    <td class="fw-semibold">₹{{ number_format($r->amount,0) }}</td>
+                    <td class="fw-semibold">INR {{ number_format($r->amount,0) }}</td>
                     <td>{{ ucfirst($r->payment_method) }}</td>
                     <td class="text-muted small">{{ $r->transaction_ref ?: '—' }}</td>
                     <td class="text-muted small">{{ $r->submitted_at->format('d M Y') }}</td>

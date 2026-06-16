@@ -6,20 +6,30 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class FeePaymentRequestController extends Controller {
+    private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
+    private function outstandingDemandsFor(int $studentId)
+    {
+        return FeeDemand::with('term')
+            ->where('student_id', $studentId)
+            ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+            ->orderBy('due_date')
+            ->get();
+    }
+
     public function index() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
         $requests = FeePaymentRequest::where('student_id', $student->id)
             ->with('feeDemand')->orderByDesc('submitted_at')->paginate(15);
-        $demands = FeeDemand::where('student_id', $student->id)
-            ->where('status','!=','paid')->get();
+        $demands = $this->outstandingDemandsFor($student->id);
         return view('student.fee-payment-request.index', compact('requests', 'demands'));
     }
 
     public function create() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
-        $demands = FeeDemand::where('student_id', $student->id)->where('status','!=','paid')->get();
+        $demands = $this->outstandingDemandsFor($student->id);
         return view('student.fee-payment-request.create', compact('demands'));
     }
 
@@ -35,6 +45,40 @@ class FeePaymentRequestController extends Controller {
             'transaction_ref' => 'nullable|string|max:100',
             'proof'           => 'nullable|file|max:5120',
         ]);
+
+        $outstandingDemands = $this->outstandingDemandsFor($student->id);
+
+        if (!empty($data['fee_demand_id'])) {
+            $demand = FeeDemand::where('student_id', $student->id)
+                ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+                ->find($data['fee_demand_id']);
+
+            if (!$demand) {
+                return back()
+                    ->withErrors(['fee_demand_id' => 'Select one of your outstanding fee demands.'])
+                    ->withInput();
+            }
+
+            if (FeePaymentRequest::where('student_id', $student->id)->where('fee_demand_id', $demand->id)->where('status', 'pending')->exists()) {
+                return back()
+                    ->withErrors(['fee_demand_id' => 'A payment proof is already pending for this fee demand. Wait for accounts verification or contact accounts.'])
+                    ->withInput();
+            }
+
+            $openAmount = $this->openAmount($demand);
+            if ((float) $data['amount'] > $openAmount) {
+                return back()
+                    ->withErrors(['amount' => 'Payment proof amount cannot exceed the selected demand balance of INR ' . number_format($openAmount, 2) . '.'])
+                    ->withInput();
+            }
+        } else {
+            $totalOpenAmount = $outstandingDemands->sum(fn (FeeDemand $demand) => $this->openAmount($demand));
+            if ((float) $data['amount'] > $totalOpenAmount) {
+                return back()
+                    ->withErrors(['amount' => 'Payment proof amount cannot exceed your total open fee balance of INR ' . number_format($totalOpenAmount, 2) . '.'])
+                    ->withInput();
+            }
+        }
 
         $proofPath = null;
         if ($request->hasFile('proof')) {
@@ -55,5 +99,10 @@ class FeePaymentRequestController extends Controller {
 
         return redirect()->route('student.fee-payment.index')
             ->with('success', 'Payment proof submitted. Accounts will verify within 1-2 working days.');
+    }
+
+    private function openAmount(FeeDemand $demand): float
+    {
+        return (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0);
     }
 }

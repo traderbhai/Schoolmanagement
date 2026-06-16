@@ -106,20 +106,38 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Book Copy ID *</label>
-                        <input type="number" name="book_copy_id" class="form-control" placeholder="Enter available book copy ID" required>
-                        <div class="form-text">Enter the book copy ID (numeric). You can find it on the book detail page.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Borrower Type *</label>
-                        <select name="borrower_type" class="form-select" required>
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher</option>
+                        <label class="form-label fw-semibold">Available Copy *</label>
+                        <select name="book_copy_id" class="form-select" required>
+                            <option value="">Select available copy</option>
+                            @foreach($availableCopies as $copy)
+                                <option value="{{ $copy->id }}">
+                                    {{ $copy->book?->title ?? 'Untitled book' }} - {{ $copy->accession_number }}
+                                    @if($copy->book?->author) ({{ $copy->book->author }}) @endif
+                                </option>
+                            @endforeach
                         </select>
+                        <div class="form-text">Only currently available copies are listed.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Borrower ID *</label>
-                        <input type="number" name="borrower_id" class="form-control" placeholder="Student or Teacher ID" required>
+                        <label class="form-label fw-semibold">Borrower *</label>
+                        <select name="borrower_key" class="form-select" required>
+                            <option value="">Select borrower</option>
+                            <optgroup label="Students">
+                                @foreach($students as $student)
+                                    <option value="student:{{ $student->id }}">
+                                        {{ $student->user?->name ?? 'Student' }} - {{ $student->roll_number ?? $student->enrollment_number ?? 'No roll number' }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="Teachers">
+                                @foreach($teachers as $teacher)
+                                    <option value="teacher:{{ $teacher->id }}">
+                                        {{ $teacher->user?->name ?? 'Teacher' }} - {{ $teacher->employee_id }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        </select>
+                        <div class="form-text">Membership and active issue limits are checked before issuing.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Due Date *</label>

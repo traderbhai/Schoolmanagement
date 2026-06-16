@@ -8,7 +8,6 @@
 
 @section('content')
 
-{{-- Semester Context Banner --}}
 <div class="card border-0 mb-4 overflow-hidden" style="background:linear-gradient(135deg,#0d9488,#0284c7)">
     <div class="card-body text-white py-3">
         <div class="d-flex align-items-center gap-3">
@@ -36,7 +35,6 @@
     </div>
 </div>
 
-{{-- Student Table --}}
 <div class="card" style="box-shadow:var(--shadow-sm)">
     <div class="card-header d-flex align-items-center gap-2">
         <i class="bi bi-people text-primary"></i>
@@ -85,19 +83,34 @@
                             </div>
                         </div>
                     </td>
-                    <td class="font-monospace small">{{ $s->enrollment_number ?? '—' }}</td>
+                    <td class="font-monospace small">{{ $s->enrollment_number ?? '-' }}</td>
                     <td>
                         <span class="badge bg-primary bg-opacity-10 text-primary me-1" style="font-size:.72rem">
-                            {{ $s->course->code ?? ($s->course->name ?? '—') }}
+                            {{ $s->course->code ?? ($s->course->name ?? '-') }}
                         </span>
                         <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size:.72rem">
                             Sem {{ $s->current_semester }}
                         </span>
                     </td>
-                    <td class="text-muted small">{{ $s->department->name ?? '—' }}</td>
+                    <td class="text-muted small">{{ $s->department->name ?? '-' }}</td>
                     <td>
-                        {{-- Attendance % not available in this view; show placeholder --}}
-                        <span class="text-muted small">—</span>
+                        @if($s->teacher_attendance_percentage === null)
+                            <span class="text-muted small">No records</span>
+                        @else
+                            @php
+                                $attendanceClass = $s->teacher_attendance_percentage >= 85
+                                    ? 'success'
+                                    : ($s->teacher_attendance_percentage >= 75 ? 'warning' : 'danger');
+                            @endphp
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-{{ $attendanceClass }} bg-opacity-10 text-{{ $attendanceClass }}">
+                                    {{ rtrim(rtrim(number_format($s->teacher_attendance_percentage, 1), '0'), '.') }}%
+                                </span>
+                                <span class="text-muted small">
+                                    {{ $s->teacher_attendance_attended }}/{{ $s->teacher_attendance_total }}
+                                </span>
+                            </div>
+                        @endif
                     </td>
                     <td>
                         @if(Route::has('admin.students.show'))

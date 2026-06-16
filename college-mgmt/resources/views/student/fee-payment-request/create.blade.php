@@ -17,24 +17,24 @@
                 <div class="mb-3">
                     <label class="form-label">Against Fee Demand <span class="text-muted">(optional)</span></label>
                     <select name="fee_demand_id" class="form-select">
-                        <option value="">— Select demand (optional) —</option>
+                        <option value="">Select demand (optional)</option>
                         @foreach($demands as $d)
                         <option value="{{ $d->id }}" @selected(old('fee_demand_id') == $d->id)>
-                            {{ $d->description ?? 'Demand' }} — ₹{{ number_format($d->amount,0) }}
+                            {{ $d->term?->name ?? 'Fee Demand' }} - INR {{ number_format((float) $d->final_amount + (float) ($d->penalty_amount ?? 0), 0) }}
                         </option>
                         @endforeach
                     </select>
                 </div>
                 @endif
                 <div class="mb-3">
-                    <label class="form-label">Amount Paid (₹)</label>
+                    <label class="form-label">Amount Paid (INR)</label>
                     <input type="number" name="amount" value="{{ old('amount') }}" step="0.01" class="form-control @error('amount') is-invalid @enderror">
                     @error('amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Payment Method</label>
                     <select name="payment_method" class="form-select @error('payment_method') is-invalid @enderror">
-                        <option value="">— Select —</option>
+                        <option value="">Select payment method</option>
                         @foreach(['online'=>'Online (UPI/Net Banking)','neft'=>'NEFT','rtgs'=>'RTGS','dd'=>'Demand Draft','cash'=>'Cash'] as $v=>$l)
                         <option value="{{ $v }}" @selected(old('payment_method') == $v)>{{ $l }}</option>
                         @endforeach

@@ -55,6 +55,7 @@
                     <select name="transport_route_id" class="form-select" required>
                         <option value="">- Select Route -</option>
                         @foreach($routes as $route)
+                            @continue(!$route->is_active)
                             <option value="{{ $route->id }}">{{ $route->name }} ({{ $route->code }})</option>
                         @endforeach
                     </select>
@@ -95,6 +96,67 @@
 </div>
 
 <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent fw-semibold">Vehicle Fleet</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Vehicle</th>
+                        <th>Capacity</th>
+                        <th>Driver / Contact</th>
+                        <th>Status</th>
+                        <th>Active Assignments</th>
+                        <th class="text-end pe-3">Update</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($vehicles as $vehicle)
+                        <tr>
+                            <form method="POST" action="{{ route('admin.transport.vehicles.update', $vehicle) }}">
+                                @csrf
+                                @method('PATCH')
+                                <td>
+                                    <input name="registration_number" class="form-control form-control-sm mb-1" value="{{ old('registration_number', $vehicle->registration_number) }}" required>
+                                    <input name="vehicle_type" class="form-control form-control-sm" value="{{ old('vehicle_type', $vehicle->vehicle_type) }}" required>
+                                </td>
+                                <td style="width:110px">
+                                    <input name="capacity" type="number" min="1" max="200" class="form-control form-control-sm" value="{{ old('capacity', $vehicle->capacity) }}" required>
+                                </td>
+                                <td>
+                                    <input name="driver_name" class="form-control form-control-sm mb-1" value="{{ old('driver_name', $vehicle->driver_name) }}" required>
+                                    <div class="row g-1">
+                                        <div class="col-6"><input name="driver_phone" class="form-control form-control-sm" value="{{ old('driver_phone', $vehicle->driver_phone) }}" placeholder="Driver phone"></div>
+                                        <div class="col-6"><input name="attendant_name" class="form-control form-control-sm" value="{{ old('attendant_name', $vehicle->attendant_name) }}" placeholder="Attendant"></div>
+                                    </div>
+                                </td>
+                                <td style="width:150px">
+                                    <select name="status" class="form-select form-select-sm" required>
+                                        @foreach(['active' => 'Active', 'maintenance' => 'Maintenance', 'inactive' => 'Inactive'] as $status => $label)
+                                            <option value="{{ $status }}" @selected(old('status', $vehicle->status) === $status)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ ($vehicle->active_assignments_count ?? 0) > 0 ? 'primary' : 'secondary' }}">
+                                        {{ $vehicle->active_assignments_count ?? 0 }}
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <button class="btn btn-sm btn-outline-primary">Save</button>
+                                </td>
+                            </form>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="text-center text-muted py-4">No vehicles configured.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-transparent fw-semibold">Assign Student To Transport</div>
     <div class="card-body">
         <form method="POST" action="{{ route('admin.transport.assignments.store') }}" class="row g-3 align-items-end">
@@ -113,6 +175,7 @@
                 <select name="transport_route_id" class="form-select" required>
                     <option value="">- Route -</option>
                     @foreach($routes as $route)
+                        @continue(!$route->is_active)
                         <option value="{{ $route->id }}">{{ $route->name }}</option>
                     @endforeach
                 </select>
@@ -123,6 +186,7 @@
                     <option value="">- Stop -</option>
                     @foreach($routes as $route)
                         @foreach($route->stops as $stop)
+                            @continue(!$route->is_active || !$stop->is_active)
                             <option value="{{ $stop->id }}">{{ $route->code }} - {{ $stop->name }}</option>
                         @endforeach
                     @endforeach
@@ -133,6 +197,7 @@
                 <select name="transport_vehicle_id" class="form-select">
                     <option value="">- Vehicle -</option>
                     @foreach($vehicles as $vehicle)
+                        @continue($vehicle->status !== 'active')
                         <option value="{{ $vehicle->id }}">{{ $vehicle->registration_number }}</option>
                     @endforeach
                 </select>

@@ -31,6 +31,16 @@ class TermPromotion extends Model
         return $this->meets_academic_criteria && $this->meets_attendance_criteria;
     }
 
+    public function isReviewable(): bool
+    {
+        return in_array($this->status, ['pending', 'on_hold'], true);
+    }
+
+    public function studentIsStillInCurrentTerm(): bool
+    {
+        return (int) $this->student?->current_term_id === (int) $this->current_term_id;
+    }
+
     public function approve(): void
     {
         $this->update(['status' => 'approved', 'processed_at' => now(), 'processed_by' => auth()->id()]);

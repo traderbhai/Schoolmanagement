@@ -68,6 +68,25 @@
                               rows="4" maxlength="2000" placeholder="Describe the eligibility criteria…">{{ old('criteria') }}</textarea>
                     @error('criteria')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
+                <div class="col-md-4">
+                    <label for="min_cgpa" class="form-label fw-semibold">Minimum CGPA</label>
+                    <input type="number" name="min_cgpa" id="min_cgpa" class="form-control @error('min_cgpa') is-invalid @enderror"
+                           value="{{ old('min_cgpa') }}" min="0" max="10" step="0.01" placeholder="e.g. 7.50">
+                    @error('min_cgpa')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
+                    <label for="max_family_income" class="form-label fw-semibold">Max Family Income</label>
+                    <input type="number" name="max_family_income" id="max_family_income" class="form-control @error('max_family_income') is-invalid @enderror"
+                           value="{{ old('max_family_income') }}" min="0" step="1000" placeholder="Annual income">
+                    @error('max_family_income')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="requires_document" value="0">
+                        <input class="form-check-input" type="checkbox" name="requires_document" id="requires_document" value="1" {{ old('requires_document') ? 'checked' : '' }}>
+                        <label class="form-check-label fw-semibold" for="requires_document">Require proof document</label>
+                    </div>
+                </div>
                 <div class="col-12">
                     <div class="form-check form-switch">
                         <input type="hidden" name="is_active" value="0">

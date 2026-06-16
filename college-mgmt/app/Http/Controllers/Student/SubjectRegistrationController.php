@@ -3,9 +3,12 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Enrollment;
+use App\Models\Semester;
 use App\Models\Subject;
 use App\Models\Student;
+use App\Models\StudentSubjectEnrollment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SubjectRegistrationController extends Controller
 {
@@ -28,29 +31,26 @@ class SubjectRegistrationController extends Controller
 
         $currentTerm = $student->currentTerm;
 
-        // Subjects already enrolled in for this term
-        $enrolledSubjectIds = Enrollment::where('student_id', $student->id)
+        $enrolledSubjectIds = StudentSubjectEnrollment::where('student_id', $student->id)
             ->where('term_id', $currentTerm?->id)
+            ->where('status', 'active')
             ->pluck('subject_id');
 
-        $enrolledSubjects = Enrollment::where('student_id', $student->id)
+        $enrolledSubjects = StudentSubjectEnrollment::where('student_id', $student->id)
             ->where('term_id', $currentTerm?->id)
+            ->where('status', 'active')
             ->with('subject')
             ->get();
 
-        // Available subjects not yet enrolled
-        $availableSubjects = Subject::whereNotIn('id', $enrolledSubjectIds)
-            ->where('semester_id', $currentTerm?->id)  // term maps to semester context
+        $availableSubjects = Subject::where('is_active', true)
+            ->where('program_id', $student->program_id)
+            ->when($currentTerm, fn($q) => $q->where(function ($termQuery) use ($currentTerm) {
+                $termQuery->whereNull('term_number')
+                    ->orWhere('term_number', $currentTerm->term_number);
+            }))
+            ->whereNotIn('id', $enrolledSubjectIds)
             ->orderBy('name')
             ->get();
-
-        // Fallback: if no subjects found via term mapping, show all subjects not enrolled
-        if ($availableSubjects->isEmpty() && $currentTerm) {
-            $availableSubjects = Subject::whereNotIn('id', $enrolledSubjectIds)
-                ->orderBy('name')
-                ->limit(30)
-                ->get();
-        }
 
         return view('student.subject-registration', compact(
             'student', 'currentTerm', 'enrolledSubjects', 'availableSubjects'
@@ -73,49 +73,109 @@ class SubjectRegistrationController extends Controller
             return back()->with('error', 'No current term assigned. Please contact the academic office.');
         }
 
-        // Prevent duplicate enrollment
-        $exists = Enrollment::where('student_id', $student->id)
+        $subject = Subject::where('is_active', true)
+            ->where('program_id', $student->program_id)
+            ->where('id', $request->subject_id)
+            ->where(function ($query) use ($currentTerm) {
+                $query->whereNull('term_number')
+                    ->orWhere('term_number', $currentTerm->term_number);
+            })
+            ->first();
+
+        if (!$subject) {
+            return back()->with('error', 'This subject is not available for your current program and term.');
+        }
+
+        $existingEnrollment = StudentSubjectEnrollment::where('student_id', $student->id)
             ->where('term_id', $currentTerm->id)
             ->where('subject_id', $request->subject_id)
-            ->exists();
+            ->first();
 
-        if ($exists) {
+        if ($existingEnrollment?->status === 'active') {
             return back()->with('error', 'You are already enrolled in this subject.');
+        }
+
+        if ($existingEnrollment?->status === 'completed') {
+            return back()->with('error', 'Completed subject history cannot be re-registered from self-service.');
         }
 
         // Check credit limit (max 24 credits per term)
         $maxCredits = 24;
-        $currentCredits = Enrollment::where('student_id', $student->id)
+        $currentCredits = StudentSubjectEnrollment::where('student_id', $student->id)
             ->where('term_id', $currentTerm->id)
+            ->where('status', 'active')
             ->with('subject')
             ->get()
-            ->sum(fn($e) => $e->subject?->credit_hours ?? 3);
+            ->sum(fn($e) => $e->subject?->credits ?? 3);
 
-        $newSubjectCredits = Subject::find($request->subject_id)?->credit_hours ?? 3;
+        $newSubjectCredits = $subject->credits ?? 3;
 
         if ($currentCredits + $newSubjectCredits > $maxCredits) {
             return back()->with('error', "Credit limit exceeded. Current: {$currentCredits}, Requested: {$newSubjectCredits}, Max: {$maxCredits}.");
         }
 
-        Enrollment::create([
-            'student_id' => $student->id,
-            'term_id'    => $currentTerm->id,
-            'subject_id' => $request->subject_id,
-            'status'     => 'active',
-        ]);
+        DB::transaction(function () use ($student, $currentTerm, $subject) {
+            StudentSubjectEnrollment::updateOrCreate([
+                'student_id' => $student->id,
+                'term_id' => $currentTerm->id,
+                'subject_id' => $subject->id,
+            ], [
+                'enrollment_type' => 'elective',
+                'status' => 'active',
+            ]);
 
-        $subject = Subject::find($request->subject_id);
+            if ($semester = $this->legacySemesterForTerm($currentTerm)) {
+                Enrollment::updateOrCreate([
+                    'student_id' => $student->id,
+                    'semester_id' => $semester->id,
+                    'subject_id' => $subject->id,
+                ], [
+                    'term_id' => $currentTerm->id,
+                    'status' => 'active',
+                ]);
+            }
+        });
+
         return back()->with('success', 'Enrolled in ' . ($subject->name ?? 'subject') . ' successfully.');
     }
 
-    public function destroy(Enrollment $enrollment)
+    public function destroy(StudentSubjectEnrollment $enrollment)
     {
         $student = $this->getStudent();
         if (!$student || $enrollment->student_id !== $student->id) {
             return back()->with('error', 'Unauthorized action.');
         }
 
-        $enrollment->delete();
+        $currentTerm = $student->currentTerm;
+        if (!$currentTerm || (int) $enrollment->term_id !== (int) $currentTerm->id) {
+            return back()->with('error', 'Only current-term subjects can be dropped from self-service.');
+        }
+
+        if ($enrollment->status !== 'active') {
+            return back()->with('error', 'Only active subject enrollments can be dropped.');
+        }
+
+        if ($enrollment->enrollment_type !== 'elective') {
+            return back()->with('error', 'Compulsory subjects cannot be dropped from student self-service.');
+        }
+
+        DB::transaction(function () use ($enrollment) {
+            $enrollment->update(['status' => 'dropped']);
+
+            Enrollment::where('student_id', $enrollment->student_id)
+                ->where('subject_id', $enrollment->subject_id)
+                ->when($enrollment->term_id, fn($q) => $q->where('term_id', $enrollment->term_id))
+                ->update(['status' => 'dropped']);
+        });
+
         return back()->with('success', 'Subject dropped successfully.');
+    }
+
+    private function legacySemesterForTerm($term): ?Semester
+    {
+        return Semester::where('number', $term->term_number)
+            ->orWhere('name', $term->name)
+            ->orderByDesc('is_current')
+            ->first();
     }
 }
