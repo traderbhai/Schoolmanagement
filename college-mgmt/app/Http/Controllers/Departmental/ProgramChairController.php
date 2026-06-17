@@ -373,8 +373,12 @@ class ProgramChairController extends Controller
             ->whereHasMorph('approvable', [Applicant::class], fn($q) => $q->whereIn('program_id', $programIds));
     }
 
-    private function authorizeProgramApproval($approvable): void
+    private function authorizeProgramApproval(ApprovalWorkflow $approval): void
     {
+        abort_unless($approval->approver_role === 'program_chair', 403);
+        abort_unless($approval->status === 'pending', 403);
+
+        $approvable = $approval->approvable;
         abort_unless($approvable instanceof Applicant, 403);
         abort_unless(in_array($approvable->program_id, $this->getAssignedProgramIds(), true), 403);
     }
@@ -387,7 +391,7 @@ class ProgramChairController extends Controller
 
         // Check seat capacity before approving
         $applicant = $approval->approvable;
-        $this->authorizeProgramApproval($applicant);
+        $this->authorizeProgramApproval($approval);
         $seatMatrix = SeatMatrix::where('program_id', $applicant->program_id)->first();
 
         if ($seatMatrix) {
@@ -416,7 +420,7 @@ class ProgramChairController extends Controller
             'rejection_reason' => 'required|string|max:500',
         ]);
 
-        $this->authorizeProgramApproval($approval->approvable);
+        $this->authorizeProgramApproval($approval);
 
         $approval->update([
             'status'      => 'rejected',

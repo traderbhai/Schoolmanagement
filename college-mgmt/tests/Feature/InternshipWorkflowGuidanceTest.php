@@ -77,6 +77,55 @@ class InternshipWorkflowGuidanceTest extends TestCase
             ->assertSee('Research Intern');
     }
 
+    public function test_cmc_can_register_internship_only_for_active_student(): void
+    {
+        $student = $this->student();
+        $company = $this->company();
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->post(route('cmc.internships.store'), [
+                'student_id' => $student->id,
+                'company_id' => $company->id,
+                'company_name' => $company->name,
+                'role_title' => 'Research Intern',
+                'start_date' => now()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'type' => 'internship',
+                'stipend' => 15000,
+            ])
+            ->assertRedirect(route('cmc.internships.index'))
+            ->assertSessionHas('success', 'Internship registered.');
+
+        $this->assertDatabaseHas('internships', [
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'status' => 'ongoing',
+        ]);
+
+        $inactive = $this->student();
+        $inactive->update(['status' => 'inactive']);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->from(route('cmc.internships.create'))
+            ->post(route('cmc.internships.store'), [
+                'student_id' => $inactive->id,
+                'company_id' => $company->id,
+                'company_name' => $company->name,
+                'role_title' => 'Archived Student Intern',
+                'start_date' => now()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'type' => 'internship',
+                'stipend' => 15000,
+            ])
+            ->assertRedirect(route('cmc.internships.create'))
+            ->assertSessionHasErrors('student_id');
+
+        $this->assertDatabaseMissing('internships', [
+            'student_id' => $inactive->id,
+            'role_title' => 'Archived Student Intern',
+        ]);
+    }
+
     public function test_cmc_completion_requires_valid_ongoing_internship_end_date(): void
     {
         $internship = $this->internship($this->student(), [

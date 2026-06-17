@@ -14,6 +14,7 @@ class PlacementController extends Controller
     {
         $student = auth()->user()->student;
         $studentCgpa = $student ? (float) $student->calculateCGPA() : null;
+        $canApplyForPlacements = $student && $student->status === 'active';
 
         $myApplicationDriveIds = $student
             ? Placement::where('student_id', $student->id)->pluck('drive_id')->toArray()
@@ -23,8 +24,15 @@ class PlacementController extends Controller
             ->whereIn('status', self::VISIBLE_DRIVE_STATUSES)
             ->orderBy('drive_date')
             ->get()
-            ->map(function (PlacementDrive $drive) use ($student, $studentCgpa) {
+            ->map(function (PlacementDrive $drive) use ($student, $studentCgpa, $canApplyForPlacements) {
                 $drive->student_eligibility = $this->driveEligibility($student, $drive, $studentCgpa);
+                if (! $canApplyForPlacements) {
+                    $drive->student_eligibility = [
+                        'eligible' => false,
+                        'reason' => 'Placement applications are available only for active students.',
+                        'detail' => 'Your student profile is not active, so you can only review existing placement history.',
+                    ];
+                }
                 return $drive;
             });
 
@@ -37,7 +45,7 @@ class PlacementController extends Controller
 
         $placementPriority = $this->placementPriority($student, $drives, $myApplications);
 
-        return view('student.placements', compact('drives', 'myApplications', 'myApplicationDriveIds', 'student', 'studentCgpa', 'placementPriority'));
+        return view('student.placements', compact('drives', 'myApplications', 'myApplicationDriveIds', 'student', 'studentCgpa', 'placementPriority', 'canApplyForPlacements'));
     }
 
     public function myApplications()
@@ -60,6 +68,10 @@ class PlacementController extends Controller
 
         if (!$student) {
             return redirect()->route('student.placements')->with('error', 'Student profile not found.');
+        }
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.placements')->with('error', 'Placement applications are available only for active students.');
         }
 
         if (! in_array($drive->status, self::VISIBLE_DRIVE_STATUSES, true)) {

@@ -2,10 +2,13 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Subject, Department};
+use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
 class SubjectController extends Controller
 {
+    public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
+
     public function index() {
         $subjects = Subject::with('department')->paginate(20);
         return view('admin.subjects.index', compact('subjects'));
@@ -45,10 +48,28 @@ class SubjectController extends Controller
             'hours_per_week' => 'required|integer|min:1|max:20',
             'is_active'      => 'boolean',
         ]);
+
+        $structuralFields = ['department_id', 'code', 'credits', 'type', 'hours_per_week'];
+        $changesStructure = collect($structuralFields)->contains(
+            fn (string $field) => (string) $subject->{$field} !== (string) $data[$field]
+        );
+
+        if ($changesStructure && $this->integrity->hasDependencies('subject', $subject->id)) {
+            return back()->withErrors([
+                'subject' => 'Subject structure is locked because enrollments, timetable, exams, assignments, or PMC records already depend on it. Deactivate it or create a revised subject instead.',
+            ])->withInput();
+        }
+
         $subject->update($data);
         return redirect()->route('admin.subjects.index')->with('success', 'Updated.');
     }
     public function destroy(Subject $subject) {
+        $dependencies = $this->integrity->dependencyLabels('subject', $subject->id);
+
+        if ($dependencies !== []) {
+            return back()->with('error', $this->integrity->message('subject', $dependencies));
+        }
+
         $subject->delete();
         return redirect()->route('admin.subjects.index')->with('success', 'Deleted.');
     }

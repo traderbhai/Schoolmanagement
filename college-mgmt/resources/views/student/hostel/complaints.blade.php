@@ -14,6 +14,12 @@
             You do not have an active hostel allocation. Contact the hostel office if this is incorrect.
         </div>
     @else
+        @unless($canCreateHostelRequest)
+            <div class="alert alert-secondary">
+                <i class="bi bi-lock me-2"></i>
+                New hostel complaints are locked because your student profile is not active. Existing complaints remain visible for history.
+            </div>
+        @endunless
         <div class="alert alert-info mb-4">
             <strong>Your Room:</strong> {{ $allocation->room?->block?->name }} / Room {{ $allocation->room?->room_number }}, Bed {{ $allocation->bed_number }}
         </div>
@@ -23,6 +29,9 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white fw-semibold">New Complaint</div>
                     <div class="card-body">
+                        @if(!$canCreateHostelRequest)
+                            <span class="badge bg-secondary">Active students only</span>
+                        @else
                         <form method="POST" action="{{ route('student.hostel.complaints.store') }}">
                             @csrf
                             <div class="mb-3">
@@ -57,6 +66,7 @@
                             </div>
                             <button class="btn btn-primary w-100">Submit Complaint</button>
                         </form>
+                        @endif
                     </div>
                 </div>
             </div>

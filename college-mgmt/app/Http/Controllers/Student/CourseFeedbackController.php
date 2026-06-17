@@ -12,13 +12,19 @@ class CourseFeedbackController extends Controller {
         abort_unless($student, 403);
 
         $subjects = $this->enrolledSubjectsForFeedback($student);
+        $canSubmitFeedback = $student->status === 'active';
 
-        return view('student.feedback.index', compact('subjects'));
+        return view('student.feedback.index', compact('subjects', 'canSubmitFeedback'));
     }
 
     public function create(Subject $subject) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.feedback.index')
+                ->with('error', 'Course feedback can be submitted only by active students.');
+        }
 
         $termId = $this->feedbackTermId($student, $subject);
         abort_unless($this->isSubjectEnrolled($student, $subject), 403);
@@ -44,8 +50,27 @@ class CourseFeedbackController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
 
+        if ($student->status !== 'active') {
+            return redirect()->route('student.feedback.index')
+                ->with('error', 'Course feedback can be submitted only by active students.');
+        }
+
         $termId = $this->feedbackTermId($student, $subject);
         abort_unless($this->isSubjectEnrolled($student, $subject), 403);
+
+        $alreadySubmitted = CourseFeedback::where('student_id', $student->id)
+            ->where('subject_id', $subject->id)
+            ->where(function ($query) use ($termId) {
+                $termId
+                    ? $query->where('term_id', $termId)
+                    : $query->whereNull('term_id');
+            })
+            ->exists();
+
+        if ($alreadySubmitted) {
+            return redirect()->route('student.feedback.index')
+                ->with('info', 'You have already submitted feedback for ' . $subject->name);
+        }
 
         $data = $request->validate([
             'teaching_rating' => 'required|integer|min:1|max:5',
@@ -54,10 +79,12 @@ class CourseFeedbackController extends Controller {
             'comments'        => 'nullable|string|max:1000',
         ]);
 
-        CourseFeedback::updateOrCreate(
-            ['student_id'=>$student->id,'subject_id'=>$subject->id,'term_id'=>$termId],
-            array_merge($data, ['is_anonymous'=>true])
-        );
+        CourseFeedback::create(array_merge($data, [
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $termId,
+            'is_anonymous' => true,
+        ]));
 
         return redirect()->route('student.feedback.index')
             ->with('success', 'Feedback submitted for ' . $subject->name . '. Thank you!');

@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class AcademicYearController extends Controller
 {
@@ -40,6 +41,13 @@ class AcademicYearController extends Controller
             'end_date'   => 'required|date|after:start_date',
             'is_current' => 'boolean',
         ]);
+
+        if ($this->hasOperationalDependencies($academicYear) && $this->changesCalendarBoundaries($academicYear, $data)) {
+            throw ValidationException::withMessages([
+                'academic_year' => 'Academic year dates and year boundaries cannot be changed after semesters, batches, or fee structures are linked.',
+            ]);
+        }
+
         if (!empty($data['is_current'])) {
             AcademicYear::where('is_current', true)->where('id', '!=', $academicYear->id)->update(['is_current' => false]);
         }
@@ -47,7 +55,27 @@ class AcademicYearController extends Controller
         return redirect()->route('admin.academic-years.index')->with('success', 'Updated.');
     }
     public function destroy(AcademicYear $academicYear) {
+        if ($this->hasOperationalDependencies($academicYear)) {
+            return redirect()->route('admin.academic-years.index')
+                ->with('error', 'Academic years with semesters, batches, or fee structures cannot be deleted because academic and financial history depends on them.');
+        }
+
         $academicYear->delete();
         return redirect()->route('admin.academic-years.index')->with('success', 'Deleted.');
+    }
+
+    private function hasOperationalDependencies(AcademicYear $academicYear): bool
+    {
+        return $academicYear->semesters()->exists()
+            || $academicYear->feeStructures()->exists()
+            || $academicYear->batches()->exists();
+    }
+
+    private function changesCalendarBoundaries(AcademicYear $academicYear, array $data): bool
+    {
+        return (string) $academicYear->start_year !== (string) $data['start_year']
+            || (string) $academicYear->end_year !== (string) $data['end_year']
+            || $academicYear->start_date->toDateString() !== (string) $data['start_date']
+            || $academicYear->end_date->toDateString() !== (string) $data['end_date'];
     }
 }

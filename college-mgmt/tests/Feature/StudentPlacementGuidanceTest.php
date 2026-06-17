@@ -65,6 +65,7 @@ class StudentPlacementGuidanceTest extends TestCase
             'program_id' => $student->program_id,
             'subject_id' => $subject->id,
             'total_marks' => 10,
+            'published_at' => now(),
         ]);
         ExamResult::factory()->create([
             'student_id' => $student->id,
@@ -140,6 +141,49 @@ class StudentPlacementGuidanceTest extends TestCase
         ]);
     }
 
+    public function test_draft_unpublished_marks_do_not_make_student_placement_eligible(): void
+    {
+        $student = $this->student();
+        $this->resultForCgpa($student, 6.25);
+
+        $draftSubject = Subject::factory()->create(['program_id' => $student->program_id]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'subject_id' => $draftSubject->id,
+            'total_marks' => 10,
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'student_id' => $student->id,
+            'exam_id' => $draftExam->id,
+            'marks_obtained' => 9.9,
+            'is_absent' => false,
+        ]);
+
+        $drive = $this->drive([
+            'status' => 'ongoing',
+            'min_cgpa' => 7.5,
+            'title' => 'Draft Should Not Qualify Drive',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.placements'))
+            ->assertOk()
+            ->assertSee('Draft Should Not Qualify Drive')
+            ->assertSee('Required CGPA 7.50; your CGPA 6.25.')
+            ->assertSee('You do not meet the minimum CGPA requirement for this drive.');
+
+        $this->actingAs($student->user)
+            ->post(route('student.placements.apply', $drive))
+            ->assertRedirect(route('student.placements'))
+            ->assertSessionHas('error', 'You do not meet the minimum CGPA requirement for this drive.');
+
+        $this->assertDatabaseMissing('placements', [
+            'student_id' => $student->id,
+            'drive_id' => $drive->id,
+        ]);
+    }
+
     public function test_student_can_apply_when_minimum_cgpa_is_met(): void
     {
         $student = $this->student();
@@ -158,6 +202,52 @@ class StudentPlacementGuidanceTest extends TestCase
             'student_id' => $student->id,
             'drive_id' => $drive->id,
             'application_status' => 'applied',
+        ]);
+    }
+
+    public function test_inactive_student_can_review_history_but_cannot_apply_to_new_drive(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+
+        $historyDrive = $this->drive([
+            'title' => 'Historical Placement Drive',
+            'status' => 'completed',
+        ]);
+        Placement::create([
+            'drive_id' => $historyDrive->id,
+            'student_id' => $student->id,
+            'application_status' => 'interview',
+            'offered_package' => 7.25,
+        ]);
+
+        $openDrive = $this->drive([
+            'title' => 'Inactive Student Should Not Apply Drive',
+            'status' => 'ongoing',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.placements'))
+            ->assertOk()
+            ->assertSee('Inactive Student Should Not Apply Drive')
+            ->assertSee('Your student profile is not active, so you can only review existing placement history.')
+            ->assertSee('Active students only')
+            ->assertDontSee('Apply Now');
+
+        $this->actingAs($student->user)
+            ->get(route('student.placements.applications'))
+            ->assertOk()
+            ->assertSee('Historical Placement Drive')
+            ->assertSee('Interview');
+
+        $this->actingAs($student->user)
+            ->post(route('student.placements.apply', $openDrive))
+            ->assertRedirect(route('student.placements'))
+            ->assertSessionHas('error', 'Placement applications are available only for active students.');
+
+        $this->assertDatabaseMissing('placements', [
+            'student_id' => $student->id,
+            'drive_id' => $openDrive->id,
         ]);
     }
 

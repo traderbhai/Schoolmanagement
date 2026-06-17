@@ -139,6 +139,102 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
             ->assertSessionHas('info');
     }
 
+    public function test_direct_feedback_post_cannot_overwrite_existing_feedback(): void
+    {
+        $fixture = $this->fixture();
+
+        CourseFeedback::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'teaching_rating' => 3,
+            'content_rating' => 4,
+            'overall_rating' => 4,
+            'comments' => 'Original submitted feedback.',
+            'is_anonymous' => true,
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.feedback.store', $fixture['enrolledSubject']), [
+                'teaching_rating' => 1,
+                'content_rating' => 1,
+                'overall_rating' => 1,
+                'comments' => 'Overwritten feedback should not be accepted.',
+            ])
+            ->assertRedirect(route('student.feedback.index'))
+            ->assertSessionHas('info');
+
+        $this->assertDatabaseHas('course_feedback', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'overall_rating' => 4,
+            'comments' => 'Original submitted feedback.',
+        ]);
+        $this->assertDatabaseMissing('course_feedback', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'overall_rating' => 1,
+            'comments' => 'Overwritten feedback should not be accepted.',
+        ]);
+    }
+
+    public function test_inactive_student_can_view_feedback_history_but_cannot_submit_new_feedback(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['student']->update(['status' => 'inactive']);
+
+        CourseFeedback::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'teaching_rating' => 4,
+            'content_rating' => 4,
+            'overall_rating' => 5,
+            'comments' => 'Historical feedback remains visible.',
+            'is_anonymous' => true,
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.feedback.index'))
+            ->assertOk()
+            ->assertSee('Enrolled Marketing')
+            ->assertSee('Submitted')
+            ->assertSee('Feedback submission is locked')
+            ->assertDontSee('Give Feedback');
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.feedback.create', $fixture['enrolledSubject']))
+            ->assertRedirect(route('student.feedback.index'))
+            ->assertSessionHas('error');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.feedback.store', $fixture['enrolledSubject']), [
+                'teaching_rating' => 1,
+                'content_rating' => 1,
+                'overall_rating' => 1,
+                'comments' => 'Inactive update should not be accepted.',
+            ])
+            ->assertRedirect(route('student.feedback.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('course_feedback', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'overall_rating' => 5,
+            'comments' => 'Historical feedback remains visible.',
+        ]);
+        $this->assertDatabaseMissing('course_feedback', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['enrolledSubject']->id,
+            'term_id' => $fixture['term']->id,
+            'overall_rating' => 1,
+            'comments' => 'Inactive update should not be accepted.',
+        ]);
+    }
+
     public function test_legacy_active_enrollment_still_allows_course_feedback(): void
     {
         Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);

@@ -57,6 +57,11 @@ class LibraryController extends Controller
         ]);
 
         $student = Student::where('user_id', auth()->id())->firstOrFail();
+
+        if ($student->status !== 'active') {
+            return back()->withErrors(['book_id' => 'Library reservations are available only for active students.']);
+        }
+
         $book = Book::withCount([
             'availableCopies as issuable_copies_count' => fn ($q) => $q->whereNotIn('condition_status', ['damaged', 'lost']),
         ])->findOrFail($data['book_id']);

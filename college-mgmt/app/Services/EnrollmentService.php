@@ -12,6 +12,11 @@ class EnrollmentService
     public function enroll(Applicant $applicant, array $data, int $confirmedBy): EnrollmentConfirmation
     {
         return DB::transaction(function () use ($applicant, $data, $confirmedBy) {
+            $applicant = Applicant::query()
+                ->whereKey($applicant->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             // 1. Validate
             if ($applicant->status !== 'selected') {
                 throw new \RuntimeException('Applicant must have status "selected" to be enrolled.');
@@ -43,9 +48,8 @@ class EnrollmentService
             }
 
             // 2. Generate enrollment number
-            $nextId = (EnrollmentConfirmation::max('id') ?? 0) + 1;
             $programCode = $applicant->program->code ?? 'GEN';
-            $enrollmentNumber = 'ENR-' . date('Y') . '-' . $programCode . '-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
+            $enrollmentNumber = 'ENR-' . date('Y') . '-' . $programCode . '-' . str_pad($applicant->id, 5, '0', STR_PAD_LEFT);
 
             // 3. Get or create User
             $personal = $applicant->personal_data ?? [];
@@ -74,6 +78,10 @@ class EnrollmentService
             $batchId = $applicant->batch_id
                 ?? \App\Models\Batch::where('program_id', $applicant->program_id)->value('id')
                 ?? \App\Models\Batch::first()?->id;
+
+            if (Student::where('batch_id', $batchId)->where('roll_number', $data['roll_number'])->exists()) {
+                throw new \RuntimeException('Roll number is already assigned to another student in this batch.');
+            }
 
             // Resolve course_id: match course by code or pick first course for department
             $program = $applicant->program;

@@ -73,13 +73,17 @@
                     <div class="d-flex gap-1">
                         <a href="{{ route('admin.exams.show', $e) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.exams.results', $e) }}" class="btn btn-sm btn-outline-success" title="Enter Results"><i class="bi bi-pencil-square"></i></a>
-                        <a href="{{ route('admin.exams.edit', $e) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                        <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
-                            data-bs-toggle="modal" data-bs-target="#deleteModal"
-                            data-action="{{ route('admin.exams.destroy', $e) }}"
-                            data-name="{{ $e->name }}">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        @if($e->published_at)
+                            <span class="btn btn-sm btn-outline-secondary disabled" title="Published exam locked"><i class="bi bi-lock"></i></span>
+                        @else
+                            <a href="{{ route('admin.exams.edit', $e) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                data-action="{{ route('admin.exams.destroy', $e) }}"
+                                data-name="{{ $e->name }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        @endif
                     </div>
                 </td>
             </tr>

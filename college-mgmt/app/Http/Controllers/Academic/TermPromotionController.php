@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Term;
 use App\Models\TermPromotion;
 use App\Models\Student;
+use App\Services\AcademicAccessPolicyService;
 use Illuminate\Http\Request;
 
 class TermPromotionController extends Controller
 {
+    public function __construct(private AcademicAccessPolicyService $policy) {}
+
     public function index()
     {
         $promotions = TermPromotion::with(['student', 'currentTerm', 'promotedToTerm'])->paginate(15);
@@ -24,6 +27,8 @@ class TermPromotionController extends Controller
 
     public function update(Request $request, TermPromotion $termPromotion)
     {
+        $this->policy->authorizeTermPromotions($request->user());
+
         if (! $termPromotion->isReviewable()) {
             return redirect()->route('academic.term-promotions.show', $termPromotion)
                 ->with('error', 'Reviewed promotion history cannot be edited.');
@@ -61,6 +66,8 @@ class TermPromotionController extends Controller
 
     public function generate(Request $request)
     {
+        $this->policy->authorizeTermPromotions($request->user());
+
         $request->validate([
             'term_id'              => 'required|exists:terms,id',
             'cgpa_threshold'       => 'nullable|numeric|min:0|max:10',
@@ -118,6 +125,8 @@ class TermPromotionController extends Controller
 
     public function approve(TermPromotion $termPromotion)
     {
+        $this->policy->authorizeTermPromotions(request()->user());
+
         if (! $termPromotion->isReviewable()) {
             return back()->with('error', 'Only pending or on-hold promotions can be approved.');
         }
@@ -130,6 +139,10 @@ class TermPromotionController extends Controller
             return back()->with('error', 'Student is no longer in the source term for this promotion.');
         }
 
+        if (! $termPromotion->targetTermIsValidProgression()) {
+            return back()->with('error', 'Promotion target term must belong to the same program/batch and be later than the current term.');
+        }
+
         $termPromotion->approve();
 
         return back()->with('success', 'Promotion approved successfully');
@@ -137,6 +150,8 @@ class TermPromotionController extends Controller
 
     public function reject(Request $request, TermPromotion $termPromotion)
     {
+        $this->policy->authorizeTermPromotions($request->user());
+
         $validated = $request->validate(['remarks' => 'required|string|max:500']);
 
         if (! $termPromotion->isReviewable()) {
@@ -150,6 +165,8 @@ class TermPromotionController extends Controller
 
     public function bulkApprove(Request $request)
     {
+        $this->policy->authorizeTermPromotions($request->user());
+
         $data = $request->validate([
             'promotion_ids' => 'required|array|min:1',
             'promotion_ids.*' => 'integer|exists:term_promotions,id',
@@ -160,7 +177,7 @@ class TermPromotionController extends Controller
             ->whereIn('id', $data['promotion_ids'])
             ->get()
             ->each(function (TermPromotion $tp) use (&$approved) {
-            if ($tp->isReviewable() && $tp->canPromote() && $tp->studentIsStillInCurrentTerm()) {
+            if ($tp->isReviewable() && $tp->canPromote() && $tp->studentIsStillInCurrentTerm() && $tp->targetTermIsValidProgression()) {
                 $tp->approve();
                 $approved++;
             }

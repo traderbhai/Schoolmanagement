@@ -158,6 +158,7 @@
                                         </form>
                                         <form method="POST" action="{{ route('admin.hostel.fees.waive', $demand) }}" class="d-inline">
                                             @csrf
+                                            <input type="hidden" name="waiver_reason" value="Approved hostel fee waiver from fee review queue.">
                                             <button class="btn btn-sm btn-outline-secondary">Waive</button>
                                         </form>
                                     @else

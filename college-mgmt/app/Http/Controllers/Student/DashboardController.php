@@ -48,7 +48,7 @@ class DashboardController extends Controller
         $sgpa = null;
         if ($currentSemester) {
             $results = ExamResult::with('exam')
-                ->whereHas('exam', fn($q) => $q->where('semester_id', $currentSemester->id))
+                ->whereHas('exam', fn($q) => $q->where('semester_id', $currentSemester->id)->whereNotNull('published_at'))
                 ->where('student_id', $student->id)
                 ->where('is_absent', false)
                 ->get();
@@ -65,6 +65,7 @@ class DashboardController extends Controller
             $allResults = ExamResult::with('exam')
                 ->where('student_id', $student->id)
                 ->where('is_absent', false)
+                ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
                 ->get()
                 ->filter(fn($r) => $r->exam && $r->exam->total_marks > 0);
             if ($allResults->count() > 0) {

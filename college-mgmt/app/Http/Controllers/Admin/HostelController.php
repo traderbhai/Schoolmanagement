@@ -144,7 +144,7 @@ class HostelController extends Controller
         $allocations = $query->latest()->paginate(20)->withQueryString();
 
         $blocks   = HostelBlock::where('is_active', true)->with('rooms')->get();
-        $students = Student::with('user')->get();
+        $students = Student::with('user')->where('status', 'active')->get();
 
         return view('admin.hostel.allocations', compact('allocations', 'blocks', 'students'));
     }
@@ -157,6 +157,11 @@ class HostelController extends Controller
             'bed_number'     => 'required|integer|min:1',
             'allocated_from' => 'required|date',
         ]);
+
+        $student = Student::findOrFail($r->student_id);
+        if ($student->status !== 'active') {
+            return back()->withErrors(['student_id' => 'Inactive or archived students cannot receive active hostel allocations.']);
+        }
 
         // Student not already in hostel
         if (HostelAllocation::where('student_id', $r->student_id)->where('status', 'active')->exists()) {
@@ -249,6 +254,10 @@ class HostelController extends Controller
     {
         if ($allocation->status !== 'active') {
             return back()->with('error', 'Only active allocations can be transferred.');
+        }
+
+        if ($allocation->student?->status !== 'active') {
+            return back()->with('error', 'Inactive or archived students cannot hold active hostel allocations. Vacate the existing allocation and use student reactivation if needed.');
         }
 
         $data = $r->validate([
@@ -367,10 +376,15 @@ class HostelController extends Controller
         $created = 0;
         $skipped = 0;
 
-        HostelAllocation::with('room')
+        HostelAllocation::with(['room', 'student'])
             ->where('status', 'active')
             ->chunkById(100, function ($allocations) use ($data, &$created, &$skipped) {
                 foreach ($allocations as $allocation) {
+                    if ($allocation->student?->status !== 'active') {
+                        $skipped++;
+                        continue;
+                    }
+
                     $amount = (float) ($allocation->room?->monthly_fee ?? 0);
                     if ($amount <= 0) {
                         $skipped++;
@@ -410,20 +424,32 @@ class HostelController extends Controller
         $demand->update([
             'status' => 'paid',
             'paid_at' => Carbon::now(),
+            'paid_by' => auth()->id(),
+            'waived_at' => null,
+            'waived_by' => null,
+            'waiver_reason' => null,
         ]);
 
         return back()->with('success', 'Hostel fee demand marked as paid.');
     }
 
-    public function feeWaive(HostelFeeDemand $demand)
+    public function feeWaive(Request $r, HostelFeeDemand $demand)
     {
         if ($demand->status !== 'pending') {
             return back()->with('error', 'Only pending hostel fee demands can be waived.');
         }
 
+        $data = $r->validate([
+            'waiver_reason' => 'required|string|min:10|max:1000',
+        ]);
+
         $demand->update([
             'status' => 'waived',
             'paid_at' => null,
+            'paid_by' => null,
+            'waived_at' => now(),
+            'waived_by' => auth()->id(),
+            'waiver_reason' => $data['waiver_reason'],
         ]);
 
         return back()->with('success', 'Hostel fee demand waived.');

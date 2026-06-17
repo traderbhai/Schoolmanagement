@@ -45,6 +45,42 @@ class AcademicAccessPolicyService
         return $this->hierarchy->canConfigure($user);
     }
 
+    public function canManageAcademicPlanning(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics', 'program_chair', 'hod']);
+    }
+
+    public function canReviewAcademicGovernance(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics']);
+    }
+
+    public function canManageCurriculum(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics', 'program_chair', 'hod']);
+    }
+
+    public function canManageObe(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics', 'program_chair', 'hod', 'iqac_head', 'iqac_manager']);
+    }
+
+    public function canManageScholarships(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics', 'accounts_officer']);
+    }
+
+    public function canManageTermPromotions(User $user): bool
+    {
+        return $this->canConfigureGovernance($user)
+            || $user->hasAnyRole(['admin', 'director', 'dean_academics', 'program_chair', 'hod']);
+    }
+
     public function canManageScope(User $user, string $scopeType, int|string|null $scopeId = null, ?string $scopeCode = null): bool
     {
         return $this->hierarchy->canSeeAll($user)
@@ -60,6 +96,36 @@ class AcademicAccessPolicyService
     public function authorizeGovernance(User $user): void
     {
         abort_unless($this->canConfigureGovernance($user), 403);
+    }
+
+    public function authorizeAcademicPlanning(User $user): void
+    {
+        abort_unless($this->canManageAcademicPlanning($user), 403);
+    }
+
+    public function authorizeAcademicGovernanceReview(User $user): void
+    {
+        abort_unless($this->canReviewAcademicGovernance($user), 403);
+    }
+
+    public function authorizeCurriculum(User $user): void
+    {
+        abort_unless($this->canManageCurriculum($user), 403);
+    }
+
+    public function authorizeObe(User $user): void
+    {
+        abort_unless($this->canManageObe($user), 403);
+    }
+
+    public function authorizeScholarships(User $user): void
+    {
+        abort_unless($this->canManageScholarships($user), 403);
+    }
+
+    public function authorizeTermPromotions(User $user): void
+    {
+        abort_unless($this->canManageTermPromotions($user), 403);
     }
 
     public function authorizeRead(User $user): void

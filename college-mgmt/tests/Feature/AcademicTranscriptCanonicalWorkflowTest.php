@@ -73,6 +73,7 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             'subject_id' => $enrolledSubject->id,
             'name' => 'Transcript Enrolled Exam',
             'total_marks' => 100,
+            'published_at' => now(),
         ]);
         Exam::factory()->create([
             'program_id' => $program->id,
@@ -81,6 +82,7 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             'subject_id' => $unenrolledSubject->id,
             'name' => 'Transcript Unenrolled Exam',
             'total_marks' => 100,
+            'published_at' => now(),
         ]);
         ExamResult::factory()->create([
             'exam_id' => $enrolledExam->id,
@@ -104,5 +106,38 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             ->assertSee('4')
             ->assertDontSee('Transcript Unenrolled Subject')
             ->assertDontSee('5</td>', false);
+    }
+
+    public function test_academic_transcript_excludes_unpublished_draft_exam_results(): void
+    {
+        $fixture = $this->fixture();
+        $student = $fixture['student'];
+        $subject = StudentSubjectEnrollment::where('student_id', $student->id)->first()->subject;
+        $term = $student->currentTerm;
+        $semester = Semester::where('number', $term->term_number)->first();
+
+        $draftExam = Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'term_id' => $term->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $subject->id,
+            'name' => 'Draft Transcript Exam',
+            'total_marks' => 100,
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $student->id,
+            'marks_obtained' => 99,
+            'is_absent' => false,
+        ]);
+
+        $this->actingAs($fixture['dean'])
+            ->get(route('academic.transcripts.show', $student))
+            ->assertOk()
+            ->assertSee('Transcript Enrolled Subject')
+            ->assertSee('88')
+            ->assertDontSee('Draft Transcript Exam')
+            ->assertDontSee('99.00/100', false);
     }
 }

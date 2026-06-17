@@ -11,6 +11,7 @@ class AcademicYear extends Model
 
     public function semesters() { return $this->hasMany(Semester::class); }
     public function feeStructures() { return $this->hasMany(FeeStructure::class); }
+    public function batches() { return $this->hasMany(Batch::class); }
 
     public static function current() { return static::where('is_current', true)->first(); }
 }

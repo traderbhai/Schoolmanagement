@@ -160,6 +160,47 @@ class HostelWorkflowGuidanceTest extends TestCase
         $this->assertSame(0, HostelAllocation::where('student_id', $student->id)->count());
     }
 
+    public function test_admin_cannot_allocate_or_transfer_inactive_student_hostel_occupancy(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $inactiveStudent = $this->student('Inactive Hostel Allocation Student');
+        $inactiveStudent->update(['status' => 'inactive']);
+        $room = $this->room(['room_number' => '151']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.store'), [
+                'student_id' => $inactiveStudent->id,
+                'hostel_room_id' => $room->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('student_id');
+
+        $this->assertSame(0, HostelAllocation::where('student_id', $inactiveStudent->id)->count());
+
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $inactiveStudent->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subMonth()->toDateString(),
+            'status' => 'active',
+            'allocated_by' => $admin->id,
+        ]);
+        $targetRoom = $this->room(['room_number' => '152']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.allocations.transfer', $allocation), [
+                'hostel_room_id' => $targetRoom->id,
+                'bed_number' => 1,
+                'allocated_from' => now()->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Inactive or archived students cannot hold active hostel allocations. Vacate the existing allocation and use student reactivation if needed.');
+
+        $this->assertSame('active', $allocation->fresh()->status);
+        $this->assertSame(1, HostelAllocation::where('student_id', $inactiveStudent->id)->count());
+    }
+
     public function test_admin_cannot_reduce_room_capacity_below_active_occupants_or_mark_occupied_room_unusable(): void
     {
         $admin = $this->userWithRole('admin');
@@ -367,6 +408,52 @@ class HostelWorkflowGuidanceTest extends TestCase
         $this->assertSame(1, OutpassRequest::where('student_id', $student->id)->count());
     }
 
+    public function test_inactive_student_can_view_outpass_history_but_cannot_create_new_outpass(): void
+    {
+        $student = $this->student('Archived Outpass Student');
+        $student->update(['status' => 'inactive']);
+        $room = $this->room();
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+        OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Historical family visit',
+            'out_datetime' => now()->subWeek(),
+            'expected_return' => now()->subWeek()->addHours(4),
+            'status' => 'returned',
+            'actual_return' => now()->subWeek()->addHours(3),
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.hostel.outpass'))
+            ->assertOk()
+            ->assertSee('New hostel outpass requests are locked')
+            ->assertSee('Active students only')
+            ->assertSee('Returned')
+            ->assertDontSee('Submit Request');
+
+        $this->actingAs($student->user)
+            ->post(route('student.hostel.outpass.store'), [
+                'reason' => 'Inactive outpass should not be accepted.',
+                'out_datetime' => now()->addDay()->format('Y-m-d\TH:i'),
+                'expected_return' => now()->addDay()->addHours(2)->format('Y-m-d\TH:i'),
+            ])
+            ->assertSessionHasErrors('error');
+
+        $this->assertSame(1, OutpassRequest::where('student_id', $student->id)->count());
+        $this->assertDatabaseMissing('outpass_requests', [
+            'student_id' => $student->id,
+            'reason' => 'Inactive outpass should not be accepted.',
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_outpass_state_transitions_are_guarded(): void
     {
         Carbon::setTestNow('2026-06-16 10:00:00');
@@ -560,6 +647,54 @@ class HostelWorkflowGuidanceTest extends TestCase
             ->assertSessionHasErrors('error');
 
         $this->assertSame(0, HostelComplaint::count());
+    }
+
+    public function test_inactive_student_can_view_complaint_history_but_cannot_create_new_complaint(): void
+    {
+        $student = $this->student('Archived Complaint Student');
+        $student->update(['status' => 'inactive']);
+        $room = $this->room();
+        HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+        HostelComplaint::create([
+            'student_id' => $student->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'Historical hostel complaint',
+            'description' => 'This complaint existed before the student profile was archived.',
+            'category' => 'maintenance',
+            'priority' => 'medium',
+            'status' => 'closed',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.hostel.complaints.index'))
+            ->assertOk()
+            ->assertSee('New hostel complaints are locked')
+            ->assertSee('Active students only')
+            ->assertSee('Historical hostel complaint')
+            ->assertDontSee('Submit Complaint');
+
+        $this->actingAs($student->user)
+            ->post(route('student.hostel.complaints.store'), [
+                'title' => 'Inactive complaint',
+                'description' => 'Inactive student should not create a new hostel complaint now.',
+                'category' => 'maintenance',
+                'priority' => 'medium',
+            ])
+            ->assertSessionHasErrors('error');
+
+        $this->assertSame(1, HostelComplaint::where('student_id', $student->id)->count());
+        $this->assertDatabaseMissing('hostel_complaints', [
+            'student_id' => $student->id,
+            'title' => 'Inactive complaint',
+            'status' => 'open',
+        ]);
     }
 
     public function test_admin_can_see_student_submitted_hostel_complaint(): void

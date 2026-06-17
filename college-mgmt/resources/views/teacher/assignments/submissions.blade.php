@@ -61,6 +61,11 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
+    @if(!$canGradeSubmissions)
+        <div class="alert alert-warning">
+            Grading is locked because this teacher profile is not active.
+        </div>
+    @endif
 
     {{-- Submissions table --}}
     <div class="card shadow-sm mb-4">
@@ -115,26 +120,32 @@
                                             <span class="badge bg-info text-dark">Submitted</span>
                                         @endif
                                     </td>
-                                    <td>
-                                        <form method="POST" action="{{ route('teacher.assignments.grade', $submission) }}">
-                                            @csrf
-                                            <input type="number" name="marks_obtained" value="{{ $submission->marks_obtained }}"
-                                                   class="form-control form-control-sm"
-                                                   step="0.01"
-                                                   min="0" max="{{ $assignment->max_marks }}"
-                                                   placeholder="/ {{ $assignment->max_marks }}">
-                                    </td>
-                                    <td>
-                                            <input type="text" name="feedback" value="{{ $submission->feedback }}"
-                                                   class="form-control form-control-sm"
-                                                   placeholder="Optional feedback">
-                                    </td>
-                                    <td class="text-center">
-                                            <button type="submit" class="btn btn-sm btn-success">
-                                                <i class="bi bi-check-lg"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    @if($canGradeSubmissions)
+                                        <td>
+                                            <form method="POST" action="{{ route('teacher.assignments.grade', $submission) }}">
+                                                @csrf
+                                                <input type="number" name="marks_obtained" value="{{ $submission->marks_obtained }}"
+                                                       class="form-control form-control-sm"
+                                                       step="0.01"
+                                                       min="0" max="{{ $assignment->max_marks }}"
+                                                       placeholder="/ {{ $assignment->max_marks }}">
+                                        </td>
+                                        <td>
+                                                <input type="text" name="feedback" value="{{ $submission->feedback }}"
+                                                       class="form-control form-control-sm"
+                                                       placeholder="Optional feedback">
+                                        </td>
+                                        <td class="text-center">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    @else
+                                        <td>{{ $submission->marks_obtained ?? '-' }}</td>
+                                        <td class="small text-muted">{{ $submission->feedback ?: '-' }}</td>
+                                        <td class="text-center"><span class="badge bg-secondary">Locked</span></td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>

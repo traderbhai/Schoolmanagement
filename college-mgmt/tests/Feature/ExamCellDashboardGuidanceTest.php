@@ -6,6 +6,7 @@ use App\Models\Exam;
 use App\Models\ExamAnomalyLog;
 use App\Models\ExamResult;
 use App\Models\MarksAppeal;
+use App\Models\Notification;
 use App\Models\Program;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
@@ -500,6 +501,16 @@ class ExamCellDashboardGuidanceTest extends TestCase
         $exam->refresh();
         $this->assertNotNull($exam->published_at);
         $this->assertSame($user->id, $exam->published_by);
+        $this->assertSame(2, Notification::where('type', 'result_published')->count());
+        foreach ([$first, $second] as $student) {
+            $this->assertDatabaseHas('notifications', [
+                'user_id' => $student->user_id,
+                'type' => 'result_published',
+                'title' => 'Exam result published',
+                'action_url' => route('student.results', ['semester_id' => $exam->semester_id]),
+                'is_read' => false,
+            ]);
+        }
         $this->assertDatabaseHas('exam_results', [
             'exam_id' => $exam->id,
             'student_id' => $first->id,
@@ -508,9 +519,80 @@ class ExamCellDashboardGuidanceTest extends TestCase
 
         $this->actingAs($user)
             ->from(route('exam-cell.grade-sheet', $exam))
+            ->post(route('exam-cell.save-marks', $exam), [
+                'marks' => [$first->id => 91],
+            ])
+            ->assertRedirect(route('exam-cell.grade-sheet', $exam))
+            ->assertSessionHas('error', 'Published results are locked. Reopen through an approved correction workflow before editing marks.');
+
+        $this->assertDatabaseHas('exam_results', [
+            'exam_id' => $exam->id,
+            'student_id' => $first->id,
+            'marks_obtained' => 76,
+            'remarks' => 'Faculty moderation note.',
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('exam-cell.grade-sheet', $exam))
             ->post(route('exam-cell.publish', $exam))
             ->assertRedirect(route('exam-cell.grade-sheet', $exam))
             ->assertSessionHas('error', 'Results are already published for this exam.');
+
+        $this->assertSame(2, Notification::where('type', 'result_published')->count());
+    }
+
+    public function test_exam_cell_cannot_edit_or_delete_published_exam_schedule(): void
+    {
+        $user = $this->examCellUser();
+        $program = Program::factory()->create(['is_active' => true]);
+        $term = Term::factory()->create(['program_id' => $program->id]);
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Published Exam Subject']);
+        $exam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'name' => 'Published Exam Schedule',
+            'type' => 'internal',
+            'total_marks' => 80,
+            'passing_marks' => 32,
+            'published_at' => now(),
+            'published_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('exam-cell.exams'))
+            ->assertOk()
+            ->assertSee('Published Exam Schedule')
+            ->assertSee('Published exam locked');
+
+        $this->actingAs($user)
+            ->from(route('exam-cell.exams.edit', $exam))
+            ->put(route('exam-cell.exams.update', $exam), [
+                'name' => 'Changed Exam Schedule',
+                'type' => 'internal',
+                'program_id' => $program->id,
+                'subject_id' => $subject->id,
+                'term_id' => $term->id,
+                'exam_date' => now()->addWeek()->toDateString(),
+                'total_marks' => 90,
+                'passing_marks' => 35,
+            ])
+            ->assertRedirect(route('exam-cell.exams'))
+            ->assertSessionHas('error', 'Published exams cannot be edited because official result history is locked.');
+
+        $this->assertDatabaseHas('exams', [
+            'id' => $exam->id,
+            'name' => 'Published Exam Schedule',
+            'total_marks' => 80,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('exam-cell.exams'))
+            ->delete(route('exam-cell.exams.destroy', $exam))
+            ->assertRedirect(route('exam-cell.exams'))
+            ->assertSessionHas('error', 'Published exams cannot be deleted because official result history is locked.');
+
+        $this->assertDatabaseHas('exams', ['id' => $exam->id]);
     }
 
     public function test_exam_cell_hall_ticket_download_requires_subject_enrollment(): void

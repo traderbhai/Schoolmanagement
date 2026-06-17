@@ -8,6 +8,7 @@
     <h4 class="mb-3"><i class="bi bi-megaphone me-2 text-primary"></i>Subject Announcements</h4>
 
     {{-- Post Announcement --}}
+    @if($canManageAnnouncements)
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-semibold bg-white">
             <i class="bi bi-pencil-square me-1 text-primary"></i>Post New Announcement
@@ -72,10 +73,21 @@
             </form>
         </div>
     </div>
+    @else
+        <div class="alert alert-warning mb-4">
+            Posting and archiving announcements is locked because this teacher profile is not active.
+        </div>
+    @endif
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mb-3">
             {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-3">
+            {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
@@ -122,15 +134,19 @@
                                         {{ $ann->created_at->format('d M Y, H:i') }}
                                     </td>
                                     <td class="text-end">
-                                        <form method="POST"
-                                              action="{{ route('teacher.announcements.destroy', $ann) }}"
-                                              onsubmit="return confirm('Delete this announcement?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        @if($canManageAnnouncements)
+                                            <form method="POST"
+                                                  action="{{ route('teacher.announcements.destroy', $ann) }}"
+                                                  onsubmit="return confirm('Delete this announcement?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="badge bg-secondary">Locked</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

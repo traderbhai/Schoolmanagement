@@ -8,6 +8,9 @@
 @endsection
 
 @section('content')
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 <div class="card" style="max-width:700px">
     <div class="card-header d-flex align-items-center justify-content-between">
@@ -15,6 +18,11 @@
         <a href="{{ route('admin.exams.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
     </div>
     <div class="card-body">
+        @if($exam->published_at)
+            <div class="alert alert-info">
+                <strong>Published exam locked.</strong> Official exam details cannot be edited after result publication.
+            </div>
+        @endif
         <form method="POST" action="{{ route('admin.exams.update', $exam) }}">
             @csrf @method('PUT')
             <div class="row g-3 mb-3">
@@ -60,7 +68,7 @@
             </div>
 
             <div class="d-flex gap-2 mt-4 pt-2 border-top">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Update Exam</button>
+                <button type="submit" class="btn btn-primary" @disabled($exam->published_at)><i class="bi bi-check-circle me-1"></i>Update Exam</button>
                 <a href="{{ route('admin.exams.index') }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>

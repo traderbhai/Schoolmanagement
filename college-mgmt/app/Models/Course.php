@@ -12,4 +12,6 @@ class Course extends Model
     public function students() { return $this->hasMany(Student::class); }
     public function timetableEntries() { return $this->hasMany(TimetableEntry::class); }
     public function feeStructures() { return $this->hasMany(FeeStructure::class); }
+    public function admissions() { return $this->hasMany(Admission::class); }
+    public function exams() { return $this->hasMany(Exam::class); }
 }

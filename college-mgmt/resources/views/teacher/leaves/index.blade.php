@@ -10,8 +10,19 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div></div>
-    <a href="{{ route('teacher.leaves.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Apply for Leave</a>
+    @if($canApplyForLeave)
+        <a href="{{ route('teacher.leaves.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Apply for Leave</a>
+    @else
+        <span class="badge bg-secondary">Active teachers only</span>
+    @endif
 </div>
+
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
 
 <div class="card">
     <div class="card-body p-0">
@@ -22,6 +33,7 @@
                     <th>From</th>
                     <th>To</th>
                     <th>Days</th>
+                    <th>Reason</th>
                     <th>Status</th>
                     <th>Remarks</th>
                     <th>Applied</th>
@@ -35,6 +47,7 @@
                 <td>{{ $leave->from_date->format('d M Y') }}</td>
                 <td>{{ $leave->to_date->format('d M Y') }}</td>
                 <td>{{ $leave->days }}</td>
+                <td style="font-size:.83rem">{{ Str::limit($leave->reason, 60) }}</td>
                 <td>
                     @if($leave->status === 'pending')
                         <span class="badge badge-pending">Pending</span>
@@ -47,7 +60,7 @@
                 <td style="font-size:.83rem">{{ $leave->admin_remarks ? Str::limit($leave->admin_remarks, 50) : '–' }}</td>
                 <td style="font-size:.83rem">{{ $leave->created_at->format('d M Y') }}</td>
                 <td>
-                    @if($leave->status === 'pending')
+                    @if($canApplyForLeave && $leave->status === 'pending')
                     <button class="btn btn-sm btn-outline-danger"
                         data-confirm-delete="true"
                         data-action="{{ route('teacher.leaves.destroy', $leave) }}"
@@ -58,11 +71,13 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="8">
+            <tr><td colspan="9">
                 <div class="empty-state py-4">
                     <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
                     <div class="text-muted">No leave applications yet.</div>
-                    <a href="{{ route('teacher.leaves.create') }}" class="btn btn-sm btn-primary mt-2">Apply for Leave</a>
+                    @if($canApplyForLeave)
+                        <a href="{{ route('teacher.leaves.create') }}" class="btn btn-sm btn-primary mt-2">Apply for Leave</a>
+                    @endif
                 </div>
             </td></tr>
             @endforelse

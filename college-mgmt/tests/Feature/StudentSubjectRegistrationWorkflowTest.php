@@ -180,6 +180,75 @@ class StudentSubjectRegistrationWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_subjects_but_cannot_add_or_drop_subjects(): void
+    {
+        $ctx = $this->makeStudentContext();
+        $ctx['student']->update(['status' => 'inactive']);
+
+        $enrolledSubject = Subject::factory()->create([
+            'program_id' => $ctx['program']->id,
+            'term_number' => 2,
+            'name' => 'Locked Current Subject',
+        ]);
+        $availableSubject = Subject::factory()->create([
+            'program_id' => $ctx['program']->id,
+            'term_number' => 2,
+            'name' => 'Locked Available Elective',
+        ]);
+        $enrollment = StudentSubjectEnrollment::create([
+            'student_id' => $ctx['student']->id,
+            'subject_id' => $enrolledSubject->id,
+            'term_id' => $ctx['term']->id,
+            'enrollment_type' => 'elective',
+            'status' => 'active',
+        ]);
+        Enrollment::create([
+            'student_id' => $ctx['student']->id,
+            'subject_id' => $enrolledSubject->id,
+            'semester_id' => $ctx['semester']->id,
+            'term_id' => $ctx['term']->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($ctx['user'])
+            ->get(route('student.subjects.index'))
+            ->assertOk()
+            ->assertSee('Subject registration changes are locked')
+            ->assertSee('Locked Current Subject')
+            ->assertSee('Locked Available Elective')
+            ->assertSee('Active students only')
+            ->assertSee('Locked')
+            ->assertDontSee('> Drop<', false)
+            ->assertDontSee('> Add<', false);
+
+        $this->actingAs($ctx['user'])
+            ->post(route('student.subjects.store'), ['subject_id' => $availableSubject->id])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Subject registration is available only for active students. Contact the academic office for archived records.');
+
+        $this->assertDatabaseMissing('student_subject_enrollments', [
+            'student_id' => $ctx['student']->id,
+            'subject_id' => $availableSubject->id,
+            'term_id' => $ctx['term']->id,
+        ]);
+
+        $this->actingAs($ctx['user'])
+            ->delete(route('student.subjects.drop', $enrollment))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Subject registration changes are available only for active students. Contact the academic office for archived records.');
+
+        $this->assertDatabaseHas('student_subject_enrollments', [
+            'id' => $enrollment->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('enrollments', [
+            'student_id' => $ctx['student']->id,
+            'subject_id' => $enrolledSubject->id,
+            'term_id' => $ctx['term']->id,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_subject_drop_blocks_compulsory_completed_and_old_term_enrollments(): void
     {
         $ctx = $this->makeStudentContext();

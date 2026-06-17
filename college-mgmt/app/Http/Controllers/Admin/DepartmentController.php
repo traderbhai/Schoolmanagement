@@ -3,10 +3,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
+    public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
+
     public function index()
     {
         $departments = Department::withCount(['courses','teachers','students'])->paginate(15);
@@ -56,6 +59,12 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department)
     {
+        $dependencies = $this->integrity->dependencyLabels('department', $department->id);
+
+        if ($dependencies !== []) {
+            return back()->with('error', $this->integrity->message('department', $dependencies));
+        }
+
         $department->delete();
         return redirect()->route('admin.departments.index')->with('success', 'Department deleted.');
     }

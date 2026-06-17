@@ -8,6 +8,12 @@
 
 @section('content')
 
+@if(!$canMarkAttendance)
+    <div class="alert alert-warning">
+        Attendance marking is locked because this teacher profile is not active.
+    </div>
+@endif
+
 {{-- Date + Filter Card --}}
 <div class="card mb-4" style="box-shadow:var(--shadow-sm)">
     <div class="card-body py-3">
@@ -86,10 +92,10 @@
                     Attendance — <strong>{{ $students->count() }}</strong> students
                 </span>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-success" onclick="markAll('present')">
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="markAll('present')" @disabled(!$canMarkAttendance)>
                         <i class="bi bi-check-all me-1"></i>All Present
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAll('absent')">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAll('absent')" @disabled(!$canMarkAttendance)>
                         <i class="bi bi-x-circle me-1"></i>All Absent
                     </button>
                 </div>
@@ -116,7 +122,8 @@
                                    name="attendance[{{ $s->id }}]"
                                    id="mob_att_{{ $s->id }}_{{ $status }}"
                                    value="{{ $status }}"
-                                   @checked(($existing && $existing->status === $status) || (!$existing && $status === 'present'))>
+                                   @checked(($existing && $existing->status === $status) || (!$existing && $status === 'present'))
+                                   @disabled(!$canMarkAttendance)>
                             <label class="btn btn-outline-{{ $color }} btn-sm" for="mob_att_{{ $s->id }}_{{ $status }}">
                                 <i class="bi bi-{{ $icon }} me-1"></i>{{ ucfirst($status) }}
                             </label>
@@ -161,7 +168,8 @@
                                        name="attendance[{{ $s->id }}]"
                                        id="att_{{ $s->id }}_{{ $status }}"
                                        value="{{ $status }}"
-                                       @checked(($existing && $existing->status === $status) || (!$existing && $status === 'present'))>
+                                       @checked(($existing && $existing->status === $status) || (!$existing && $status === 'present'))
+                                       @disabled(!$canMarkAttendance)>
                                 <label class="btn btn-outline-{{ $color }} btn-sm" for="att_{{ $s->id }}_{{ $status }}">
                                     <i class="bi bi-{{ $icon }} me-1"></i>{{ ucfirst($status) }}
                                 </label>
@@ -174,7 +182,7 @@
                 </table>
             </div>
             <div class="card-footer d-flex gap-2 flex-wrap">
-                <button type="submit" class="btn btn-primary w-100 w-md-auto">
+                <button type="submit" class="btn btn-primary w-100 w-md-auto" @disabled(!$canMarkAttendance)>
                     <i class="bi bi-save me-2"></i>Save Attendance
                 </button>
                 <a href="{{ route('teacher.attendance.mark', ['date' => $date]) }}"
@@ -206,7 +214,7 @@
                     <div class="text-muted small mb-3"><i class="bi bi-building me-1"></i>Room: {{ $e->classroom->room_number ?? 'N/A' }}</div>
                     <a href="{{ route('teacher.attendance.mark', ['date' => $date, 'entry_id' => $e->id]) }}"
                        class="btn btn-primary btn-sm w-100">
-                        <i class="bi bi-check2-square me-1"></i>Mark Attendance
+                        <i class="bi bi-check2-square me-1"></i>{{ $canMarkAttendance ? 'Mark Attendance' : 'View Attendance' }}
                     </a>
                 </div>
             </div>

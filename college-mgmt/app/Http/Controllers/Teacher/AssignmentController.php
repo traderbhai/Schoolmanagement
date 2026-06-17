@@ -8,6 +8,16 @@ use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
+    private function activeTeacher()
+    {
+        return auth()->user()->teacher;
+    }
+
+    private function ensureActiveTeacher(): void
+    {
+        abort_unless($this->activeTeacher()?->status === 'active', 403, 'Only active teachers can manage assignments.');
+    }
+
     private function teacherSubjectIds(): array
     {
         $teacher = auth()->user()->teacher;
@@ -51,11 +61,18 @@ class AssignmentController extends Controller
             ->paginate(15);
 
         $subjects = Subject::whereIn('id', $this->teacherSubjectIds())->get();
-        return view('teacher.assignments.index', compact('assignments', 'subjects'));
+        $canManageAssignments = $this->activeTeacher()?->status === 'active';
+        return view('teacher.assignments.index', compact('assignments', 'subjects', 'canManageAssignments'));
     }
 
     public function create()
     {
+        if ($this->activeTeacher()?->status !== 'active') {
+            return redirect()
+                ->route('teacher.assignments.index')
+                ->with('error', 'Only active teachers can create assignments.');
+        }
+
         $subjects    = Subject::whereIn('id', $this->teacherSubjectIds())->get();
         $currentTerm = Term::latest('start_date')->first();
         return view('teacher.assignments.create', compact('subjects', 'currentTerm'));
@@ -74,6 +91,7 @@ class AssignmentController extends Controller
             'late_penalty_percent' => 'nullable|integer|min:0|max:100',
             'attachment'           => 'nullable|file|max:10240',
         ]);
+        $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
 
         $path = $request->hasFile('attachment')
@@ -110,12 +128,14 @@ class AssignmentController extends Controller
 
         $submittedIds = $submissions->pluck('student_id')->toArray();
         $notSubmitted = $enrolledStudents->whereNotIn('id', $submittedIds);
+        $canGradeSubmissions = $this->activeTeacher()?->status === 'active';
 
-        return view('teacher.assignments.submissions', compact('assignment', 'submissions', 'notSubmitted'));
+        return view('teacher.assignments.submissions', compact('assignment', 'submissions', 'notSubmitted', 'canGradeSubmissions'));
     }
 
     public function grade(Request $request, AssignmentSubmission $submission)
     {
+        $this->ensureActiveTeacher();
         abort_unless($submission->assignment && $submission->assignment->created_by === auth()->id(), 403);
         abort_unless($this->assignmentRosterQuery($submission->assignment)->whereKey($submission->student_id)->exists(), 403);
 

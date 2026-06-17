@@ -54,17 +54,25 @@ class UserRoleController extends Controller
             return back()->with('error', 'This role is already assigned to this user.');
         }
 
-        $userRole = UserRole::create([
-            'user_id' => $user->id,
-            'role_id' => $role->id,
-            'program_id' => $validated['program_id'] ?? null,
-            'assigned_by' => auth()->id(),
-            'active_until' => $validated['active_until'] ?? null,
-        ]);
+        $userRole = UserRole::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'role_id' => $role->id,
+                'program_id' => $validated['program_id'] ?? null,
+            ],
+            [
+                'assigned_by' => auth()->id(),
+                'active_until' => $validated['active_until'] ?? null,
+            ]
+        );
+
+        if (! $user->hasRole($role->name)) {
+            $user->assignRole($role->name);
+        }
 
         // Audit log
         AuditLog::logRoleAssignment(auth()->user(), $user, $role,
-            $validated['program_id'] ? Program::find($validated['program_id']) : null
+            ($validated['program_id'] ?? null) ? Program::find($validated['program_id']) : null
         );
 
         return redirect('admin/users/roles')->with('success', 'Role assigned successfully.');
@@ -75,9 +83,17 @@ class UserRoleController extends Controller
         $user = $userRole->user;
         $role = $userRole->role;
 
+        if ($role->name === 'admin' && $this->wouldRemoveProtectedAdminAccess($user)) {
+            return back()->with('error', 'Cannot revoke the final or current admin access. Assign another admin first.');
+        }
+
         AuditLog::logRoleRevoked(auth()->user(), $user, $role);
 
         $userRole->delete();
+
+        if (! $this->hasOtherActiveAssignmentForRole($user, $role->name)) {
+            $user->removeRole($role->name);
+        }
 
         return back()->with('success', 'Role revoked successfully.');
     }
@@ -85,14 +101,57 @@ class UserRoleController extends Controller
     public function expireAll(User $user)
     {
         $userRoles = UserRole::where('user_id', $user->id)
-            ->where('active_until', '>', today())
+            ->where(function ($query) {
+                $query->whereNull('active_until')
+                    ->orWhere('active_until', '>=', today());
+            })
             ->get();
 
         foreach ($userRoles as $ur) {
-            $ur->update(['active_until' => today()]);
+            if ($ur->role?->name === 'admin' && $this->wouldRemoveProtectedAdminAccess($user)) {
+                continue;
+            }
+
+            $ur->update(['active_until' => today()->subDay()]);
             AuditLog::logRoleRevoked(auth()->user(), $user, $ur->role);
+
+            if ($ur->role && ! $this->hasOtherActiveAssignmentForRole($user, $ur->role->name)) {
+                $user->removeRole($ur->role->name);
+            }
         }
 
         return back()->with('success', 'All active roles revoked for ' . $user->name);
+    }
+
+    private function hasOtherActiveAssignmentForRole(User $user, string $roleName): bool
+    {
+        $role = Role::where('name', $roleName)->first();
+
+        $hasUserRole = $role && UserRole::where('user_id', $user->id)
+            ->where('role_id', $role->id)
+            ->get()
+            ->contains(fn (UserRole $assignment) => $assignment->isActive());
+
+        if ($hasUserRole) {
+            return true;
+        }
+
+        return \App\Models\RoleProgramAssignment::where('user_id', $user->id)
+            ->where('role_name', $roleName)
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    private function wouldRemoveProtectedAdminAccess(User $user): bool
+    {
+        if (auth()->id() === $user->id) {
+            return true;
+        }
+
+        $otherAdminCount = User::role('admin')
+            ->whereKeyNot($user->id)
+            ->count();
+
+        return $otherAdminCount === 0;
     }
 }

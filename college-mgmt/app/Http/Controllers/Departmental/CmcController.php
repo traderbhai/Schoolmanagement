@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
 use App\Models\{PlacementDrive, Placement, Student, Program, Company, CareerEvent, CareerEventRegistration};
+use App\Services\PlacementLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,6 +12,8 @@ class CmcController extends Controller
 {
     private const ACTIVE_DRIVE_STATUSES = ['upcoming', 'ongoing'];
     private const OPEN_APPLICATION_STATUSES = ['applied', 'shortlisted', 'interview'];
+
+    public function __construct(private PlacementLifecycleService $lifecycle) {}
 
     public function dashboard()
     {
@@ -140,6 +143,10 @@ class CmcController extends Controller
             'status'          => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
 
+        if (($data['last_apply_date'] ?? null) && ($data['drive_date'] ?? null) && $data['last_apply_date'] > $data['drive_date']) {
+            return back()->withErrors(['last_apply_date' => 'Application deadline cannot be after the placement drive date.'])->withInput();
+        }
+
         PlacementDrive::create($data);
         return redirect()->route('cmc.drives')->with('success', 'Placement drive created.');
     }
@@ -168,12 +175,20 @@ class CmcController extends Controller
             'status'          => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
 
+        if ($message = $this->lifecycle->validateDriveUpdate($drive, $data)) {
+            return back()->withErrors(['placement_drive' => $message])->withInput();
+        }
+
         $drive->update($data);
         return redirect()->route('cmc.drives')->with('success', 'Drive updated.');
     }
 
     public function destroyDrive(PlacementDrive $drive)
     {
+        if ($message = $this->lifecycle->validateDriveDelete($drive)) {
+            return back()->with('error', $message);
+        }
+
         $drive->delete();
         return back()->with('success', 'Drive deleted.');
     }
@@ -195,7 +210,13 @@ class CmcController extends Controller
             'remarks'            => 'nullable|string|max:500',
         ]);
 
-        $placement->update($request->only(['application_status', 'offered_package', 'remarks']));
+        $data = $request->only(['application_status', 'offered_package', 'remarks']);
+
+        if ($message = $this->lifecycle->validateApplicationUpdate($placement, $data)) {
+            return back()->withErrors(['application_status' => $message])->withInput();
+        }
+
+        $placement->update($data);
         return back()->with('success', 'Application status updated.');
     }
 
@@ -267,6 +288,20 @@ class CmcController extends Controller
             'description'    => 'nullable|string|max:1000',
             'is_active'      => 'boolean',
         ]);
+
+        if ($company->hasOperationalHistory() && $data['name'] !== $company->name) {
+            return back()
+                ->withErrors(['name' => 'Company name cannot be changed after placement or internship history exists.'])
+                ->withInput();
+        }
+
+        $data['is_active'] = $request->boolean('is_active');
+        if ($company->is_active && ! $data['is_active'] && $company->hasActivePlacementDrives()) {
+            return back()
+                ->withErrors(['is_active' => 'Company cannot be deactivated while upcoming or ongoing placement drives exist.'])
+                ->withInput();
+        }
+
         $company->update($data);
         return redirect()->route('cmc.companies')->with('success', 'Company updated.');
     }
@@ -321,6 +356,15 @@ class CmcController extends Controller
         ]);
 
         $registeredCount = $event->registrations()->count();
+        if ($registeredCount > 0) {
+            $message = $this->registeredEventContractChangeMessage($event, $data);
+            if ($message) {
+                return back()
+                    ->withErrors(['career_event' => $message])
+                    ->withInput();
+            }
+        }
+
         if (($data['seats'] ?? null) !== null && (int) $data['seats'] < $registeredCount) {
             return back()
                 ->withErrors(['seats' => "Seats cannot be lower than the current registration count ({$registeredCount})."])
@@ -358,10 +402,37 @@ class CmcController extends Controller
             'attended' => 'required|boolean',
         ]);
 
+        if ($registration->attended && ! (bool) $data['attended']) {
+            return back()->with('error', 'Attended event records are locked. Use an audited correction workflow for attendance reversals.');
+        }
+
         $registration->update([
             'attended' => (bool) $data['attended'],
         ]);
 
         return back()->with('success', 'Event attendance updated.');
+    }
+
+    private function registeredEventContractChangeMessage(CareerEvent $event, array $data): ?string
+    {
+        $date = $event->event_date?->toDateString();
+        $deadline = $event->registration_deadline?->toDateString();
+
+        $newDate = $data['event_date'] ?? null;
+        $newDeadline = $data['registration_deadline'] ?? null;
+
+        if (($data['event_type'] ?? null) !== $event->event_type) {
+            return 'Event type cannot be changed after students have registered.';
+        }
+
+        if ($newDate !== $date) {
+            return 'Event date cannot be changed after students have registered.';
+        }
+
+        if (($newDeadline ?: null) !== $deadline) {
+            return 'Registration deadline cannot be changed after students have registered.';
+        }
+
+        return null;
     }
 }

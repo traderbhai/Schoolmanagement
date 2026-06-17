@@ -18,6 +18,10 @@ class GatewayPaymentController extends Controller
             abort(403);
         }
 
+        if ($payment->status !== 'pending') {
+            return back()->with('error', 'Only pending admission payments can be paid online.');
+        }
+
         $order = $gateway->createOrder($payment);
 
         return back()->with('success', 'Payment gateway order created: ' . $order['order_id']);

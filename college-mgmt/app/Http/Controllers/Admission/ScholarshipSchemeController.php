@@ -71,6 +71,23 @@ class ScholarshipSchemeController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
         $validated['requires_document'] = $request->boolean('requires_document');
 
+        if ($validated['available_seats'] !== null && $validated['available_seats'] < $scholarshipScheme->awardsCount()) {
+            return back()
+                ->withErrors(['available_seats' => 'Available seats cannot be reduced below existing awarded, approved, or disbursed scholarships.'])
+                ->withInput();
+        }
+
+        $highestAwardedAmount = max(
+            (float) $scholarshipScheme->applicantScholarships()->whereIn('status', ['awarded', 'disbursed'])->max('awarded_amount'),
+            (float) $scholarshipScheme->studentScholarshipApplications()->whereIn('status', ['approved', 'disbursed'])->max('disbursed_amount')
+        );
+
+        if ($highestAwardedAmount > 0 && (float) $validated['max_amount'] < $highestAwardedAmount) {
+            return back()
+                ->withErrors(['max_amount' => 'Maximum amount cannot be reduced below existing approved, awarded, or disbursed scholarship amounts.'])
+                ->withInput();
+        }
+
         $scholarshipScheme->update($validated);
 
         return redirect()->route('admission.scholarship-schemes.index')

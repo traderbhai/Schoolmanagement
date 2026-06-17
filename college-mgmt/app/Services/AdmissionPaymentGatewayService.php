@@ -6,11 +6,18 @@ use App\Models\AdmissionPayment;
 use App\Models\AdmissionPaymentGatewayEvent;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AdmissionPaymentGatewayService
 {
     public function createOrder(AdmissionPayment $payment, string $provider = 'razorpay_mock'): array
     {
+        if ($payment->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'payment' => 'Only pending admission payments can be paid online.',
+            ]);
+        }
+
         if (!$payment->gateway_order_id) {
             $payment->update([
                 'provider' => $provider,
@@ -56,7 +63,7 @@ class AdmissionPaymentGatewayService
 
         $payment = $this->resolvePaymentForWebhook($provider, $orderId, $paymentId);
 
-        if ($payment) {
+        if ($payment && $payment->status === 'pending') {
             $gatewayStatus = $this->gatewayStatus($payload, $eventType);
             $updates = [
                 'provider' => $provider,

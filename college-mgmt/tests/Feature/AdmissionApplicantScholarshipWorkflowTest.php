@@ -9,6 +9,8 @@ use App\Models\Batch;
 use App\Models\Program;
 use App\Models\RequiredDocument;
 use App\Models\ScholarshipScheme;
+use App\Models\Student;
+use App\Models\StudentScholarshipApplication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -192,5 +194,148 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
             ->assertSessionHasErrors('scheme_id');
 
         $this->assertSame(1, ApplicantScholarship::count());
+    }
+
+    public function test_applicant_scholarship_award_must_have_positive_amount(): void
+    {
+        $officer = $this->admissionOfficer();
+        $applicant = $this->applicant();
+        $scheme = $this->scheme();
+
+        $this->actingAs($officer)
+            ->post(route('admission.applicants.scholarships.store', $applicant), [
+                'scheme_id' => $scheme->id,
+                'awarded_amount' => 0,
+            ])
+            ->assertSessionHasErrors('awarded_amount');
+
+        $this->assertSame(0, ApplicantScholarship::count());
+    }
+
+    public function test_applicant_scholarship_disbursement_rechecks_award_integrity_and_preserves_notes(): void
+    {
+        $officer = $this->admissionOfficer();
+        $applicant = $this->applicant();
+        $scheme = $this->scheme(['max_amount' => 5000]);
+        $award = ApplicantScholarship::create([
+            'applicant_id' => $applicant->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 8000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+            'notes' => 'Award approved by committee.',
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $award), [
+                'disbursement_ref' => 'UTR-BLOCKED',
+                'notes' => 'Trying to pay over-cap award.',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('awarded', $award->fresh()->status);
+        $this->assertNull($award->fresh()->disbursement_ref);
+
+        $award->update(['awarded_amount' => 4000]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $award), [
+                'disbursement_ref' => 'UTR-APPLICANT-SCH-1',
+                'notes' => 'Paid through bank transfer.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $award->refresh();
+        $this->assertSame('disbursed', $award->status);
+        $this->assertSame('UTR-APPLICANT-SCH-1', $award->disbursement_ref);
+        $this->assertStringContainsString('Award approved by committee.', $award->notes);
+        $this->assertStringContainsString('Paid through bank transfer.', $award->notes);
+    }
+
+    public function test_applicant_scholarship_disbursement_reference_must_be_unique(): void
+    {
+        $officer = $this->admissionOfficer();
+        $scheme = $this->scheme();
+        $disbursed = ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 1000,
+            'status' => 'disbursed',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+            'disbursed_at' => now(),
+            'disbursement_ref' => 'UTR-DUPLICATE',
+        ]);
+        $award = ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $this->scheme()->id,
+            'awarded_amount' => 1000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $award), [
+                'disbursement_ref' => $disbursed->disbursement_ref,
+            ])
+            ->assertSessionHasErrors('disbursement_ref');
+
+        $this->assertSame('awarded', $award->fresh()->status);
+        $this->assertNull($award->fresh()->disbursement_ref);
+    }
+
+    public function test_scholarship_scheme_cannot_reduce_capacity_or_maximum_below_existing_awards(): void
+    {
+        $officer = $this->admissionOfficer();
+        $scheme = $this->scheme([
+            'max_amount' => 25000,
+            'available_seats' => 2,
+        ]);
+        ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 12000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+        StudentScholarshipApplication::create([
+            'student_id' => Student::factory()->create()->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Approved student scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 10000,
+        ]);
+
+        $this->actingAs($officer)
+            ->put(route('admission.scholarship-schemes.update', $scheme), [
+                'name' => $scheme->name,
+                'scheme_code' => $scheme->scheme_code,
+                'type' => $scheme->type,
+                'criteria' => $scheme->criteria,
+                'max_amount' => 25000,
+                'available_seats' => 1,
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors('available_seats');
+
+        $this->actingAs($officer)
+            ->put(route('admission.scholarship-schemes.update', $scheme), [
+                'name' => $scheme->name,
+                'scheme_code' => $scheme->scheme_code,
+                'type' => $scheme->type,
+                'criteria' => $scheme->criteria,
+                'max_amount' => 11000,
+                'available_seats' => 2,
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors('max_amount');
+
+        $scheme->refresh();
+        $this->assertSame(2, $scheme->available_seats);
+        $this->assertSame('25000.00', $scheme->max_amount);
     }
 }

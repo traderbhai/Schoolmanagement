@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ParentProfile, Student, User};
+use App\Models\{ActivityLog, ParentProfile, Student, User};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -117,7 +117,16 @@ class ParentController extends Controller
 
     public function destroy(ParentProfile $parent)
     {
-        $parent->user->delete();
-        return redirect()->route('admin.parents.index')->with('success', 'Parent deleted.');
+        $name = $parent->user?->name ?? 'Parent';
+
+        if ($parent->user?->hasRole('parent')) {
+            $parent->user->removeRole('parent');
+        }
+
+        $parent->delete();
+
+        ActivityLog::record('archived', "Parent archived instead of deleted to preserve student linkage history: {$name}", $parent);
+
+        return redirect()->route('admin.parents.index')->with('success', 'Parent archived. Student linkage and portal history was preserved.');
     }
 }

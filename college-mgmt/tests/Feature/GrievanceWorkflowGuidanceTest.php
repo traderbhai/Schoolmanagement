@@ -63,6 +63,41 @@ class GrievanceWorkflowGuidanceTest extends TestCase
             ->assertSee('Escalated');
     }
 
+    public function test_inactive_student_can_view_grievances_but_cannot_submit_new_one(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $this->grievance($student, [
+            'title' => 'Historical grievance',
+            'status' => 'under_review',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.grievances.index'))
+            ->assertOk()
+            ->assertSee('Historical grievance');
+
+        $this->actingAs($student->user)
+            ->get(route('student.grievances.create'))
+            ->assertRedirect(route('student.grievances.index'))
+            ->assertSessionHas('error', 'New grievances can be submitted only by active students.');
+
+        $this->actingAs($student->user)
+            ->post(route('student.grievances.store'), [
+                'category' => 'academic',
+                'title' => 'Inactive direct grievance',
+                'description' => 'This should not open a new operational grievance.',
+                'priority' => 'normal',
+            ])
+            ->assertRedirect(route('student.grievances.index'))
+            ->assertSessionHas('error', 'New grievances can be submitted only by active students.');
+
+        $this->assertDatabaseMissing('student_grievances', [
+            'student_id' => $student->id,
+            'title' => 'Inactive direct grievance',
+        ]);
+    }
+
     public function test_admin_grievance_queue_uses_real_fields_and_priority_guidance(): void
     {
         $student = $this->student();

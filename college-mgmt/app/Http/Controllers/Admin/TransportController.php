@@ -137,6 +137,11 @@ class TransportController extends Controller
             return back()->withErrors(['student_id' => 'Student already has an active transport assignment.']);
         }
 
+        $student = Student::findOrFail($data['student_id']);
+        if ($student->status !== 'active') {
+            return back()->withErrors(['student_id' => 'Only active students can receive transport assignments.']);
+        }
+
         $route = TransportRoute::findOrFail($data['transport_route_id']);
         if (!$route->is_active) {
             return back()->withErrors(['transport_route_id' => 'Transport route is inactive.']);
@@ -184,7 +189,7 @@ class TransportController extends Controller
     public function assignmentEnd(Request $request, TransportAssignment $assignment)
     {
         $data = $request->validate([
-            'end_date' => 'required|date',
+            'end_date' => 'required|date|before_or_equal:today',
         ]);
 
         if ($assignment->status !== 'active') {

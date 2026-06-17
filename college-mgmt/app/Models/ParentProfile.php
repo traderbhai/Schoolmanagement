@@ -2,9 +2,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ParentProfile extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'parents';
     protected $fillable = ['user_id', 'relation', 'phone', 'occupation', 'annual_income', 'address'];
 

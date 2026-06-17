@@ -13,12 +13,18 @@ class ResumeController extends Controller {
         $student->load(['program','batch','user']);
         $resume = StudentResume::firstOrNew(['student_id'=>$student->id]);
         $cgpa = app(GradeService::class)->calculateCGPA($student->id);
-        return view('student.resume.index', compact('student','resume','cgpa'));
+        $canEditResume = $student->status === 'active';
+
+        return view('student.resume.index', compact('student','resume','cgpa', 'canEditResume'));
     }
 
     public function save(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return back()->with('error', 'Resume updates are available only for active students. Contact the placement office for archived records.');
+        }
 
         $request->validate([
             'headline'    => 'nullable|string|max:150',

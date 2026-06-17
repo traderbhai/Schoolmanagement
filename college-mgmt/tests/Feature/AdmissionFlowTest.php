@@ -50,6 +50,66 @@ class AdmissionFlowTest extends TestCase
         return [$appUser, $applicant, $program, $batch];
     }
 
+    private function makeEnrollmentReadyApplicant(?Program $program = null, ?Batch $batch = null): array
+    {
+        foreach (['applicant', 'admission_officer', 'student'] as $role) {
+            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+        }
+
+        $program = $program ?? Program::factory()->create(['is_active' => true]);
+        $batch = $batch ?? Batch::factory()->create(['program_id' => $program->id]);
+        Course::firstOrCreate(
+            ['code' => $program->code],
+            [
+                'department_id' => $program->department_id,
+                'name' => $program->name . ' Course',
+                'description' => 'Course mapped for admission enrollment tests.',
+                'duration_years' => $program->duration_years,
+                'total_semesters' => $program->total_terms,
+                'is_active' => true,
+            ]
+        );
+
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'name' => 'Enrollment Readiness Fee',
+            'amount' => 25000,
+            'installment_number' => 1,
+            'due_date' => now()->addDays(7),
+            'is_active' => true,
+        ]);
+
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+            'personal_data' => [
+                'full_name' => $applicantUser->name,
+                'email' => $applicantUser->email,
+            ],
+        ]);
+
+        AdmissionPayment::create([
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 25000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'READY-' . $applicant->id,
+            'status' => 'verified',
+            'submitted_by' => $applicantUser->id,
+            'verified_by' => null,
+            'verified_at' => now(),
+        ]);
+
+        return [$applicantUser, $applicant, $program, $batch];
+    }
+
     public function test_applicant_can_view_dashboard(): void
     {
         [$appUser] = $this->makeApplicant();
@@ -271,5 +331,94 @@ class AdmissionFlowTest extends TestCase
         ]);
 
         Mail::assertQueued(EnrollmentConfirmed::class);
+    }
+
+    public function test_completed_enrollment_cannot_be_created_twice(): void
+    {
+        Mail::fake();
+
+        [, $applicant] = $this->makeEnrollmentReadyApplicant();
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'ENR-LOCK-001',
+                'notes' => 'First enrollment.',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'ENR-LOCK-002',
+                'notes' => 'Duplicate enrollment attempt.',
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseCount('enrollment_confirmations', 1);
+        $this->assertDatabaseCount('admission_handoff_records', 1);
+        $this->assertDatabaseMissing('students', [
+            'roll_number' => 'ENR-LOCK-002',
+        ]);
+    }
+
+    public function test_enrolled_applicant_status_cannot_be_changed_after_completion(): void
+    {
+        Mail::fake();
+
+        [, $applicant] = $this->makeEnrollmentReadyApplicant();
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'ENR-FINAL-001',
+                'notes' => 'Final enrollment.',
+            ])
+            ->assertRedirect();
+
+        Role::firstOrCreate(['name' => 'admission_head', 'guard_name' => 'web']);
+        $head = User::factory()->create();
+        $head->assignRole('admission_head');
+
+        $this->actingAs($head)
+            ->post(route('admission.applicants.status', $applicant), [
+                'status' => 'withdrawn',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Completed enrollments are locked. Use the academic student lifecycle or audited cancellation workflow instead of changing applicant status.');
+
+        $this->assertSame('selected', $applicant->fresh()->status);
+        $this->assertDatabaseHas('enrollment_confirmations', [
+            'applicant_id' => $applicant->id,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_enrollment_rejects_duplicate_roll_number_in_same_batch(): void
+    {
+        Mail::fake();
+
+        [, $firstApplicant, $program, $batch] = $this->makeEnrollmentReadyApplicant();
+        [, $secondApplicant] = $this->makeEnrollmentReadyApplicant($program, $batch);
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $firstApplicant), [
+                'roll_number' => 'BATCH-ROLL-001',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $secondApplicant), [
+                'roll_number' => 'BATCH-ROLL-001',
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseCount('enrollment_confirmations', 1);
+        $this->assertDatabaseHas('applicants', [
+            'id' => $secondApplicant->id,
+            'status' => 'selected',
+        ]);
     }
 }

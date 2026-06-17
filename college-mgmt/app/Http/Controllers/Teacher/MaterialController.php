@@ -4,10 +4,19 @@ namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\{StudyMaterial, Subject, Term, TimetableEntry};
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class MaterialController extends Controller
 {
+    private function activeTeacher()
+    {
+        return auth()->user()->teacher;
+    }
+
+    private function ensureActiveTeacher(): void
+    {
+        abort_unless($this->activeTeacher()?->status === 'active', 403, 'Only active teachers can manage study materials.');
+    }
+
     private function teacherSubjectIds(): array
     {
         $teacher = auth()->user()->teacher;
@@ -38,12 +47,19 @@ class MaterialController extends Controller
 
         $materials = $query->paginate(20)->withQueryString();
         $subjects  = Subject::whereIn('id', $subjectIds)->get();
+        $canManageMaterials = $teacher?->status === 'active';
 
-        return view('teacher.materials.index', compact('materials', 'subjects'));
+        return view('teacher.materials.index', compact('materials', 'subjects', 'canManageMaterials'));
     }
 
     public function create()
     {
+        if ($this->activeTeacher()?->status !== 'active') {
+            return redirect()
+                ->route('teacher.materials.index')
+                ->with('error', 'Only active teachers can upload study materials.');
+        }
+
         $subjects    = Subject::whereIn('id', $this->teacherSubjectIds())->get();
         $currentTerm = Term::latest('start_date')->first();
         return view('teacher.materials.create', compact('subjects', 'currentTerm'));
@@ -59,6 +75,7 @@ class MaterialController extends Controller
             'file'         => 'nullable|file|max:20480',
             'external_url' => 'nullable|url|max:500',
         ]);
+        $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
 
         $path = null;
@@ -86,9 +103,9 @@ class MaterialController extends Controller
 
     public function destroy(StudyMaterial $material)
     {
+        $this->ensureActiveTeacher();
         if ($material->uploaded_by !== auth()->id()) abort(403);
-        if ($material->file_path) Storage::disk('public')->delete($material->file_path);
         $material->delete();
-        return back()->with('success', 'Material deleted.');
+        return back()->with('success', 'Material archived. Teaching history and file reference were preserved.');
     }
 }

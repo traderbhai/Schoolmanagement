@@ -2,6 +2,12 @@
 @section('title','Event Registrations')
 @section('page-title','Event Registrations')
 @section('content')
+@if(session('success'))
+  <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
+@if(session('error'))
+  <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h5 class="mb-0">{{ $event->title }}</h5>
@@ -44,14 +50,18 @@
               <span class="badge bg-{{ $reg->attended ? 'success' : 'secondary' }}">{{ $reg->attended ? 'Attended' : 'Registered' }}</span>
             </td>
             <td class="text-end pe-3">
-              <form method="POST" action="{{ route('cmc.events.registrations.attendance', [$event, $reg]) }}" class="d-inline">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="attended" value="{{ $reg->attended ? 0 : 1 }}">
-                <button class="btn btn-sm btn-outline-{{ $reg->attended ? 'secondary' : 'success' }} py-0 px-2">
-                  {{ $reg->attended ? 'Mark absent' : 'Mark attended' }}
-                </button>
-              </form>
+              @if($reg->attended)
+                <span class="badge bg-success-subtle text-success">Attendance locked</span>
+              @else
+                <form method="POST" action="{{ route('cmc.events.registrations.attendance', [$event, $reg]) }}" class="d-inline">
+                  @csrf
+                  @method('PATCH')
+                  <input type="hidden" name="attended" value="1">
+                  <button class="btn btn-sm btn-outline-success py-0 px-2">
+                    Mark attended
+                  </button>
+                </form>
+              @endif
             </td>
           </tr>
           @empty

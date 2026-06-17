@@ -7,6 +7,16 @@ use Illuminate\Http\Request;
 
 class AnnouncementController extends Controller
 {
+    private function activeTeacher()
+    {
+        return auth()->user()->teacher;
+    }
+
+    private function ensureActiveTeacher(): void
+    {
+        abort_unless($this->activeTeacher()?->status === 'active', 403, 'Only active teachers can manage announcements.');
+    }
+
     private function teacherSubjectIds(): array
     {
         $teacher = auth()->user()->teacher;
@@ -30,7 +40,8 @@ class AnnouncementController extends Controller
             ->paginate(20);
 
         $subjects = Subject::whereIn('id', $this->teacherSubjectIds())->get();
-        return view('teacher.announcements.index', compact('announcements', 'subjects'));
+        $canManageAnnouncements = $this->activeTeacher()?->status === 'active';
+        return view('teacher.announcements.index', compact('announcements', 'subjects', 'canManageAnnouncements'));
     }
 
     public function store(Request $request)
@@ -41,6 +52,7 @@ class AnnouncementController extends Controller
             'body'       => 'required|string',
             'is_pinned'  => 'boolean',
         ]);
+        $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
 
         SubjectAnnouncement::create([
@@ -57,8 +69,9 @@ class AnnouncementController extends Controller
 
     public function destroy(SubjectAnnouncement $announcement)
     {
+        $this->ensureActiveTeacher();
         if ($announcement->posted_by !== auth()->id()) abort(403);
         $announcement->delete();
-        return back()->with('success', 'Announcement deleted.');
+        return back()->with('success', 'Announcement archived. Teaching history was preserved.');
     }
 }

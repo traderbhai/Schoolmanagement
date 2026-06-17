@@ -8,10 +8,7 @@ class NoticeController extends Controller
 {
     public function index()
     {
-        $notices = Notice::where('is_published', true)
-            ->where('publish_date', '<=', now())
-            ->where(fn($q) => $q->whereNull('expiry_date')->orWhere('expiry_date', '>=', now()))
-            ->where(fn($q) => $q->where('audience', 'all')->orWhere('audience', 'students'))
+        $notices = Notice::visibleTo(auth()->user())
             ->latest()
             ->paginate(10);
 
@@ -20,7 +17,7 @@ class NoticeController extends Controller
 
     public function show(Notice $notice)
     {
-        abort_unless($notice->is_published, 404);
+        abort_unless(Notice::visibleTo(auth()->user())->whereKey($notice->id)->exists(), 404);
         return view('student.notice-show', compact('notice'));
     }
 }

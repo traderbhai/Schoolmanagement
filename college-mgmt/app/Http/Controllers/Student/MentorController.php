@@ -11,6 +11,7 @@ class MentorController extends Controller {
         abort_unless($student, 403);
 
         $student->load('mentor');
+        $canUseMentorWorkflow = $student->status === 'active' && (bool) $student->mentor_id;
         $meetings = MentorMeeting::where('student_id', $student->id)
             ->orderByDesc('meeting_date')->paginate(10);
         $messages = MentorMessage::where('student_id', $student->id)
@@ -18,12 +19,13 @@ class MentorController extends Controller {
             ->orderBy('created_at')
             ->get();
 
-        return view('student.mentor.index', compact('student','meetings','messages'));
+        return view('student.mentor.index', compact('student','meetings','messages','canUseMentorWorkflow'));
     }
 
     public function requestMeeting(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student && $student->mentor_id, 403, 'No mentor assigned.');
+        abort_unless($student->status === 'active', 403, 'Only active students can request mentor meetings.');
 
         $data = $request->validate([
             'meeting_date' => 'required|date|after:today',
@@ -43,6 +45,7 @@ class MentorController extends Controller {
     public function sendMessage(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student && $student->mentor_id, 403, 'No mentor assigned.');
+        abort_unless($student->status === 'active', 403, 'Only active students can send mentor messages.');
 
         $request->validate(['message' => 'required|string|max:2000']);
 

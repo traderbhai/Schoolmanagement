@@ -18,8 +18,9 @@ class HostelController extends Controller
         $requests = $student
             ? OutpassRequest::where('student_id', $student->id)->latest()->take(20)->get()
             : collect();
+        $canCreateHostelRequest = $student?->status === 'active';
 
-        return view('student.hostel.outpass', compact('allocation', 'requests'));
+        return view('student.hostel.outpass', compact('allocation', 'requests', 'canCreateHostelRequest'));
     }
 
     public function outpassStore(Request $r)
@@ -28,6 +29,10 @@ class HostelController extends Controller
 
         if (! $student) {
             return back()->withErrors(['error' => 'Student profile not found.']);
+        }
+
+        if ($student->status !== 'active') {
+            return back()->withErrors(['error' => 'New hostel outpass requests are available only for active students. Contact the hostel office for archived records.']);
         }
 
         $allocation = HostelAllocation::where('student_id', $student->id)->where('status', 'active')->first();
@@ -76,14 +81,19 @@ class HostelController extends Controller
             ->where('student_id', $student->id)
             ->latest()
             ->paginate(15);
+        $canCreateHostelRequest = $student->status === 'active';
 
-        return view('student.hostel.complaints', compact('allocation', 'complaints'));
+        return view('student.hostel.complaints', compact('allocation', 'complaints', 'canCreateHostelRequest'));
     }
 
     public function complaintStore(Request $request)
     {
         $student = auth()->user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return back()->withErrors(['error' => 'New hostel complaints are available only for active students. Contact the hostel office for archived records.']);
+        }
 
         $allocation = HostelAllocation::with('room.block')
             ->where('student_id', $student->id)

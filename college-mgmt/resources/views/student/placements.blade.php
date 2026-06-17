@@ -119,6 +119,10 @@
                                 <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                     Profile not set up
                                 </button>
+                            @elseif(!$canApplyForPlacements)
+                                <button class="btn btn-sm btn-outline-secondary w-100" disabled>
+                                    Active students only
+                                </button>
                             @elseif($deadlinePassed)
                                 <button class="btn btn-sm btn-outline-secondary w-100" disabled>
                                     Deadline passed

@@ -7,10 +7,21 @@
 
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h4 class="mb-0"><i class="bi bi-folder2-open me-2 text-primary"></i>Study Materials</h4>
-        <a href="{{ route('teacher.materials.create') }}" class="btn btn-primary btn-sm">
-            <i class="bi bi-cloud-upload me-1"></i> Upload Material
-        </a>
+        @if($canManageMaterials)
+            <a href="{{ route('teacher.materials.create') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-cloud-upload me-1"></i> Upload Material
+            </a>
+        @else
+            <span class="badge bg-secondary">Active teachers only</span>
+        @endif
     </div>
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
     {{-- Filters --}}
     <div class="card shadow-sm mb-3">
@@ -79,7 +90,10 @@
             @if($materials->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-                    No materials found. <a href="{{ route('teacher.materials.create') }}">Upload the first one.</a>
+                    No materials found.
+                    @if($canManageMaterials)
+                        <a href="{{ route('teacher.materials.create') }}">Upload the first one.</a>
+                    @endif
                 </div>
             @else
                 <div class="table-responsive">
@@ -133,14 +147,18 @@
                                         {{ $material->created_at->format('d M Y') }}
                                     </td>
                                     <td class="text-end">
-                                        <form method="POST" action="{{ route('teacher.materials.destroy', $material) }}"
-                                              onsubmit="return confirm('Delete this material?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        @if($canManageMaterials)
+                                            <form method="POST" action="{{ route('teacher.materials.destroy', $material) }}"
+                                                  onsubmit="return confirm('Delete this material?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="badge bg-secondary">Locked</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach

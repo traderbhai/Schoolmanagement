@@ -6,6 +6,11 @@
 <div class="container-fluid px-4">
 
     <h4 class="mb-3"><i class="bi bi-person-heart me-2 text-primary"></i>My Mentees</h4>
+    @if(!$canManageMentoring)
+        <div class="alert alert-warning">
+            Messaging and meeting scheduling are locked because this teacher profile is not active.
+        </div>
+    @endif
 
     @if($mentees->isEmpty())
         <div class="card shadow-sm">

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand};
+use App\Models\{ActivityLog, FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand};
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -225,6 +225,7 @@ class AccountsController extends Controller
         if ($request->filled('date_to'))   $query->whereDate('payment_date', '<=', $request->date_to);
 
         $payments = $query->latest('payment_date')->get();
+        $this->recordExportActivity('fee collections', $payments->count(), $request);
 
         $filename = 'fee-collections-' . now()->format('Ymd') . '.csv';
         $headers = [
@@ -258,6 +259,7 @@ class AccountsController extends Controller
             $query->whereHas('applicant', fn($q) => $q->where('program_id', $request->program_id));
         }
         $payments = $query->latest('verified_at')->get();
+        $this->recordExportActivity('admission payments', $payments->count(), $request);
 
         $filename = 'admission-payments-' . now()->format('Ymd') . '.csv';
         $headers = [
@@ -286,6 +288,7 @@ class AccountsController extends Controller
     public function exportOutstanding(Request $request)
     {
         $students = $this->outstandingStudents();
+        $this->recordExportActivity('outstanding fees', $students->count(), $request);
 
         $filename = 'outstanding-fees-' . now()->format('Ymd') . '.csv';
         $headers = [
@@ -376,5 +379,13 @@ class AccountsController extends Controller
     private function collectionPercentage(float $collected, float $billed): int
     {
         return $billed > 0 ? min(100, (int) round(($collected / $billed) * 100)) : 0;
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "Accounts {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

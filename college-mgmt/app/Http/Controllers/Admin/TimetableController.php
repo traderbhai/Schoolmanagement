@@ -99,6 +99,12 @@ class TimetableController extends Controller
     {
         $entry = TimetableEntry::findOrFail($id);
 
+        if ($this->entryHasOperationalHistory($entry) || $entry->status === 'published') {
+            return redirect()
+                ->route('admin.timetable.show', $entry)
+                ->with('error', 'Timetable entries with attendance, substitution, or published history cannot be structurally changed. Create a revision instead.');
+        }
+
         $data = $request->validate([
             'semester_id'       => 'required|exists:semesters,id',
             'course_id'         => 'required|exists:courses,id',
@@ -124,8 +130,26 @@ class TimetableController extends Controller
 
     public function destroy(string $id)
     {
-        TimetableEntry::findOrFail($id)->delete();
+        $entry = TimetableEntry::findOrFail($id);
+
+        if ($this->entryHasOperationalHistory($entry) || $entry->status === 'published') {
+            $entry->update([
+                'is_active' => false,
+                'status' => $entry->status === 'published' ? 'archived' : $entry->status,
+            ]);
+
+            return back()->with('error', 'Timetable entry has attendance, substitution, or published history and was archived instead of deleted.');
+        }
+
+        $entry->delete();
         return back()->with('success', 'Entry removed from timetable.');
+    }
+
+    private function entryHasOperationalHistory(TimetableEntry $entry): bool
+    {
+        return $entry->attendances()->exists()
+            || $entry->substitutions()->exists()
+            || (bool) $entry->timetable_version_id;
     }
 
     public function teacherView(Request $request)

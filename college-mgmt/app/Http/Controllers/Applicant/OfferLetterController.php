@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Applicant;
 use App\Http\Controllers\Controller;
 use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
+use App\Services\AdmissionSeatCapacityService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -67,6 +68,10 @@ class OfferLetterController extends Controller
             return response()->json(['error' => 'This offer cannot be accepted.'], 400);
         }
 
+        if ($this->applicantHasTerminalStatus($offerLetter)) {
+            return response()->json(['error' => 'This applicant is in a final admission state and the offer cannot be changed.'], 400);
+        }
+
         if (now()->toDateString() > $offerLetter->acceptance_deadline) {
             return response()->json(['error' => 'Acceptance deadline has passed.'], 400);
         }
@@ -95,6 +100,10 @@ class OfferLetterController extends Controller
             return response()->json(['error' => 'This offer cannot be declined.'], 400);
         }
 
+        if ($this->applicantHasTerminalStatus($offerLetter)) {
+            return response()->json(['error' => 'This applicant is in a final admission state and the offer cannot be changed.'], 400);
+        }
+
         $offerLetter->update([
             'status'          => 'declined',
             'declined_at'     => now(),
@@ -104,20 +113,21 @@ class OfferLetterController extends Controller
         $applicant->update(['status' => 'rejected']);
 
         // Promote waitlisted applicant
-        $this->promoteFromWaitlist($offerLetter->program_id, $offerLetter->batch_id);
+        $this->promoteFromWaitlist($offerLetter->program_id, $offerLetter->batch_id, $offerLetter->applicant_id);
 
         return response()->json(['success' => true, 'message' => 'Offer declined successfully.']);
     }
 
-    protected function promoteFromWaitlist($programId, $batchId)
+    protected function promoteFromWaitlist($programId, $batchId, ?int $releasedApplicantId = null)
     {
         $waitlisted = MeritListEntry::where('program_id', $programId)
             ->where('batch_id', $batchId)
             ->where('decision', 'waitlisted')
+            ->with('applicant')
             ->orderBy('rank')
             ->first();
 
-        if ($waitlisted) {
+        if ($waitlisted && app(AdmissionSeatCapacityService::class)->canPromoteFromWaitlist($waitlisted, $releasedApplicantId)) {
             $waitlisted->update(['decision' => 'selected', 'decided_by' => auth()->id(), 'decided_at' => now()]);
 
             $existing = OfferLetter::where('applicant_id', $waitlisted->applicant_id)
@@ -137,5 +147,12 @@ class OfferLetterController extends Controller
                 Mail::send(new \App\Mail\OfferLetterMail($offer));
             }
         }
+    }
+
+    private function applicantHasTerminalStatus(OfferLetter $offerLetter): bool
+    {
+        $status = $offerLetter->applicant?->status;
+
+        return in_array($status, ['rejected', 'withdrawn', 'enrolled'], true);
     }
 }

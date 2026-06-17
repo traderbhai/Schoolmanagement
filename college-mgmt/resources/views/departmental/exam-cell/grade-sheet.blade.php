@@ -10,7 +10,7 @@
     <div class="d-flex gap-2">
         <form method="POST" action="{{ route('exam-cell.publish', $exam) }}">
             @csrf
-            <button class="btn btn-sm btn-success" onclick="return confirm('Publish results for this exam?')">
+            <button class="btn btn-sm btn-success" onclick="return confirm('Publish results for this exam?')" @disabled($exam->published_at)>
                 <i class="bi bi-check-circle me-1"></i>Publish Results
             </button>
         </form>
@@ -21,13 +21,21 @@
 @if(session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
 @endif
+@if(session('error'))
+<div class="alert alert-danger">{{ session('error') }}</div>
+@endif
+@if($exam->published_at)
+<div class="alert alert-info">
+    <strong>Results published.</strong> Marks are locked for this exam. Use an approved correction workflow for post-publication changes.
+</div>
+@endif
 
 <form method="POST" action="{{ route('exam-cell.save-marks', $exam) }}">
 @csrf
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
         <span>Total Marks: <strong>{{ $exam->total_marks }}</strong> &nbsp;|&nbsp; Passing: <strong>{{ $exam->passing_marks }}</strong></span>
-        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i>Save Marks</button>
+        <button type="submit" class="btn btn-sm btn-primary" @disabled($exam->published_at)><i class="bi bi-save me-1"></i>Save Marks</button>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -44,13 +52,15 @@
                         <td>{{ $s->roll_number ?? $s->enrollment_number ?? '—' }}</td>
                         <td>
                             <input type="checkbox" name="absent[]" value="{{ $s->id }}" class="form-check-input"
-                                {{ $r?->is_absent ? 'checked' : '' }}>
+                                {{ $r?->is_absent ? 'checked' : '' }}
+                                @disabled($exam->published_at)>
                         </td>
                         <td style="width:130px;">
                             <input type="number" name="marks[{{ $s->id }}]" class="form-control form-control-sm"
                                 min="0" max="{{ $exam->total_marks }}" step="0.5"
                                 value="{{ $r && !$r->is_absent ? $r->marks_obtained : '' }}"
-                                placeholder="—">
+                                placeholder="—"
+                                @disabled($exam->published_at)>
                         </td>
                         <td>
                             @if(!$r)

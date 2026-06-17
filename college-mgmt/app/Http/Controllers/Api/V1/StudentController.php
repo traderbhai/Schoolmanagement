@@ -47,7 +47,11 @@ class StudentController extends Controller
     public function results(Request $r)
     {
         $s = $this->student($r);
-        $results = $s->examResults()->with('exam.subject', 'exam.semester')->get();
+        $results = $s->examResults()
+            ->whereHas('exam', fn($query) => $query->whereNotNull('published_at'))
+            ->with('exam.subject', 'exam.semester')
+            ->get();
+
         return response()->json($results->map(fn($res) => [
             'subject' => optional(optional($res->exam)->subject)->name,
             'semester' => optional(optional($res->exam)->semester)->name,

@@ -32,6 +32,7 @@ class AcademicSummaryController extends Controller {
 
         // All exam results grouped by term
         $results = ExamResult::where('student_id', $student->id)
+            ->whereHas('exam', fn($query) => $query->whereNotNull('published_at'))
             ->with(['exam.subject'])
             ->orderByDesc('id')
             ->get();

@@ -59,6 +59,7 @@ class AttendanceController extends Controller
     {
         $teacher = auth()->user()->teacher;
         if (!$teacher) return redirect()->route('teacher.dashboard');
+        $canMarkAttendance = $teacher->status === 'active';
 
         $date = $request->date ?? today()->toDateString();
         $dayOfWeek = (int) date('N', strtotime($date));
@@ -86,12 +87,14 @@ class AttendanceController extends Controller
             ])->orderBy('roll_number')->get();
         }
 
-        return view('teacher.attendance.mark', compact('entries', 'entry', 'students', 'date', 'currentSemester'));
+        return view('teacher.attendance.mark', compact('entries', 'entry', 'students', 'date', 'currentSemester', 'canMarkAttendance'));
     }
 
     public function store(Request $request)
     {
         $teacher = auth()->user()->teacher;
+        abort_unless($teacher?->status === 'active', 403, 'Only active teachers can mark attendance.');
+
         $request->validate([
             'timetable_entry_id' => 'required|exists:timetable_entries,id',
             'date'               => 'required|date',

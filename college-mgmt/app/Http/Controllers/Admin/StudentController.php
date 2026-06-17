@@ -103,9 +103,12 @@ class StudentController extends Controller
     public function destroy(Student $student)
     {
         $name = $student->user->name;
-        ActivityLog::record('deleted', "Student deleted: {$name}", $student);
-        $student->user->delete();
-        return redirect()->route('admin.students.index')->with('success', 'Student deleted.');
+        $student->update(['status' => 'inactive']);
+        $student->user?->syncRoles([]);
+
+        ActivityLog::record('archived', "Student archived instead of deleted to preserve academic history: {$name}", $student);
+
+        return redirect()->route('admin.students.index')->with('success', 'Student archived. Academic, fee, attendance, and result history was preserved.');
     }
 
     public function export(Request $r)

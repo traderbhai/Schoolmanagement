@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\Batch;
+use App\Models\EnrollmentConfirmation;
 use App\Models\MeritListEntry;
+use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Models\SeatMatrix;
 use Illuminate\Http\Request;
@@ -69,10 +71,24 @@ class WaitlistController extends Controller
             )
             ->first();
 
-        $totalSeats = $seatMatrix?->total_seats ?? PHP_INT_MAX;
+        if (! $seatMatrix) {
+            return back()->with('error', 'No seat matrix is configured for this program/batch.');
+        }
+
+        $totalSeats = (int) $seatMatrix->total_seats;
 
         if ($selectedCount >= $totalSeats) {
             return back()->with('error', 'No available seats to promote this candidate.');
+        }
+
+        $category = $this->seatCategoryForApplicant($entry->applicant?->category ?? 'general');
+        $categoryCapacity = $this->seatCapacityForCategory($seatMatrix, $category);
+        $categoryCommitted = $this->committedApplicants($entry->program_id, $entry->batch_id)
+            ->filter(fn (Applicant $applicant) => $this->seatCategoryForApplicant($applicant->category ?? 'general') === $category)
+            ->count();
+
+        if ($categoryCommitted >= $categoryCapacity) {
+            return back()->with('error', 'No available seats in this applicant category.');
         }
 
         $entry->update([
@@ -90,5 +106,52 @@ class WaitlistController extends Controller
             ->notifyApplicantStatusChanged($entry->applicant->fresh(), 'selected');
 
         return back()->with('success', $entry->applicant->user->name . ' promoted from waitlist to selected.');
+    }
+
+    private function committedApplicants(int $programId, ?int $batchId)
+    {
+        $applicantIds = collect()
+            ->merge(MeritListEntry::where('program_id', $programId)
+                ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
+                ->where('decision', 'selected')
+                ->pluck('applicant_id'))
+            ->merge(OfferLetter::where('program_id', $programId)
+                ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
+                ->whereIn('status', ['issued', 'accepted'])
+                ->pluck('applicant_id'))
+            ->merge(EnrollmentConfirmation::where('status', 'completed')
+                ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
+                ->whereHas('applicant', fn ($query) => $query->where('program_id', $programId))
+                ->pluck('applicant_id'))
+            ->unique()
+            ->values();
+
+        return Applicant::whereIn('id', $applicantIds)->get();
+    }
+
+    private function seatCategoryForApplicant(string $category): string
+    {
+        return match ($category) {
+            'obc', 'obc_nc', 'obc_ncl' => 'obc',
+            'sc' => 'sc',
+            'st' => 'st',
+            'ews' => 'ews',
+            'management_quota' => 'management',
+            'nri' => 'nri',
+            default => 'general',
+        };
+    }
+
+    private function seatCapacityForCategory(SeatMatrix $matrix, string $category): int
+    {
+        return match ($category) {
+            'obc' => (int) $matrix->obc_seats,
+            'sc' => (int) $matrix->sc_seats,
+            'st' => (int) $matrix->st_seats,
+            'ews' => (int) $matrix->ews_seats,
+            'management' => (int) $matrix->management_quota,
+            'nri' => (int) $matrix->nri_quota,
+            default => (int) $matrix->general_seats,
+        };
     }
 }

@@ -6,6 +6,9 @@
     <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>All Exams</h4>
     <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
 </div>
+@if(session('error'))
+<div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 <form method="GET" class="row g-2 mb-3">
     <div class="col-sm-3">
@@ -42,13 +45,17 @@
                         <td><span class="badge bg-{{ $exam->results_count > 0 ? 'success' : 'warning' }}">{{ $exam->results_count }} entered</span></td>
                         <td class="d-flex gap-1 flex-wrap">
                             <a href="{{ route('exam-cell.grade-sheet', $exam) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Grade Sheet</a>
-                            <a href="{{ route('exam-cell.exams.edit', $exam) }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-pencil"></i></a>
-                            <button class="btn btn-sm btn-outline-danger py-0 px-2"
-                                data-bs-toggle="modal" data-bs-target="#deleteModal"
-                                data-action="{{ route('exam-cell.exams.destroy', $exam) }}"
-                                data-name="{{ $exam->name }}">
-                                <i class="bi bi-trash3"></i>
-                            </button>
+                            @if($exam->published_at)
+                                <span class="btn btn-sm btn-outline-secondary py-0 px-2 disabled" title="Published exam locked"><i class="bi bi-lock"></i></span>
+                            @else
+                                <a href="{{ route('exam-cell.exams.edit', $exam) }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-pencil"></i></a>
+                                <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                    data-action="{{ route('exam-cell.exams.destroy', $exam) }}"
+                                    data-name="{{ $exam->name }}">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            @endif
                         </td>
                     </tr>
                 @empty

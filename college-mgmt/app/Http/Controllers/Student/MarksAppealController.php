@@ -61,7 +61,8 @@ class MarksAppealController extends Controller {
             ->where('student_id', $student->id)
             ->where('is_absent', false)
             ->whereHas('exam', function ($examQuery) use ($student) {
-                $examQuery->where(function ($eligibleExam) use ($student) {
+                $examQuery->whereNotNull('published_at')
+                    ->where(function ($eligibleExam) use ($student) {
                     $eligibleExam->whereExists(function ($subquery) use ($student) {
                         $subquery->selectRaw('1')
                             ->from('student_subject_enrollments')

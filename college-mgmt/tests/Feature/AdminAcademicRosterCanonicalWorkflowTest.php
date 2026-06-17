@@ -181,6 +181,89 @@ class AdminAcademicRosterCanonicalWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_change_results_after_exam_publication(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['exam']->forceFill([
+            'published_at' => now(),
+            'published_by' => $fixture['admin']->id,
+        ])->save();
+
+        ExamResult::create([
+            'exam_id' => $fixture['exam']->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 88,
+            'grade' => 'A',
+            'is_absent' => false,
+            'remarks' => 'Published mark.',
+        ]);
+
+        $this->actingAs($fixture['admin'])
+            ->get(route('admin.exams.results', $fixture['exam']))
+            ->assertOk()
+            ->assertSee('Results published');
+
+        $this->actingAs($fixture['admin'])
+            ->from(route('admin.exams.results', $fixture['exam']))
+            ->post(route('admin.exams.results.save', $fixture['exam']), [
+                'results' => [
+                    $fixture['student']->id => ['marks' => 95, 'grade' => 'A+', 'remarks' => 'Changed after publish'],
+                ],
+            ])
+            ->assertRedirect(route('admin.exams.results', $fixture['exam']))
+            ->assertSessionHas('error', 'Published results are locked. Use the Exam Cell appeal/correction workflow for changes.');
+
+        $this->assertDatabaseHas('exam_results', [
+            'exam_id' => $fixture['exam']->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 88,
+            'grade' => 'A',
+            'remarks' => 'Published mark.',
+        ]);
+    }
+
+    public function test_admin_cannot_edit_or_delete_published_exam_schedule(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['exam']->forceFill([
+            'published_at' => now(),
+            'published_by' => $fixture['admin']->id,
+        ])->save();
+
+        $this->actingAs($fixture['admin'])
+            ->get(route('admin.exams.show', $fixture['exam']))
+            ->assertOk()
+            ->assertSee('Published')
+            ->assertSee('Locked');
+
+        $this->actingAs($fixture['admin'])
+            ->from(route('admin.exams.edit', $fixture['exam']))
+            ->put(route('admin.exams.update', $fixture['exam']), [
+                'semester_id' => $fixture['exam']->semester_id,
+                'subject_id' => $fixture['exam']->subject_id,
+                'name' => 'Changed Published Exam',
+                'type' => $fixture['exam']->type,
+                'exam_date' => now()->addDays(10)->toDateString(),
+                'total_marks' => 90,
+                'passing_marks' => 35,
+            ])
+            ->assertRedirect(route('admin.exams.show', $fixture['exam']))
+            ->assertSessionHas('error', 'Published exams cannot be edited because official result history is locked.');
+
+        $this->assertDatabaseHas('exams', [
+            'id' => $fixture['exam']->id,
+            'name' => 'Admin Canonical Exam',
+            'total_marks' => 100,
+        ]);
+
+        $this->actingAs($fixture['admin'])
+            ->delete(route('admin.exams.destroy', $fixture['exam']))
+            ->assertRedirect(route('admin.exams.index'))
+            ->assertSessionHas('error', 'Published exams cannot be deleted because official result history is locked.');
+
+        $this->assertDatabaseHas('exams', ['id' => $fixture['exam']->id]);
+    }
+
     public function test_admin_attendance_uses_canonical_subject_roster_and_rejects_outsider_attendance(): void
     {
         $fixture = $this->fixture();

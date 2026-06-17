@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Applicant;
+use App\Models\ParentProfile;
+use App\Models\Student;
+use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -66,6 +70,53 @@ class ProfileTest extends TestCase
 
         $this->assertGuest();
         $this->assertNull($user->fresh());
+    }
+
+    public function test_student_account_cannot_self_delete_and_cascade_academic_history(): void
+    {
+        $user = User::factory()->create();
+        $student = Student::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+
+        $this->actingAs($user)
+            ->from('/profile')
+            ->delete('/profile', ['password' => 'password'])
+            ->assertSessionHasErrorsIn('userDeletion', 'password')
+            ->assertRedirect('/profile');
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('students', ['id' => $student->id, 'user_id' => $user->id]);
+    }
+
+    public function test_teacher_parent_and_applicant_accounts_cannot_self_delete_institutional_history(): void
+    {
+        $teacherUser = User::factory()->create();
+        $teacher = Teacher::factory()->create(['user_id' => $teacherUser->id, 'status' => 'active']);
+
+        $parentUser = User::factory()->create();
+        $parent = ParentProfile::create([
+            'user_id' => $parentUser->id,
+            'relation' => 'guardian',
+            'phone' => '9999999999',
+        ]);
+
+        $applicant = Applicant::factory()->create();
+        $applicantUser = $applicant->user;
+
+        foreach ([
+            [$teacherUser, 'teachers', $teacher->id],
+            [$parentUser, 'parents', $parent->id],
+            [$applicantUser, 'applicants', $applicant->id],
+        ] as [$user, $table, $profileId]) {
+            $this->actingAs($user)
+                ->from('/profile')
+                ->delete('/profile', ['password' => 'password'])
+                ->assertSessionHasErrorsIn('userDeletion', 'password')
+                ->assertRedirect('/profile');
+
+            $this->assertDatabaseHas('users', ['id' => $user->id]);
+            $this->assertDatabaseHas($table, ['id' => $profileId]);
+        }
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

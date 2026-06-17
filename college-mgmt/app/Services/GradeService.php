@@ -69,6 +69,7 @@ class GradeService
         foreach ($subjects as $subject) {
             $results = ExamResult::whereHas('exam', function ($q) use ($semesterId, $termIds, $subject) {
                 $q->where('subject_id', $subject->id)
+                    ->whereNotNull('published_at')
                     ->where(function ($scope) use ($semesterId, $termIds) {
                         $scope->where('semester_id', $semesterId);
 

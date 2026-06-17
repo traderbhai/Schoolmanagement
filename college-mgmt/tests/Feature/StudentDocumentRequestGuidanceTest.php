@@ -90,6 +90,43 @@ class StudentDocumentRequestGuidanceTest extends TestCase
             ->assertSessionHasErrors('purpose');
     }
 
+    public function test_inactive_student_can_view_history_but_cannot_create_new_document_request(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+
+        DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'character',
+            'purpose' => 'Historical request',
+            'status' => 'rejected',
+            'notes' => 'Closed before deactivation.',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.documents.index'))
+            ->assertOk()
+            ->assertSee('Character Certificate');
+
+        $this->actingAs($student->user)
+            ->get(route('student.documents.create'))
+            ->assertRedirect(route('student.documents.index'))
+            ->assertSessionHas('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
+
+        $this->actingAs($student->user)
+            ->post(route('student.documents.store'), [
+                'document_type' => 'bonafide',
+                'purpose' => 'Trying after deactivation',
+            ])
+            ->assertRedirect(route('student.documents.index'))
+            ->assertSessionHas('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
+
+        $this->assertDatabaseMissing('document_requests', [
+            'student_id' => $student->id,
+            'document_type' => 'bonafide',
+        ]);
+    }
+
     public function test_student_cannot_download_another_students_document(): void
     {
         Storage::fake('local');

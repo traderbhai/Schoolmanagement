@@ -38,11 +38,14 @@ class DashboardController extends Controller
                 $termIds = $this->termIdsForSemester($student, $currentSemester->id);
                 $results = ExamResult::with('exam')
                     ->whereHas('exam', function ($q) use ($currentSemester, $termIds) {
-                        $q->where('semester_id', $currentSemester->id);
+                        $q->whereNotNull('published_at')
+                            ->where(function ($scope) use ($currentSemester, $termIds) {
+                                $scope->where('semester_id', $currentSemester->id);
 
-                        if ($termIds !== []) {
-                            $q->orWhereIn('term_id', $termIds);
-                        }
+                                if ($termIds !== []) {
+                                    $scope->orWhereIn('term_id', $termIds);
+                                }
+                            });
                     })
                     ->whereHas('exam', fn($q) => $q->whereIn('subject_id', $subjectIds))
                     ->where('student_id', $student->id)
@@ -73,8 +76,7 @@ class DashboardController extends Controller
             ];
         });
 
-        $notices = Notice::where('is_published', true)
-            ->where('publish_date', '<=', now())
+        $notices = Notice::visibleTo(auth()->user())
             ->latest()->take(5)->get();
 
         $parentPriority = $childrenData->first(fn($item) => $item['priority']['level'] !== 'none')['priority'] ?? [
@@ -163,11 +165,14 @@ class DashboardController extends Controller
             $subjectIds = $this->enrolledSubjectIds($student);
             $results = ExamResult::with('exam.subject')
                 ->whereHas('exam', function ($q) use ($semesterId, $termIds) {
-                    $q->where('semester_id', $semesterId);
+                    $q->whereNotNull('published_at')
+                        ->where(function ($scope) use ($semesterId, $termIds) {
+                            $scope->where('semester_id', $semesterId);
 
-                    if ($termIds !== []) {
-                        $q->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 })
                 ->whereHas('exam', fn($q) => $q->whereIn('subject_id', $subjectIds))
                 ->where('student_id', $student->id)
@@ -195,9 +200,7 @@ class DashboardController extends Controller
     public function notices()
     {
         $parent = $this->getParent();
-        $notices = Notice::where('is_published', true)
-            ->where('publish_date', '<=', now())
-            ->where(fn($q) => $q->whereNull('expiry_date')->orWhere('expiry_date', '>=', now()))
+        $notices = Notice::visibleTo(auth()->user())
             ->latest()
             ->paginate(10);
 

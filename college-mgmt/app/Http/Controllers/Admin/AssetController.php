@@ -131,7 +131,7 @@ class AssetController extends Controller
             'quantity' => 'required|integer|min:1',
             'vendor_name' => 'nullable|string|max:160',
             'reference_number' => 'nullable|string|max:120',
-            'movement_date' => 'required|date',
+            'movement_date' => 'required|date|before_or_equal:today',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
@@ -162,7 +162,7 @@ class AssetController extends Controller
             'quantity' => 'required|integer|min:1',
             'issued_to_user_id' => 'nullable|exists:users,id',
             'reference_number' => 'nullable|string|max:120',
-            'movement_date' => 'required|date',
+            'movement_date' => 'required|date|before_or_equal:today',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
@@ -216,7 +216,7 @@ class AssetController extends Controller
     public function returnAssignment(Request $request, AssetAssignment $assignment)
     {
         $data = $request->validate([
-            'returned_on' => 'required|date|after_or_equal:'.$assignment->assigned_on->toDateString(),
+            'returned_on' => 'required|date|after_or_equal:'.$assignment->assigned_on->toDateString().'|before_or_equal:today',
             'condition' => 'required|in:new,good,needs_repair,damaged',
             'remarks' => 'nullable|string|max:1000',
         ]);

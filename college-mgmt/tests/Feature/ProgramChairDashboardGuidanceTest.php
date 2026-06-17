@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
+use App\Models\Batch;
 use App\Models\Program;
 use App\Models\ProgramSubject;
 use App\Models\RoleProgramAssignment;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
 use App\Models\Subject;
+use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,6 +104,49 @@ class ProgramChairDashboardGuidanceTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_program_chair_cannot_reapprove_or_reject_finalized_approval(): void
+    {
+        $program = Program::factory()->create();
+        $user = $this->chairUser($program);
+        $approval = $this->pendingApprovalFor($program);
+
+        $this->actingAs($user)
+            ->post(route('chair.approve', $approval), ['remarks' => 'Approved once'])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post(route('chair.reject', $approval->fresh()), ['rejection_reason' => 'Trying to reverse'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('approval_workflows', [
+            'id' => $approval->id,
+            'status' => 'approved',
+            'remarks' => 'Approved once',
+        ]);
+    }
+
+    public function test_program_chair_cannot_action_hod_queue_even_for_same_program(): void
+    {
+        $program = Program::factory()->create();
+        $user = $this->chairUser($program);
+        $applicant = Applicant::factory()->create(['program_id' => $program->id]);
+        $approval = ApprovalWorkflow::create([
+            'approvable_type' => Applicant::class,
+            'approvable_id' => $applicant->id,
+            'approver_role' => 'hod',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('chair.approve', $approval), ['remarks' => 'Wrong queue'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('approval_workflows', [
+            'id' => $approval->id,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_program_chair_can_override_assigned_program_elective_with_audit_reason(): void
     {
         $program = Program::factory()->create();
@@ -149,6 +194,52 @@ class ProgramChairDashboardGuidanceTest extends TestCase
             'previous_subject_id' => $oldSubject->id,
             'override_reason' => 'Student shifted elective after counselling.',
             'overridden_by' => $chair->id,
+        ]);
+    }
+
+    public function test_program_chair_mentor_assignment_stores_teacher_user_identity(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $chair = $this->chairUser($program);
+        $mentor = Teacher::factory()->create(['status' => 'active']);
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+        $batchStudent = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($chair)
+            ->get(route('chair.students.mentors'))
+            ->assertOk();
+
+        $this->actingAs($chair)
+            ->post(route('chair.students.mentors.assign'), [
+                'student_id' => $student->id,
+                'mentor_id' => $mentor->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('students', [
+            'id' => $student->id,
+            'mentor_id' => $mentor->user_id,
+        ]);
+
+        $this->actingAs($chair)
+            ->post(route('chair.students.mentors.bulk'), [
+                'batch_id' => $batch->id,
+                'mentor_id' => $mentor->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('students', [
+            'id' => $batchStudent->id,
+            'mentor_id' => $mentor->user_id,
         ]);
     }
 

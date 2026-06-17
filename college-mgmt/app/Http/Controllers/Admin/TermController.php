@@ -3,10 +3,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Term, Batch};
+use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
 class TermController extends Controller
 {
+    public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
+
     public function store(Request $r)
     {
         $r->validate([
@@ -40,6 +43,12 @@ class TermController extends Controller
 
     public function destroy(Term $term)
     {
+        $dependencies = $this->integrity->dependencyLabels('term', $term->id);
+
+        if ($dependencies !== []) {
+            return back()->with('error', $this->integrity->message('term', $dependencies));
+        }
+
         $term->delete();
         return back()->with('success', 'Term deleted.');
     }

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\TermPromotion;
+use App\Models\Batch;
+use App\Models\Program;
 use App\Models\Student;
 use App\Models\Term;
 use App\Models\User;
@@ -14,11 +16,34 @@ class TermPromotionTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function userWithRole(string $role): User
+    {
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        return $user;
+    }
+
     private function eligiblePendingPromotion(): TermPromotion
     {
-        $student = Student::factory()->create();
-        $currentTerm = Term::factory()->create();
-        $promotedToTerm = Term::factory()->create();
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+        ]);
+        $currentTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+        ]);
+        $promotedToTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 2,
+        ]);
         $student->update(['current_term_id' => $currentTerm->id]);
 
         return TermPromotion::factory()->create([
@@ -34,10 +59,7 @@ class TermPromotionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $user = User::factory()->create();
-        $user->assignRole('admin');
-        $this->actingAs($user);
+        $this->actingAs($this->userWithRole('admin'));
     }
 
     public function test_can_view_promotions_list()
@@ -68,6 +90,31 @@ class TermPromotionTest extends TestCase
         $this->assertEquals($promotion->promoted_to_term_id, $promotion->student->fresh()->current_term_id);
     }
 
+    public function test_accounts_user_cannot_directly_mutate_term_promotions(): void
+    {
+        $promotion = $this->eligiblePendingPromotion();
+        $accounts = $this->userWithRole('accounts_officer');
+
+        $this->actingAs($accounts)
+            ->post("/academic/term-promotions/{$promotion->id}/approve")
+            ->assertForbidden();
+
+        $this->actingAs($accounts)
+            ->post("/academic/term-promotions/{$promotion->id}/reject", [
+                'remarks' => 'Not my academic decision.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($accounts)
+            ->put("/academic/term-promotions/{$promotion->id}", [
+                'status' => 'on_hold',
+                'remarks' => 'Unauthorized hold.',
+            ])
+            ->assertForbidden();
+
+        $this->assertEquals('pending', $promotion->fresh()->status);
+    }
+
     public function test_cannot_approve_ineligible_promotion()
     {
         $promotion = TermPromotion::factory()->create([
@@ -94,9 +141,22 @@ class TermPromotionTest extends TestCase
 
     public function test_promotion_update_student_term()
     {
-        $student = Student::factory()->create();
-        $currentTerm = Term::factory()->create();
-        $promotedToTerm = Term::factory()->create();
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+        ]);
+        $currentTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+        ]);
+        $promotedToTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 2,
+        ]);
 
         $student->update(['current_term_id' => $currentTerm->id]);
 
@@ -111,6 +171,19 @@ class TermPromotionTest extends TestCase
         $promotion->approve();
 
         $this->assertEquals($promotedToTerm->id, $student->fresh()->current_term_id);
+    }
+
+    public function test_cannot_approve_promotion_to_unrelated_or_earlier_term(): void
+    {
+        $promotion = $this->eligiblePendingPromotion();
+        $unrelatedTerm = Term::factory()->create(['term_number' => 2]);
+        $promotion->update(['promoted_to_term_id' => $unrelatedTerm->id]);
+
+        $this->post("/academic/term-promotions/{$promotion->id}/approve")
+            ->assertSessionHas('error', 'Promotion target term must belong to the same program/batch and be later than the current term.');
+
+        $this->assertEquals('pending', $promotion->fresh()->status);
+        $this->assertEquals($promotion->current_term_id, $promotion->student->fresh()->current_term_id);
     }
 
     public function test_can_reject_with_remarks()

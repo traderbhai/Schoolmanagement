@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Course, Department};
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends Controller
 {
@@ -44,11 +45,54 @@ class CourseController extends Controller
             'total_semesters' => 'required|integer|min:1|max:12',
             'is_active'       => 'boolean',
         ]);
+
+        if ($this->hasOperationalDependencies($course) && $this->changesStructuralFields($course, $data)) {
+            throw ValidationException::withMessages([
+                'course' => 'Course department, code, duration, and semester structure cannot be changed after students, fees, admissions, exams, or timetable entries are linked.',
+            ]);
+        }
+
+        if ($this->deactivatesCourseWithActiveStudents($course, $data)) {
+            throw ValidationException::withMessages([
+                'is_active' => 'Courses with active students cannot be deactivated.',
+            ]);
+        }
+
         $course->update($data);
         return redirect()->route('admin.courses.index')->with('success', 'Updated.');
     }
     public function destroy(Course $course) {
+        if ($this->hasOperationalDependencies($course)) {
+            return redirect()->route('admin.courses.index')
+                ->with('error', 'Courses with students, fees, admissions, exams, or timetable entries cannot be deleted because academic history depends on them.');
+        }
+
         $course->delete();
         return redirect()->route('admin.courses.index')->with('success', 'Deleted.');
+    }
+
+    private function hasOperationalDependencies(Course $course): bool
+    {
+        return $course->students()->exists()
+            || $course->feeStructures()->exists()
+            || $course->timetableEntries()->exists()
+            || $course->admissions()->exists()
+            || $course->exams()->exists();
+    }
+
+    private function changesStructuralFields(Course $course, array $data): bool
+    {
+        return (int) $course->department_id !== (int) $data['department_id']
+            || (string) $course->code !== (string) $data['code']
+            || (int) $course->duration_years !== (int) $data['duration_years']
+            || (int) $course->total_semesters !== (int) $data['total_semesters'];
+    }
+
+    private function deactivatesCourseWithActiveStudents(Course $course, array $data): bool
+    {
+        return array_key_exists('is_active', $data)
+            && ! (bool) $data['is_active']
+            && (bool) $course->is_active
+            && $course->students()->where('status', 'active')->exists();
     }
 }

@@ -129,6 +129,7 @@ class QuizController extends Controller
     public function submitAttempt(Request $request, Quiz $quiz)
     {
         $student = $this->getStudent();
+        abort_unless($quiz->isActive(), 403, 'This quiz is not currently active.');
         $this->ensureEnrolled($student, $quiz);
 
         $attempt = QuizAttempt::where('quiz_id', $quiz->id)
@@ -177,6 +178,11 @@ class QuizController extends Controller
     {
         $student = $this->getStudent();
         $this->ensureEnrolled($student, $quiz);
+
+        if (! $quiz->show_result_immediately && $quiz->isActive()) {
+            return redirect()->route('student.quizzes.index')
+                ->with('error', 'Quiz results are not available yet.');
+        }
 
         $attempt = QuizAttempt::with(['answers.question', 'answers.option'])
             ->where('quiz_id', $quiz->id)

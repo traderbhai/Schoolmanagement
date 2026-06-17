@@ -62,6 +62,7 @@ class StudentMarksAppealWorkflowTest extends TestCase
             'subject_id' => $subject->id,
             'name' => 'Mid Term Retest',
             'total_marks' => 60,
+            'published_at' => now(),
         ]);
         $result = ExamResult::factory()->create([
             'exam_id' => $exam->id,
@@ -183,6 +184,7 @@ class StudentMarksAppealWorkflowTest extends TestCase
             'subject_id' => $fixture['exam']->subject_id,
             'name' => 'Absent Enrolled Exam',
             'total_marks' => 60,
+            'published_at' => now(),
         ]);
         $absentResult = ExamResult::factory()->create([
             'exam_id' => $absentExam->id,
@@ -222,6 +224,46 @@ class StudentMarksAppealWorkflowTest extends TestCase
         $this->assertDatabaseMissing('marks_appeals', [
             'student_id' => $fixture['student']->id,
             'exam_result_id' => $absentResult->id,
+        ]);
+    }
+
+    public function test_student_cannot_view_or_submit_appeal_for_unpublished_draft_result(): void
+    {
+        $fixture = $this->studentWithResult();
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $fixture['exam']->subject_id,
+            'name' => 'Draft Internal Marks',
+            'total_marks' => 60,
+            'published_at' => null,
+        ]);
+        $draftResult = ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 40,
+            'is_absent' => false,
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.appeals.create'))
+            ->assertOk()
+            ->assertSee('Mid Term Retest')
+            ->assertDontSee('Draft Internal Marks');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.appeals.store'), [
+                'exam_result_id' => $draftResult->id,
+                'reason' => 'wrong_entry',
+                'description' => 'Draft marks should not be appealable.',
+                'marks_claimed' => 45,
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('marks_appeals', [
+            'student_id' => $fixture['student']->id,
+            'exam_result_id' => $draftResult->id,
         ]);
     }
 }

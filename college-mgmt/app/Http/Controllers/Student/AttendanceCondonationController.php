@@ -13,12 +13,19 @@ class AttendanceCondonationController extends Controller {
         $condonations = AttendanceCondonation::with('subject')
             ->where('student_id', $student->id)
             ->orderByDesc('created_at')->paginate(15);
-        return view('student.condonation.index', compact('condonations'));
+        $canRequestCondonation = $student->status === 'active';
+
+        return view('student.condonation.index', compact('condonations', 'canRequestCondonation'));
     }
 
     public function create() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.condonation.index')
+                ->with('error', 'Attendance condonation requests are available only for active students. Contact the academic office for archived records.');
+        }
 
         $lowSubjects = $this->eligibleLowAttendanceSubjects($student)->values()->all();
 
@@ -28,6 +35,11 @@ class AttendanceCondonationController extends Controller {
     public function store(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.condonation.index')
+                ->with('error', 'Attendance condonation requests are available only for active students. Contact the academic office for archived records.');
+        }
 
         $data = $request->validate([
             'subject_id' => 'required|exists:subjects,id',

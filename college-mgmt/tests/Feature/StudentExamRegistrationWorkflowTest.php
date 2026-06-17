@@ -230,4 +230,64 @@ class StudentExamRegistrationWorkflowTest extends TestCase
 
         $this->assertSame(0, ExamRegistration::count());
     }
+
+    public function test_reviewed_exam_registration_cannot_be_reset_to_pending_by_student_post(): void
+    {
+        $fixture = $this->fixture();
+        FeeDemand::factory()->create([
+            'student_id' => $fixture['student']->id,
+            'status' => 'fully_paid',
+        ]);
+
+        foreach (['approved', 'rejected'] as $status) {
+            ExamRegistration::query()->delete();
+            $registration = ExamRegistration::create([
+                'student_id' => $fixture['student']->id,
+                'exam_id' => $fixture['exam']->id,
+                'status' => $status,
+                'attendance_eligible' => $status === 'approved',
+                'fee_cleared' => true,
+                'remarks' => 'Reviewed by Exam Cell',
+                'approved_by' => User::factory()->create()->id,
+            ]);
+
+            $this->actingAs($fixture['user'])
+                ->post(route('student.exam-reg.register', $fixture['exam']))
+                ->assertRedirect()
+                ->assertSessionHas('error', 'This exam registration has already been reviewed and cannot be changed.');
+
+            $registration->refresh();
+            $this->assertSame($status, $registration->status);
+            $this->assertSame('Reviewed by Exam Cell', $registration->remarks);
+        }
+    }
+
+    public function test_student_cannot_register_for_result_published_exam(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['exam']->forceFill([
+            'published_at' => now(),
+            'published_by' => User::factory()->create()->id,
+            'exam_date' => now()->addWeek(),
+        ])->save();
+        FeeDemand::factory()->create([
+            'student_id' => $fixture['student']->id,
+            'status' => 'fully_paid',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.exam-reg.index'))
+            ->assertOk()
+            ->assertDontSee('End Term Economics');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.exam-reg.register', $fixture['exam']))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Registration is closed because this exam result has already been published.');
+
+        $this->assertDatabaseMissing('exam_registrations', [
+            'student_id' => $fixture['student']->id,
+            'exam_id' => $fixture['exam']->id,
+        ]);
+    }
 }

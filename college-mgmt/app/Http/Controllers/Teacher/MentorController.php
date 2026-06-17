@@ -12,12 +12,28 @@ class MentorController extends Controller
         return auth()->user()->teacher;
     }
 
+    private function ensureCanMentor(Student $student): void
+    {
+        $teacher = $this->teacher();
+        abort_unless($teacher && $student->mentor_id === $teacher->user_id, 403);
+    }
+
+    private function ensureActiveMentor(Student $student): void
+    {
+        $teacher = $this->teacher();
+        abort_unless(
+            $teacher && $teacher->status === 'active' && $student->mentor_id === $teacher->user_id && $student->status === 'active',
+            403,
+            'Only active mentors can update active mentee workflows.'
+        );
+    }
+
     public function index()
     {
         $teacher = $this->teacher();
         if (!$teacher) abort(403);
 
-        $mentees = Student::where('mentor_id', $teacher->id)
+        $mentees = Student::where('mentor_id', $teacher->user_id)
             ->where('status', 'active')
             ->with(['user', 'program', 'batch'])
             ->get()
@@ -35,7 +51,7 @@ class MentorController extends Controller
                 return $student;
             });
 
-        $upcomingMeetings = MentorMeeting::where('mentor_id', $teacher->id)
+        $upcomingMeetings = MentorMeeting::where('mentor_id', $teacher->user_id)
             ->where('meeting_date', '>=', now()->toDateString())
             ->where('status', 'scheduled')
             ->with('student.user')
@@ -43,13 +59,15 @@ class MentorController extends Controller
             ->take(10)
             ->get();
 
-        return view('teacher.mentor.index', compact('mentees', 'upcomingMeetings'));
+        $canManageMentoring = $teacher->status === 'active';
+
+        return view('teacher.mentor.index', compact('mentees', 'upcomingMeetings', 'canManageMentoring'));
     }
 
     public function mentee(Student $student)
     {
         $teacher = $this->teacher();
-        if (!$teacher || $student->mentor_id !== $teacher->id) abort(403);
+        $this->ensureCanMentor($student);
 
         $student->load(['user', 'program', 'batch']);
 
@@ -67,16 +85,24 @@ class MentorController extends Controller
 
         // Meetings
         $meetings = MentorMeeting::where('student_id', $student->id)
-            ->where('mentor_id', $teacher->id)
+            ->where('mentor_id', $teacher->user_id)
             ->orderByDesc('meeting_date')
             ->get();
 
         // Attendance by subject
         $attBySubject = Attendance::where('student_id', $student->id)
-            ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present')
-            ->groupBy('subject_id')
-            ->with('subject')
-            ->get();
+            ->with('timetableEntry.subject')
+            ->get()
+            ->filter(fn ($attendance) => $attendance->timetableEntry?->subject)
+            ->groupBy(fn ($attendance) => $attendance->timetableEntry->subject_id)
+            ->map(function ($records) {
+                return (object) [
+                    'subject' => $records->first()->timetableEntry->subject,
+                    'total' => $records->count(),
+                    'present' => $records->where('status', 'present')->count(),
+                ];
+            })
+            ->values();
 
         // Exam results
         $results = ExamResult::where('student_id', $student->id)
@@ -85,13 +111,14 @@ class MentorController extends Controller
             ->take(10)
             ->get();
 
-        return view('teacher.mentor.mentee', compact('student', 'messages', 'meetings', 'attBySubject', 'results'));
+        $canManageMentoring = $teacher->status === 'active' && $student->status === 'active';
+
+        return view('teacher.mentor.mentee', compact('student', 'messages', 'meetings', 'attBySubject', 'results', 'canManageMentoring'));
     }
 
     public function sendMessage(Request $request, Student $student)
     {
-        $teacher = $this->teacher();
-        if (!$teacher || $student->mentor_id !== $teacher->id) abort(403);
+        $this->ensureActiveMentor($student);
 
         $request->validate(['message' => 'required|string|max:1000']);
 
@@ -107,7 +134,7 @@ class MentorController extends Controller
     public function scheduleMeeting(Request $request, Student $student)
     {
         $teacher = $this->teacher();
-        if (!$teacher || $student->mentor_id !== $teacher->id) abort(403);
+        $this->ensureActiveMentor($student);
 
         $request->validate([
             'meeting_date' => 'required|date|after_or_equal:today',
@@ -117,7 +144,7 @@ class MentorController extends Controller
 
         MentorMeeting::create([
             'student_id'   => $student->id,
-            'mentor_id'    => $teacher->id,
+            'mentor_id'    => $teacher->user_id,
             'meeting_date' => $request->meeting_date,
             'topic'        => $request->topic,
             'notes'        => $request->notes,

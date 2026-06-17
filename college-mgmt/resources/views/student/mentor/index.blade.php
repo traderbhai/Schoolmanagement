@@ -21,14 +21,20 @@
                 <i class="bi bi-person-fill"></i>
             </div>
             <div>
-                <div class="fw-semibold fs-6">{{ $student->mentor->user->name ?? $student->mentor->name }}</div>
+                <div class="fw-semibold fs-6">{{ $student->mentor->name }}</div>
                 <div class="text-muted small">Faculty Mentor · {{ $student->mentor->department->name ?? '' }}</div>
-                @if($student->mentor->user->email ?? false)
-                <a href="mailto:{{ $student->mentor->user->email }}" class="small">{{ $student->mentor->user->email }}</a>
+                @if($student->mentor->email ?? false)
+                <a href="mailto:{{ $student->mentor->email }}" class="small">{{ $student->mentor->email }}</a>
                 @endif
             </div>
         </div>
     </div>
+
+    @if(!$canUseMentorWorkflow)
+        <div class="alert alert-warning">
+            Mentor messaging and meeting requests are locked because this student profile is not active.
+        </div>
+    @endif
 
     <div class="row g-4">
         {{-- Message Thread --}}
@@ -50,6 +56,7 @@
                     @endforelse
                 </div>
                 <div class="card-footer">
+                    @if($canUseMentorWorkflow)
                     <form method="POST" action="{{ route('student.mentor.message') }}">
                         @csrf
                         <div class="d-flex gap-2">
@@ -59,6 +66,9 @@
                         </div>
                         @error('message')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </form>
+                    @else
+                        <div class="text-muted small">Mentor replies are locked for inactive student profiles.</div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -68,6 +78,7 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header fw-semibold"><i class="bi bi-calendar-plus me-2"></i>Request Meeting</div>
                 <div class="card-body">
+                    @if($canUseMentorWorkflow)
                     <form method="POST" action="{{ route('student.mentor.meeting') }}">
                         @csrf
                         <div class="mb-2">
@@ -84,6 +95,9 @@
                         </div>
                         <button type="submit" class="btn btn-sm btn-primary w-100">Send Request</button>
                     </form>
+                    @else
+                        <div class="text-muted small">Meeting requests are locked for inactive student profiles.</div>
+                    @endif
                 </div>
             </div>
 

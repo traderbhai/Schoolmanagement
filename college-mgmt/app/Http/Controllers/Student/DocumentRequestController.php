@@ -20,6 +20,14 @@ class DocumentRequestController extends Controller {
     }
 
     public function create() {
+        $student = Auth::user()->student;
+        abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.documents.index')
+                ->with('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
+        }
+
         $types = self::TYPES;
         return view('student.documents.create', compact('types'));
     }
@@ -27,6 +35,11 @@ class DocumentRequestController extends Controller {
     public function store(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.documents.index')
+                ->with('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
+        }
 
         $data = $request->validate([
             'document_type'   => 'required|in:' . implode(',', self::TYPES),

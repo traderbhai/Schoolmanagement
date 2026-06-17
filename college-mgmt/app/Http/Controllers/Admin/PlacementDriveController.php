@@ -6,10 +6,13 @@ use App\Models\Company;
 use App\Models\Placement;
 use App\Models\PlacementDrive;
 use App\Models\Student;
+use App\Services\PlacementLifecycleService;
 use Illuminate\Http\Request;
 
 class PlacementDriveController extends Controller
 {
+    public function __construct(private PlacementLifecycleService $lifecycle) {}
+
     public function index(Request $request)
     {
         $drives = PlacementDrive::with('company')
@@ -46,7 +49,7 @@ class PlacementDriveController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'company_id'     => 'required|exists:companies,id',
             'title'          => 'required|string|max:191',
             'job_role'       => 'required|string|max:191',
@@ -61,7 +64,11 @@ class PlacementDriveController extends Controller
             'description'    => 'nullable|string',
         ]);
 
-        PlacementDrive::create($request->all());
+        if (($data['last_apply_date'] ?? null) && ($data['drive_date'] ?? null) && $data['last_apply_date'] > $data['drive_date']) {
+            return back()->withErrors(['last_apply_date' => 'Application deadline cannot be after the placement drive date.'])->withInput();
+        }
+
+        PlacementDrive::create($data);
 
         return redirect()->route('admin.placement-drives.index')->with('success', 'Placement drive created successfully.');
     }
@@ -87,7 +94,7 @@ class PlacementDriveController extends Controller
 
     public function update(Request $request, PlacementDrive $placementDrive)
     {
-        $request->validate([
+        $data = $request->validate([
             'company_id'     => 'required|exists:companies,id',
             'title'          => 'required|string|max:191',
             'job_role'       => 'required|string|max:191',
@@ -102,13 +109,21 @@ class PlacementDriveController extends Controller
             'description'    => 'nullable|string',
         ]);
 
-        $placementDrive->update($request->all());
+        if ($message = $this->lifecycle->validateDriveUpdate($placementDrive, $data)) {
+            return back()->withErrors(['placement_drive' => $message])->withInput();
+        }
+
+        $placementDrive->update($data);
 
         return redirect()->route('admin.placement-drives.index')->with('success', 'Placement drive updated successfully.');
     }
 
     public function destroy(PlacementDrive $placementDrive)
     {
+        if ($message = $this->lifecycle->validateDriveDelete($placementDrive)) {
+            return back()->with('error', $message);
+        }
+
         $placementDrive->delete();
         return redirect()->route('admin.placement-drives.index')->with('success', 'Placement drive deleted.');
     }
@@ -119,9 +134,14 @@ class PlacementDriveController extends Controller
             'student_id' => 'required|exists:students,id',
         ]);
 
-        Placement::firstOrCreate(
-            ['drive_id' => $drive->id, 'student_id' => $request->student_id],
+        $student = Student::findOrFail($request->student_id);
+        if ($message = $this->lifecycle->validateApplicationCreate($drive, $student)) {
+            return back()->with('error', $message);
+        }
+
+        Placement::create(
             ['application_status' => 'applied']
+            + ['drive_id' => $drive->id, 'student_id' => $student->id]
         );
 
         return redirect()->route('admin.placement-drives.show', $drive)->with('success', 'Student added to drive.');
@@ -167,7 +187,13 @@ class PlacementDriveController extends Controller
             'remarks'            => 'nullable|string|max:500',
         ]);
 
-        $placement->update($request->only('application_status', 'offered_package', 'joining_date', 'remarks'));
+        $data = $request->only('application_status', 'offered_package', 'joining_date', 'remarks');
+
+        if ($message = $this->lifecycle->validateApplicationUpdate($placement, $data)) {
+            return back()->withErrors(['application_status' => $message])->withInput();
+        }
+
+        $placement->update($data);
 
         return redirect()->route('admin.placement-drives.show', $placement->drive_id)->with('success', 'Application updated.');
     }

@@ -4,10 +4,25 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-semibold mb-0">Attendance Condonation Requests</h4>
+        @if($canRequestCondonation)
         <a href="{{ route('student.condonation.create') }}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i>New Request
         </a>
+        @else
+            <span class="badge bg-secondary">Active students only</span>
+        @endif
     </div>
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-warning">{{ session('error') }}</div>
+    @endif
+    @unless($canRequestCondonation)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-1"></i>New attendance condonation requests are locked because your student profile is not active. Existing requests remain visible for history.
+        </div>
+    @endunless
     @if($condonations->isEmpty())
     <div class="alert alert-info">No condonation requests submitted yet.</div>
     @else

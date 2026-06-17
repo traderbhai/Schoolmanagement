@@ -6,6 +6,14 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Edit Exam</div>
   <div class="card-body">
+    @if(session('error'))
+      <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+    @if($exam->published_at)
+      <div class="alert alert-info">
+        <strong>Published exam locked.</strong> Official exam details cannot be edited after result publication.
+      </div>
+    @endif
     <form method="POST" action="{{ route('exam-cell.exams.update', $exam) }}">
       @csrf @method('PUT')
       <div class="row g-3">
@@ -78,7 +86,7 @@
           <input type="number" name="passing_marks" class="form-control" value="{{ old('passing_marks',$exam->passing_marks) }}" min="0">
         </div>
         <div class="col-12 d-flex gap-2 pt-2">
-          <button type="submit" class="btn btn-primary">Update Exam</button>
+          <button type="submit" class="btn btn-primary" @disabled($exam->published_at)>Update Exam</button>
           <a href="{{ route('exam-cell.exams') }}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </div>

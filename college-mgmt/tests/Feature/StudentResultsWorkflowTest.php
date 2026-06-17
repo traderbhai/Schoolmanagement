@@ -57,6 +57,7 @@ class StudentResultsWorkflowTest extends TestCase
             'name' => 'Canonical Result Exam',
             'total_marks' => 100,
             'passing_marks' => 35,
+            'published_at' => now(),
         ]);
         ExamResult::factory()->create([
             'exam_id' => $exam->id,
@@ -77,5 +78,69 @@ class StudentResultsWorkflowTest extends TestCase
         $this->assertSame(4, $report['total_credits']);
         $this->assertSame('Pass', $report['result']);
         $this->assertSame(9.0, app(\App\Services\GradeService::class)->calculateCGPA($student->id));
+    }
+
+    public function test_student_results_hide_unpublished_draft_marks_from_reports_and_cgpa(): void
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+
+        $program = Program::factory()->create();
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $semester = Semester::factory()->create([
+            'number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $user = User::factory()->create();
+        $user->assignRole('student');
+        $student = Student::factory()->create([
+            'user_id' => $user->id,
+            'program_id' => $program->id,
+            'current_term_id' => $term->id,
+            'status' => 'active',
+        ]);
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'credits' => 4,
+            'name' => 'Draft Hidden Subject',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'semester_id' => $semester->id,
+            'name' => 'Draft Result Exam',
+            'total_marks' => 100,
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $student->id,
+            'marks_obtained' => 95,
+            'is_absent' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.results'))
+            ->assertOk()
+            ->assertSee('Draft Hidden Subject')
+            ->assertDontSee('95.00/100', false);
+
+        $report = app(\App\Services\GradeService::class)->calculateStudentSemesterReport($student->id, $semester->id);
+        $this->assertSame('pending', $report['subjects'][0]['status']);
+        $this->assertSame(0.0, app(\App\Services\GradeService::class)->calculateCGPA($student->id));
     }
 }

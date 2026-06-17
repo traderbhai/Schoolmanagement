@@ -191,6 +191,48 @@ class StudentCareerEventWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_events_but_cannot_register_or_cancel(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $event = $this->event(['title' => 'Read Only Career Workshop']);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+        ]);
+
+        $newEvent = $this->event(['title' => 'Inactive Student Cannot Register Event']);
+
+        $this->actingAs($student->user)
+            ->get(route('student.career-events.index'))
+            ->assertOk()
+            ->assertSee('Read Only Career Workshop')
+            ->assertSee('Inactive Student Cannot Register Event')
+            ->assertSee('Registered')
+            ->assertSee('Active students only')
+            ->assertDontSee('Register</button>', false)
+            ->assertDontSee('Cancel</button>', false);
+
+        $this->actingAs($student->user)
+            ->post(route('student.career-events.register', $newEvent))
+            ->assertStatus(422);
+
+        $this->actingAs($student->user)
+            ->delete(route('student.career-events.cancel', $event))
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('career_event_registrations', [
+            'career_event_id' => $newEvent->id,
+            'student_id' => $student->id,
+        ]);
+        $this->assertDatabaseHas('career_event_registrations', [
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+        ]);
+    }
+
     public function test_student_event_list_only_shows_published_upcoming_events_and_registration_status(): void
     {
         $student = $this->student();
@@ -254,8 +296,18 @@ class StudentCareerEventWorkflowTest extends TestCase
         $this->actingAs($this->cmcUser())
             ->get(route('cmc.events.registrations', $event))
             ->assertStatus(200)
-            ->assertSee('Mark absent')
-            ->assertSee('1 attended');
+            ->assertSee('Attendance locked')
+            ->assertSee('1 attended')
+            ->assertDontSee('Mark absent');
+
+        $this->actingAs($this->cmcUser())
+            ->patch(route('cmc.events.registrations.attendance', [$event, $registration]), [
+                'attended' => false,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Attended event records are locked. Use an audited correction workflow for attendance reversals.');
+
+        $this->assertTrue($registration->fresh()->attended);
     }
 
     public function test_cmc_cannot_update_attendance_through_wrong_event_url(): void
@@ -436,6 +488,111 @@ class StudentCareerEventWorkflowTest extends TestCase
             ->assertSessionHas('success', 'Event updated.');
 
         $this->assertSame(1, $event->fresh()->seats);
+    }
+
+    public function test_cmc_cannot_rewrite_registered_event_contract_fields(): void
+    {
+        $cmc = $this->cmcUser();
+        $student = $this->student();
+        $event = $this->event([
+            'title' => 'Registered Contract Event',
+            'event_type' => 'workshop',
+            'organizer_id' => $cmc->id,
+            'event_date' => today()->addDays(5)->toDateString(),
+            'registration_deadline' => today()->addDays(2)->toDateString(),
+            'seats' => 20,
+        ]);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+        ]);
+
+        $this->actingAs($cmc)
+            ->from(route('cmc.events.edit', $event))
+            ->put(route('cmc.events.update', $event), [
+                'title' => 'Registered Contract Event',
+                'event_type' => 'mock_interview',
+                'event_date' => $event->event_date->toDateString(),
+                'venue' => 'Auditorium',
+                'seats' => 20,
+                'registration_deadline' => $event->registration_deadline->toDateString(),
+                'is_published' => '1',
+            ])
+            ->assertRedirect(route('cmc.events.edit', $event))
+            ->assertSessionHasErrors('career_event');
+
+        $this->actingAs($cmc)
+            ->from(route('cmc.events.edit', $event))
+            ->put(route('cmc.events.update', $event), [
+                'title' => 'Registered Contract Event',
+                'event_type' => 'workshop',
+                'event_date' => today()->addDays(7)->toDateString(),
+                'venue' => 'Auditorium',
+                'seats' => 20,
+                'registration_deadline' => $event->registration_deadline->toDateString(),
+                'is_published' => '1',
+            ])
+            ->assertRedirect(route('cmc.events.edit', $event))
+            ->assertSessionHasErrors('career_event');
+
+        $this->actingAs($cmc)
+            ->from(route('cmc.events.edit', $event))
+            ->put(route('cmc.events.update', $event), [
+                'title' => 'Registered Contract Event',
+                'event_type' => 'workshop',
+                'event_date' => $event->event_date->toDateString(),
+                'venue' => 'Auditorium',
+                'seats' => 20,
+                'registration_deadline' => today()->addDays(4)->toDateString(),
+                'is_published' => '1',
+            ])
+            ->assertRedirect(route('cmc.events.edit', $event))
+            ->assertSessionHasErrors('career_event');
+
+        $event->refresh();
+        $this->assertSame('workshop', $event->event_type);
+        $this->assertSame(today()->addDays(5)->toDateString(), $event->event_date->toDateString());
+        $this->assertSame(today()->addDays(2)->toDateString(), $event->registration_deadline->toDateString());
+    }
+
+    public function test_cmc_can_update_registered_event_safe_descriptive_fields(): void
+    {
+        $cmc = $this->cmcUser();
+        $student = $this->student();
+        $event = $this->event([
+            'title' => 'Registered Editable Event',
+            'organizer_id' => $cmc->id,
+            'event_date' => today()->addDays(3)->toDateString(),
+            'registration_deadline' => today()->addDay()->toDateString(),
+            'venue' => 'Old Venue',
+            'seats' => 5,
+        ]);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+        ]);
+
+        $this->actingAs($cmc)
+            ->put(route('cmc.events.update', $event), [
+                'title' => 'Registered Editable Event Updated',
+                'event_type' => $event->event_type,
+                'event_date' => $event->event_date->toDateString(),
+                'venue' => 'New Venue',
+                'description' => 'Updated room directions.',
+                'seats' => 10,
+                'registration_deadline' => $event->registration_deadline->toDateString(),
+                'is_published' => '1',
+            ])
+            ->assertRedirect(route('cmc.events'))
+            ->assertSessionHas('success', 'Event updated.');
+
+        $event->refresh();
+        $this->assertSame('Registered Editable Event Updated', $event->title);
+        $this->assertSame('New Venue', $event->venue);
+        $this->assertSame(10, $event->seats);
+        $this->assertSame('Updated room directions.', $event->description);
     }
 
     public function test_cmc_can_delete_event_without_registrations(): void

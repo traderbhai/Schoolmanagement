@@ -75,10 +75,13 @@ class HostelFeeWorkflowTest extends TestCase
         $existingStudent = $this->student('Existing Demand Student');
         $newStudent = $this->student('New Demand Student');
         $zeroFeeStudent = $this->student('Zero Fee Student');
+        $inactiveStudent = $this->student('Inactive Hostel Student');
+        $inactiveStudent->update(['status' => 'inactive']);
 
         $existingAllocation = $this->allocation($existingStudent, $this->room(['room_number' => '201']));
         $newAllocation = $this->allocation($newStudent, $this->room(['room_number' => '202']));
         $this->allocation($zeroFeeStudent, $this->room(['room_number' => '203', 'monthly_fee' => 0]));
+        $this->allocation($inactiveStudent, $this->room(['room_number' => '204']));
 
         HostelFeeDemand::create([
             'hostel_allocation_id' => $existingAllocation->id,
@@ -95,7 +98,7 @@ class HostelFeeWorkflowTest extends TestCase
                 'due_date' => '2026-06-30',
             ])
             ->assertRedirect()
-            ->assertSessionHas('success', 'Hostel fee demands generated: 1 created, 2 skipped.');
+            ->assertSessionHas('success', 'Hostel fee demands generated: 1 created, 3 skipped.');
 
         $this->assertSame(2, HostelFeeDemand::count());
         $this->assertDatabaseHas('hostel_fee_demands', [
@@ -107,6 +110,10 @@ class HostelFeeWorkflowTest extends TestCase
         ]);
         $this->assertDatabaseMissing('hostel_fee_demands', [
             'student_id' => $zeroFeeStudent->id,
+            'month' => '2026-06',
+        ]);
+        $this->assertDatabaseMissing('hostel_fee_demands', [
+            'student_id' => $inactiveStudent->id,
             'month' => '2026-06',
         ]);
     }
@@ -134,6 +141,7 @@ class HostelFeeWorkflowTest extends TestCase
         $demand->refresh();
         $this->assertSame('paid', $demand->status);
         $this->assertNotNull($demand->paid_at);
+        $this->assertSame($admin->id, $demand->paid_by);
 
         $this->actingAs($admin)
             ->post(route('admin.hostel.fees.waive', $demand))
@@ -141,6 +149,44 @@ class HostelFeeWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Only pending hostel fee demands can be waived.');
 
         $this->assertSame('paid', $demand->fresh()->status);
+    }
+
+    public function test_hostel_fee_waiver_requires_reason_and_stores_audit_metadata(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Waiver Audit Student');
+        $allocation = $this->allocation($student, $this->room(['room_number' => '251']));
+
+        $demand = HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => '2026-07',
+            'amount' => 4500,
+            'status' => 'pending',
+            'due_date' => '2026-07-31',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.hostel.fees'))
+            ->post(route('admin.hostel.fees.waive', $demand))
+            ->assertRedirect(route('admin.hostel.fees'))
+            ->assertSessionHasErrors('waiver_reason');
+
+        $this->assertSame('pending', $demand->fresh()->status);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.fees.waive', $demand), [
+                'waiver_reason' => 'Dean approved waiver due documented accommodation hardship.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Hostel fee demand waived.');
+
+        $demand->refresh();
+        $this->assertSame('waived', $demand->status);
+        $this->assertNull($demand->paid_at);
+        $this->assertSame($admin->id, $demand->waived_by);
+        $this->assertNotNull($demand->waived_at);
+        $this->assertSame('Dean approved waiver due documented accommodation hardship.', $demand->waiver_reason);
     }
 
     public function test_student_fee_page_shows_hostel_demands_and_outstanding_total(): void

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, ExamAnomalyLog, ExamResult, MarksAppeal, Program, Student, Subject, Term, Classroom};
+use App\Models\{Exam, ExamAnomalyLog, ExamResult, MarksAppeal, Notification, Program, Student, Subject, Term, Classroom};
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -119,6 +119,11 @@ class ExamCellController extends Controller
 
     public function updateExam(Request $request, Exam $exam)
     {
+        if ($exam->published_at) {
+            return redirect()->route('exam-cell.exams')
+                ->with('error', 'Published exams cannot be edited because official result history is locked.');
+        }
+
         $data = $request->validate([
             'name'         => 'required|string|max:255',
             'type'         => 'required|string|max:100',
@@ -139,6 +144,10 @@ class ExamCellController extends Controller
 
     public function destroyExam(Exam $exam)
     {
+        if ($exam->published_at) {
+            return back()->with('error', 'Published exams cannot be deleted because official result history is locked.');
+        }
+
         $exam->delete();
         return back()->with('success', 'Exam deleted.');
     }
@@ -174,6 +183,10 @@ class ExamCellController extends Controller
 
     public function saveMarks(Request $request, Exam $exam)
     {
+        if ($exam->published_at) {
+            return back()->with('error', 'Published results are locked. Reopen through an approved correction workflow before editing marks.');
+        }
+
         $request->validate([
             'marks'   => 'required|array',
             'marks.*' => 'nullable|numeric|min:0|max:' . (float) $exam->total_marks,
@@ -271,7 +284,36 @@ class ExamCellController extends Controller
             'published_by' => auth()->id(),
         ])->save();
 
+        $this->queueResultPublishedNotifications($exam);
+
         return redirect()->route('exam-cell.grade-sheet', $exam)->with('success', 'Results published successfully.');
+    }
+
+    private function queueResultPublishedNotifications(Exam $exam): void
+    {
+        $actionUrl = route('student.results', array_filter(['semester_id' => $exam->semester_id]));
+        $title = 'Exam result published';
+        $subjectName = $exam->subject?->name ?? 'your subject';
+        $examName = $exam->name ?? 'exam';
+
+        $this->eligibleStudentQuery($exam)
+            ->whereNotNull('user_id')
+            ->get(['id', 'user_id'])
+            ->each(function (Student $student) use ($actionUrl, $title, $subjectName, $examName) {
+                Notification::updateOrCreate(
+                    [
+                        'user_id' => $student->user_id,
+                        'type' => 'result_published',
+                        'action_url' => $actionUrl,
+                        'title' => $title,
+                    ],
+                    [
+                        'message' => "Your result for {$examName} ({$subjectName}) has been published.",
+                        'is_read' => false,
+                        'read_at' => null,
+                    ]
+                );
+            });
     }
 
     public function hallTickets(Request $request)

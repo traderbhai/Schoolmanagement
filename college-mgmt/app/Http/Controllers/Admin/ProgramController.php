@@ -3,10 +3,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Program, Department};
+use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
 class ProgramController extends Controller
 {
+    public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
+
     public function index()
     {
         $programs = Program::with('department', 'batches')->withCount('students', 'subjects', 'batches')->get();
@@ -49,7 +52,7 @@ class ProgramController extends Controller
 
     public function update(Request $r, Program $program)
     {
-        $r->validate([
+        $validated = $r->validate([
             'name'          => 'required|string|max:191',
             'code'          => 'required|string|max:20|unique:programs,code,' . $program->id,
             'department_id' => 'required|exists:departments,id',
@@ -57,15 +60,30 @@ class ProgramController extends Controller
             'duration_years'=> 'required|integer|min:1|max:5',
             'total_terms'   => 'required|integer|min:1|max:12',
         ]);
-        $program->update($r->all());
+
+        $structuralFields = ['department_id', 'system_type', 'duration_years', 'total_terms'];
+        $changesStructure = collect($structuralFields)->contains(
+            fn (string $field) => (string) $program->{$field} !== (string) $validated[$field]
+        );
+
+        if ($changesStructure && $this->integrity->hasDependencies('program', $program->id)) {
+            return back()->withErrors([
+                'program' => 'Program structure is locked because students, batches, subjects, timetable, exams, or PMC records already depend on it. Deactivate or create a revised program instead.',
+            ])->withInput();
+        }
+
+        $program->update($validated);
         return redirect()->route('admin.programs.index')->with('success', 'Program updated.');
     }
 
     public function destroy(Program $program)
     {
-        if ($program->students()->count() > 0) {
-            return back()->with('error', 'Cannot delete program with enrolled students.');
+        $dependencies = $this->integrity->dependencyLabels('program', $program->id);
+
+        if ($dependencies !== []) {
+            return back()->with('error', $this->integrity->message('program', $dependencies));
         }
+
         $program->delete();
         return redirect()->route('admin.programs.index')->with('success', 'Program deleted.');
     }

@@ -76,7 +76,9 @@ class NotificationTest extends TestCase
 
         $this->post("/notifications/{$notification->id}/delete");
 
-        $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
+        $this->assertSoftDeleted('notifications', ['id' => $notification->id]);
+        $this->assertTrue(Notification::withTrashed()->whereKey($notification->id)->exists());
+        $this->assertNull(Notification::find($notification->id));
     }
 
     public function test_notification_mark_as_read_sets_timestamp()
@@ -98,5 +100,25 @@ class NotificationTest extends TestCase
         $response = $this->get("/notifications/{$notification->id}");
 
         $response->assertStatus(403);
+    }
+
+    public function test_only_own_notifications_can_be_marked_read_or_archived()
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $otherUser = User::factory()->create();
+        $otherUser->assignRole('student');
+        $notification = Notification::factory()->create([
+            'user_id' => $otherUser->id,
+            'is_read' => false,
+            'read_at' => null,
+        ]);
+
+        $this->post("/notifications/{$notification->id}/mark-read")->assertStatus(403);
+        $this->post("/notifications/{$notification->id}/delete")->assertStatus(403);
+
+        $notification->refresh();
+        $this->assertFalse($notification->is_read);
+        $this->assertNull($notification->read_at);
+        $this->assertFalse($notification->trashed());
     }
 }

@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Batch;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use App\Models\QuizOption;
 use App\Models\QuizQuestion;
 use App\Models\Semester;
@@ -370,6 +372,43 @@ class StudentCourseContentAccessTest extends TestCase
         ]);
     }
 
+    public function test_student_cannot_resubmit_assignment_after_it_is_graded(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $assignment = Assignment::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Graded Assignment',
+            'description' => 'Graded submissions are locked.',
+            'due_at' => now()->addDays(3),
+            'max_marks' => 100,
+            'is_published' => true,
+        ]);
+        $this->enroll($student, $subject);
+        $submission = AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer_text' => 'Original final answer.',
+            'marks_obtained' => 82,
+            'feedback' => 'Good structure.',
+            'graded_by' => $this->teacher()->id,
+            'graded_at' => now(),
+            'status' => 'graded',
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.assignments.submit', $assignment), ['answer_text' => 'Overwrite after grading.'])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This assignment has already been graded and cannot be resubmitted.');
+
+        $submission->refresh();
+        $this->assertSame('graded', $submission->status);
+        $this->assertSame('Original final answer.', $submission->answer_text);
+        $this->assertEquals(82, (float) $submission->marks_obtained);
+        $this->assertSame('Good structure.', $submission->feedback);
+    }
+
     public function test_student_cannot_view_start_or_result_quiz_outside_enrolled_subject(): void
     {
         $student = $this->student();
@@ -525,5 +564,103 @@ class StudentCourseContentAccessTest extends TestCase
             'quiz_question_id' => $question->id,
             'quiz_option_id' => $otherOption->id,
         ]);
+    }
+
+    public function test_student_cannot_submit_quiz_after_it_is_closed_or_unpublished(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Closing Quiz',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'is_published' => true,
+            'total_marks' => 1,
+        ]);
+        $question = QuizQuestion::create([
+            'quiz_id' => $quiz->id,
+            'question_text' => 'Answer before close.',
+            'type' => 'mcq',
+            'marks' => 1,
+            'order' => 1,
+        ]);
+        $correct = QuizOption::create([
+            'quiz_question_id' => $question->id,
+            'option_text' => 'Correct',
+            'is_correct' => true,
+            'order' => 1,
+        ]);
+        $this->enroll($student, $subject);
+
+        $this->actingAs($student->user)->post(route('student.quizzes.start', $quiz))->assertOk();
+
+        $quiz->forceFill(['ends_at' => now()->subMinute()])->save();
+
+        $this->actingAs($student->user)
+            ->post(route('student.quizzes.submit', $quiz), ['answers' => [$question->id => $correct->id]])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('quiz_attempts', [
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'is_completed' => false,
+            'score' => null,
+        ]);
+        $this->assertDatabaseMissing('quiz_answers', [
+            'quiz_question_id' => $question->id,
+            'quiz_option_id' => $correct->id,
+        ]);
+
+        $quiz->forceFill(['ends_at' => now()->addHour(), 'is_published' => false])->save();
+
+        $this->actingAs($student->user)
+            ->post(route('student.quizzes.submit', $quiz), ['answers' => [$question->id => $correct->id]])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('quiz_attempts', [
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'is_completed' => false,
+            'score' => null,
+        ]);
+    }
+
+    public function test_student_cannot_view_quiz_result_until_results_are_released(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Delayed Result Quiz',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'is_published' => true,
+            'show_result_immediately' => false,
+            'total_marks' => 1,
+        ]);
+        $this->enroll($student, $subject);
+        QuizAttempt::create([
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(10),
+            'submitted_at' => now()->subMinute(),
+            'score' => 1,
+            'is_completed' => true,
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.quizzes.result', $quiz))
+            ->assertRedirect(route('student.quizzes.index'))
+            ->assertSessionHas('error', 'Quiz results are not available yet.');
+
+        $quiz->forceFill(['ends_at' => now()->subMinute()])->save();
+
+        $this->actingAs($student->user)
+            ->get(route('student.quizzes.result', $quiz))
+            ->assertOk()
+            ->assertSee('Delayed Result Quiz');
     }
 }

@@ -41,6 +41,18 @@ class TermPromotion extends Model
         return (int) $this->student?->current_term_id === (int) $this->current_term_id;
     }
 
+    public function targetTermIsValidProgression(): bool
+    {
+        $current = $this->currentTerm;
+        $target = $this->promotedToTerm;
+
+        return $current
+            && $target
+            && (int) $current->program_id === (int) $target->program_id
+            && (int) $current->batch_id === (int) $target->batch_id
+            && (int) $target->term_number > (int) $current->term_number;
+    }
+
     public function approve(): void
     {
         $this->update(['status' => 'approved', 'processed_at' => now(), 'processed_by' => auth()->id()]);

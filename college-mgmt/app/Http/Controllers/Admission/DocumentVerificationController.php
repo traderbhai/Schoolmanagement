@@ -63,6 +63,10 @@ class DocumentVerificationController extends Controller
     {
         $this->guardDocumentScope($document);
 
+        if ($document->status !== 'pending') {
+            return back()->with('error', 'Only pending applicant documents can be verified.');
+        }
+
         $document->update([
             'status'      => 'verified',
             'verified_by' => Auth::id(),
@@ -79,6 +83,10 @@ class DocumentVerificationController extends Controller
     public function reject(Request $request, ApplicantDocument $document)
     {
         $this->guardDocumentScope($document);
+
+        if ($document->status !== 'pending') {
+            return back()->with('error', 'Only pending applicant documents can be rejected.');
+        }
 
         $request->validate([
             'rejection_reason' => 'required|string|max:1000',

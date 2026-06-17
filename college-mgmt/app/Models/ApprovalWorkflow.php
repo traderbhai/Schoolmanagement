@@ -13,14 +13,18 @@ class ApprovalWorkflow extends Model
         'approvable_type',
         'approvable_id',
         'approver_role',
+        'workflow_type',
+        'step_order',
         'status',
         'remarks',
         'approver_id',
         'approved_at',
         'sla_days',
+        'sla_hours',
         'due_at',
         'escalated_to_role',
         'escalated_at',
+        'parent_approval_id',
     ];
 
     protected $casts = [

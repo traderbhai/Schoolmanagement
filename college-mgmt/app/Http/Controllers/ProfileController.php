@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Applicant;
+use App\Models\ParentProfile;
+use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +52,12 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        if ($this->hasInstitutionalProfile((int) $user->id)) {
+            return Redirect::route('profile.edit')->withErrors([
+                'password' => 'Institutional accounts cannot be self-deleted. Ask an administrator to archive the linked student, teacher, parent, or applicant profile so academic and financial history is preserved.',
+            ], 'userDeletion');
+        }
+
         Auth::logout();
 
         $user->delete();
@@ -56,5 +66,13 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function hasInstitutionalProfile(int $userId): bool
+    {
+        return Student::where('user_id', $userId)->exists()
+            || Teacher::where('user_id', $userId)->exists()
+            || ParentProfile::withTrashed()->where('user_id', $userId)->exists()
+            || Applicant::where('user_id', $userId)->exists();
     }
 }

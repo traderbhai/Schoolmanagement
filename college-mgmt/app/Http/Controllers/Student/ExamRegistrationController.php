@@ -58,6 +58,18 @@ class ExamRegistrationController extends Controller {
         abort_unless($this->studentCanAccessExam($student, $exam), 403);
         abort_if($exam->exam_date && $exam->exam_date->isPast(), 422, 'Registration is closed for this exam.');
 
+        if ($exam->published_at) {
+            return back()->with('error', 'Registration is closed because this exam result has already been published.');
+        }
+
+        $existingRegistration = ExamRegistration::where('student_id', $student->id)
+            ->where('exam_id', $exam->id)
+            ->first();
+
+        if ($existingRegistration && in_array($existingRegistration->status, ['approved', 'rejected'], true)) {
+            return back()->with('error', 'This exam registration has already been reviewed and cannot be changed.');
+        }
+
         $hasDues = FeeDemand::where('student_id',$student->id)->where('status','!=','fully_paid')->exists();
 
         // Attendance check
@@ -108,7 +120,8 @@ class ExamRegistrationController extends Controller {
                 if ($eligibility['semester_ids'] !== []) {
                     $query->orWhereIn('semester_id', $eligibility['semester_ids']);
                 }
-            });
+            })
+            ->whereNull('published_at');
     }
 
     private function studentCanAccessExam(Student $student, Exam $exam): bool

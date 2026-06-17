@@ -135,6 +135,10 @@ class LibraryController extends Controller
             return back()->withErrors(['borrower_id' => 'Selected borrower was not found.']);
         }
 
+        if (($borrower->status ?? null) !== 'active') {
+            return back()->withErrors(['borrower_id' => 'Only active students or teachers can be issued library books.']);
+        }
+
         $membership = LibraryMembership::where('user_id', $borrower->user_id)->where('is_active', true)->first();
         if ($membership && $membership->expiry_date && $membership->expiry_date->isPast()) {
             return back()->withErrors(['borrower_id' => 'Library membership has expired.']);
@@ -186,11 +190,17 @@ class LibraryController extends Controller
     public function returnBook(BookIssue $issue)
     {
         if ($issue->returned_at) return back()->with('error', 'Book already returned.');
+
+        if (! in_array($issue->status, ['issued', 'overdue'], true)) {
+            return back()->with('error', 'Only active issued or overdue books can be returned.');
+        }
+
         $fine = $this->fines->calculateFine($issue);
         $issue->update([
             'returned_at'         => now(),
             'return_accepted_by'  => auth()->id(),
             'fine_amount'         => $fine,
+            'fine_paid'           => $fine <= 0,
             'status'              => 'returned',
         ]);
         $issue->bookCopy->update(['is_available' => true]);
@@ -332,6 +342,14 @@ class LibraryController extends Controller
             'fine_per_day'      => 'required|numeric|min:0',
             'expiry_date'       => 'nullable|date',
         ]);
+
+        $activeIssueCount = $this->activeIssueCountForMembershipUser((int) $data['user_id'], $data['member_type']);
+        if ((int) $data['max_books_allowed'] < $activeIssueCount) {
+            return back()->withErrors([
+                'max_books_allowed' => "Max books cannot be lower than the borrower's current active issue count ({$activeIssueCount}).",
+            ])->withInput();
+        }
+
         LibraryMembership::updateOrCreate(['user_id' => $data['user_id']], $data + ['is_active' => true]);
         return back()->with('success', 'Membership saved.');
     }
@@ -345,6 +363,18 @@ class LibraryController extends Controller
 
     public function finePay(BookIssue $issue)
     {
+        if (in_array($issue->status, ['issued', 'overdue'], true)) {
+            return back()->withErrors(['fine' => 'Return the book before collecting the final fine.']);
+        }
+
+        if ((float) $issue->fine_amount <= 0) {
+            return back()->withErrors(['fine' => 'There is no payable fine on this issue.']);
+        }
+
+        if ($issue->fine_paid) {
+            return back()->withErrors(['fine' => 'This fine has already been paid.']);
+        }
+
         $issue->update(['fine_paid' => true]);
         return back()->with('success', 'Fine of Rs. ' . number_format((float) $issue->fine_amount, 2) . ' marked as paid.');
     }
@@ -373,5 +403,26 @@ class LibraryController extends Controller
             ->where('status', 'pending')
             ->orderBy('reserved_at')
             ->first();
+    }
+
+    private function activeIssueCountForMembershipUser(int $userId, string $memberType): int
+    {
+        if ($memberType === 'student') {
+            $studentId = Student::where('user_id', $userId)->value('id');
+
+            return $studentId
+                ? BookIssue::where('student_id', $studentId)->whereIn('status', ['issued', 'overdue'])->count()
+                : 0;
+        }
+
+        if ($memberType === 'teacher') {
+            $teacherId = Teacher::where('user_id', $userId)->value('id');
+
+            return $teacherId
+                ? BookIssue::where('teacher_id', $teacherId)->whereIn('status', ['issued', 'overdue'])->count()
+                : 0;
+        }
+
+        return 0;
     }
 }

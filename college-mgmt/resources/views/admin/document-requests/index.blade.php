@@ -179,12 +179,14 @@
                                         </form>
                                     @endif
 
-                                    <form method="POST" action="{{ route('admin.document-requests.fulfill', $request) }}" enctype="multipart/form-data" class="d-flex gap-2">
-                                        @csrf
-                                        <input type="file" name="document_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
-                                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="Student note">
-                                        <button type="submit" class="btn btn-sm btn-primary">Mark Ready</button>
-                                    </form>
+                                    @if($request->status === 'approved')
+                                        <form method="POST" action="{{ route('admin.document-requests.fulfill', $request) }}" enctype="multipart/form-data" class="d-flex gap-2">
+                                            @csrf
+                                            <input type="file" name="document_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
+                                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Student note">
+                                            <button type="submit" class="btn btn-sm btn-primary">Mark Ready</button>
+                                        </form>
+                                    @endif
 
                                     <form method="POST" action="{{ route('admin.document-requests.reject', $request) }}" class="d-flex gap-2">
                                         @csrf

@@ -8,6 +8,7 @@ use App\Models\ScoringParameter;
 use App\Models\SelectionProcessStep;
 use App\Models\SelectionSession;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SelectionProcessController extends Controller
 {
@@ -66,9 +67,17 @@ class SelectionProcessController extends Controller
             'instructions' => 'nullable|string',
         ]);
 
-        $step->update(array_merge($validated, [
+        $data = array_merge($validated, [
             'is_active' => $request->boolean('is_active', true),
-        ]));
+        ]);
+
+        if ($this->selectionStepHasActivity($step) && $this->changesSelectionStepContract($step, $data)) {
+            throw ValidationException::withMessages([
+                'selection_step' => 'This selection step already has sessions or scores and cannot be restructured, reordered, rescored, or deactivated.',
+            ]);
+        }
+
+        $step->update($data);
 
         return redirect()->route('admission.selection-process.steps', $step->program)
             ->with('success', 'Step updated successfully.');
@@ -76,8 +85,7 @@ class SelectionProcessController extends Controller
 
     public function destroyStep(SelectionProcessStep $step)
     {
-        $hasSessions = SelectionSession::where('selection_process_step_id', $step->id)->exists();
-        if ($hasSessions) {
+        if ($this->selectionStepHasActivity($step)) {
             return back()->with('error', 'Cannot delete: sessions have been conducted for this step.');
         }
         $program = $step->program;
@@ -146,5 +154,19 @@ class SelectionProcessController extends Controller
         $parameter->delete();
         return redirect()->route('admission.selection-process.parameters', $step)
             ->with('success', 'Parameter deleted.');
+    }
+
+    private function selectionStepHasActivity(SelectionProcessStep $step): bool
+    {
+        return $step->sessions()->exists() || $step->scores()->exists();
+    }
+
+    private function changesSelectionStepContract(SelectionProcessStep $step, array $data): bool
+    {
+        return (string) ($data['type'] ?? $step->type) !== (string) $step->type
+            || (int) ($data['step_order'] ?? $step->step_order) !== (int) $step->step_order
+            || (int) ($data['max_score'] ?? $step->max_score) !== (int) $step->max_score
+            || number_format((float) ($data['weightage'] ?? $step->weightage), 2, '.', '') !== number_format((float) $step->weightage, 2, '.', '')
+            || (array_key_exists('is_active', $data) && (bool) $data['is_active'] !== (bool) $step->is_active);
     }
 }

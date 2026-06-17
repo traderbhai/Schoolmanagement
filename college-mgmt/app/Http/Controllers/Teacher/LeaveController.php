@@ -18,11 +18,19 @@ class LeaveController extends Controller
     {
         $teacher = $this->getTeacher();
         $leaves = $teacher->leaveApplications()->latest()->paginate(15);
-        return view('teacher.leaves.index', compact('leaves'));
+        $canApplyForLeave = $teacher->status === 'active';
+        return view('teacher.leaves.index', compact('leaves', 'canApplyForLeave'));
     }
 
     public function create()
     {
+        $teacher = $this->getTeacher();
+        if ($teacher->status !== 'active') {
+            return redirect()
+                ->route('teacher.leaves.index')
+                ->with('error', 'Leave applications can be submitted only by active teachers.');
+        }
+
         return view('teacher.leaves.create');
     }
 
@@ -36,6 +44,11 @@ class LeaveController extends Controller
         ]);
 
         $teacher = $this->getTeacher();
+        if ($teacher->status !== 'active') {
+            return redirect()
+                ->route('teacher.leaves.index')
+                ->with('error', 'Leave applications can be submitted only by active teachers.');
+        }
 
         $from = Carbon::parse($request->from_date)->startOfDay();
         $to   = Carbon::parse($request->to_date)->startOfDay();
@@ -73,7 +86,7 @@ class LeaveController extends Controller
     {
         $teacher = $this->getTeacher();
 
-        if ($leave->teacher_id !== $teacher->id || $leave->status !== 'pending') {
+        if ($teacher->status !== 'active' || $leave->teacher_id !== $teacher->id || $leave->status !== 'pending') {
             return back()->with('error', 'Cannot cancel this leave application.');
         }
 

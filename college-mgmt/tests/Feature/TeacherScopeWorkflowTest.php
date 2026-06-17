@@ -10,11 +10,15 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamResult;
+use App\Models\MentorMeeting;
+use App\Models\MentorMessage;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
+use App\Models\StudyMaterial;
 use App\Models\Subject;
+use App\Models\SubjectAnnouncement;
 use App\Models\Teacher;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
@@ -33,7 +37,7 @@ class TeacherScopeWorkflowTest extends TestCase
         $program = Program::factory()->create();
         $course = Course::factory()->create();
         $semester = Semester::factory()->create(['is_current' => true]);
-        $teacher = Teacher::factory()->create();
+        $teacher = Teacher::factory()->create(['status' => 'active']);
         $teacher->user->assignRole('teacher');
         $assignedSubject = Subject::factory()->create(['program_id' => $program->id]);
         $otherSubject = Subject::factory()->create(['program_id' => $program->id]);
@@ -118,6 +122,172 @@ class TeacherScopeWorkflowTest extends TestCase
             'title' => 'Valid Lecture Notes',
             'type' => 'notes',
         ]);
+    }
+
+    public function test_inactive_teacher_cannot_mutate_course_content_or_grades(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['teacher']->update(['status' => 'inactive']);
+
+        $material = StudyMaterial::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'uploaded_by' => $fixture['teacher']->user_id,
+            'title' => 'Historical inactive material',
+            'type' => 'notes',
+            'is_published' => true,
+        ]);
+        $announcement = SubjectAnnouncement::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'posted_by' => $fixture['teacher']->user_id,
+            'title' => 'Historical inactive announcement',
+            'body' => 'Visible history.',
+        ]);
+        $assignment = Assignment::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Historical inactive assignment',
+            'description' => 'Historical assignment visible to the inactive teacher.',
+            'max_marks' => 20,
+            'due_at' => now()->addWeek(),
+            'is_published' => true,
+        ]);
+        $submission = AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $fixture['enrolled']->id,
+            'answer_text' => 'Submitted work',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.materials.index'))
+            ->assertOk()
+            ->assertSee('Historical inactive material')
+            ->assertSee('Active teachers only')
+            ->assertDontSee('Upload Material');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.index'))
+            ->assertOk()
+            ->assertSee('Historical inactive assignment')
+            ->assertSee('Active teachers only')
+            ->assertDontSee('Create Assignment');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.announcements.index'))
+            ->assertOk()
+            ->assertSee('Historical inactive announcement')
+            ->assertSee('teacher profile is not active')
+            ->assertDontSee('Post Announcement');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.submissions', $assignment))
+            ->assertOk()
+            ->assertSee('Grading is locked because this teacher profile is not active.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.materials.create'))
+            ->assertRedirect(route('teacher.materials.index'))
+            ->assertSessionHas('error', 'Only active teachers can upload study materials.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.create'))
+            ->assertRedirect(route('teacher.assignments.index'))
+            ->assertSessionHas('error', 'Only active teachers can create assignments.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.materials.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Inactive teacher material',
+                'type' => 'notes',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.assignments.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Inactive teacher assignment',
+                'max_marks' => 10,
+                'due_at' => now()->addWeek()->toDateTimeString(),
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.announcements.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Inactive teacher announcement',
+                'body' => 'Should not be posted.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->delete(route('teacher.materials.destroy', $material))
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->delete(route('teacher.announcements.destroy', $announcement))
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.assignments.grade', $submission), [
+                'marks_obtained' => 18,
+                'feedback' => 'Should not grade.',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('study_materials', ['title' => 'Inactive teacher material']);
+        $this->assertDatabaseMissing('assignments', ['title' => 'Inactive teacher assignment']);
+        $this->assertDatabaseMissing('subject_announcements', ['title' => 'Inactive teacher announcement']);
+        $this->assertDatabaseHas('assignment_submissions', [
+            'id' => $submission->id,
+            'status' => 'submitted',
+            'marks_obtained' => null,
+        ]);
+        $this->assertDatabaseHas('study_materials', ['id' => $material->id, 'deleted_at' => null]);
+        $this->assertDatabaseHas('subject_announcements', ['id' => $announcement->id, 'deleted_at' => null]);
+    }
+
+    public function test_teacher_material_and_announcement_delete_archives_content_history(): void
+    {
+        $fixture = $this->fixture();
+
+        $material = StudyMaterial::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'uploaded_by' => $fixture['teacher']->user_id,
+            'title' => 'Published Content History',
+            'type' => 'notes',
+            'file_path' => 'materials/published-history.pdf',
+            'is_published' => true,
+        ]);
+
+        $announcement = SubjectAnnouncement::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'posted_by' => $fixture['teacher']->user_id,
+            'title' => 'Archived Announcement History',
+            'body' => 'This announcement should be archived, not destroyed.',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->delete(route('teacher.materials.destroy', $material))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Material archived. Teaching history and file reference were preserved.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->delete(route('teacher.announcements.destroy', $announcement))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Announcement archived. Teaching history was preserved.');
+
+        $this->assertNull(StudyMaterial::find($material->id));
+        $archivedMaterial = StudyMaterial::withTrashed()->find($material->id);
+        $this->assertNotNull($archivedMaterial);
+        $this->assertNotNull($archivedMaterial->deleted_at);
+        $this->assertSame('materials/published-history.pdf', $archivedMaterial->file_path);
+
+        $this->assertNull(SubjectAnnouncement::find($announcement->id));
+        $archivedAnnouncement = SubjectAnnouncement::withTrashed()->find($announcement->id);
+        $this->assertNotNull($archivedAnnouncement);
+        $this->assertNotNull($archivedAnnouncement->deleted_at);
+        $this->assertSame('Archived Announcement History', $archivedAnnouncement->title);
     }
 
     public function test_teacher_cannot_grade_another_teachers_assignment_submission(): void
@@ -276,6 +446,110 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('exam_results', ['student_id' => $fixture['outsider']->id]);
     }
 
+    public function test_inactive_teacher_cannot_mark_attendance_or_save_exam_results(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['teacher']->update(['status' => 'inactive']);
+        $exam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.attendance.mark', [
+                'date' => now()->toDateString(),
+                'entry_id' => $fixture['entry']->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Attendance marking is locked because this teacher profile is not active.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.exams.results', $exam))
+            ->assertOk()
+            ->assertSee('Result entry is locked because this teacher profile is not active.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $exam), [
+                'results' => [$fixture['enrolled']->id => ['marks_obtained' => 80]],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+        ]);
+        $this->assertDatabaseMissing('exam_results', [
+            'student_id' => $fixture['enrolled']->id,
+            'exam_id' => $exam->id,
+        ]);
+    }
+
+    public function test_inactive_teacher_can_view_mentee_history_but_cannot_send_messages_or_schedule_meetings(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['teacher']->update(['status' => 'inactive']);
+        $fixture['enrolled']->update(['mentor_id' => $fixture['teacher']->user_id]);
+
+        MentorMessage::create([
+            'student_id' => $fixture['enrolled']->id,
+            'sender_id' => $fixture['enrolled']->user_id,
+            'message' => 'Historical mentor message',
+        ]);
+        MentorMeeting::create([
+            'student_id' => $fixture['enrolled']->id,
+            'mentor_id' => $fixture['teacher']->user_id,
+            'meeting_date' => now()->addWeek()->toDateString(),
+            'topic' => 'Historical mentor meeting',
+            'status' => 'scheduled',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.mentor.index'))
+            ->assertOk()
+            ->assertSee('Messaging and meeting scheduling are locked because this teacher profile is not active.')
+            ->assertSee('Historical mentor meeting');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.mentor.mentee', $fixture['enrolled']))
+            ->assertOk()
+            ->assertSee('Historical mentor message')
+            ->assertSee('Historical mentor meeting')
+            ->assertSee('Mentoring message replies are locked for inactive profiles.')
+            ->assertSee('Meeting scheduling is locked for inactive profiles.')
+            ->assertDontSee('Post Announcement');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.mentor.message', $fixture['enrolled']), [
+                'message' => 'Inactive mentor direct message',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.mentor.meeting', $fixture['enrolled']), [
+                'meeting_date' => now()->addWeek()->toDateString(),
+                'topic' => 'Inactive mentor meeting',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('mentor_messages', [
+            'student_id' => $fixture['enrolled']->id,
+            'message' => 'Inactive mentor direct message',
+        ]);
+        $this->assertDatabaseMissing('mentor_meetings', [
+            'student_id' => $fixture['enrolled']->id,
+            'topic' => 'Inactive mentor meeting',
+        ]);
+    }
+
     public function test_teacher_can_mark_attendance_and_results_for_enrolled_roster_only(): void
     {
         $fixture = $this->fixture();
@@ -358,6 +632,46 @@ class TeacherScopeWorkflowTest extends TestCase
             'marks_obtained' => null,
             'is_absent' => true,
             'remarks' => 'Medical absence',
+        ]);
+    }
+
+    public function test_teacher_cannot_change_results_after_exam_publication(): void
+    {
+        $fixture = $this->fixture();
+        $exam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'published_at' => now(),
+            'published_by' => $fixture['teacher']->user_id,
+        ]);
+
+        ExamResult::create([
+            'exam_id' => $exam->id,
+            'student_id' => $fixture['enrolled']->id,
+            'marks_obtained' => 42,
+            'is_absent' => false,
+            'remarks' => 'Published mark.',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.exams.results', $exam))
+            ->assertOk()
+            ->assertSee('Results published');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.exams.results', $exam))
+            ->post(route('teacher.exams.results.save', $exam), [
+                'results' => [$fixture['enrolled']->id => ['marks_obtained' => 49, 'remarks' => 'Changed after publish']],
+            ])
+            ->assertRedirect(route('teacher.exams.results', $exam))
+            ->assertSessionHas('error', 'Published results are locked. Contact Exam Cell for appeal or correction workflow.');
+
+        $this->assertDatabaseHas('exam_results', [
+            'exam_id' => $exam->id,
+            'student_id' => $fixture['enrolled']->id,
+            'marks_obtained' => 42,
+            'remarks' => 'Published mark.',
         ]);
     }
 }

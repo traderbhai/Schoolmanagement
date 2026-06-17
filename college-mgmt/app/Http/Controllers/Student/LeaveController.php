@@ -23,18 +23,30 @@ class LeaveController extends Controller
         $leaves = LeaveApplication::where('student_id', $student->id)
             ->orderByDesc('created_at')
             ->paginate(15);
-        return view('student.leave.index', compact('leaves'));
+        $canApplyForLeave = $student->status === 'active';
+        return view('student.leave.index', compact('leaves', 'canApplyForLeave'));
     }
 
     public function create()
     {
-        $this->getStudent();
+        $student = $this->getStudent();
+        if ($student->status !== 'active') {
+            return redirect()
+                ->route('student.leave.index')
+                ->with('error', 'Leave applications can be submitted only by active students.');
+        }
+
         return view('student.leave.create');
     }
 
     public function store(Request $request)
     {
         $student = $this->getStudent();
+        if ($student->status !== 'active') {
+            return redirect()
+                ->route('student.leave.index')
+                ->with('error', 'Leave applications can be submitted only by active students.');
+        }
 
         $data = $request->validate([
             'from_date'   => 'required|date|after_or_equal:today',

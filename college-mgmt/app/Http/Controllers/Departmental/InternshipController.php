@@ -53,6 +53,14 @@ class InternshipController extends Controller
             'supervisor_email' => 'nullable|email',
             'description'      => 'nullable|string',
         ]);
+
+        $student = Student::findOrFail($v['student_id']);
+        if ($student->status !== 'active') {
+            return back()
+                ->withErrors(['student_id' => 'Internships can be registered only for active students.'])
+                ->withInput();
+        }
+
         Internship::create(array_merge($v, ['status' => 'ongoing', 'approved_by' => auth()->id()]));
         return redirect()->route('cmc.internships.index')->with('success', 'Internship registered.');
     }

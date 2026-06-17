@@ -118,6 +118,7 @@ class TranscriptController extends Controller {
         $semesterIds = $this->semesterIdsForTerm($term);
 
         return Exam::where('program_id', $student->program_id)
+            ->whereNotNull('published_at')
             ->whereIn('subject_id', $scope['subject_ids'])
             ->where(function ($query) use ($term, $semesterIds) {
                 $query->where('term_id', $term->id);

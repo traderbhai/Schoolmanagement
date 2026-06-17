@@ -101,6 +101,14 @@ class AssignmentController extends Controller
             return back()->with('error', 'Submission deadline has passed.');
         }
 
+        $existingSubmission = AssignmentSubmission::where('assignment_id', $assignment->id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        if ($existingSubmission && $existingSubmission->status === 'graded') {
+            return back()->with('error', 'This assignment has already been graded and cannot be resubmitted.');
+        }
+
         $request->validate([
             'answer_text' => 'nullable|string',
             'file'        => 'nullable|file|max:10240',
@@ -113,15 +121,20 @@ class AssignmentController extends Controller
 
         $isLate = $assignment->due_at->isPast();
 
+        $submissionData = [
+            'answer_text' => $request->answer_text,
+            'submitted_at' => now(),
+            'is_late'     => $isLate,
+            'status'      => 'submitted',
+        ];
+
+        if ($filePath !== null || ! $existingSubmission) {
+            $submissionData['file_path'] = $filePath;
+        }
+
         AssignmentSubmission::updateOrCreate(
             ['assignment_id' => $assignment->id, 'student_id' => $student->id],
-            [
-                'answer_text' => $request->answer_text,
-                'file_path'   => $filePath,
-                'submitted_at' => now(),
-                'is_late'     => $isLate,
-                'status'      => 'submitted',
-            ]
+            $submissionData
         );
 
         return redirect()->route('student.assignments.show', $assignment)

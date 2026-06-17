@@ -2,9 +2,9 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
+use App\Models\{AcademicYear, Course, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
-                RoleProgramAssignment};
+                RoleProgramAssignment, Semester};
 use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,9 +12,131 @@ use Illuminate\Support\Facades\Auth;
 class PmcTimetableController extends Controller {
 
     private function programIds(): array {
+        $user = Auth::user();
+        if ($user?->hasRole(['admin', 'dean_academics', 'director', 'academic_department_owner'])) {
+            return Program::where('is_active', true)->pluck('id')->toArray();
+        }
+
         $ids = RoleProgramAssignment::where('user_id', Auth::id())
             ->where('is_active', true)->pluck('program_id')->toArray();
-        return $ids ?: Program::where('is_active', true)->pluck('id')->toArray();
+
+        return array_values(array_filter(array_map('intval', $ids)));
+    }
+
+    private function authorizeProgramScope(int $programId): void
+    {
+        abort_unless(in_array($programId, $this->programIds(), true), 403);
+    }
+
+    private function validateAcademicScope(Request $request): ?string
+    {
+        $programId = (int) $request->program_id;
+        $this->authorizeProgramScope($programId);
+
+        $term = Term::find($request->term_id);
+        if (! $term || (int) $term->program_id !== $programId) {
+            return 'Selected term does not belong to the selected program.';
+        }
+
+        if ($request->filled('batch_id')) {
+            $batch = Batch::find($request->batch_id);
+            if (! $batch || (int) $batch->program_id !== $programId) {
+                return 'Selected batch does not belong to the selected program.';
+            }
+        }
+
+        if ($request->filled('subject_id')) {
+            $subject = Subject::find($request->subject_id);
+            if (! $subject || ($subject->program_id !== null && (int) $subject->program_id !== $programId)) {
+                return 'Selected subject does not belong to the selected program.';
+            }
+        }
+
+        return null;
+    }
+
+    private function hasPublishedVersion(int $programId, int $termId, ?int $batchId = null): bool
+    {
+        return TimetableVersion::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->where('status', 'published')
+            ->when($batchId, fn($query) => $query->where('batch_id', $batchId), fn($query) => $query->whereNull('batch_id'))
+            ->exists();
+    }
+
+    private function blockIfPublished(int $programId, int $termId, ?int $batchId = null)
+    {
+        if ($this->hasPublishedVersion($programId, $termId, $batchId)) {
+            return back()->with('error', 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.');
+        }
+
+        return null;
+    }
+
+    private function validateProgramTermBatchScope(int $programId, int $termId, ?int $batchId = null): ?string
+    {
+        $this->authorizeProgramScope($programId);
+
+        $term = Term::find($termId);
+        if (! $term || (int) $term->program_id !== $programId) {
+            return 'Selected term does not belong to the selected program.';
+        }
+
+        if ($batchId !== null) {
+            $batch = Batch::find($batchId);
+            if (! $batch || (int) $batch->program_id !== $programId) {
+                return 'Selected batch does not belong to the selected program.';
+            }
+        }
+
+        return null;
+    }
+
+    private function legacySemesterForTerm(Term $term): Semester
+    {
+        $semester = Semester::where('number', $term->term_number)->first()
+            ?: Semester::where('name', $term->name)->first()
+            ?: Semester::current()
+            ?: Semester::first();
+
+        if ($semester) {
+            return $semester;
+        }
+
+        $year = AcademicYear::current() ?: AcademicYear::firstOrCreate(
+            ['name' => now()->year . '-' . now()->addYear()->year],
+            [
+                'start_year' => now()->year,
+                'end_year' => now()->addYear()->year,
+                'start_date' => now()->startOfYear()->toDateString(),
+                'end_date' => now()->addYear()->endOfYear()->toDateString(),
+                'is_current' => true,
+            ]
+        );
+
+        return Semester::create([
+            'academic_year_id' => $year->id,
+            'name' => $term->name ?: 'PMC Legacy Term',
+            'number' => $term->term_number ?: 1,
+            'start_date' => $term->start_date ?: now()->startOfMonth()->toDateString(),
+            'end_date' => $term->end_date ?: now()->addMonths(4)->endOfMonth()->toDateString(),
+            'is_current' => false,
+        ]);
+    }
+
+    private function legacyCourseForProgram(Program $program): Course
+    {
+        return Course::firstOrCreate(
+            ['code' => 'PMCP' . $program->id],
+            [
+                'department_id' => $program->department_id,
+                'name' => 'PMC Timetable Bridge - ' . $program->name,
+                'description' => 'Compatibility bridge for legacy timetable rows created from PMC program timetable workflows.',
+                'duration_years' => max(1, (int) ($program->duration_years ?: 1)),
+                'total_semesters' => max(1, (int) ($program->total_terms ?: 1)),
+                'is_active' => true,
+            ]
+        );
     }
 
     // ── Timetable builder ─────────────────────────────────────────────────────
@@ -85,6 +207,19 @@ class PmcTimetableController extends Controller {
             'classroom_id'      => 'nullable|exists:classrooms,id',
         ]);
 
+        if ($message = $this->validateAcademicScope($request)) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        if ($this->hasPublishedVersion((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return response()->json(['message' => 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.'], 423);
+        }
+
+        $program = Program::findOrFail($request->program_id);
+        $term = Term::findOrFail($request->term_id);
+        $semester = $this->legacySemesterForTerm($term);
+        $course = $this->legacyCourseForProgram($program);
+
         // Conflict check
         if ($request->filled('subject_id')) {
             $conflicts = app(TimetableConflictService::class)->check([
@@ -113,6 +248,8 @@ class PmcTimetableController extends Controller {
         // Create new entry if subject is set
         if ($request->filled('subject_id')) {
             TimetableEntry::create([
+                'semester_id'       => $semester->id,
+                'course_id'         => $course->id,
                 'program_id'        => $request->program_id,
                 'term_id'           => $request->term_id,
                 'batch_id'          => $request->batch_id,
@@ -137,6 +274,14 @@ class PmcTimetableController extends Controller {
             'batch_id'      => 'nullable|exists:batches,id',
             'effective_from'=> 'nullable|date',
         ]);
+
+        if ($message = $this->validateAcademicScope($request)) {
+            return back()->with('error', $message);
+        }
+
+        if ($response = $this->blockIfPublished((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return $response;
+        }
 
         // Run full conflict audit before publishing
         $conflicts = app(TimetableConflictService::class)->auditTerm(
@@ -220,6 +365,13 @@ class PmcTimetableController extends Controller {
             'substitute_teacher_id' => 'nullable|exists:teachers,id',
             'reason'                => 'nullable|string|max:300',
         ]);
+
+        $entry = TimetableEntry::findOrFail($request->timetable_entry_id);
+        abort_unless(in_array((int) $entry->program_id, $this->programIds(), true), 403);
+
+        if ($entry->status === 'published') {
+            return back()->with('error', 'Published timetable entries require the PMC substitution/change workflow with audit context.');
+        }
 
         TimetableSubstitution::create([
             'timetable_entry_id'    => $request->timetable_entry_id,
@@ -312,6 +464,10 @@ class PmcTimetableController extends Controller {
             'file'       => 'required|mimes:csv,txt|max:5120',
         ]);
 
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return response()->json(['success' => false, 'errors' => [$message]], 422);
+        }
+
         $service = app(TimetableImportService::class);
         $result = $service->validateCSV(
             $request->file('file'),
@@ -330,6 +486,14 @@ class PmcTimetableController extends Controller {
             'batch_id'   => 'nullable|exists:batches,id',
             'file'       => 'required|mimes:csv,txt|max:5120',
         ]);
+
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return back()->with('error', $message);
+        }
+
+        if ($response = $this->blockIfPublished((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return $response;
+        }
 
         $service = app(TimetableImportService::class);
         $result = $service->importCSV(
@@ -408,6 +572,10 @@ class PmcTimetableController extends Controller {
             'batch_id'         => 'nullable|exists:batches,id',
         ]);
 
+        if ($message = $this->validateAcademicScope($request)) {
+            return response()->json(['success' => false, 'errors' => [$message]], 422);
+        }
+
         $service = app(TimetableCopyService::class);
         $preview = $service->previewCopy(
             $request->source_term_id,
@@ -429,6 +597,14 @@ class PmcTimetableController extends Controller {
             'reassign_teachers' => 'sometimes|boolean',
             'reassign_classrooms' => 'sometimes|boolean',
         ]);
+
+        if ($message = $this->validateAcademicScope($request)) {
+            return back()->with('error', $message);
+        }
+
+        if ($response = $this->blockIfPublished((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return $response;
+        }
 
         $service = app(TimetableCopyService::class);
         $result = $service->executeCopy(
@@ -616,6 +792,10 @@ class PmcTimetableController extends Controller {
             'batch_id'   => 'nullable|exists:batches,id',
         ]);
 
+        if ($message = $this->validateAcademicScope($request)) {
+            return response()->json(['success' => false, 'errors' => [$message]], 422);
+        }
+
         $service = app(AutoSchedulingService::class);
         $result = $service->suggestSchedule(
             $request->program_id,
@@ -638,6 +818,27 @@ class PmcTimetableController extends Controller {
             'suggestions.*.day_of_week' => 'required|integer|between:1,6',
             'suggestions.*.timetable_slot_id' => 'required|exists:timetable_slots,id',
         ]);
+
+        if ($message = $this->validateAcademicScope($request)) {
+            return back()->with('error', $message);
+        }
+
+        if ($response = $this->blockIfPublished((int) $request->program_id, (int) $request->term_id)) {
+            return $response;
+        }
+
+        foreach ($request->suggestions as $suggestion) {
+            $batch = Batch::find($suggestion['batch_id']);
+            $subject = Subject::find($suggestion['subject_id']);
+
+            if (! $batch || (int) $batch->program_id !== (int) $request->program_id) {
+                return back()->with('error', 'Suggested batch does not belong to the selected program.');
+            }
+
+            if (! $subject || ($subject->program_id !== null && (int) $subject->program_id !== (int) $request->program_id)) {
+                return back()->with('error', 'Suggested subject does not belong to the selected program.');
+            }
+        }
 
         $created = 0;
         $errors = [];

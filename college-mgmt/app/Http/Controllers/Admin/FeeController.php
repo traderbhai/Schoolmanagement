@@ -5,6 +5,7 @@ use App\Jobs\SendFeeReceiptEmail;
 use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear, ActivityLog, FeeDemand, FeePaymentRequest};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class FeeController extends Controller
 {
@@ -100,11 +101,23 @@ class FeeController extends Controller
             'amount'           => 'required|numeric|min:0',
             'semester_number'  => 'nullable|integer',
         ]);
+
+        if ($fee->payments()->exists() && $this->changesFinancialStructure($fee, $data)) {
+            throw ValidationException::withMessages([
+                'fee_structure' => 'This fee structure is linked to receipt history and cannot be changed. Create a new fee structure or audited adjustment instead.',
+            ]);
+        }
+
         $fee->update($data);
         return redirect()->route('admin.fees.index')->with('success', 'Updated.');
     }
 
     public function destroy(FeeStructure $fee) {
+        if ($fee->payments()->exists()) {
+            return redirect()->route('admin.fees.index')
+                ->with('error', 'This fee structure is linked to fee receipt history and cannot be deleted.');
+        }
+
         $fee->delete();
         return redirect()->route('admin.fees.index')->with('success', 'Deleted.');
     }
@@ -175,9 +188,24 @@ class FeeController extends Controller
                 ->withErrors(['fee_structure_id' => 'Select a fee structure for the selected student course.']);
         }
 
+        $activeDemands = FeeDemand::where('student_id', $student->id)
+            ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+            ->orderBy('due_date')
+            ->orderBy('id')
+            ->get();
+        if ($activeDemands->isNotEmpty()) {
+            $openBalance = $activeDemands->sum(fn (FeeDemand $demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
+            if ((float) $data['amount_paid'] > $openBalance) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['amount_paid' => 'Payment amount exceeds the student active fee demand balance.']);
+            }
+        }
+
         $data['receipt_number'] = 'RCP-' . strtoupper(uniqid());
         $data['status'] = 'paid';
         $payment = FeePayment::create($data);
+        $this->applyManualPaymentToDemands($activeDemands, (float) $payment->amount_paid);
         $student->load('user');
         ActivityLog::record('created', "Fee payment ₹{$payment->amount_paid} for " . ($student->user->name ?? ''), $payment);
         SendFeeReceiptEmail::dispatch($payment);
@@ -295,10 +323,25 @@ class FeeController extends Controller
 
         $amount = (float) $feePaymentRequest->amount;
         $demand = $feePaymentRequest->feeDemand;
+        if ($demand && ! in_array($demand->status, self::ACTIVE_DEMAND_STATUSES, true)) {
+            return back()->withErrors([
+                'fee_demand_id' => 'This payment proof is linked to a closed fee demand and cannot be verified.',
+            ]);
+        }
+
         if ($demand && in_array($demand->status, self::ACTIVE_DEMAND_STATUSES, true)) {
             $openAmount = (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0);
             if ($amount > $openAmount) {
                 return back()->withErrors(['amount' => 'Payment proof amount exceeds the current demand balance.']);
+            }
+        } elseif (! $demand) {
+            $openAmount = FeeDemand::where('student_id', $student->id)
+                ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
+                ->get()
+                ->sum(fn (FeeDemand $openDemand) => (float) $openDemand->final_amount + (float) ($openDemand->penalty_amount ?? 0));
+
+            if ($amount > $openAmount) {
+                return back()->withErrors(['amount' => 'Payment proof amount exceeds the student current open fee balance.']);
             }
         }
 
@@ -391,5 +434,28 @@ class FeeController extends Controller
             'penalty_amount' => 0,
             'status' => $remaining <= 0 ? 'fully_paid' : 'partially_paid',
         ]);
+    }
+
+    private function applyManualPaymentToDemands($demands, float $amount): void
+    {
+        foreach ($demands as $demand) {
+            if ($amount <= 0) {
+                return;
+            }
+
+            $openAmount = (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0);
+            $applied = min($amount, $openAmount);
+            $this->applyPaymentToDemand($demand, $applied);
+            $amount -= $applied;
+        }
+    }
+
+    private function changesFinancialStructure(FeeStructure $fee, array $data): bool
+    {
+        return (int) $data['course_id'] !== (int) $fee->course_id
+            || (int) $data['academic_year_id'] !== (int) $fee->academic_year_id
+            || (string) $data['fee_type'] !== (string) $fee->fee_type
+            || number_format((float) $data['amount'], 2, '.', '') !== number_format((float) $fee->amount, 2, '.', '')
+            || (int) ($data['semester_number'] ?? 0) !== (int) ($fee->semester_number ?? 0);
     }
 }

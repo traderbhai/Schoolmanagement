@@ -46,6 +46,11 @@ class ExamController extends Controller
         return view('admin.exams.edit', compact('exam','semesters','subjects','classrooms'));
     }
     public function update(Request $request, Exam $exam) {
+        if ($exam->published_at) {
+            return redirect()->route('admin.exams.show', $exam)
+                ->with('error', 'Published exams cannot be edited because official result history is locked.');
+        }
+
         $data = $request->validate([
             'semester_id'   => 'required|exists:semesters,id',
             'subject_id'    => 'required|exists:subjects,id',
@@ -59,6 +64,11 @@ class ExamController extends Controller
         return redirect()->route('admin.exams.show', $exam)->with('success', 'Exam updated.');
     }
     public function destroy(Exam $exam) {
+        if ($exam->published_at) {
+            return redirect()->route('admin.exams.index')
+                ->with('error', 'Published exams cannot be deleted because official result history is locked.');
+        }
+
         $exam->delete();
         return redirect()->route('admin.exams.index')->with('success', 'Deleted.');
     }
@@ -73,6 +83,10 @@ class ExamController extends Controller
     }
 
     public function saveResults(Request $request, Exam $exam) {
+        if ($exam->published_at) {
+            return back()->with('error', 'Published results are locked. Use the Exam Cell appeal/correction workflow for changes.');
+        }
+
         $request->validate([
             'results' => 'required|array',
             'results.*.is_absent' => 'nullable|boolean',

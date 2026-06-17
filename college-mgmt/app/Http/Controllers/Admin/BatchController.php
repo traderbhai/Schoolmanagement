@@ -3,10 +3,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Batch, Program, AcademicYear, Term};
+use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
 class BatchController extends Controller
 {
+    public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
+
     public function index()
     {
         $batches = Batch::with('program', 'academicYear')->withCount('students', 'terms')->latest()->get();
@@ -68,7 +71,7 @@ class BatchController extends Controller
 
     public function update(Request $r, Batch $batch)
     {
-        $r->validate([
+        $validated = $r->validate([
             'name'            => 'required|string|max:191',
             'code'            => 'required|string|max:20|unique:batches,code,' . $batch->id,
             'start_date'      => 'required|date',
@@ -76,15 +79,32 @@ class BatchController extends Controller
             'intake_capacity' => 'required|integer|min:1|max:500',
             'status'          => 'required|in:upcoming,active,completed,cancelled',
         ]);
-        $batch->update($r->all());
+
+        $studentCount = $batch->students()->count();
+        if ((int) $validated['intake_capacity'] < $studentCount) {
+            return back()->withErrors([
+                'intake_capacity' => "Batch capacity cannot be reduced below the current enrolled student count ({$studentCount}).",
+            ])->withInput();
+        }
+
+        if ($validated['status'] === 'cancelled' && $studentCount > 0) {
+            return back()->withErrors([
+                'status' => 'A batch with enrolled students cannot be cancelled. Close or complete the academic lifecycle instead.',
+            ])->withInput();
+        }
+
+        $batch->update($validated);
         return redirect()->route('admin.batches.show', $batch)->with('success', 'Batch updated.');
     }
 
     public function destroy(Batch $batch)
     {
-        if ($batch->students()->count() > 0) {
-            return back()->with('error', 'Cannot delete batch with enrolled students.');
+        $dependencies = $this->integrity->dependencyLabels('batch', $batch->id);
+
+        if ($dependencies !== []) {
+            return back()->with('error', $this->integrity->message('batch', $dependencies));
         }
+
         $batch->delete();
         return redirect()->route('admin.batches.index')->with('success', 'Batch deleted.');
     }

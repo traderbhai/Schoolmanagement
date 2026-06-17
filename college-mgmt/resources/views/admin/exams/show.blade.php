@@ -8,6 +8,9 @@
 @endsection
 
 @section('content')
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 <div class="row g-3">
     <div class="col-md-4">
         <div class="card">
@@ -23,10 +26,15 @@
                     <tr><td class="text-muted">Pass Marks</td><td>{{ $exam->passing_marks }}</td></tr>
                     <tr><td class="text-muted">Classroom</td><td>{{ optional($exam->classroom)->room_number ?? '–' }}</td></tr>
                     <tr><td class="text-muted">Results</td><td>{{ $exam->results->count() }} entered</td></tr>
+                    <tr><td class="text-muted">Publication</td><td>{{ $exam->published_at ? 'Published '.$exam->published_at->format('d M Y H:i') : 'Draft' }}</td></tr>
                 </table>
                 <div class="d-flex gap-2 mt-3">
                     <a href="{{ route('admin.exams.results', $exam) }}" class="btn btn-sm btn-success">Enter Results</a>
-                    <a href="{{ route('admin.exams.edit', $exam) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    @if($exam->published_at)
+                        <span class="btn btn-sm btn-outline-secondary disabled"><i class="bi bi-lock me-1"></i>Locked</span>
+                    @else
+                        <a href="{{ route('admin.exams.edit', $exam) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    @endif
                 </div>
             </div>
         </div>

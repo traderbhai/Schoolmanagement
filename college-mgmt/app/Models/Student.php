@@ -41,7 +41,10 @@ class Student extends Model
 
     public function calculateCGPA(): float
     {
-        $avg = $this->examResults()->avg('marks_obtained');
+        $avg = $this->examResults()
+            ->where('is_absent', false)
+            ->whereHas('exam', fn ($query) => $query->whereNotNull('published_at'))
+            ->avg('marks_obtained');
         return round($avg ?? 0, 2);
     }
 

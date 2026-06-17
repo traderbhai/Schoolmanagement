@@ -40,6 +40,10 @@ class FeeDemandController extends Controller
         $validated['scholarship_deduction'] = $validated['scholarship_deduction'] ?? 0;
         $validated['final_amount'] = max(0, $validated['total_amount'] - $validated['scholarship_deduction']);
 
+        if ($validated['status'] === 'fully_paid' && $validated['final_amount'] > 0) {
+            return back()->withErrors(['status' => 'A new non-zero fee demand cannot be created as fully paid. Record a payment, verified proof, waiver, or scholarship adjustment first.']);
+        }
+
         FeeDemand::create($validated);
 
         return redirect()->route('academic.fee-demands.index')
@@ -62,6 +66,10 @@ class FeeDemandController extends Controller
 
     public function update(Request $request, FeeDemand $feeDemand)
     {
+        if ($feeDemand->status === 'fully_paid') {
+            return back()->with('error', 'Fully paid fee demands are locked. Use an audited adjustment or refund workflow instead of editing closed demand history.');
+        }
+
         $validated = $request->validate([
             'total_amount' => 'required|numeric|min:0',
             'scholarship_deduction' => 'nullable|numeric|min:0|lte:total_amount',
@@ -72,6 +80,16 @@ class FeeDemandController extends Controller
         $validated['scholarship_deduction'] = $validated['scholarship_deduction'] ?? 0;
         $validated['final_amount'] = max(0, $validated['total_amount'] - $validated['scholarship_deduction']);
 
+        if ($feeDemand->hasFinancialActivity() && $this->changesLedgerFields($feeDemand, $validated)) {
+            return back()->withErrors([
+                'fee_demand' => 'This fee demand has payment activity and its ledger fields cannot be rewritten. Use an audited adjustment, waiver, refund, or new demand instead.',
+            ]);
+        }
+
+        if ($validated['status'] === 'fully_paid' && $validated['final_amount'] > 0) {
+            return back()->withErrors(['status' => 'A non-zero demand cannot be manually closed as fully paid. Record a payment, verified proof, waiver, or scholarship adjustment first.']);
+        }
+
         $feeDemand->update($validated);
 
         return redirect()->route('academic.fee-demands.show', $feeDemand)
@@ -80,6 +98,14 @@ class FeeDemandController extends Controller
 
     public function markAsPaid(FeeDemand $feeDemand)
     {
+        if ($feeDemand->status === 'fully_paid') {
+            return back()->with('error', 'Fee demand is already fully paid.');
+        }
+
+        if ($feeDemand->openBalance() > 0) {
+            return back()->withErrors(['fee_demand' => 'This demand still has an open balance. Use fee receipt/payment verification or an approved adjustment instead of manually marking it paid.']);
+        }
+
         $feeDemand->markAsFullyPaid();
         return back()->with('success', 'Fee marked as fully paid');
     }
@@ -159,6 +185,14 @@ class FeeDemandController extends Controller
 
     public function destroy(FeeDemand $feeDemand)
     {
+        if ($feeDemand->status !== 'pending') {
+            return back()->with('error', 'Only untouched pending fee demands can be deleted. Paid, partial, overdue, or closed demands are retained for financial audit.');
+        }
+
+        if ($feeDemand->hasFinancialActivity()) {
+            return back()->with('error', 'Cannot delete this fee demand because payment requests or installment records are linked to it.');
+        }
+
         $feeDemand->delete();
         return redirect()->route('academic.fee-demands.index')
             ->with('success', 'Fee demand deleted successfully');
@@ -179,5 +213,13 @@ class FeeDemandController extends Controller
             ->sum('awarded_amount');
 
         return min((float) $awardedAmount, $totalFee);
+    }
+
+    private function changesLedgerFields(FeeDemand $feeDemand, array $validated): bool
+    {
+        return number_format((float) $validated['total_amount'], 2, '.', '') !== number_format((float) $feeDemand->total_amount, 2, '.', '')
+            || number_format((float) $validated['scholarship_deduction'], 2, '.', '') !== number_format((float) $feeDemand->scholarship_deduction, 2, '.', '')
+            || number_format((float) $validated['final_amount'], 2, '.', '') !== number_format((float) $feeDemand->final_amount, 2, '.', '')
+            || (string) $validated['due_date'] !== $feeDemand->due_date?->toDateString();
     }
 }

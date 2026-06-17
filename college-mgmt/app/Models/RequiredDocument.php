@@ -7,6 +7,7 @@ class RequiredDocument extends Model
     protected $fillable = ['program_id', 'name', 'description', 'is_mandatory', 'accepted_formats', 'max_size_kb', 'sort_order', 'is_active'];
     protected $casts = ['is_mandatory' => 'boolean', 'is_active' => 'boolean'];
     public function program() { return $this->belongsTo(Program::class); }
+    public function applicantDocuments() { return $this->hasMany(ApplicantDocument::class); }
 
     public function getAcceptedFormatsArrayAttribute(): array
     {

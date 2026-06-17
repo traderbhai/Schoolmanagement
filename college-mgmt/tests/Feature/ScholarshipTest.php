@@ -13,13 +13,25 @@ class ScholarshipTest extends TestCase
 {
     use RefreshDatabase;
 
+    private User $admin;
+
     protected function setUp(): void
     {
         parent::setUp();
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $this->admin = User::factory()->create();
+        $this->admin->assignRole('admin');
+        $this->actingAs($this->admin);
+    }
+
+    private function userWithRole(string $role): User
+    {
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+
         $user = User::factory()->create();
-        $user->assignRole('admin');
-        $this->actingAs($user);
+        $user->assignRole($role);
+
+        return $user;
     }
 
     public function test_can_view_scholarships_list()
@@ -50,6 +62,28 @@ class ScholarshipTest extends TestCase
         $this->assertDatabaseHas('scholarships', ['name' => 'Merit Scholarship']);
     }
 
+    public function test_can_create_fixed_amount_scholarship_without_percentage(): void
+    {
+        $student = Student::factory()->create();
+
+        $this->post('/academic/scholarships', [
+            'student_id' => $student->id,
+            'name' => 'Fixed Support Scholarship',
+            'fixed_amount' => 7500,
+            'type' => 'need_based',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ])->assertRedirect(route('academic.scholarships.index'));
+
+        $this->assertDatabaseHas('scholarships', [
+            'student_id' => $student->id,
+            'name' => 'Fixed Support Scholarship',
+            'percentage' => '0.00',
+            'fixed_amount' => '7500.00',
+        ]);
+    }
+
     public function test_can_view_scholarship_details()
     {
         $scholarship = Scholarship::factory()->create();
@@ -77,13 +111,92 @@ class ScholarshipTest extends TestCase
         $this->assertEquals('Updated Scholarship', $scholarship->fresh()->name);
     }
 
-    public function test_can_delete_scholarship()
+    public function test_delete_archives_scholarship_history_instead_of_destroying_it()
     {
         $scholarship = Scholarship::factory()->create();
 
         $response = $this->delete("/academic/scholarships/{$scholarship->id}");
 
-        $this->assertDatabaseMissing('scholarships', ['id' => $scholarship->id]);
+        $response->assertRedirect(route('academic.scholarships.index'));
+        $this->assertDatabaseHas('scholarships', [
+            'id' => $scholarship->id,
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function test_program_chair_cannot_directly_mutate_financial_scholarships(): void
+    {
+        $chair = $this->userWithRole('program_chair');
+        $student = Student::factory()->create();
+        $scholarship = Scholarship::factory()->create(['student_id' => $student->id]);
+
+        $this->actingAs($chair)
+            ->post('/academic/scholarships', [
+                'student_id' => $student->id,
+                'name' => 'Unauthorized Scholarship',
+                'percentage' => 25,
+                'type' => 'merit',
+                'status' => 'active',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->put("/academic/scholarships/{$scholarship->id}", [
+                'name' => 'Unauthorized Update',
+                'percentage' => 25,
+                'type' => 'merit',
+                'status' => 'active',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->delete("/academic/scholarships/{$scholarship->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('scholarships', ['name' => 'Unauthorized Scholarship']);
+        $this->assertNotSame('Unauthorized Update', $scholarship->fresh()->name);
+        $this->assertSame('active', $scholarship->fresh()->status);
+    }
+
+    public function test_scholarship_must_have_positive_discount_value(): void
+    {
+        $student = Student::factory()->create();
+
+        $this->post('/academic/scholarships', [
+            'student_id' => $student->id,
+            'name' => 'Zero Value Scholarship',
+            'percentage' => 0,
+            'fixed_amount' => 0,
+            'type' => 'merit',
+            'status' => 'active',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('scholarships', ['name' => 'Zero Value Scholarship']);
+    }
+
+    public function test_duplicate_overlapping_active_scholarship_is_blocked(): void
+    {
+        $student = Student::factory()->create();
+        Scholarship::factory()->create([
+            'student_id' => $student->id,
+            'name' => 'Merit Scholarship',
+            'type' => 'merit',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ]);
+
+        $this->post('/academic/scholarships', [
+            'student_id' => $student->id,
+            'name' => 'Merit Scholarship',
+            'percentage' => 20,
+            'type' => 'merit',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->addMonth()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ])->assertStatus(422);
+
+        $this->assertSame(1, Scholarship::where('student_id', $student->id)->where('name', 'Merit Scholarship')->count());
     }
 
     public function test_active_scholarship_discount()

@@ -35,6 +35,12 @@
         </div>
     </div>
 
+    @if(!$canManageMentoring)
+        <div class="alert alert-warning">
+            Messaging and meeting scheduling are locked because this mentor or mentee profile is not active.
+        </div>
+    @endif
+
     <div class="row g-4">
 
         {{-- LEFT COLUMN --}}
@@ -67,9 +73,9 @@
                     @endif
                 </div>
                 <div class="card-footer bg-white">
-                    <form method="POST" action="{{ route('teacher.mentor.message') }}">
+                    @if($canManageMentoring)
+                    <form method="POST" action="{{ route('teacher.mentor.message', $student) }}">
                         @csrf
-                        <input type="hidden" name="student_id" value="{{ $student->id }}">
                         <div class="d-flex gap-2">
                             <textarea name="message" rows="2"
                                       class="form-control @error('message') is-invalid @enderror"
@@ -80,6 +86,9 @@
                         </div>
                         @error('message')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                     </form>
+                    @else
+                        <div class="text-muted small">Mentoring message replies are locked for inactive profiles.</div>
+                    @endif
                 </div>
             </div>
 
@@ -137,9 +146,9 @@
                     <i class="bi bi-calendar-plus me-1 text-success"></i>Schedule Meeting
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('teacher.mentor.meeting') }}">
+                    @if($canManageMentoring)
+                    <form method="POST" action="{{ route('teacher.mentor.meeting', $student) }}">
                         @csrf
-                        <input type="hidden" name="student_id" value="{{ $student->id }}">
 
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Date <span class="text-danger">*</span></label>
@@ -168,6 +177,9 @@
                             <i class="bi bi-calendar-check me-1"></i> Schedule
                         </button>
                     </form>
+                    @else
+                        <div class="text-muted small">Meeting scheduling is locked for inactive profiles.</div>
+                    @endif
                 </div>
             </div>
 

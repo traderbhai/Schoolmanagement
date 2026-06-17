@@ -16,10 +16,26 @@ class GrievanceController extends Controller {
         return view('student.grievances.index', compact('grievances', 'grievancePriority'));
     }
 
-    public function create() { return view('student.grievances.create'); }
+    public function create()
+    {
+        $student = $this->student();
+        if ($student->status !== 'active') {
+            return redirect()
+                ->route('student.grievances.index')
+                ->with('error', 'New grievances can be submitted only by active students.');
+        }
+
+        return view('student.grievances.create');
+    }
 
     public function store(Request $request) {
         $student = $this->student();
+        if ($student->status !== 'active') {
+            return redirect()
+                ->route('student.grievances.index')
+                ->with('error', 'New grievances can be submitted only by active students.');
+        }
+
         $v = $request->validate([
             'category'    => 'required|in:academic,financial,facility,faculty,administrative,other',
             'title'       => 'required|string|max:255',

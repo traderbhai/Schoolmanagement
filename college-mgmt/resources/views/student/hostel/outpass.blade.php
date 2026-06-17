@@ -21,6 +21,12 @@
         You do not have an active hostel allocation. Please contact the hostel warden.
     </div>
 @else
+    @unless($canCreateHostelRequest)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-2"></i>
+            New hostel outpass requests are locked because your student profile is not active. Existing requests remain visible for history.
+        </div>
+    @endunless
     <div class="alert alert-info mb-4">
         <strong>Your Room:</strong> {{ $allocation->room?->block?->name }} / Room {{ $allocation->room?->room_number }}, Bed {{ $allocation->bed_number }}
     </div>
@@ -30,6 +36,9 @@
             <div class="card">
                 <div class="card-header"><h6 class="mb-0">New Outpass Request</h6></div>
                 <div class="card-body">
+                    @if(!$canCreateHostelRequest)
+                        <span class="badge bg-secondary">Active students only</span>
+                    @else
                     <form method="POST" action="{{ route('student.hostel.outpass.store') }}">
                         @csrf
                         <div class="mb-3">
@@ -49,6 +58,7 @@
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Submit Request</button>
                     </form>
+                    @endif
                 </div>
             </div>
         </div>

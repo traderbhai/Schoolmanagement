@@ -7,12 +7,16 @@ use App\Models\{
     CoAttainment, CoPoMapping, CourseOutcome, ObeSurvey, ObeSurveyResponse,
     PoAttainment, Program, ProgramOutcome, ProgramSpecificOutcome, Subject, Term
 };
+use App\Services\AcademicAccessPolicyService;
 use App\Services\ObeAttainmentService;
 use Illuminate\Http\Request;
 
 class ObeController extends Controller
 {
-    public function __construct(private ObeAttainmentService $obe) {}
+    public function __construct(
+        private ObeAttainmentService $obe,
+        private AcademicAccessPolicyService $policy
+    ) {}
 
     /* ── COURSE OUTCOMES ──────────────────────────────────────────────────── */
 
@@ -41,6 +45,8 @@ class ObeController extends Controller
 
     public function coStore(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'subject_id'  => 'required|exists:subjects,id',
             'code'        => 'required|string|max:20',
@@ -54,6 +60,8 @@ class ObeController extends Controller
 
     public function coUpdate(Request $request, CourseOutcome $co)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'code'        => 'required|string|max:20',
             'description' => 'required|string|max:500',
@@ -64,8 +72,15 @@ class ObeController extends Controller
         return back()->with('success', 'Course outcome updated.');
     }
 
-    public function coDestroy(CourseOutcome $co)
+    public function coDestroy(Request $request, CourseOutcome $co)
     {
+        $this->policy->authorizeObe($request->user());
+        abort_if(
+            $co->coPoMappings()->exists() || $co->attainments()->exists() || ObeSurveyResponse::where('course_outcome_id', $co->id)->exists(),
+            422,
+            'Course outcomes with mappings, attainment, or survey responses cannot be deleted. Deactivate or revise them instead.'
+        );
+
         $co->delete();
         return back()->with('success', 'Course outcome removed.');
     }
@@ -91,6 +106,8 @@ class ObeController extends Controller
 
     public function poStore(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'program_id'  => 'required|exists:programs,id',
             'code'        => 'required|string|max:20',
@@ -103,6 +120,8 @@ class ObeController extends Controller
 
     public function poUpdate(Request $request, ProgramOutcome $po)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'code'        => 'required|string|max:20',
             'description' => 'required|string|max:500',
@@ -113,14 +132,23 @@ class ObeController extends Controller
         return back()->with('success', 'Program outcome updated.');
     }
 
-    public function poDestroy(ProgramOutcome $po)
+    public function poDestroy(Request $request, ProgramOutcome $po)
     {
+        $this->policy->authorizeObe($request->user());
+        abort_if(
+            $po->coMappings()->exists() || $po->attainments()->exists(),
+            422,
+            'Program outcomes with mappings or attainment cannot be deleted. Deactivate or revise them instead.'
+        );
+
         $po->delete();
         return back()->with('success', 'Program outcome removed.');
     }
 
     public function psoStore(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'program_id'  => 'required|exists:programs,id',
             'code'        => 'required|string|max:20',
@@ -130,8 +158,15 @@ class ObeController extends Controller
         return back()->with('success', "PSO {$data['code']} created.");
     }
 
-    public function psoDestroy(ProgramSpecificOutcome $pso)
+    public function psoDestroy(Request $request, ProgramSpecificOutcome $pso)
     {
+        $this->policy->authorizeObe($request->user());
+        abort_if(
+            CoPoMapping::where('program_specific_outcome_id', $pso->id)->exists(),
+            422,
+            'Program specific outcomes with mappings cannot be deleted. Deactivate or revise them instead.'
+        );
+
         $pso->delete();
         return back()->with('success', 'PSO removed.');
     }
@@ -177,6 +212,8 @@ class ObeController extends Controller
 
     public function matrixSave(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $request->validate([
             'subject_id'  => 'required|exists:subjects,id',
             'program_id'  => 'required|exists:programs,id',
@@ -250,6 +287,8 @@ class ObeController extends Controller
 
     public function recalculate(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $request->validate([
             'program_id' => 'required|exists:programs,id',
             'term_id'    => 'required|exists:terms,id',
@@ -272,6 +311,8 @@ class ObeController extends Controller
 
     public function surveyStore(Request $request)
     {
+        $this->policy->authorizeObe($request->user());
+
         $data = $request->validate([
             'subject_id' => 'required|exists:subjects,id',
             'term_id'    => 'required|exists:terms,id',
@@ -282,8 +323,10 @@ class ObeController extends Controller
         return back()->with('success', 'Survey created.');
     }
 
-    public function surveyToggle(ObeSurvey $survey)
+    public function surveyToggle(Request $request, ObeSurvey $survey)
     {
+        $this->policy->authorizeObe($request->user());
+
         $survey->update(['is_published' => !$survey->is_published]);
         $status = $survey->is_published ? 'published' : 'unpublished';
         return back()->with('success', "Survey {$status}.");

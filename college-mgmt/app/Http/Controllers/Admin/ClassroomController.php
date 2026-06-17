@@ -4,6 +4,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Services\TimetableService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ClassroomController extends Controller
 {
@@ -46,11 +47,85 @@ class ClassroomController extends Controller
             'has_lab'       => 'boolean',
             'is_active'     => 'boolean',
         ]);
+
+        if ($this->hasOperationalDependencies($classroom) && $this->changesStructuralFields($classroom, $data)) {
+            throw ValidationException::withMessages([
+                'classroom' => 'Room number, type, lab/projector capability, and building details cannot be changed after timetable or exam records are linked.',
+            ]);
+        }
+
+        $minimumCapacity = $this->minimumRequiredCapacity($classroom);
+        if ($minimumCapacity !== null && (int) $data['capacity'] < $minimumCapacity) {
+            throw ValidationException::withMessages([
+                'capacity' => "Classroom capacity cannot be reduced below {$minimumCapacity}, because active timetable batches depend on this room.",
+            ]);
+        }
+
+        if ($this->deactivatesRoomWithActiveSchedules($classroom, $data)) {
+            throw ValidationException::withMessages([
+                'is_active' => 'Classrooms with active timetable entries or upcoming exams cannot be deactivated.',
+            ]);
+        }
+
         $classroom->update($data);
         return redirect()->route('admin.classrooms.index')->with('success', 'Updated.');
     }
     public function destroy(Classroom $classroom) {
+        if ($this->hasOperationalDependencies($classroom)) {
+            return redirect()->route('admin.classrooms.index')
+                ->with('error', 'Classrooms with timetable or exam history cannot be deleted because room allocation history depends on them.');
+        }
+
         $classroom->delete();
         return redirect()->route('admin.classrooms.index')->with('success', 'Deleted.');
+    }
+
+    private function hasOperationalDependencies(Classroom $classroom): bool
+    {
+        return $classroom->timetableEntries()->exists()
+            || $classroom->exams()->exists();
+    }
+
+    private function changesStructuralFields(Classroom $classroom, array $data): bool
+    {
+        return (string) $classroom->room_number !== (string) $data['room_number']
+            || (string) $classroom->type !== (string) $data['type']
+            || (string) ($classroom->building ?? '') !== (string) ($data['building'] ?? '')
+            || (string) ($classroom->floor ?? '') !== (string) ($data['floor'] ?? '')
+            || (bool) $classroom->has_projector !== (bool) ($data['has_projector'] ?? false)
+            || (bool) $classroom->has_lab !== (bool) ($data['has_lab'] ?? false);
+    }
+
+    private function minimumRequiredCapacity(Classroom $classroom): ?int
+    {
+        $maximumBatchSize = $classroom->timetableEntries()
+            ->where('is_active', true)
+            ->with('batch')
+            ->get()
+            ->map(function ($entry) {
+                if (! $entry->batch) {
+                    return null;
+                }
+
+                return max(
+                    (int) $entry->batch->students()->where('status', 'active')->count(),
+                    (int) $entry->batch->intake_capacity
+                );
+            })
+            ->filter(fn ($size) => $size !== null)
+            ->max();
+
+        return $maximumBatchSize ? (int) $maximumBatchSize : null;
+    }
+
+    private function deactivatesRoomWithActiveSchedules(Classroom $classroom, array $data): bool
+    {
+        return array_key_exists('is_active', $data)
+            && ! (bool) $data['is_active']
+            && (bool) $classroom->is_active
+            && (
+                $classroom->timetableEntries()->where('is_active', true)->exists()
+                || $classroom->exams()->whereDate('exam_date', '>=', now()->toDateString())->exists()
+            );
     }
 }

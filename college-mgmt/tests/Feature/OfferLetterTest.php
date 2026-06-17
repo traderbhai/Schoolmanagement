@@ -8,6 +8,7 @@ use App\Models\Batch;
 use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
+use App\Models\SeatMatrix;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -193,12 +194,89 @@ class OfferLetterTest extends TestCase
         ]);
     }
 
+    public function test_applicant_cannot_accept_stale_offer_after_final_admission_status(): void
+    {
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'withdrawn',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => User::factory()->create()->id,
+        ]);
+
+        $response = $this->actingAs($applicantUser)->post(route('applicant.offer-letters.accept', $offer));
+
+        $response->assertStatus(400);
+        $this->assertSame('issued', $offer->fresh()->status);
+        $this->assertSame('withdrawn', $applicant->fresh()->status);
+        $response->assertJson(['error' => 'This applicant is in a final admission state and the offer cannot be changed.']);
+    }
+
+    public function test_staff_cannot_decline_stale_offer_after_final_admission_status(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+        $applicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'rejected',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $officer->id,
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.offer-letters.decline', $offer), [
+                'reason' => 'Trying stale staff decline.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This applicant is in a final admission state and the offer cannot be changed.');
+
+        $this->assertSame('issued', $offer->fresh()->status);
+        $this->assertSame('rejected', $applicant->fresh()->status);
+    }
+
     public function test_offer_letter_promotion_on_decline(): void
     {
         Mail::fake();
 
         $program = Program::factory()->create();
         $batch = Batch::factory()->create(['program_id' => $program->id]);
+        SeatMatrix::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'total_seats' => 1,
+            'general_seats' => 1,
+            'obc_seats' => 0,
+            'sc_seats' => 0,
+            'st_seats' => 0,
+            'ews_seats' => 0,
+            'management_quota' => 0,
+            'nri_quota' => 0,
+            'defence_quota' => 0,
+        ]);
 
         // Create selected applicant with offer
         $selectedUser = User::factory()->create();
@@ -269,6 +347,155 @@ class OfferLetterTest extends TestCase
         $newOffer = OfferLetter::where('applicant_id', $waitlisted->id)->first();
         $this->assertNotNull($newOffer);
         $this->assertEquals('issued', $newOffer->status);
+    }
+
+    public function test_offer_decline_does_not_auto_promote_without_seat_matrix(): void
+    {
+        Mail::fake();
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $selectedUser = User::factory()->create();
+        $selectedUser->assignRole('applicant');
+        $selected = Applicant::factory()->create([
+            'user_id' => $selectedUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'category' => 'general',
+            'status' => 'selected',
+        ]);
+        $waitlisted = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'category' => 'general',
+            'status' => 'shortlisted',
+        ]);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        MeritListEntry::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'applicant_id' => $selected->id,
+            'rank' => 1,
+            'total_weighted_score' => 90,
+            'composite_score' => 90,
+            'decision' => 'selected',
+            'category' => 'general',
+            'decided_by' => $officer->id,
+            'decided_at' => now(),
+        ]);
+        $entry = MeritListEntry::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'applicant_id' => $waitlisted->id,
+            'rank' => 2,
+            'total_weighted_score' => 88,
+            'composite_score' => 88,
+            'decision' => 'waitlisted',
+            'category' => 'general',
+            'decided_by' => $officer->id,
+            'decided_at' => now(),
+        ]);
+        $offer = OfferLetter::create([
+            'applicant_id' => $selected->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $officer->id,
+        ]);
+
+        $this->actingAs($selectedUser)->post(route('applicant.offer-letters.decline', $offer), [
+            'reason' => 'Going elsewhere',
+        ])->assertOk();
+
+        $this->assertSame('waitlisted', $entry->fresh()->decision);
+        $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $waitlisted->id]);
+    }
+
+    public function test_staff_offer_decline_does_not_auto_promote_when_waitlist_category_is_full(): void
+    {
+        Mail::fake();
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        SeatMatrix::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'total_seats' => 2,
+            'general_seats' => 1,
+            'obc_seats' => 1,
+            'sc_seats' => 0,
+            'st_seats' => 0,
+            'ews_seats' => 0,
+            'management_quota' => 0,
+            'nri_quota' => 0,
+            'defence_quota' => 0,
+        ]);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+        $generalSelected = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'category' => 'general',
+            'status' => 'selected',
+        ]);
+        $obcCommitted = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'category' => 'obc',
+            'status' => 'selected',
+        ]);
+        $obcWaitlisted = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'category' => 'obc',
+            'status' => 'shortlisted',
+        ]);
+
+        foreach ([[$generalSelected, 1, 'general', 'selected'], [$obcCommitted, 2, 'obc', 'selected']] as [$applicant, $rank, $category, $decision]) {
+            MeritListEntry::create([
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'applicant_id' => $applicant->id,
+                'rank' => $rank,
+                'total_weighted_score' => 95 - $rank,
+                'composite_score' => 95 - $rank,
+                'decision' => $decision,
+                'category' => $category,
+                'decided_by' => $officer->id,
+                'decided_at' => now(),
+            ]);
+        }
+
+        $entry = MeritListEntry::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'applicant_id' => $obcWaitlisted->id,
+            'rank' => 3,
+            'total_weighted_score' => 88,
+            'composite_score' => 88,
+            'decision' => 'waitlisted',
+            'category' => 'obc',
+            'decided_by' => $officer->id,
+            'decided_at' => now(),
+        ]);
+        $offer = OfferLetter::create([
+            'applicant_id' => $generalSelected->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $officer->id,
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.offer-letters.decline', $offer), ['reason' => 'Seat released'])
+            ->assertRedirect();
+
+        $this->assertSame('waitlisted', $entry->fresh()->decision);
+        $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $obcWaitlisted->id]);
     }
 
     public function test_applicant_can_view_own_offer_letters(): void

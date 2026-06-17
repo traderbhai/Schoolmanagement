@@ -2,7 +2,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Company;
+use App\Models\Internship;
 use Illuminate\Http\Request;
 
 class CompanyController extends Controller
@@ -71,13 +73,36 @@ class CompanyController extends Controller
             'is_active'     => 'boolean',
         ]);
 
-        $company->update($request->merge(['is_active' => $request->boolean('is_active')])->all());
+        $data = $request->merge(['is_active' => $request->boolean('is_active')])->all();
+
+        if ($company->hasOperationalHistory() && $data['name'] !== $company->name) {
+            return back()
+                ->withErrors(['name' => 'Company name cannot be changed after placement or internship history exists.'])
+                ->withInput();
+        }
+
+        if ($company->is_active && ! $data['is_active'] && $company->hasActivePlacementDrives()) {
+            return back()
+                ->withErrors(['is_active' => 'Company cannot be deactivated while upcoming or ongoing placement drives exist.'])
+                ->withInput();
+        }
+
+        $company->update($data);
 
         return redirect()->route('admin.companies.index')->with('success', 'Company updated successfully.');
     }
 
     public function destroy(Company $company)
     {
+        $hasOperationalHistory = $company->hasOperationalHistory();
+
+        if ($hasOperationalHistory) {
+            $company->update(['is_active' => false]);
+            ActivityLog::record('archived', "Company archived instead of deleted to preserve placement and internship history: {$company->name}", $company);
+
+            return redirect()->route('admin.companies.index')->with('success', 'Company archived. Placement and internship history was preserved.');
+        }
+
         $company->delete();
         return redirect()->route('admin.companies.index')->with('success', 'Company deleted.');
     }

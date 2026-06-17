@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\AdmissionPayment;
 use App\Models\Applicant;
+use App\Models\ActivityLog;
 use App\Models\FeeDemand;
 use App\Models\FeePayment;
 use App\Models\FeeStructure;
@@ -195,6 +196,89 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->assertStringContainsString($student->user->name, $content);
         $this->assertStringContainsString('41,000.00', $content);
         $this->assertStringNotContainsString('999,999', $content);
+    }
+
+    public function test_accounts_exports_write_activity_logs_with_row_counts_and_filters(): void
+    {
+        $user = $this->accountsUser();
+        $student = Student::factory()->create();
+        $term = Term::factory()->create(['program_id' => $student->program_id]);
+        $feeStructure = FeeStructure::create([
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'academic_year_id' => \App\Models\AcademicYear::factory()->create()->id,
+            'fee_type' => 'Audit Tuition',
+            'amount' => 25000,
+        ]);
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $feeStructure->id,
+            'amount_paid' => 12000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'RCPT-EXPORT-AUDIT',
+            'payment_method' => 'cash',
+            'status' => 'paid',
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'final_amount' => 5000,
+            'penalty_amount' => 100,
+            'status' => 'pending',
+        ]);
+
+        $applicant = Applicant::factory()->create([
+            'program_id' => $student->program_id,
+        ]);
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $student->program_id,
+            'name' => 'Export Audit Admission Fee',
+            'amount' => 10000,
+            'installment_number' => 1,
+            'is_active' => true,
+        ]);
+        AdmissionPayment::create([
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 10000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'ADM-EXPORT-AUDIT',
+            'status' => 'verified',
+            'verified_by' => $user->id,
+            'verified_at' => now(),
+            'submitted_by' => $applicant->user_id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.export-fee-collections', ['program_id' => $student->program_id]))
+            ->assertOk()
+            ->streamedContent();
+        $this->actingAs($user)
+            ->get(route('accounts.export-admission-payments', ['program_id' => $student->program_id]))
+            ->assertOk()
+            ->streamedContent();
+        $this->actingAs($user)
+            ->get(route('accounts.export-outstanding'))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $user->id,
+            'action' => 'export',
+            'description' => 'Accounts fee collections exported: 1 rows; filters={"program_id":"' . $student->program_id . '"}',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $user->id,
+            'action' => 'export',
+            'description' => 'Accounts admission payments exported: 1 rows; filters={"program_id":"' . $student->program_id . '"}',
+        ]);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $user->id,
+            'action' => 'export',
+            'description' => 'Accounts outstanding fees exported: 1 rows; filters=none',
+        ]);
+        $this->assertSame(3, ActivityLog::where('user_id', $user->id)->where('action', 'export')->count());
     }
 
     public function test_accounts_reports_use_fee_demands_for_program_and_batch_totals(): void

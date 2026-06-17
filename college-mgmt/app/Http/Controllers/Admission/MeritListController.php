@@ -7,6 +7,7 @@ use App\Models\Applicant;
 use App\Models\ApplicantScore;
 use App\Models\Batch;
 use App\Models\MeritListEntry;
+use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Models\ProgramSeatMatrix;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -80,6 +81,10 @@ class MeritListController extends Controller
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
             ->max('merit_list_version') ?? 0;
         $newVersion = $currentVersion + 1;
+
+        if ($lockedCount = $this->lockedOfferEntryCount($program->id, $batchId)) {
+            return back()->with('error', "Cannot regenerate this merit list because {$lockedCount} applicant(s) already have active offer letters. Use an audited correction workflow instead.");
+        }
 
         $ranked = [];
 
@@ -331,6 +336,14 @@ class MeritListController extends Controller
             'notes'    => 'nullable|string',
         ]);
 
+        if ($this->entryHasActiveOffer($entry)) {
+            return back()->with('error', 'Merit decisions linked to active offer letters are locked.');
+        }
+
+        if ($entry->decision !== 'pending' && $entry->decision !== $request->decision) {
+            return back()->with('error', 'Final merit decisions are locked. Create an audited correction workflow instead of changing selection history.');
+        }
+
         $entry->update([
             'decision'   => $request->decision,
             'notes'      => $request->notes,
@@ -383,6 +396,21 @@ class MeritListController extends Controller
         }
 
         return back()->with('success', "Bulk decision applied: {$acceptTop} selected, {$waitlistNext} waitlisted.");
+    }
+
+    private function entryHasActiveOffer(MeritListEntry $entry): bool
+    {
+        return OfferLetter::where('applicant_id', $entry->applicant_id)
+            ->whereIn('status', ['issued', 'accepted'])
+            ->exists();
+    }
+
+    private function lockedOfferEntryCount(int $programId, ?int $batchId = null): int
+    {
+        return MeritListEntry::where('program_id', $programId)
+            ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
+            ->whereHas('applicant.offerLetters', fn ($query) => $query->whereIn('status', ['issued', 'accepted']))
+            ->count();
     }
 
     public function exportMeritList(Program $program)

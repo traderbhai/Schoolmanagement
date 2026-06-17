@@ -69,6 +69,10 @@ class PaymentVerificationController extends Controller
     {
         $this->guardPaymentScope($payment);
 
+        if ($payment->status !== 'pending') {
+            return back()->with('error', 'Only pending admission payments can be verified.');
+        }
+
         $r->validate([
             'verification_notes' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -103,6 +107,10 @@ class PaymentVerificationController extends Controller
     {
         $this->guardPaymentScope($payment);
 
+        if ($payment->status !== 'pending') {
+            return back()->with('error', 'Only pending admission payments can be rejected.');
+        }
+
         $r->validate([
             'verification_notes' => ['required', 'string', 'max:1000'],
         ]);
@@ -114,7 +122,7 @@ class PaymentVerificationController extends Controller
             'verification_notes' => $r->verification_notes,
         ]);
 
-        app(\App\Services\AdmissionNotificationService::class)->notifyPaymentRejected($payment->fresh(), $r->notes ?? 'Payment proof could not be verified.');
+        app(\App\Services\AdmissionNotificationService::class)->notifyPaymentRejected($payment->fresh(), $r->verification_notes);
 
         return back()->with('success', 'Payment rejected with notes.');
     }

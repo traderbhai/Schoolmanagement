@@ -10,6 +10,10 @@ class TimetableSlot extends Model
     protected $casts = ['is_break' => 'boolean', 'is_active' => 'boolean'];
 
     public function entries() { return $this->hasMany(TimetableEntry::class); }
+    public function lockedSlots() { return $this->hasMany(AcademicPmcLockedSlot::class, 'timetable_slot_id'); }
+    public function generationItems() { return $this->hasMany(AcademicPmcTimetableGenerationItem::class, 'timetable_slot_id'); }
+    public function sessionDeliveryLogs() { return $this->hasMany(AcademicPmcSessionDeliveryLog::class, 'timetable_slot_id'); }
+    public function teacherAvailabilities() { return $this->hasMany(TeacherAvailability::class, 'timetable_slot_id'); }
 
     public function getDurationMinutesAttribute(): int
     {

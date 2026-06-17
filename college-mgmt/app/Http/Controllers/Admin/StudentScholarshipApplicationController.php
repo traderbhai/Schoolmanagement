@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Program;
 use App\Models\StudentScholarshipApplication;
+use App\Services\GradeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -79,6 +80,10 @@ class StudentScholarshipApplicationController extends Controller
         ]);
 
         $scheme = $application->scheme;
+        if ($blocker = $this->approvalBlocker($application)) {
+            return back()->withErrors(['scholarship' => $blocker]);
+        }
+
         if ($scheme->max_amount > 0 && $data['disbursed_amount'] > $scheme->max_amount) {
             return back()->withErrors(['disbursed_amount' => 'Amount exceeds scheme maximum of Rs. ' . number_format((float) $scheme->max_amount, 2)]);
         }
@@ -124,14 +129,36 @@ class StudentScholarshipApplicationController extends Controller
 
     public function disburse(Request $request, StudentScholarshipApplication $application)
     {
+        $application = StudentScholarshipApplication::query()
+            ->whereKey($application->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
         if ($application->status !== 'approved') {
             return back()->with('error', 'Only approved scholarship applications can be disbursed.');
         }
 
         $data = $request->validate([
-            'disbursement_ref' => 'required|string|max:100',
+            'disbursement_ref' => 'required|string|max:100|unique:student_scholarship_applications,disbursement_ref',
             'review_note' => 'nullable|string|max:1000',
         ]);
+
+        $scheme = $application->scheme;
+        if ($blocker = $this->approvalBlocker($application)) {
+            return back()->withErrors(['scholarship' => $blocker]);
+        }
+
+        if (! $application->disbursed_amount || (float) $application->disbursed_amount <= 0) {
+            return back()->withErrors(['disbursed_amount' => 'Approved scholarship amount must be positive before disbursement.']);
+        }
+
+        if ($scheme->max_amount > 0 && (float) $application->disbursed_amount > (float) $scheme->max_amount) {
+            return back()->withErrors(['disbursed_amount' => 'Approved amount exceeds scheme maximum of Rs. ' . number_format((float) $scheme->max_amount, 2)]);
+        }
+
+        if ($scheme->available_seats !== null && $this->usedSeatsExcluding($application) >= $scheme->available_seats) {
+            return back()->withErrors(['scholarship' => 'No seats remaining for this scholarship scheme.']);
+        }
 
         $note = trim(($application->review_note ? $application->review_note . "\n" : '') . 'Disbursement ref: ' . $data['disbursement_ref']);
         if (! empty($data['review_note'])) {
@@ -143,6 +170,7 @@ class StudentScholarshipApplicationController extends Controller
             'reviewed_by' => Auth::id(),
             'review_note' => $note,
             'disbursed_at' => now(),
+            'disbursement_ref' => $data['disbursement_ref'],
         ]);
 
         $this->notifyStudent($application->fresh(['student.user', 'scheme']), 'Scholarship disbursed');
@@ -176,5 +204,78 @@ class StudentScholarshipApplicationController extends Controller
             'type' => 'scholarship',
             'action_url' => route('student.scholarships.index'),
         ]);
+    }
+
+    private function approvalBlocker(StudentScholarshipApplication $application): ?string
+    {
+        $application->loadMissing(['student.parents', 'scheme']);
+        $student = $application->student;
+        $scheme = $application->scheme;
+
+        if (! $student || ! $scheme) {
+            return 'Scholarship application is missing a valid student or scheme.';
+        }
+
+        if ($student->status !== 'active') {
+            return 'Scholarship applications can be approved or disbursed only for active students.';
+        }
+
+        if (! $scheme->is_active) {
+            return 'Inactive scholarship schemes cannot be approved.';
+        }
+
+        if ($scheme->program_id && (int) $scheme->program_id !== (int) $student->program_id) {
+            return 'Scholarship scheme is not available for this student program.';
+        }
+
+        if ($scheme->requires_document && (! $application->documents_path || ! Storage::disk('local')->exists($application->documents_path))) {
+            return 'Required scholarship proof document must be available before approval.';
+        }
+
+        $cgpa = app(GradeService::class)->calculateCGPA($student->id);
+        if ($scheme->min_cgpa !== null && $cgpa < (float) $scheme->min_cgpa) {
+            return 'Student no longer meets the minimum CGPA requirement for this scholarship.';
+        }
+
+        $familyIncome = $this->familyIncome($student);
+        if ($scheme->max_family_income !== null && $familyIncome === null) {
+            return 'Family income is required before approving this scholarship.';
+        }
+
+        if ($scheme->max_family_income !== null && $familyIncome > (float) $scheme->max_family_income) {
+            return 'Student family income exceeds this scholarship scheme limit.';
+        }
+
+        return null;
+    }
+
+    private function familyIncome($student): ?float
+    {
+        $raw = $student->parents()->pluck('annual_income')
+            ->filter()
+            ->first();
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $numeric = preg_replace('/[^0-9.]/', '', (string) $raw);
+
+        return $numeric === '' ? null : (float) $numeric;
+    }
+
+    private function usedSeatsExcluding(StudentScholarshipApplication $application): int
+    {
+        $scheme = $application->scheme;
+
+        if (! $scheme) {
+            return 0;
+        }
+
+        return $scheme->applicantScholarships()->whereIn('status', ['awarded', 'disbursed'])->count()
+            + $scheme->studentScholarshipApplications()
+                ->whereIn('status', ['approved', 'disbursed'])
+                ->whereKeyNot($application->id)
+                ->count();
     }
 }

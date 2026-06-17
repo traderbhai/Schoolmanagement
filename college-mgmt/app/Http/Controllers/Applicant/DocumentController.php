@@ -34,6 +34,14 @@ class DocumentController extends Controller
             return back()->with('error', 'You cannot upload documents at this stage.');
         }
 
+        $existing = ApplicantDocument::where('applicant_id', $applicant->id)
+            ->where('required_document_id', $requiredDocument->id)
+            ->first();
+
+        if ($existing?->status === 'verified') {
+            return back()->with('error', 'Cannot replace a verified document. Contact the admission office if a correction is required.');
+        }
+
         $formats = $requiredDocument->accepted_formats_array;
         $mimeMap = ['jpg' => 'jpeg,jpg', 'jpeg' => 'jpeg,jpg', 'png' => 'png', 'pdf' => 'pdf'];
         $mimes = implode(',', array_unique(array_filter(array_map(fn($f) => $mimeMap[$f] ?? $f, $formats))));
@@ -48,10 +56,6 @@ class DocumentController extends Controller
         $slug = Str::slug($requiredDocument->name);
 
         // Determine version
-        $existing = ApplicantDocument::where('applicant_id', $applicant->id)
-            ->where('required_document_id', $requiredDocument->id)
-            ->first();
-
         $version = $existing ? ($existing->version + 1) : 1;
         $filename = "{$slug}_v{$version}_" . time() . ".{$ext}";
         $dir  = "applicant-documents/{$applicant->id}";

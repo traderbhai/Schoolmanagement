@@ -2,9 +2,12 @@
 namespace App\Http\Controllers\Academic;
 use App\Http\Controllers\Controller;
 use App\Models\{CurriculumChange, Program, Subject};
+use App\Services\AcademicAccessPolicyService;
 use Illuminate\Http\Request;
 
 class CurriculumChangeController extends Controller {
+    public function __construct(private AcademicAccessPolicyService $policy) {}
+
     public function index(Request $request) {
         $query = CurriculumChange::with(['program','proposedBy','subject'])->latest();
         if ($request->filled('status')) $query->where('status',$request->status);
@@ -19,6 +22,8 @@ class CurriculumChangeController extends Controller {
         return view('academic.curriculum-changes.create', compact('programs','subjects'));
     }
     public function store(Request $request) {
+        $this->policy->authorizeCurriculum($request->user());
+
         $v = $request->validate([
             'program_id'=>'required|exists:programs,id',
             'subject_id'=>'nullable|exists:subjects,id',
@@ -34,11 +39,17 @@ class CurriculumChangeController extends Controller {
         return view('academic.curriculum-changes.show', compact('curriculumChange'));
     }
     public function approve(Request $request, CurriculumChange $curriculumChange) {
+        $this->policy->authorizeAcademicGovernanceReview($request->user());
+        abort_unless($curriculumChange->isPending(), 422, 'Only pending curriculum changes can be approved.');
+
         $request->validate(['remarks'=>'nullable|string|max:500']);
         $curriculumChange->update(['status'=>'approved','reviewed_by'=>auth()->id(),'review_remarks'=>$request->remarks,'reviewed_at'=>now()]);
         return back()->with('success','Curriculum change approved.');
     }
     public function reject(Request $request, CurriculumChange $curriculumChange) {
+        $this->policy->authorizeAcademicGovernanceReview($request->user());
+        abort_unless($curriculumChange->isPending(), 422, 'Only pending curriculum changes can be rejected.');
+
         $request->validate(['remarks'=>'required|string|max:500']);
         $curriculumChange->update(['status'=>'rejected','reviewed_by'=>auth()->id(),'review_remarks'=>$request->remarks,'reviewed_at'=>now()]);
         return back()->with('error','Curriculum change rejected.');

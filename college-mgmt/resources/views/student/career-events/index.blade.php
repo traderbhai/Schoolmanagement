@@ -25,7 +25,7 @@
                         @if($registered)
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Registered</span>
-                                @if($event->isOpen())
+                                @if($canManageCareerEventRegistrations && $event->isOpen())
                                     <form method="POST" action="{{ route('student.career-events.cancel', $event) }}">
                                         @csrf
                                         @method('DELETE')
@@ -33,11 +33,13 @@
                                     </form>
                                 @endif
                             </div>
-                        @elseif($event->isOpen())
+                        @elseif($canManageCareerEventRegistrations && $event->isOpen())
                             <form method="POST" action="{{ route('student.career-events.register', $event) }}">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-primary">Register</button>
                             </form>
+                        @elseif(!$canManageCareerEventRegistrations)
+                            <span class="badge bg-secondary">Active students only</span>
                         @else
                             <span class="badge bg-secondary">Closed</span>
                         @endif

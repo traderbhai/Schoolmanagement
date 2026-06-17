@@ -31,6 +31,11 @@
         <i class="bi bi-exclamation-triangle me-1"></i>No student profile found for your account. Please contact the academic office.
     </div>
 @else
+    @unless($canManageSubjects)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-1"></i>Subject registration changes are locked because your student profile is not active. Current registrations remain visible for history.
+        </div>
+    @endunless
 
 <div class="row g-4">
     {{-- Enrolled Subjects --}}
@@ -52,6 +57,9 @@
                                 <div class="fw-semibold">{{ $enrollment->subject->name ?? '—' }}</div>
                                 <div class="small text-muted font-monospace">{{ $enrollment->subject->code ?? '' }}</div>
                             </div>
+                            @if(!$canManageSubjects)
+                                <span class="badge bg-secondary">Active students only</span>
+                            @else
                             <form action="{{ route('student.subjects.drop', $enrollment) }}" method="POST"
                                   onsubmit="return confirm('Drop {{ $enrollment->subject->name ?? 'this subject' }}?')">
                                 @csrf
@@ -60,6 +68,7 @@
                                     <i class="bi bi-x-circle"></i> Drop
                                 </button>
                             </form>
+                            @endif
                         </li>
                         @endforeach
                     </ul>
@@ -87,6 +96,9 @@
                                 <div class="fw-semibold">{{ $subject->name }}</div>
                                 <div class="small text-muted font-monospace">{{ $subject->code }}</div>
                             </div>
+                            @if(!$canManageSubjects)
+                                <span class="badge bg-secondary">Locked</span>
+                            @else
                             <form action="{{ route('student.subjects.store') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="subject_id" value="{{ $subject->id }}">
@@ -94,6 +106,7 @@
                                     <i class="bi bi-plus-circle"></i> Add
                                 </button>
                             </form>
+                            @endif
                         </li>
                         @endforeach
                     </ul>

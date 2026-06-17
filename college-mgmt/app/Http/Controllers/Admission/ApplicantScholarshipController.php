@@ -16,7 +16,7 @@ class ApplicantScholarshipController extends Controller
     {
         $validated = $request->validate([
             'scheme_id'      => 'required|exists:scholarship_schemes,id',
-            'awarded_amount' => 'required|numeric|min:0',
+            'awarded_amount' => 'required|numeric|min:1',
             'notes'          => 'nullable|string|max:500',
         ]);
 
@@ -83,7 +83,7 @@ class ApplicantScholarshipController extends Controller
     public function disburse(Request $request, ApplicantScholarship $scholarship)
     {
         $request->validate([
-            'disbursement_ref' => 'required|string|max:100',
+            'disbursement_ref' => 'required|string|max:100|unique:applicant_scholarships,disbursement_ref,' . $scholarship->id,
             'notes'            => 'nullable|string|max:500',
         ]);
 
@@ -91,11 +91,20 @@ class ApplicantScholarshipController extends Controller
             return back()->withErrors(['scholarship' => 'Only awarded scholarships can be disbursed.']);
         }
 
+        if ($blocker = $this->disbursementBlocker($scholarship)) {
+            return back()->withErrors(['scholarship' => $blocker]);
+        }
+
+        $notes = $scholarship->notes;
+        if ($request->filled('notes')) {
+            $notes = trim(($notes ? $notes . "\n" : '') . 'Disbursement note: ' . $request->notes);
+        }
+
         $scholarship->update([
             'status'           => 'disbursed',
             'disbursement_ref' => $request->disbursement_ref,
             'disbursed_at'     => now(),
-            'notes'            => $request->notes,
+            'notes'            => $notes,
         ]);
 
         // Notify applicant
@@ -154,6 +163,31 @@ class ApplicantScholarshipController extends Controller
 
         if ($scheme->requires_document && ! $applicant->documents()->where('status', 'verified')->exists()) {
             return 'A verified applicant document is required before awarding this scholarship.';
+        }
+
+        return null;
+    }
+
+    private function disbursementBlocker(ApplicantScholarship $scholarship): ?string
+    {
+        $scholarship->loadMissing(['applicant', 'scheme']);
+        $applicant = $scholarship->applicant;
+        $scheme = $scholarship->scheme;
+
+        if (! $applicant || ! $scheme) {
+            return 'Scholarship award is missing a valid applicant or scheme.';
+        }
+
+        if ($scheme->program_id && (int) $scheme->program_id !== (int) $applicant->program_id) {
+            return 'Scholarship scheme no longer matches the applicant program.';
+        }
+
+        if ((float) $scholarship->awarded_amount <= 0) {
+            return 'Scholarship award amount must be greater than zero before disbursement.';
+        }
+
+        if ((float) $scheme->max_amount > 0 && (float) $scholarship->awarded_amount > (float) $scheme->max_amount) {
+            return 'Scholarship award amount exceeds the current scheme maximum.';
         }
 
         return null;

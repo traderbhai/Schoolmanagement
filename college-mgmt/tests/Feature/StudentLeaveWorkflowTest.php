@@ -117,6 +117,49 @@ class StudentLeaveWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_leave_history_but_cannot_submit_new_leave(): void
+    {
+        $fixture = $this->studentFixture();
+        $fixture['student']->update(['status' => 'inactive']);
+
+        LeaveApplication::create([
+            'student_id' => $fixture['student']->id,
+            'leave_type' => 'student',
+            'from_date' => now()->addDays(5)->toDateString(),
+            'to_date' => now()->addDays(6)->toDateString(),
+            'days' => 2,
+            'reason' => 'Historical leave',
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.leave.index'))
+            ->assertOk()
+            ->assertSee('Historical leave')
+            ->assertSee('Active students only')
+            ->assertDontSee('Apply for Leave');
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.leave.create'))
+            ->assertRedirect(route('student.leave.index'))
+            ->assertSessionHas('error', 'Leave applications can be submitted only by active students.');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.leave.store'), [
+                'from_date' => now()->addDays(8)->toDateString(),
+                'to_date' => now()->addDays(9)->toDateString(),
+                'reason' => 'Inactive direct leave',
+                'description' => 'Should not create a new leave request.',
+            ])
+            ->assertRedirect(route('student.leave.index'))
+            ->assertSessionHas('error', 'Leave applications can be submitted only by active students.');
+
+        $this->assertDatabaseMissing('leave_applications', [
+            'student_id' => $fixture['student']->id,
+            'reason' => 'Inactive direct leave',
+        ]);
+    }
+
     public function test_teacher_cannot_submit_overlapping_open_leave_request(): void
     {
         $teacherUser = $this->userWithRole('teacher');
@@ -144,6 +187,61 @@ class StudentLeaveWorkflowTest extends TestCase
             ->assertSessionHasErrors('from_date');
 
         $this->assertSame(1, LeaveApplication::where('teacher_id', $teacher->id)->count());
+    }
+
+    public function test_inactive_teacher_can_view_leave_history_but_cannot_submit_or_cancel_leave(): void
+    {
+        $teacherUser = $this->userWithRole('teacher');
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'status' => 'inactive',
+        ]);
+
+        $leave = LeaveApplication::create([
+            'teacher_id' => $teacher->id,
+            'leave_type' => 'casual',
+            'from_date' => now()->addDays(5)->toDateString(),
+            'to_date' => now()->addDays(6)->toDateString(),
+            'days' => 2,
+            'reason' => 'Historical teacher leave',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.leaves.index'))
+            ->assertOk()
+            ->assertSee('Historical teacher leave')
+            ->assertSee('Active teachers only')
+            ->assertDontSee('Apply for Leave');
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.leaves.create'))
+            ->assertRedirect(route('teacher.leaves.index'))
+            ->assertSessionHas('error', 'Leave applications can be submitted only by active teachers.');
+
+        $this->actingAs($teacherUser)
+            ->post(route('teacher.leaves.store'), [
+                'leave_type' => 'medical',
+                'from_date' => now()->addDays(8)->toDateString(),
+                'to_date' => now()->addDays(9)->toDateString(),
+                'reason' => 'Inactive teacher direct leave',
+            ])
+            ->assertRedirect(route('teacher.leaves.index'))
+            ->assertSessionHas('error', 'Leave applications can be submitted only by active teachers.');
+
+        $this->actingAs($teacherUser)
+            ->delete(route('teacher.leaves.destroy', $leave))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Cannot cancel this leave application.');
+
+        $this->assertDatabaseMissing('leave_applications', [
+            'teacher_id' => $teacher->id,
+            'reason' => 'Inactive teacher direct leave',
+        ]);
+        $this->assertDatabaseHas('leave_applications', [
+            'id' => $leave->id,
+            'status' => 'pending',
+        ]);
     }
 
     public function test_admin_cannot_reapprove_reject_or_delete_reviewed_leave_history(): void

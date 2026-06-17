@@ -23,12 +23,18 @@ class FeePaymentRequestController extends Controller {
         $requests = FeePaymentRequest::where('student_id', $student->id)
             ->with('feeDemand')->orderByDesc('submitted_at')->paginate(15);
         $demands = $this->outstandingDemandsFor($student->id);
-        return view('student.fee-payment-request.index', compact('requests', 'demands'));
+        return view('student.fee-payment-request.index', compact('requests', 'demands', 'student'));
     }
 
     public function create() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.fee-payment.index')
+                ->with('error', 'New fee payment proofs are available only for active students. Contact accounts for archived records.');
+        }
+
         $demands = $this->outstandingDemandsFor($student->id);
         return view('student.fee-payment-request.create', compact('demands'));
     }
@@ -36,6 +42,11 @@ class FeePaymentRequestController extends Controller {
     public function store(Request $request) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return redirect()->route('student.fee-payment.index')
+                ->with('error', 'New fee payment proofs are available only for active students. Contact accounts for archived records.');
+        }
 
         $data = $request->validate([
             'fee_demand_id'   => 'nullable|exists:fee_demands,id',

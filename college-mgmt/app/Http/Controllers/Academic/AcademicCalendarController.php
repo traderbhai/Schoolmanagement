@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Academic;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicCalendar;
 use App\Models\Term;
+use App\Services\AcademicAccessPolicyService;
 use Illuminate\Http\Request;
 
 class AcademicCalendarController extends Controller
 {
+    public function __construct(private AcademicAccessPolicyService $policy) {}
+
     public function index(Request $request)
     {
         $termId = $request->get('term_id');
@@ -32,6 +35,8 @@ class AcademicCalendarController extends Controller
 
     public function store(Request $request)
     {
+        $this->policy->authorizeAcademicPlanning($request->user());
+
         $validated = $request->validate([
             'term_id' => 'required|exists:terms,id',
             'event_date' => 'required|date',
@@ -61,6 +66,8 @@ class AcademicCalendarController extends Controller
 
     public function update(Request $request, AcademicCalendar $academicCalendar)
     {
+        $this->policy->authorizeAcademicPlanning($request->user());
+
         $validated = $request->validate([
             'event_date' => 'required|date',
             'event_name' => 'required|string|max:255',
@@ -75,8 +82,10 @@ class AcademicCalendarController extends Controller
             ->with('success', 'Calendar event updated successfully');
     }
 
-    public function destroy(AcademicCalendar $academicCalendar)
+    public function destroy(Request $request, AcademicCalendar $academicCalendar)
     {
+        $this->policy->authorizeAcademicPlanning($request->user());
+
         $academicCalendar->delete();
         return redirect()->route('academic.academic-calendars.index')
             ->with('success', 'Calendar event deleted successfully');

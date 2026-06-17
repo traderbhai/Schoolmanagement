@@ -18,6 +18,11 @@ class ExamController extends Controller
         abort_unless($teaches, 403, 'You do not teach this subject.');
     }
 
+    private function ensureActiveTeacher(): void
+    {
+        abort_unless(auth()->user()->teacher?->status === 'active', 403, 'Only active teachers can save exam results.');
+    }
+
     private function enrolledStudentIdsForExam(Exam $exam)
     {
         return Student::whereHas('enrollments', fn($q) =>
@@ -54,13 +59,19 @@ class ExamController extends Controller
         )->with(['user',
             'examResults' => fn($q) => $q->where('exam_id', $exam->id)
         ])->orderBy('roll_number')->get();
+        $canSaveResults = auth()->user()->teacher?->status === 'active';
 
-        return view('teacher.exams.results', compact('exam', 'students'));
+        return view('teacher.exams.results', compact('exam', 'students', 'canSaveResults'));
     }
 
     public function saveResults(Request $request, Exam $exam)
     {
         $this->ensureTeacherForExam($exam);
+        $this->ensureActiveTeacher();
+
+        if ($exam->published_at) {
+            return back()->with('error', 'Published results are locked. Contact Exam Cell for appeal or correction workflow.');
+        }
 
         $request->validate([
             'results' => 'required|array',

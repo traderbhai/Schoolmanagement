@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SubjectAnnouncement extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = ['subject_id', 'posted_by', 'term_id', 'title', 'body', 'attachment_path', 'is_pinned'];
     protected $casts = ['is_pinned' => 'boolean'];

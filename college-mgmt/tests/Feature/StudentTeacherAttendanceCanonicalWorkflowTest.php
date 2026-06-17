@@ -275,6 +275,63 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_condonation_history_but_cannot_request_new_condonation(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['student']->update(['status' => 'inactive']);
+
+        foreach (range(1, 4) as $day) {
+            Attendance::create([
+                'student_id' => $fixture['student']->id,
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => $day === 1 ? 'present' : 'absent',
+                'marked_by' => $fixture['teacher']->user_id,
+            ]);
+        }
+
+        AttendanceCondonation::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $fixture['term']->id,
+            'reason' => 'Historical approved condonation.',
+            'sessions_requested' => 2,
+            'sessions_condoned' => 2,
+            'status' => 'approved',
+            'remarks' => 'Approved before archival.',
+        ]);
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.condonation.index'))
+            ->assertOk()
+            ->assertSee('Canonical Attendance Subject')
+            ->assertSee('Historical approved condonation')
+            ->assertSee('New attendance condonation requests are locked')
+            ->assertSee('Active students only')
+            ->assertDontSee('New Request');
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.condonation.create'))
+            ->assertRedirect(route('student.condonation.index'))
+            ->assertSessionHas('error', 'Attendance condonation requests are available only for active students. Contact the academic office for archived records.');
+
+        $this->actingAs($fixture['student']->user)
+            ->post(route('student.condonation.store'), [
+                'subject_id' => $fixture['subject']->id,
+                'reason' => 'Inactive direct request should not be accepted.',
+            ])
+            ->assertRedirect(route('student.condonation.index'))
+            ->assertSessionHas('error', 'Attendance condonation requests are available only for active students. Contact the academic office for archived records.');
+
+        $this->assertSame(1, AttendanceCondonation::where('student_id', $fixture['student']->id)->count());
+        $this->assertDatabaseMissing('attendance_condonations', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'reason' => 'Inactive direct request should not be accepted.',
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_program_chair_condonation_review_is_scoped_pending_only_and_capped_to_requested_sessions(): void
     {
         $fixture = $this->fixture();

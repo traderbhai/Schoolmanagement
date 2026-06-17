@@ -102,6 +102,51 @@ class HodDashboardGuidanceTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_hod_cannot_reapprove_or_reject_finalized_approval(): void
+    {
+        $department = Department::factory()->create();
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $user = $this->hodUser($department);
+        $approval = $this->pendingApprovalFor($program);
+
+        $this->actingAs($user)
+            ->post(route('hod.approve', $approval), ['remarks' => 'Approved once'])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->post(route('hod.reject', $approval->fresh()), ['rejection_reason' => 'Trying to reverse'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('approval_workflows', [
+            'id' => $approval->id,
+            'status' => 'approved',
+            'remarks' => 'Approved once',
+        ]);
+    }
+
+    public function test_hod_cannot_action_program_chair_queue_even_inside_department(): void
+    {
+        $department = Department::factory()->create();
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $user = $this->hodUser($department);
+        $applicant = Applicant::factory()->create(['program_id' => $program->id]);
+        $approval = ApprovalWorkflow::create([
+            'approvable_type' => Applicant::class,
+            'approvable_id' => $applicant->id,
+            'approver_role' => 'program_chair',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('hod.approve', $approval), ['remarks' => 'Wrong queue'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('approval_workflows', [
+            'id' => $approval->id,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_hod_leave_review_modal_uses_named_route_action(): void
     {
         $department = Department::factory()->create(['name' => 'Computer Science']);

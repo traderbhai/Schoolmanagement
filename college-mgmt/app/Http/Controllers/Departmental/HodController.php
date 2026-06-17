@@ -163,8 +163,12 @@ class HodController extends Controller
             });
     }
 
-    private function authorizeDepartmentApproval($approvable): void
+    private function authorizeDepartmentApproval(ApprovalWorkflow $approval): void
     {
+        abort_unless($approval->approver_role === 'hod', 403);
+        abort_unless($approval->status === 'pending', 403);
+
+        $approvable = $approval->approvable;
         $departmentId = $this->hodDepartmentId($this->hodTeacher());
 
         abort_unless($approvable instanceof Applicant, 403);
@@ -174,7 +178,7 @@ class HodController extends Controller
     public function approve(Request $request, ApprovalWorkflow $approval)
     {
         $request->validate(['remarks' => 'nullable|string|max:500']);
-        $this->authorizeDepartmentApproval($approval->approvable);
+        $this->authorizeDepartmentApproval($approval);
         $approval->update(['status' => 'approved', 'approver_id' => auth()->id(), 'remarks' => $request->remarks, 'approved_at' => now()]);
         $name = $approval->approvable instanceof Applicant ? ($approval->approvable->user->name ?? 'applicant') : 'applicant';
         return back()->with('success', "Approval granted for {$name}.");
@@ -183,7 +187,7 @@ class HodController extends Controller
     public function reject(Request $request, ApprovalWorkflow $approval)
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
-        $this->authorizeDepartmentApproval($approval->approvable);
+        $this->authorizeDepartmentApproval($approval);
         $approval->update(['status' => 'rejected', 'approver_id' => auth()->id(), 'remarks' => $request->rejection_reason, 'approved_at' => now()]);
         $name = $approval->approvable instanceof Applicant ? ($approval->approvable->user->name ?? 'applicant') : 'applicant';
         return back()->with('error', "Approval rejected for {$name}.");

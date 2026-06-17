@@ -182,6 +182,29 @@ class TransportWorkflowTest extends TestCase
             ->assertSessionHasErrors('transport_vehicle_id');
     }
 
+    public function test_transport_assignment_requires_active_student_even_through_direct_route(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $inactiveStudent = $this->student('Archived Transport Student');
+        $inactiveStudent->update(['status' => 'inactive']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.assignments.store'), [
+                'student_id' => $inactiveStudent->id,
+                'transport_route_id' => $route->id,
+                'transport_stop_id' => $stop->id,
+                'transport_vehicle_id' => null,
+                'start_date' => now()->toDateString(),
+            ])
+            ->assertSessionHasErrors('student_id');
+
+        $this->assertDatabaseMissing('transport_assignments', [
+            'student_id' => $inactiveStudent->id,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_transport_assignment_rejects_inactive_stop_and_hides_inactive_options(): void
     {
         $admin = $this->userWithRole('admin');
@@ -380,6 +403,32 @@ class TransportWorkflowTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.transport.assignments.end', $assignment), [
                 'end_date' => now()->subDay()->toDateString(),
+            ])
+            ->assertSessionHasErrors('end_date');
+
+        $assignment->refresh();
+        $this->assertSame('active', $assignment->status);
+        $this->assertNull($assignment->end_date);
+    }
+
+    public function test_admin_cannot_end_transport_assignment_with_future_date(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $student = $this->student('Future End Student');
+
+        $assignment = TransportAssignment::create([
+            'student_id' => $student->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'start_date' => now()->subWeek()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.assignments.end', $assignment), [
+                'end_date' => now()->addWeek()->toDateString(),
             ])
             ->assertSessionHasErrors('end_date');
 

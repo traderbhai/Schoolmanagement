@@ -41,6 +41,7 @@ class ResultController extends Controller
         $backlogs = ExamResult::with(['exam.subject', 'exam.semester'])
             ->where('student_id', $student->id)
             ->where('is_absent', false)
+            ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
             ->get()
             ->filter(function ($r) {
                 if (!$r->exam || $r->exam->total_marks <= 0) return false;

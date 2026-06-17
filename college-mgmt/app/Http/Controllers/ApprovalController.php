@@ -55,6 +55,8 @@ class ApprovalController extends Controller
      */
     public function chain(ApprovalWorkflow $approval)
     {
+        $this->authorizeApprovalView($approval, request()->user());
+
         $history = ApprovalChainService::getHistory($approval->approvable);
         $chainDef = ApprovalChainService::getChain($approval->workflow_type ?? 'general');
 
@@ -120,5 +122,23 @@ class ApprovalController extends Controller
         if (!in_array($approval->approver_role, $userRoles) && !$user->hasRole('admin')) {
             abort(403, 'You are not the designated approver for this step.');
         }
+    }
+
+    private function authorizeApprovalView(ApprovalWorkflow $approval, $user): void
+    {
+        if ($user->hasRole('admin')) {
+            return;
+        }
+
+        if ($approval->approver_id && (int) $approval->approver_id === (int) $user->id) {
+            return;
+        }
+
+        $userRoles = $user->getRoleNames()->toArray();
+        if (in_array($approval->approver_role, $userRoles, true)) {
+            return;
+        }
+
+        abort(403, 'You are not allowed to view this approval chain.');
     }
 }

@@ -96,7 +96,7 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
             ->assertSee('Asha Student')
             ->assertSee('Bonafide Certificate')
             ->assertSee('Approve')
-            ->assertSee('Mark Ready');
+            ->assertDontSee('Mark Ready');
     }
 
     public function test_admin_can_approve_and_reject_student_document_requests(): void
@@ -192,6 +192,32 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
             ->get(route('student.documents.download', $request))
             ->assertStatus(200)
             ->assertHeader('content-disposition');
+    }
+
+    public function test_admin_cannot_mark_pending_document_request_ready_without_approval(): void
+    {
+        Storage::fake('local');
+        $student = $this->student();
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'bonafide',
+            'purpose' => 'Scholarship',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.document-requests.fulfill', $request), [
+                'document_file' => UploadedFile::fake()->create('bonafide.pdf', 48, 'application/pdf'),
+                'notes' => 'Direct ready attempt.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only approved document requests can be marked ready.');
+
+        $request->refresh();
+        $this->assertSame('pending', $request->status);
+        $this->assertNull($request->fulfilled_at);
+        $this->assertNull($request->output_path);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 
     public function test_rejecting_requires_staff_notes(): void

@@ -109,8 +109,8 @@ class StudentDocumentRequestController extends Controller
 
     public function fulfill(Request $request, DocumentRequest $documentRequest)
     {
-        if (! in_array($documentRequest->status, ['pending', 'approved'], true)) {
-            return back()->with('error', 'Only pending or approved document requests can be marked ready.');
+        if ($documentRequest->status !== 'approved') {
+            return back()->with('error', 'Only approved document requests can be marked ready.');
         }
 
         if ($blocker = $this->nocClearanceBlocker($documentRequest)) {

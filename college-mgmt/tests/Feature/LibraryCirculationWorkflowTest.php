@@ -38,6 +38,16 @@ class LibraryCirculationWorkflowTest extends TestCase
         ]);
     }
 
+    private function teacher(string $status = 'active'): Teacher
+    {
+        $user = $this->userWithRole('teacher');
+
+        return Teacher::factory()->create([
+            'user_id' => $user->id,
+            'status' => $status,
+        ]);
+    }
+
     private function bookWithCopy(array $bookOverrides = []): array
     {
         $book = Book::create(array_merge([
@@ -211,6 +221,96 @@ class LibraryCirculationWorkflowTest extends TestCase
         $this->assertSame(1, $secondBook->fresh()->available_copies);
     }
 
+    public function test_library_issue_requires_active_student_or_teacher_borrower(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $inactiveStudent = $this->student();
+        $inactiveStudent->update(['status' => 'inactive']);
+        $inactiveTeacher = $this->teacher('inactive');
+        [$studentBook, $studentCopy] = $this->bookWithCopy(['title' => 'Student Direct Route Book']);
+        [$teacherBook, $teacherCopy] = $this->bookWithCopy(['title' => 'Teacher Direct Route Book']);
+
+        foreach ([$inactiveStudent->user_id, $inactiveTeacher->user_id] as $userId) {
+            LibraryMembership::create([
+                'user_id' => $userId,
+                'member_type' => 'student',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.issue'), [
+                'book_copy_id' => $studentCopy->id,
+                'borrower_type' => 'student',
+                'borrower_id' => $inactiveStudent->id,
+                'due_date' => now()->addDays(7)->toDateString(),
+            ])
+            ->assertSessionHasErrors('borrower_id');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.issue'), [
+                'book_copy_id' => $teacherCopy->id,
+                'borrower_type' => 'teacher',
+                'borrower_id' => $inactiveTeacher->id,
+                'due_date' => now()->addDays(7)->toDateString(),
+            ])
+            ->assertSessionHasErrors('borrower_id');
+
+        $this->assertTrue($studentCopy->fresh()->is_available);
+        $this->assertTrue($teacherCopy->fresh()->is_available);
+        $this->assertSame(1, $studentBook->fresh()->available_copies);
+        $this->assertSame(1, $teacherBook->fresh()->available_copies);
+        $this->assertSame(0, BookIssue::count());
+    }
+
+    public function test_membership_limit_cannot_be_lowered_below_active_issue_count(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$firstBook, $firstCopy] = $this->bookWithCopy(['title' => 'Membership Limit One']);
+        [$secondBook, $secondCopy] = $this->bookWithCopy(['title' => 'Membership Limit Two']);
+
+        $membership = LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 3,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+
+        foreach ([$firstCopy, $secondCopy] as $copy) {
+            BookIssue::create([
+                'book_copy_id' => $copy->id,
+                'student_id' => $student->id,
+                'issued_by' => $admin->id,
+                'issued_at' => now(),
+                'due_date' => now()->addDays(7)->toDateString(),
+                'status' => 'issued',
+            ]);
+            $copy->update(['is_available' => false]);
+        }
+        $firstBook->update(['available_copies' => 0]);
+        $secondBook->update(['available_copies' => 0]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $student->user_id,
+                'member_type' => 'student',
+                'max_books_allowed' => 1,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertSessionHasErrors('max_books_allowed');
+
+        $membership->refresh();
+        $this->assertSame(3, $membership->max_books_allowed);
+        $this->assertSame(2, BookIssue::where('student_id', $student->id)->whereIn('status', ['issued', 'overdue'])->count());
+    }
+
     public function test_student_can_reserve_unavailable_book_and_cancel_own_reservation(): void
     {
         $student = $this->student();
@@ -249,6 +349,30 @@ class LibraryCirculationWorkflowTest extends TestCase
             ->assertSessionHas('success', 'Reservation cancelled.');
 
         $this->assertSame('cancelled', $reservation->fresh()->status);
+    }
+
+    public function test_inactive_student_cannot_create_library_reservation_through_direct_route(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        [$book, $copy] = $this->bookWithCopy();
+        $book->update(['available_copies' => 0]);
+        $copy->update(['is_available' => false]);
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.library.reservations.store'), ['book_id' => $book->id])
+            ->assertSessionHasErrors('book_id');
+
+        $this->assertSame(0, LibraryReservation::count());
     }
 
     public function test_reserved_book_cannot_be_issued_to_another_borrower_before_queue_is_served(): void
@@ -408,5 +532,116 @@ class LibraryCirculationWorkflowTest extends TestCase
 
         $this->assertFalse($eligibility['eligible']);
         $this->assertSame('Has unpaid library fines', $eligibility['reason']);
+    }
+
+    public function test_active_overdue_fine_cannot_be_marked_paid_before_final_return(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 2,
+            'is_active' => true,
+        ]);
+
+        $issue = BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now()->subDays(12),
+            'due_date' => now()->subDays(4)->toDateString(),
+            'fine_amount' => 8,
+            'fine_paid' => false,
+            'status' => 'overdue',
+        ]);
+        $copy->update(['is_available' => false]);
+        $book->update(['available_copies' => 0]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.fines.pay', $issue))
+            ->assertRedirect()
+            ->assertSessionHasErrors('fine');
+
+        $this->assertFalse($issue->fresh()->fine_paid);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.issues.return', $issue))
+            ->assertRedirect();
+
+        $issue->refresh();
+        $this->assertSame('returned', $issue->status);
+        $this->assertGreaterThan(0, (float) $issue->fine_amount);
+        $this->assertFalse($issue->fine_paid);
+    }
+
+    public function test_lost_book_issue_cannot_be_returned_through_direct_route(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        $issue = BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now()->subDays(20),
+            'due_date' => now()->subDays(10)->toDateString(),
+            'fine_amount' => 100,
+            'fine_paid' => false,
+            'status' => 'lost',
+        ]);
+        $copy->update([
+            'is_available' => false,
+            'condition_status' => 'lost',
+        ]);
+        $book->update(['available_copies' => 0]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.issues.return', $issue))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Only active issued or overdue books can be returned.');
+
+        $issue->refresh();
+        $this->assertSame('lost', $issue->status);
+        $this->assertNull($issue->returned_at);
+        $this->assertFalse($copy->fresh()->is_available);
+        $this->assertSame('lost', $copy->fresh()->condition_status);
+        $this->assertSame(0, $book->fresh()->available_copies);
+    }
+
+    public function test_returned_positive_fine_can_be_paid_once_only(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        $issue = BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now()->subDays(10),
+            'due_date' => now()->subDays(5)->toDateString(),
+            'returned_at' => now()->subDay(),
+            'fine_amount' => 25,
+            'fine_paid' => false,
+            'status' => 'returned',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.fines.pay', $issue))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Fine of Rs. 25.00 marked as paid.');
+
+        $this->assertTrue($issue->fresh()->fine_paid);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.fines.pay', $issue))
+            ->assertRedirect()
+            ->assertSessionHasErrors('fine');
     }
 }

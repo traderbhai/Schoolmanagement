@@ -54,6 +54,31 @@ class PaymentController extends Controller
             return back()->with('error', 'You can only submit payments after being shortlisted or selected.');
         }
 
+        $installmentBelongsToApplicant = $installment->is_active
+            && (int) $installment->program_id === (int) $applicant->program_id
+            && (
+                $installment->batch_id === null
+                || (int) $installment->batch_id === (int) $applicant->batch_id
+            );
+
+        if (!$installmentBelongsToApplicant) {
+            return back()->with('error', 'This fee installment is not available for your application.');
+        }
+
+        $existingActivePayment = $applicant->payments()
+            ->where('admission_fee_installment_id', $installment->id)
+            ->whereIn('status', ['pending', 'verified'])
+            ->latest()
+            ->first();
+
+        if ($existingActivePayment) {
+            $message = $existingActivePayment->status === 'verified'
+                ? 'This fee installment has already been verified. Contact admissions for corrections.'
+                : 'A payment proof for this fee installment is already pending verification.';
+
+            return back()->with('error', $message);
+        }
+
         $validated = $r->validate([
             'amount_paid'           => ['required', 'numeric', 'min:1'],
             'payment_date'          => ['required', 'date', 'before_or_equal:today'],

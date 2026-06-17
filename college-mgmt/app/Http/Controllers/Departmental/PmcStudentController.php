@@ -91,7 +91,7 @@ class PmcStudentController extends Controller {
 
         $query = Student::whereIn('program_id', $programIds)
             ->where('status', 'active')
-            ->with(['user', 'batch', 'mentor.user']);
+            ->with(['user', 'batch', 'mentor']);
 
         if ($request->filled('batch_id')) {
             $query->where('batch_id', $request->batch_id);
@@ -112,7 +112,11 @@ class PmcStudentController extends Controller {
             'mentor_id'   => 'nullable|exists:teachers,id',
         ]);
 
-        Student::where('id', $request->student_id)->update(['mentor_id' => $request->mentor_id]);
+        $mentorUserId = $request->filled('mentor_id')
+            ? Teacher::whereKey($request->mentor_id)->value('user_id')
+            : null;
+
+        Student::where('id', $request->student_id)->update(['mentor_id' => $mentorUserId]);
         return back()->with('success', 'Mentor updated.');
     }
 
@@ -122,9 +126,11 @@ class PmcStudentController extends Controller {
             'mentor_id' => 'required|exists:teachers,id',
         ]);
 
+        $mentorUserId = Teacher::whereKey($request->mentor_id)->value('user_id');
+
         Student::where('batch_id', $request->batch_id)
             ->where('status', 'active')
-            ->update(['mentor_id' => $request->mentor_id]);
+            ->update(['mentor_id' => $mentorUserId]);
 
         return back()->with('success', 'Mentor assigned to entire batch.');
     }

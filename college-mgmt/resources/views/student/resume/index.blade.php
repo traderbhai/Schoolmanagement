@@ -4,9 +4,21 @@
 
 @section('content')
 <div class="container-fluid py-3" style="max-width:860px">
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-warning">{{ session('error') }}</div>
+    @endif
+    @unless($canEditResume)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-1"></i>Resume updates are locked because your student profile is not active. Your saved resume remains visible for history.
+        </div>
+    @endunless
 
     <form method="POST" action="{{ route('student.resume.save') }}" id="resumeForm">
         @csrf
+        <fieldset @disabled(!$canEditResume)>
 
         {{-- Header / Headline --}}
         <div class="card border-0 shadow-sm mb-4">
@@ -144,7 +156,13 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary px-4">Save Resume</button>
+        </fieldset>
+
+        @if($canEditResume)
+            <button type="submit" class="btn btn-primary px-4">Save Resume</button>
+        @else
+            <span class="badge bg-secondary">Active students only</span>
+        @endif
     </form>
 </div>
 @endsection

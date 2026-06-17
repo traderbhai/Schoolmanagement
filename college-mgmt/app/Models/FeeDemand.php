@@ -25,6 +25,8 @@ class FeeDemand extends Model
 
     public function student() { return $this->belongsTo(Student::class); }
     public function term() { return $this->belongsTo(Term::class); }
+    public function paymentRequests() { return $this->hasMany(FeePaymentRequest::class); }
+    public function installments() { return $this->hasMany(FeeInstallment::class); }
 
     public function isOverdue(): bool
     {
@@ -44,6 +46,16 @@ class FeeDemand extends Model
     public function markAsFullyPaid(): void
     {
         $this->update(['status' => 'fully_paid']);
+    }
+
+    public function openBalance(): float
+    {
+        return max(0, (float) $this->final_amount + (float) $this->penalty_amount);
+    }
+
+    public function hasFinancialActivity(): bool
+    {
+        return $this->paymentRequests()->exists() || $this->installments()->exists();
     }
 
     public function calculateWithScholarship(float $totalAmount, float $scholarshipAmount = 0): void

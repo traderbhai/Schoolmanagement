@@ -8,6 +8,7 @@ use App\Models\AdmissionPayment;
 use App\Models\Batch;
 use App\Models\Program;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class FeeInstallmentController extends Controller
 {
@@ -70,9 +71,17 @@ class FeeInstallmentController extends Controller
             'description'         => 'nullable|string|max:500',
         ]);
 
-        $feeInstallment->update(array_merge($validated, [
+        $data = array_merge($validated, [
             'is_active' => $request->boolean('is_active', true),
-        ]));
+        ]);
+
+        if ($feeInstallment->payments()->exists() && $this->changesAdmissionInstallmentContract($feeInstallment, $data)) {
+            throw ValidationException::withMessages([
+                'admission_fee_installment' => 'This installment is linked to admission payments and cannot be financially changed or deactivated.',
+            ]);
+        }
+
+        $feeInstallment->update($data);
 
         return redirect()->route('admission.fee-installments.index', $feeInstallment->program)
             ->with('success', 'Fee installment updated successfully.');
@@ -80,8 +89,7 @@ class FeeInstallmentController extends Controller
 
     public function destroy(AdmissionFeeInstallment $feeInstallment)
     {
-        $hasPayments = AdmissionPayment::where('admission_fee_installment_id', $feeInstallment->id)->exists();
-        if ($hasPayments) {
+        if ($feeInstallment->payments()->exists()) {
             return back()->with('error', 'Cannot delete: payments exist for this installment.');
         }
         $program = $feeInstallment->program;
@@ -137,5 +145,13 @@ class FeeInstallmentController extends Controller
 
         return redirect()->route('admission.fee-installments.index', $program)
             ->with('success', "$count installments duplicated to new batch.");
+    }
+
+    private function changesAdmissionInstallmentContract(AdmissionFeeInstallment $installment, array $data): bool
+    {
+        return number_format((float) ($data['amount'] ?? $installment->amount), 2, '.', '') !== number_format((float) $installment->amount, 2, '.', '')
+            || (int) ($data['installment_number'] ?? $installment->installment_number) !== (int) $installment->installment_number
+            || (int) ($data['batch_id'] ?? $installment->batch_id ?? 0) !== (int) ($installment->batch_id ?? 0)
+            || (array_key_exists('is_active', $data) && (bool) $data['is_active'] !== (bool) $installment->is_active);
     }
 }

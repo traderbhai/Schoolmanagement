@@ -11,6 +11,7 @@ use App\Models\Exam;
 use App\Models\ExamResult;
 use App\Models\FeeDemand;
 use App\Models\FeeStructure;
+use App\Models\Notice;
 use App\Models\ParentProfile;
 use App\Models\Program;
 use App\Models\Semester;
@@ -134,6 +135,101 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertDontSee('Parent Unenrolled Subject');
     }
 
+    public function test_parent_results_hide_unpublished_draft_marks(): void
+    {
+        [$user, $student, $semester, $enrolledSubject] = $this->parentAcademicFixture();
+
+        $draftExam = Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'term_id' => $student->current_term_id,
+            'semester_id' => $semester->id,
+            'subject_id' => $enrolledSubject->id,
+            'name' => 'Parent Draft Result Exam',
+            'total_marks' => 100,
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $student->id,
+            'marks_obtained' => 99,
+            'is_absent' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parent.children.results', ['student' => $student, 'semester_id' => $semester->id]))
+            ->assertOk()
+            ->assertSee('Parent Enrolled Subject')
+            ->assertSee('88')
+            ->assertDontSee('Parent Draft Result Exam')
+            ->assertDontSee('99.00');
+    }
+
+    public function test_parent_dashboard_notice_preview_respects_audience_and_active_dates(): void
+    {
+        [$user] = $this->parentWithStudent();
+        $admin = User::factory()->create();
+
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Parent Visible Family Notice',
+            'content' => 'Visible to parents through student audience.',
+            'audience' => 'students',
+            'publish_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Parent Visible All Notice',
+            'content' => 'Visible to all audiences.',
+            'audience' => 'all',
+            'publish_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Teacher Only Dashboard Leak',
+            'content' => 'Should stay hidden from parents.',
+            'audience' => 'teachers',
+            'publish_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Admin Only Dashboard Leak',
+            'content' => 'Should stay hidden from parents.',
+            'audience' => 'admin',
+            'publish_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Future Family Notice',
+            'content' => 'Should not be visible yet.',
+            'audience' => 'students',
+            'publish_date' => now()->addDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        Notice::create([
+            'user_id' => $admin->id,
+            'title' => 'Expired Family Notice',
+            'content' => 'Should no longer be visible.',
+            'audience' => 'students',
+            'publish_date' => now()->subDays(10)->toDateString(),
+            'expiry_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parent.dashboard'))
+            ->assertOk()
+            ->assertSee('Parent Visible Family Notice')
+            ->assertSee('Parent Visible All Notice')
+            ->assertDontSee('Teacher Only Dashboard Leak')
+            ->assertDontSee('Admin Only Dashboard Leak')
+            ->assertDontSee('Future Family Notice')
+            ->assertDontSee('Expired Family Notice');
+    }
+
     private function parentAcademicFixture(): array
     {
         Role::firstOrCreate(['name' => 'parent', 'guard_name' => 'web']);
@@ -214,6 +310,7 @@ class ParentPortalGuidanceTest extends TestCase
                 'subject_id' => $subject->id,
                 'name' => $subject->name . ' Exam',
                 'total_marks' => 100,
+                'published_at' => now(),
             ]);
             ExamResult::factory()->create([
                 'exam_id' => $exam->id,

@@ -131,6 +131,10 @@ class ApplicantCrmController extends Controller
             abort(403, 'Only authorized admission leadership can change status.');
         }
 
+        if ($applicant->isEnrolled()) {
+            return back()->with('error', 'Completed enrollments are locked. Use the academic student lifecycle or audited cancellation workflow instead of changing applicant status.');
+        }
+
         $allowed = self::TRANSITIONS[$applicant->status] ?? [];
         $request->validate([
             'status' => ['required', 'in:' . implode(',', $allowed)],
@@ -177,6 +181,15 @@ class ApplicantCrmController extends Controller
 
     public function verifyDocument(Request $request, ApplicantDocument $document)
     {
+        abort_unless($this->hierarchy->canVerifyAdmissionDocuments($request->user()), 403);
+
+        $document->loadMissing('applicant');
+        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $document->applicant?->assigned_to, false), 403);
+
+        if ($document->status !== 'pending') {
+            return back()->with('error', 'Only pending applicant documents can be verified or rejected.');
+        }
+
         $request->validate([
             'action'           => 'required|in:verified,rejected',
             'rejection_reason' => 'required_if:action,rejected|nullable|string',
@@ -207,6 +220,10 @@ class ApplicantCrmController extends Controller
         $count = 0;
         foreach ($request->applicant_ids as $id) {
             $applicant = Applicant::find($id);
+            if (! $applicant || $applicant->isEnrolled()) {
+                continue;
+            }
+
             $allowed = self::TRANSITIONS[$applicant->status] ?? [];
             if (in_array($request->action, $allowed)) {
                 $applicant->update([

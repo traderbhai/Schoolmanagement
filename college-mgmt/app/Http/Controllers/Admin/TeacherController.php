@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Teacher, User, Department};
+use App\Models\{ActivityLog, Teacher, User, Department};
 use App\Services\TimetableService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -90,7 +90,12 @@ class TeacherController extends Controller
 
     public function destroy(Teacher $teacher)
     {
-        $teacher->user->delete();
-        return redirect()->route('admin.teachers.index')->with('success', 'Teacher deleted.');
+        $name = $teacher->user?->name ?? $teacher->employee_id;
+        $teacher->update(['status' => 'inactive']);
+        $teacher->user?->syncRoles([]);
+
+        ActivityLog::record('archived', "Teacher archived instead of deleted to preserve teaching history: {$name}", $teacher);
+
+        return redirect()->route('admin.teachers.index')->with('success', 'Teacher archived. Timetable, attendance, leave, and academic history was preserved.');
     }
 }

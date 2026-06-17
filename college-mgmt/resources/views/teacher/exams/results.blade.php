@@ -9,6 +9,16 @@
 
 @section('content')
 
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
+@if(!$canSaveResults)
+    <div class="alert alert-warning d-flex align-items-center gap-2">
+        <i class="bi bi-lock-fill"></i>
+        <div>Result entry is locked because this teacher profile is not active.</div>
+    </div>
+@endif
+
 {{-- Exam Info Header --}}
 <div class="card mb-4 border-0 border-start border-4 border-primary" style="box-shadow:var(--shadow-sm)">
     <div class="card-body py-3">
@@ -28,6 +38,16 @@
         </div>
     </div>
 </div>
+
+@if($exam->published_at)
+    <div class="alert alert-info d-flex align-items-center gap-2">
+        <i class="bi bi-lock-fill"></i>
+        <div>
+            <strong>Results published.</strong>
+            This grade sheet is locked from teacher edits. Corrections must go through the Exam Cell appeal/correction workflow.
+        </div>
+    </div>
+@endif
 
 @if($students->isEmpty())
     <div class="card" style="box-shadow:var(--shadow-sm)">
@@ -86,7 +106,8 @@
                                        class="form-check-input absent-cb"
                                        data-student="{{ $s->id }}"
                                        id="absent_{{ $s->id }}"
-                                       @checked($existingResult && $existingResult->is_absent)>
+                                       @checked($existingResult && $existingResult->is_absent)
+                                       @disabled($exam->published_at || !$canSaveResults)>
                                 <label class="form-check-label ms-1 text-danger small fw-semibold" for="absent_{{ $s->id }}">Absent</label>
                             </div>
                         </td>
@@ -99,7 +120,7 @@
                                    step="0.5"
                                    placeholder="0 – {{ $exam->total_marks }}"
                                    value="{{ $existingResult && !$existingResult->is_absent ? $existingResult->marks_obtained : '' }}"
-                                   @disabled($existingResult && $existingResult->is_absent)>
+                                   @disabled($exam->published_at || !$canSaveResults || ($existingResult && $existingResult->is_absent))>
                             <div class="form-text" style="font-size:.68rem">Out of {{ $exam->total_marks }} | Pass: {{ $exam->passing_marks }}</div>
                         </td>
                         <td>
@@ -107,7 +128,8 @@
                                    name="results[{{ $s->id }}][remarks]"
                                    class="form-control form-control-sm"
                                    placeholder="Optional"
-                                   value="{{ $existingResult ? $existingResult->remarks : '' }}">
+                                   value="{{ $existingResult ? $existingResult->remarks : '' }}"
+                                   @disabled($exam->published_at || !$canSaveResults)>
                         </td>
                     </tr>
                     @endforeach
@@ -116,7 +138,7 @@
             </div>
         </div>
         <div class="card-footer d-flex gap-2 flex-wrap align-items-center">
-            <button type="submit" class="btn btn-success btn-lg px-4">
+            <button type="submit" class="btn btn-success btn-lg px-4" @disabled($exam->published_at || !$canSaveResults)>
                 <i class="bi bi-save me-2"></i>Save All Results
             </button>
             <a href="{{ route('teacher.exams.index') }}" class="btn btn-outline-secondary">

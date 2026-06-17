@@ -11,4 +11,19 @@ class Company extends Model
     {
         return $this->hasMany(PlacementDrive::class);
     }
+
+    public function internships()
+    {
+        return $this->hasMany(Internship::class);
+    }
+
+    public function hasOperationalHistory(): bool
+    {
+        return $this->drives()->exists() || $this->internships()->exists();
+    }
+
+    public function hasActivePlacementDrives(): bool
+    {
+        return $this->drives()->whereIn('status', ['upcoming', 'ongoing'])->exists();
+    }
 }

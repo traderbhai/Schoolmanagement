@@ -77,6 +77,7 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
             'subject_id' => $subject->id,
             'total_marks' => 10,
             'passing_marks' => 4,
+            'published_at' => now(),
         ]);
         ExamResult::factory()->create([
             'exam_id' => $exam->id,
@@ -136,6 +137,22 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
                 'reason' => str_repeat('This reason is long enough for validation. ', 2),
             ])
             ->assertForbidden();
+
+        $this->assertDatabaseCount('student_scholarship_applications', 0);
+    }
+
+    public function test_inactive_student_cannot_submit_new_scholarship_application(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $scheme = $this->scheme();
+
+        $this->actingAs($student->user)
+            ->post(route('student.scholarships.apply', $scheme), [
+                'reason' => str_repeat('This reason is long enough for validation. ', 2),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('student');
 
         $this->assertDatabaseCount('student_scholarship_applications', 0);
     }
@@ -291,8 +308,73 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
         $application->refresh();
         $this->assertSame('disbursed', $application->status);
         $this->assertNotNull($application->disbursed_at);
+        $this->assertSame('UTR12345', $application->disbursement_ref);
         $this->assertStringContainsString('UTR12345', $application->review_note);
         $this->assertSame(3, Notification::where('user_id', $student->user_id)->where('type', 'scholarship')->count());
+    }
+
+    public function test_admin_cannot_disburse_stale_student_scholarship_after_scheme_becomes_invalid(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $scheme = $this->scheme(['available_seats' => 1]);
+
+        $application = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Approved scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 12000,
+        ]);
+
+        $scheme->update(['is_active' => false]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.disburse', $application), [
+                'disbursement_ref' => 'UTR-STALE-001',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $application->refresh();
+        $this->assertSame('approved', $application->status);
+        $this->assertNull($application->disbursed_at);
+        $this->assertNull($application->disbursement_ref);
+    }
+
+    public function test_admin_cannot_reuse_student_scholarship_disbursement_reference(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $scheme = $this->scheme(['available_seats' => 2]);
+        $firstApplication = StudentScholarshipApplication::create([
+            'student_id' => $this->student()->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('First approved scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 12000,
+        ]);
+        $secondApplication = StudentScholarshipApplication::create([
+            'student_id' => $this->student()->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Second approved scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 8000,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.disburse', $firstApplication), [
+                'disbursement_ref' => 'UTR-DUP-001',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Scholarship marked as disbursed.');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.disburse', $secondApplication), [
+                'disbursement_ref' => 'UTR-DUP-001',
+            ])
+            ->assertSessionHasErrors('disbursement_ref');
+
+        $this->assertSame('approved', $secondApplication->fresh()->status);
+        $this->assertNull($secondApplication->fresh()->disbursement_ref);
     }
 
     public function test_admin_cannot_approve_when_scheme_seats_are_full(): void
@@ -324,5 +406,126 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
             ->assertSessionHasErrors('scholarship');
 
         $this->assertSame('pending', $application->fresh()->status);
+    }
+
+    public function test_admin_cannot_approve_stale_or_incomplete_scholarship_applications(): void
+    {
+        Storage::fake('local');
+
+        $admin = $this->userWithRole('admin');
+        $program = Program::factory()->create();
+        $student = $this->student($program);
+
+        $inactiveApplication = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $this->scheme(['is_active' => false])->id,
+            'reason' => str_repeat('Inactive scheme application reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        $wrongProgramApplication = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $this->scheme(['program_id' => Program::factory()->create()->id])->id,
+            'reason' => str_repeat('Wrong program application reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        $missingProofApplication = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $this->scheme([
+                'program_id' => $program->id,
+                'requires_document' => true,
+            ])->id,
+            'reason' => str_repeat('Missing proof application reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        foreach ([$inactiveApplication, $wrongProgramApplication, $missingProofApplication] as $application) {
+            $this->actingAs($admin)
+                ->patch(route('admin.student-scholarships.approve', $application), [
+                    'disbursed_amount' => 5000,
+                    'review_note' => 'Trying to approve stale application.',
+                ])
+                ->assertSessionHasErrors('scholarship');
+
+            $this->assertSame('pending', $application->fresh()->status);
+            $this->assertNull($application->fresh()->disbursed_amount);
+        }
+    }
+
+    public function test_admin_rechecks_structured_eligibility_before_scholarship_approval(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $program = Program::factory()->create();
+        $student = $this->student($program);
+        $this->resultForCgpa($student, 6.5);
+        $this->parentIncome($student, '800000');
+        $scheme = $this->scheme([
+            'program_id' => $program->id,
+            'min_cgpa' => 7.5,
+            'max_family_income' => 500000,
+        ]);
+
+        $application = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Stale structured eligibility application reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.approve', $application), [
+                'disbursed_amount' => 5000,
+                'review_note' => 'Trying to approve ineligible student.',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('pending', $application->fresh()->status);
+        $this->assertNull($application->fresh()->disbursed_amount);
+    }
+
+    public function test_admin_cannot_approve_or_disburse_scholarship_for_inactive_student(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $scheme = $this->scheme(['available_seats' => 2]);
+        $secondScheme = $this->scheme(['available_seats' => 2]);
+
+        $pendingApplication = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Inactive student scholarship reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.approve', $pendingApplication), [
+                'disbursed_amount' => 5000,
+                'review_note' => 'Trying to approve inactive student.',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('pending', $pendingApplication->fresh()->status);
+        $this->assertNull($pendingApplication->fresh()->disbursed_amount);
+
+        $approvedApplication = StudentScholarshipApplication::create([
+            'student_id' => $student->id,
+            'scholarship_scheme_id' => $secondScheme->id,
+            'reason' => str_repeat('Previously approved inactive student scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 6000,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.disburse', $approvedApplication), [
+                'disbursement_ref' => 'UTR-INACTIVE-SCH',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $approvedApplication->refresh();
+        $this->assertSame('approved', $approvedApplication->status);
+        $this->assertNull($approvedApplication->disbursed_at);
+        $this->assertNull($approvedApplication->disbursement_ref);
     }
 }

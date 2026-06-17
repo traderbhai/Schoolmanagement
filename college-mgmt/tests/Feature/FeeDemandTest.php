@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\FeeDemand;
+use App\Models\FeePaymentRequest;
 use App\Models\Applicant;
 use App\Models\ApplicantScholarship;
 use App\Models\AcademicYear;
@@ -71,7 +72,7 @@ class FeeDemandTest extends TestCase
 
     public function test_can_update_fee_demand()
     {
-        $feeDemand = FeeDemand::factory()->create();
+        $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
 
         $data = [
             'total_amount' => 150000,
@@ -85,22 +86,79 @@ class FeeDemandTest extends TestCase
         $this->assertEquals(150000, $feeDemand->fresh()->total_amount);
     }
 
-    public function test_can_mark_as_paid()
+    public function test_can_mark_zero_balance_demand_as_paid()
     {
-        $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
+        $feeDemand = FeeDemand::factory()->create([
+            'status' => 'pending',
+            'total_amount' => 10000,
+            'scholarship_deduction' => 10000,
+            'final_amount' => 0,
+            'penalty_amount' => 0,
+        ]);
 
         $response = $this->post("/academic/fee-demands/{$feeDemand->id}/mark-paid");
 
         $this->assertEquals('fully_paid', $feeDemand->fresh()->status);
     }
 
-    public function test_can_delete_fee_demand()
+    public function test_cannot_manually_mark_non_zero_demand_as_paid()
     {
-        $feeDemand = FeeDemand::factory()->create();
+        $feeDemand = FeeDemand::factory()->create([
+            'status' => 'pending',
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+        ]);
+
+        $this->post("/academic/fee-demands/{$feeDemand->id}/mark-paid")
+            ->assertSessionHasErrors('fee_demand');
+
+        $this->assertEquals('pending', $feeDemand->fresh()->status);
+    }
+
+    public function test_cannot_update_non_zero_demand_directly_to_fully_paid()
+    {
+        $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
+
+        $this->put("/academic/fee-demands/{$feeDemand->id}", [
+            'total_amount' => 150000,
+            'scholarship_deduction' => 15000,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'fully_paid',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertNotEquals('fully_paid', $feeDemand->fresh()->status);
+    }
+
+    public function test_can_delete_untouched_pending_fee_demand()
+    {
+        $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
 
         $response = $this->delete("/academic/fee-demands/{$feeDemand->id}");
 
         $this->assertDatabaseMissing('fee_demands', ['id' => $feeDemand->id]);
+    }
+
+    public function test_cannot_delete_paid_or_linked_fee_demand_history()
+    {
+        $paid = FeeDemand::factory()->create(['status' => 'fully_paid']);
+        $linked = FeeDemand::factory()->create(['status' => 'pending']);
+        FeePaymentRequest::create([
+            'student_id' => $linked->student_id,
+            'fee_demand_id' => $linked->id,
+            'amount' => 1000,
+            'payment_method' => 'online',
+            'transaction_ref' => 'LINKED-FEE-DEMAND',
+            'submitted_at' => now(),
+            'status' => 'pending',
+        ]);
+
+        $this->delete("/academic/fee-demands/{$paid->id}")
+            ->assertSessionHas('error', 'Only untouched pending fee demands can be deleted. Paid, partial, overdue, or closed demands are retained for financial audit.');
+        $this->delete("/academic/fee-demands/{$linked->id}")
+            ->assertSessionHas('error', 'Cannot delete this fee demand because payment requests or installment records are linked to it.');
+
+        $this->assertDatabaseHas('fee_demands', ['id' => $paid->id]);
+        $this->assertDatabaseHas('fee_demands', ['id' => $linked->id]);
     }
 
     public function test_fee_demand_is_overdue()
@@ -152,6 +210,59 @@ class FeeDemandTest extends TestCase
             'student_id' => $student->id,
             'term_id' => $term->id,
         ]);
+    }
+
+    public function test_manual_fee_demand_cannot_be_created_as_fully_paid_with_open_balance(): void
+    {
+        $student = Student::factory()->create();
+        $term = Term::factory()->create();
+
+        $this->post('/academic/fee-demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'total_amount' => 10000,
+            'scholarship_deduction' => 1000,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'fully_paid',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertDatabaseMissing('fee_demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+        ]);
+    }
+
+    public function test_fee_demand_with_financial_activity_cannot_have_ledger_fields_rewritten(): void
+    {
+        $feeDemand = FeeDemand::factory()->create([
+            'status' => 'pending',
+            'total_amount' => 10000,
+            'scholarship_deduction' => 0,
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+            'due_date' => now()->addMonth()->toDateString(),
+        ]);
+        FeePaymentRequest::create([
+            'student_id' => $feeDemand->student_id,
+            'fee_demand_id' => $feeDemand->id,
+            'amount' => 5000,
+            'payment_method' => 'online',
+            'transaction_ref' => 'LOCK-DEMAND-EDIT',
+            'submitted_at' => now(),
+            'status' => 'pending',
+        ]);
+
+        $this->put("/academic/fee-demands/{$feeDemand->id}", [
+            'total_amount' => 6000,
+            'scholarship_deduction' => 0,
+            'due_date' => now()->addMonths(2)->toDateString(),
+            'status' => 'pending',
+        ])->assertSessionHasErrors('fee_demand');
+
+        $feeDemand->refresh();
+        $this->assertSame('10000.00', $feeDemand->total_amount);
+        $this->assertSame('10000.00', $feeDemand->final_amount);
+        $this->assertSame('pending', $feeDemand->status);
     }
 
     public function test_generated_fee_demand_applies_admission_scholarship_from_completed_handoff(): void

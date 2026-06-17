@@ -62,6 +62,6 @@ class NoticeController extends Controller
     public function destroy(Notice $notice)
     {
         $notice->delete();
-        return redirect()->route('admin.notices.index')->with('success', 'Notice deleted.');
+        return redirect()->route('admin.notices.index')->with('success', 'Notice archived. Communication history was preserved.');
     }
 }

@@ -109,7 +109,7 @@ class AssetWorkflowTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.assets.assign', $asset), [
                 'assigned_to_user_id' => $teacher->id,
-                'assigned_on' => '2026-06-13',
+                'assigned_on' => now()->subWeek()->toDateString(),
                 'remarks' => 'Issued with charger.',
             ])
             ->assertRedirect()
@@ -124,7 +124,7 @@ class AssetWorkflowTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.assets.assignments.return', $assignment), [
-                'returned_on' => '2026-06-20',
+                'returned_on' => now()->toDateString(),
                 'condition' => 'good',
             ])
             ->assertRedirect()
@@ -175,6 +175,34 @@ class AssetWorkflowTest extends TestCase
 
         $this->assertSame('active', $assignment->fresh()->status);
         $this->assertSame('assigned', $asset->fresh()->status);
+    }
+
+    public function test_admin_cannot_return_asset_with_future_date(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'assigned']);
+
+        $assignment = AssetAssignment::create([
+            'institute_asset_id' => $asset->id,
+            'assigned_to_user_id' => $teacher->id,
+            'assigned_by' => $admin->id,
+            'assigned_on' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assignments.return', $assignment), [
+                'returned_on' => now()->addWeek()->toDateString(),
+                'condition' => 'good',
+            ])
+            ->assertSessionHasErrors('returned_on');
+
+        $assignment->refresh();
+        $asset->refresh();
+        $this->assertSame('active', $assignment->status);
+        $this->assertNull($assignment->returned_on);
+        $this->assertSame('assigned', $asset->status);
     }
 
     public function test_asset_register_page_shows_assets_and_assignment_context(): void
@@ -304,6 +332,33 @@ class AssetWorkflowTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHas('error', 'Only active inventory items can be issued.');
+
+        $this->assertSame(8, $item->fresh()->current_stock);
+        $this->assertSame(0, InventoryMovement::count());
+    }
+
+    public function test_inventory_stock_movements_cannot_be_future_dated(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $item = $this->inventoryItem(['current_stock' => 8]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.stock-items.receive', $item), [
+                'quantity' => 5,
+                'movement_date' => now()->addWeek()->toDateString(),
+                'reference_number' => 'FUTURE-PO',
+            ])
+            ->assertSessionHasErrors('movement_date');
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.stock-items.issue', $item), [
+                'quantity' => 2,
+                'issued_to_user_id' => $teacher->id,
+                'movement_date' => now()->addWeek()->toDateString(),
+                'reference_number' => 'FUTURE-ISSUE',
+            ])
+            ->assertSessionHasErrors('movement_date');
 
         $this->assertSame(8, $item->fresh()->current_stock);
         $this->assertSame(0, InventoryMovement::count());

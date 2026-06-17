@@ -26,10 +26,12 @@ class SubjectRegistrationController extends Controller
                 'availableSubjects'  => collect(),
                 'enrolledSubjects'   => collect(),
                 'currentTerm'        => null,
+                'canManageSubjects'  => false,
             ]);
         }
 
         $currentTerm = $student->currentTerm;
+        $canManageSubjects = $student->status === 'active';
 
         $enrolledSubjectIds = StudentSubjectEnrollment::where('student_id', $student->id)
             ->where('term_id', $currentTerm?->id)
@@ -53,7 +55,7 @@ class SubjectRegistrationController extends Controller
             ->get();
 
         return view('student.subject-registration', compact(
-            'student', 'currentTerm', 'enrolledSubjects', 'availableSubjects'
+            'student', 'currentTerm', 'enrolledSubjects', 'availableSubjects', 'canManageSubjects'
         ));
     }
 
@@ -62,6 +64,10 @@ class SubjectRegistrationController extends Controller
         $student = $this->getStudent();
         if (!$student) {
             return back()->with('error', 'Student profile not found.');
+        }
+
+        if ($student->status !== 'active') {
+            return back()->with('error', 'Subject registration is available only for active students. Contact the academic office for archived records.');
         }
 
         $request->validate([
@@ -144,6 +150,10 @@ class SubjectRegistrationController extends Controller
         $student = $this->getStudent();
         if (!$student || $enrollment->student_id !== $student->id) {
             return back()->with('error', 'Unauthorized action.');
+        }
+
+        if ($student->status !== 'active') {
+            return back()->with('error', 'Subject registration changes are available only for active students. Contact the academic office for archived records.');
         }
 
         $currentTerm = $student->currentTerm;

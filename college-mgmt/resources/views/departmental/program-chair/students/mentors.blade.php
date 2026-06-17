@@ -63,7 +63,13 @@
                   <small class="text-muted">{{ $s->enrollment_number }}</small>
                 </td>
                 <td>{{ $s->batch->name ?? '—' }}</td>
-                <td>{{ $s->mentor->user->name ?? '<span class="text-muted small">Unassigned</span>' }}</td>
+                <td>
+                  @if($s->mentor)
+                    {{ $s->mentor->name }}
+                  @else
+                    <span class="text-muted small">Unassigned</span>
+                  @endif
+                </td>
                 <td>
                   <form method="POST" action="{{ route('chair.students.mentors.assign') }}" class="d-flex gap-1">
                     @csrf
@@ -71,7 +77,7 @@
                     <select name="mentor_id" class="form-select form-select-sm">
                       <option value="">None</option>
                       @foreach($teachers as $t)
-                        <option value="{{ $t->id }}" @selected($s->mentor_id == $t->id)>{{ $t->user->name ?? $t->id }}</option>
+                        <option value="{{ $t->id }}" @selected($s->mentor_id == $t->user_id)>{{ $t->user->name ?? $t->id }}</option>
                       @endforeach
                     </select>
                     <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>

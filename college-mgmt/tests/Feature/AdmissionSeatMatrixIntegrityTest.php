@@ -1,0 +1,233 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Applicant;
+use App\Models\Batch;
+use App\Models\EnrollmentConfirmation;
+use App\Models\MeritListEntry;
+use App\Models\OfferLetter;
+use App\Models\Program;
+use App\Models\SeatMatrix;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
+
+class AdmissionSeatMatrixIntegrityTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function admin(): User
+    {
+        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
+    }
+
+    private function matrix(): SeatMatrix
+    {
+        $program = Program::factory()->create(['is_active' => true]);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'status' => 'active']);
+
+        return SeatMatrix::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'total_seats' => 10,
+            'general_seats' => 5,
+            'obc_seats' => 2,
+            'sc_seats' => 1,
+            'st_seats' => 1,
+            'ews_seats' => 1,
+            'management_quota' => 0,
+            'nri_quota' => 0,
+            'defence_quota' => 0,
+        ]);
+    }
+
+    public function test_seat_matrix_with_selection_offer_or_enrollment_history_cannot_be_deleted(): void
+    {
+        $admin = $this->admin();
+        $matrix = $this->matrix();
+        $selected = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'general',
+            'status' => 'selected',
+        ]);
+        $offered = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'obc',
+            'status' => 'selected',
+        ]);
+        $enrolled = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'sc',
+            'status' => 'enrolled',
+        ]);
+
+        MeritListEntry::create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'applicant_id' => $selected->id,
+            'rank' => 1,
+            'total_weighted_score' => 90,
+            'composite_score' => 90,
+            'merit_list_version' => 1,
+            'decision' => 'selected',
+            'category' => 'general',
+        ]);
+        OfferLetter::create([
+            'applicant_id' => $offered->id,
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(7)->toDateString(),
+            'issued_at' => now(),
+            'issued_by' => $admin->id,
+        ]);
+        EnrollmentConfirmation::create([
+            'applicant_id' => $enrolled->id,
+            'confirmed_by' => $admin->id,
+            'confirmed_at' => now(),
+            'enrollment_number' => 'ENR-SEAT-001',
+            'roll_number' => 'ROLL-SEAT-001',
+            'batch_id' => $matrix->batch_id,
+            'status' => 'completed',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admission.seat-matrices.destroy', $matrix))
+            ->assertRedirect(route('admission.seat-matrices.index', $matrix->program))
+            ->assertSessionHas('error', 'This seat matrix has selections, offers, waitlist, or enrollment history and cannot be deleted.');
+
+        $this->assertDatabaseHas('seat_matrices', ['id' => $matrix->id]);
+        $this->assertDatabaseHas('merit_list_entries', ['applicant_id' => $selected->id]);
+        $this->assertDatabaseHas('offer_letters', ['applicant_id' => $offered->id]);
+        $this->assertDatabaseHas('enrollment_confirmations', ['applicant_id' => $enrolled->id]);
+    }
+
+    public function test_seat_matrix_capacity_cannot_be_reduced_below_committed_applicants(): void
+    {
+        $admin = $this->admin();
+        $matrix = $this->matrix();
+        $general = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'general',
+            'status' => 'selected',
+        ]);
+        $obc = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'obc',
+            'status' => 'selected',
+        ]);
+
+        MeritListEntry::create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'applicant_id' => $general->id,
+            'rank' => 1,
+            'total_weighted_score' => 95,
+            'composite_score' => 95,
+            'merit_list_version' => 1,
+            'decision' => 'selected',
+            'category' => 'general',
+        ]);
+        OfferLetter::create([
+            'applicant_id' => $obc->id,
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'status' => 'accepted',
+            'acceptance_deadline' => now()->addDays(5)->toDateString(),
+            'issued_at' => now(),
+            'issued_by' => $admin->id,
+            'accepted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admission.seat-matrices.update', $matrix), [
+                'total_seats' => 10,
+                'general_seats' => 0,
+                'obc_seats' => 2,
+                'sc_seats' => 1,
+                'st_seats' => 1,
+                'ews_seats' => 1,
+                'management_quota' => 0,
+                'nri_quota' => 0,
+                'defence_quota' => 0,
+            ])
+            ->assertSessionHasErrors('general_seats');
+
+        $this->assertSame(5, $matrix->fresh()->general_seats);
+
+        $this->actingAs($admin)
+            ->put(route('admission.seat-matrices.update', $matrix), [
+                'total_seats' => 1,
+                'general_seats' => 5,
+                'obc_seats' => 2,
+                'sc_seats' => 1,
+                'st_seats' => 1,
+                'ews_seats' => 1,
+                'management_quota' => 0,
+                'nri_quota' => 0,
+                'defence_quota' => 0,
+            ])
+            ->assertSessionHasErrors('total_seats');
+
+        $this->assertSame(10, $matrix->fresh()->total_seats);
+    }
+
+    public function test_seat_matrix_can_be_increased_after_commitments_and_unused_matrix_can_be_deleted(): void
+    {
+        $admin = $this->admin();
+        $matrix = $this->matrix();
+        $applicant = Applicant::factory()->create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'category' => 'general',
+        ]);
+        MeritListEntry::create([
+            'program_id' => $matrix->program_id,
+            'batch_id' => $matrix->batch_id,
+            'applicant_id' => $applicant->id,
+            'rank' => 1,
+            'total_weighted_score' => 88,
+            'composite_score' => 88,
+            'merit_list_version' => 1,
+            'decision' => 'selected',
+            'category' => 'general',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admission.seat-matrices.update', $matrix), [
+                'total_seats' => 12,
+                'general_seats' => 6,
+                'obc_seats' => 2,
+                'sc_seats' => 1,
+                'st_seats' => 1,
+                'ews_seats' => 1,
+                'management_quota' => 1,
+                'nri_quota' => 0,
+                'defence_quota' => 0,
+            ])
+            ->assertRedirect(route('admission.seat-matrices.index', $matrix->program));
+
+        $this->assertSame(12, $matrix->fresh()->total_seats);
+        $this->assertSame(6, $matrix->fresh()->general_seats);
+
+        $unused = $this->matrix();
+        $this->actingAs($admin)
+            ->delete(route('admission.seat-matrices.destroy', $unused))
+            ->assertRedirect(route('admission.seat-matrices.index', $unused->program))
+            ->assertSessionHas('success', 'Seat matrix deleted.');
+
+        $this->assertDatabaseMissing('seat_matrices', ['id' => $unused->id]);
+    }
+}

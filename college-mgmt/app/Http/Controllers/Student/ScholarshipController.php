@@ -30,6 +30,13 @@ class ScholarshipController extends Controller {
     public function apply(Request $request, ScholarshipScheme $scheme) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+
+        if ($student->status !== 'active') {
+            return back()
+                ->withErrors(['student' => 'Scholarship applications are available only for active students. Contact the office for archived records.'])
+                ->withInput();
+        }
+
         abort_unless($scheme->is_active, 422, 'This scholarship is not accepting applications.');
         abort_if(
             $scheme->program_id && $scheme->program_id !== $student->program_id,
