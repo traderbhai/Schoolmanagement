@@ -9,6 +9,7 @@ use App\Services\DepartmentHierarchyService;
 use App\Services\AdmissionNextActionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
@@ -205,8 +206,13 @@ class LeadController extends Controller
         }
 
         $validated = $request->validate([
-            'program_id' => 'required|exists:programs,id',
-            'batch_id'   => 'nullable|exists:batches,id',
+            'program_id' => ['required', Rule::exists('programs', 'id')->where('is_active', true)],
+            'batch_id'   => [
+                'nullable',
+                Rule::exists('batches', 'id')
+                    ->where('program_id', $request->input('program_id'))
+                    ->whereIn('status', ['upcoming', 'active']),
+            ],
         ]);
 
         // Reuse existing user or create new one

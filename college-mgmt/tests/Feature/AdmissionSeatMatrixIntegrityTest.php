@@ -230,4 +230,57 @@ class AdmissionSeatMatrixIntegrityTest extends TestCase
 
         $this->assertDatabaseMissing('seat_matrices', ['id' => $unused->id]);
     }
+
+    public function test_seat_matrix_batch_must_belong_to_selected_active_program(): void
+    {
+        $admin = $this->admin();
+        $program = Program::factory()->create(['is_active' => true]);
+        $otherProgram = Program::factory()->create(['is_active' => true]);
+        $otherBatch = Batch::factory()->create([
+            'program_id' => $otherProgram->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admission.seat-matrices.store', $program), [
+                'batch_id' => $otherBatch->id,
+                'total_seats' => 10,
+                'general_seats' => 5,
+                'obc_seats' => 2,
+                'sc_seats' => 1,
+                'st_seats' => 1,
+                'ews_seats' => 1,
+                'management_quota' => 0,
+                'nri_quota' => 0,
+                'defence_quota' => 0,
+            ])
+            ->assertSessionHasErrors('batch_id');
+
+        $this->assertDatabaseMissing('seat_matrices', [
+            'program_id' => $program->id,
+            'batch_id' => $otherBatch->id,
+        ]);
+    }
+
+    public function test_seat_matrix_total_cannot_be_less_than_category_and_quota_total(): void
+    {
+        $admin = $this->admin();
+        $matrix = $this->matrix();
+
+        $this->actingAs($admin)
+            ->put(route('admission.seat-matrices.update', $matrix), [
+                'total_seats' => 3,
+                'general_seats' => 5,
+                'obc_seats' => 2,
+                'sc_seats' => 1,
+                'st_seats' => 1,
+                'ews_seats' => 1,
+                'management_quota' => 0,
+                'nri_quota' => 0,
+                'defence_quota' => 0,
+            ])
+            ->assertSessionHasErrors('total_seats');
+
+        $this->assertSame(10, $matrix->fresh()->total_seats);
+    }
 }

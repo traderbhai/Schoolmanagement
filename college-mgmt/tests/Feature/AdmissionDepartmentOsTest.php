@@ -523,15 +523,21 @@ class AdmissionDepartmentOsTest extends TestCase
         $this->assertDatabaseHas('department_roles', [
             'id' => $unusedRole->id,
             'is_active' => false,
+            'deactivated_by' => $admin->id,
         ]);
+        $this->assertNotNull($unusedRole->fresh()->deactivated_at);
         $this->assertDatabaseHas('department_members', [
             'id' => $leafMember->id,
             'is_active' => false,
+            'deactivated_by' => $admin->id,
         ]);
+        $this->assertNotNull($leafMember->fresh()->deactivated_at);
         $this->assertDatabaseHas('department_teams', [
             'id' => $unusedTeam->id,
             'is_active' => false,
+            'deactivated_by' => $admin->id,
         ]);
+        $this->assertNotNull($unusedTeam->fresh()->deactivated_at);
         $this->assertDatabaseHas('department_activity_logs', [
             'department_id' => $department->id,
             'actor_user_id' => $admin->id,
@@ -543,6 +549,92 @@ class AdmissionDepartmentOsTest extends TestCase
             'target_user_id' => $leafUser->id,
             'action' => 'department_member_deactivated',
         ]);
+    }
+
+    public function test_deactivated_department_role_and_team_can_be_reactivated_without_duplicate_history(): void
+    {
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $admin = $this->userWithRole('admin');
+        $role = DepartmentRole::create([
+            'department_id' => $department->id,
+            'name' => 'Paused Outreach Lead',
+            'code' => 'paused_outreach_lead',
+            'level' => 60,
+            'permissions' => ['view_team'],
+            'is_active' => false,
+            'deactivated_by' => $admin->id,
+            'deactivated_at' => now()->subDay(),
+        ]);
+        $team = DepartmentTeam::create([
+            'department_id' => $department->id,
+            'name' => 'Paused Outreach Team',
+            'type' => 'custom',
+            'is_active' => false,
+            'deactivated_by' => $admin->id,
+            'deactivated_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($admin)->post(route('department-hierarchy.roles.store'), [
+            'department_id' => $department->id,
+            'name' => 'Paused Outreach Lead',
+            'code' => 'paused_outreach_lead',
+            'level' => 60,
+            'permissions' => ['view_team', 'assign_work'],
+            'can_view_team_data' => 1,
+        ])->assertRedirect()
+            ->assertSessionHas('success', 'Department role saved.');
+
+        $this->actingAs($admin)->post(route('department-hierarchy.teams.store'), [
+            'department_id' => $department->id,
+            'name' => 'Paused Outreach Team',
+            'type' => 'custom',
+        ])->assertRedirect()
+            ->assertSessionHas('success', 'Department team created.');
+
+        $role->refresh();
+        $team->refresh();
+        $this->assertTrue($role->is_active);
+        $this->assertNull($role->deactivated_by);
+        $this->assertNull($role->deactivated_at);
+        $this->assertTrue($role->can_view_team_data);
+        $this->assertSame(['view_team', 'assign_work'], $role->permissions);
+        $this->assertTrue($team->is_active);
+        $this->assertNull($team->deactivated_by);
+        $this->assertNull($team->deactivated_at);
+        $this->assertSame(1, DepartmentRole::where('department_id', $department->id)->where('code', 'paused_outreach_lead')->count());
+        $this->assertSame(1, DepartmentTeam::where('department_id', $department->id)->where('name', 'Paused Outreach Team')->where('type', 'custom')->count());
+    }
+
+    public function test_deactivated_department_member_can_be_reactivated_without_duplicate_history(): void
+    {
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $admin = $this->userWithRole('admin');
+        $user = User::factory()->create();
+        $role = DepartmentRole::where('department_id', $department->id)->where('code', 'admission_counsellor')->firstOrFail();
+        $member = DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $role->id,
+            'user_id' => $user->id,
+            'is_active' => false,
+            'deactivated_by' => $admin->id,
+            'deactivated_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($admin)->post(route('department-hierarchy.members.store'), [
+            'department_id' => $department->id,
+            'department_role_id' => $role->id,
+            'user_id' => $user->id,
+        ])->assertRedirect()
+            ->assertSessionHas('success', 'Department member saved.');
+
+        $member->refresh();
+        $this->assertTrue($member->is_active);
+        $this->assertNull($member->deactivated_by);
+        $this->assertNull($member->deactivated_at);
+        $this->assertSame(1, DepartmentMember::where('department_id', $department->id)
+            ->where('department_role_id', $role->id)
+            ->where('user_id', $user->id)
+            ->count());
     }
 
     public function test_department_member_role_change_keeps_single_active_membership(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Applicant;
 
 use App\Http\Controllers\Controller;
+use App\Models\Applicant;
 use Illuminate\Http\Request;
 
 class RegistrationFeeController extends Controller
@@ -35,10 +36,19 @@ class RegistrationFeeController extends Controller
             'receipt_number' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $receiptReference = trim((string) ($validated['receipt_number'] ?? $validated['reference_number']));
+        if (Applicant::whereRaw('LOWER(registration_fee_receipt) = ?', [strtolower($receiptReference)])
+            ->whereKeyNot($applicant->id)
+            ->exists()) {
+            return back()
+                ->withErrors(['reference_number' => 'This registration fee reference is already linked to another application.'])
+                ->withInput();
+        }
+
         $applicant->update([
             'registration_fee_amount' => $validated['amount_paid'],
             'registration_fee_paid_at' => now(),
-            'registration_fee_receipt' => $validated['receipt_number'] ?? $validated['reference_number'],
+            'registration_fee_receipt' => $receiptReference,
         ]);
 
         return redirect()->route('applicant.dashboard')

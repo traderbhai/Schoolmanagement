@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Student, Teacher, Notice};
 use Illuminate\Http\Request;
@@ -9,6 +10,8 @@ class SearchController extends Controller
 {
     public function index(Request $r)
     {
+        abort_unless($r->user() && AccessControl::canUseGlobalSearch($r->user()), 403);
+
         $q = $r->q;
         if (!$q || strlen($q) < 2) {
             return view('admin.search', ['results' => [], 'query' => $q, 'students' => collect(), 'teachers' => collect(), 'notices' => collect()]);

@@ -181,6 +181,16 @@ class AcademicsPmcTimetableV041Test extends TestCase
         ])->assertRedirect();
         $this->assertDatabaseHas('academic_pmc_timetable_change_requests', ['id' => $change->id, 'status' => 'approved']);
 
+        $this->actingAs($chair)->patch(route('academics.pmc.timetable-change-requests.decide', $change), [
+            'status' => 'rejected',
+            'decision_note' => 'Trying to rewrite the approved decision.',
+        ])->assertStatus(422);
+        $this->assertDatabaseHas('academic_pmc_timetable_change_requests', [
+            'id' => $change->id,
+            'status' => 'approved',
+            'decision_note' => 'Approved by PMC head.',
+        ]);
+
         $this->actingAs($chair)->post(route('academics.pmc.substitution-intelligence.recommend'), [
             'course_group_id' => $group->id,
             'original_teacher_id' => $teacher->id,

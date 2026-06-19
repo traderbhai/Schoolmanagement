@@ -73,9 +73,10 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Teacher</th>
+                    <th>Requester</th>
+                    <th>Type</th>
                     <th>Leave Type</th>
-                    <th>From – To</th>
+                    <th>From - To</th>
                     <th>Days</th>
                     <th>Status</th>
                     <th>Reason</th>
@@ -84,10 +85,15 @@
             </thead>
             <tbody>
             @forelse($leaves as $leave)
+            @php
+                $requesterName = $leave->teacher?->user?->name ?? $leave->student?->user?->name ?? '-';
+                $requesterType = $leave->teacher_id ? 'Teacher' : ($leave->student_id ? 'Student' : '-');
+            @endphp
             <tr>
-                <td class="fw-semibold">{{ $leave->teacher?->user?->name ?? '—' }}</td>
+                <td class="fw-semibold">{{ $requesterName }}</td>
+                <td><span class="badge bg-light text-dark border">{{ $requesterType }}</span></td>
                 <td>{{ ucfirst($leave->leave_type) }}</td>
-                <td style="font-size:.83rem">{{ $leave->from_date->format('d M Y') }} – {{ $leave->to_date->format('d M Y') }}</td>
+                <td style="font-size:.83rem">{{ $leave->from_date->format('d M Y') }} - {{ $leave->to_date->format('d M Y') }}</td>
                 <td>{{ $leave->days }}</td>
                 <td>
                     @if($leave->status === 'pending')
@@ -115,14 +121,14 @@
                         <button class="btn btn-sm btn-outline-danger"
                             data-confirm-delete="true"
                             data-action="{{ route('admin.leaves.destroy', $leave) }}"
-                            data-name="{{ ($leave->teacher?->user?->name ?? 'Unknown') }}'s leave">
+                            data-name="{{ $requesterName }}'s leave">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </div>
                 </td>
             </tr>
             @empty
-            <tr><td colspan="7">
+            <tr><td colspan="8">
                 <div class="empty-state py-4">
                     <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
                     <div class="text-muted">No leave applications found.</div>

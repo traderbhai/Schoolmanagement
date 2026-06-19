@@ -21,7 +21,7 @@ class DocumentController extends Controller
 
         $uploaded = $applicant->documents->keyBy('required_document_id');
         $verifiedCount = $applicant->documents->where('status', 'verified')->count();
-        $locked = in_array($applicant->status, ['selected', 'rejected', 'withdrawn']);
+        $locked = $this->isDocumentLocked($applicant->status);
 
         return view('applicant.documents.index', compact('applicant', 'requiredDocs', 'uploaded', 'verifiedCount', 'locked'));
     }
@@ -30,8 +30,12 @@ class DocumentController extends Controller
     {
         $applicant = auth()->user()->applicant()->firstOrFail();
 
-        if (in_array($applicant->status, ['selected', 'rejected', 'withdrawn'])) {
+        if ($this->isDocumentLocked($applicant->status)) {
             return back()->with('error', 'You cannot upload documents at this stage.');
+        }
+
+        if (! $requiredDocument->is_active || (int) $requiredDocument->program_id !== (int) $applicant->program_id) {
+            return back()->with('error', 'This document requirement is not available for your application.');
         }
 
         $existing = ApplicantDocument::where('applicant_id', $applicant->id)
@@ -108,7 +112,7 @@ class DocumentController extends Controller
             return back()->with('error', 'Cannot delete a verified document.');
         }
 
-        if (in_array($applicant->status, ['selected', 'rejected', 'withdrawn'])) {
+        if ($this->isDocumentLocked($applicant->status)) {
             return back()->with('error', 'You cannot remove documents at this stage.');
         }
 
@@ -116,5 +120,10 @@ class DocumentController extends Controller
         $document->delete();
 
         return back()->with('success', 'Document removed.');
+    }
+
+    private function isDocumentLocked(string $status): bool
+    {
+        return in_array($status, ['selected', 'rejected', 'withdrawn', 'enrolled'], true);
     }
 }

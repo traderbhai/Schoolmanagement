@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
@@ -9,6 +10,8 @@ class ActivityLogController extends Controller
 {
     public function index(Request $r)
     {
+        abort_unless($r->user() && AccessControl::canViewGlobalActivityLogs($r->user()), 403);
+
         $logs = ActivityLog::with('user')
             ->when($r->action, fn($q) => $q->where('action', $r->action))
             ->when($r->search, fn($q) => $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$r->search}%")))

@@ -71,6 +71,12 @@ class ScholarshipSchemeController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
         $validated['requires_document'] = $request->boolean('requires_document');
 
+        if ($this->hasActiveScholarshipRecords($scholarshipScheme) && $this->changesEligibilityContract($scholarshipScheme, $validated)) {
+            return back()
+                ->withErrors(['scholarship_scheme' => 'Scholarship schemes with active applications or awards cannot have eligibility, program, proof, type, or active status changed. Create a new scheme version or close existing applications first.'])
+                ->withInput();
+        }
+
         if ($validated['available_seats'] !== null && $validated['available_seats'] < $scholarshipScheme->awardsCount()) {
             return back()
                 ->withErrors(['available_seats' => 'Available seats cannot be reduced below existing awarded, approved, or disbursed scholarships.'])
@@ -96,8 +102,54 @@ class ScholarshipSchemeController extends Controller
 
     public function toggle(ScholarshipScheme $scholarshipScheme)
     {
+        if ($this->hasActiveScholarshipRecords($scholarshipScheme)) {
+            return back()->with('error', 'Scholarship schemes with active applications or awards cannot be activated or deactivated directly. Create a new scheme version or close existing applications first.');
+        }
+
         $scholarshipScheme->update(['is_active' => !$scholarshipScheme->is_active]);
         $label = $scholarshipScheme->is_active ? 'activated' : 'deactivated';
         return back()->with('success', "Scheme {$label}.");
+    }
+
+    private function hasActiveScholarshipRecords(ScholarshipScheme $scheme): bool
+    {
+        return $scheme->applicantScholarships()
+                ->whereIn('status', ['awarded', 'disbursed'])
+                ->exists()
+            || $scheme->studentScholarshipApplications()
+                ->whereIn('status', ['pending', 'shortlisted', 'approved', 'disbursed'])
+                ->exists();
+    }
+
+    private function changesEligibilityContract(ScholarshipScheme $scheme, array $validated): bool
+    {
+        foreach (['program_id', 'type', 'min_cgpa', 'max_family_income', 'requires_document', 'is_active'] as $field) {
+            if (! array_key_exists($field, $validated)) {
+                continue;
+            }
+
+            if ($this->normaliseContractValue($scheme->{$field}) !== $this->normaliseContractValue($validated[$field])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normaliseContractValue(mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_numeric($value)) {
+            return rtrim(rtrim(number_format((float) $value, 4, '.', ''), '0'), '.');
+        }
+
+        return (string) $value;
     }
 }

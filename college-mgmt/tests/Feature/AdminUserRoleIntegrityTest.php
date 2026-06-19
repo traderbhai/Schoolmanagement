@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Program;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +52,44 @@ class AdminUserRoleIntegrityTest extends TestCase
         $this->assertTrue(AuditLog::where('action', 'role_assigned')->where('target_id', $target->id)->exists());
     }
 
-    public function test_admin_user_role_revoke_removes_actual_authorization_role_when_no_other_active_assignment_exists(): void
+    public function test_global_user_role_assignment_rejects_program_scope_to_avoid_hidden_global_access(): void
+    {
+        $admin = $this->admin();
+        $target = User::factory()->create();
+        $role = $this->role('exam_cell');
+        $program = Program::factory()->create(['is_active' => true]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.roles.create'))
+            ->post(route('admin.users.roles.store'), [
+                'user_id' => $target->id,
+                'role_id' => $role->id,
+                'program_id' => $program->id,
+            ])
+            ->assertRedirect(route('admin.users.roles.create'))
+            ->assertSessionHasErrors('program_id');
+
+        $this->assertDatabaseMissing('user_roles', [
+            'user_id' => $target->id,
+            'role_id' => $role->id,
+            'program_id' => $program->id,
+        ]);
+        $this->assertFalse($target->fresh()->hasRole('exam_cell'));
+    }
+
+    public function test_global_user_role_assignment_form_directs_program_scopes_to_scoped_role_workflow(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.roles.create'))
+            ->assertOk()
+            ->assertSee('Grant a global role with optional expiry')
+            ->assertSee('Scoped Role Assignments')
+            ->assertDontSee('Scope this role to a specific program');
+    }
+
+    public function test_admin_user_role_revoke_expires_history_and_removes_actual_authorization_role_when_no_other_active_assignment_exists(): void
     {
         $admin = $this->admin();
         $target = User::factory()->create();
@@ -68,7 +106,9 @@ class AdminUserRoleIntegrityTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success', 'Role revoked successfully.');
 
-        $this->assertDatabaseMissing('user_roles', ['id' => $assignment->id]);
+        $assignment->refresh();
+        $this->assertSame(today()->subDay()->toDateString(), $assignment->active_until->toDateString());
+        $this->assertDatabaseHas('user_roles', ['id' => $assignment->id]);
         $this->assertFalse($target->fresh()->hasRole('cmc'));
         $this->assertTrue(AuditLog::where('action', 'role_revoked')->where('target_id', $target->id)->exists());
     }
@@ -121,5 +161,46 @@ class AdminUserRoleIntegrityTest extends TestCase
 
         $this->assertDatabaseHas('user_roles', ['id' => $assignment->id]);
         $this->assertTrue($admin->fresh()->hasRole('admin'));
+    }
+
+    public function test_non_security_admin_cannot_manage_global_user_roles_by_direct_route(): void
+    {
+        $programChair = User::factory()->create();
+        $programChair->assignRole($this->role('program_chair'));
+        $target = User::factory()->create();
+        $cmcRole = $this->role('cmc');
+        $assignment = UserRole::create([
+            'user_id' => $target->id,
+            'role_id' => $cmcRole->id,
+            'assigned_by' => $programChair->id,
+        ]);
+        $target->assignRole('cmc');
+
+        $this->actingAs($programChair)
+            ->get(route('admin.users.roles.index'))
+            ->assertForbidden();
+
+        $this->actingAs($programChair)
+            ->get(route('admin.users.roles.create'))
+            ->assertForbidden();
+
+        $this->actingAs($programChair)
+            ->post(route('admin.users.roles.store'), [
+                'user_id' => $target->id,
+                'role_id' => $this->role('exam_cell')->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($programChair)
+            ->delete(route('admin.users.roles.destroy', $assignment))
+            ->assertForbidden();
+
+        $this->actingAs($programChair)
+            ->post(route('admin.users.roles.expire-all', $target))
+            ->assertForbidden();
+
+        $this->assertTrue($assignment->fresh()->isActive());
+        $this->assertTrue($target->fresh()->hasRole('cmc'));
+        $this->assertFalse($target->fresh()->hasRole('exam_cell'));
     }
 }

@@ -138,6 +138,29 @@ class AcademicsOsV001Test extends TestCase
             ->assertRedirect();
 
         $this->assertFalse($scope->fresh()->is_active);
+        $this->assertSame($owner->id, $scope->fresh()->deactivated_by);
+        $this->assertNotNull($scope->fresh()->deactivated_at);
+
+        $this->actingAs($owner)->post(route('academics.scopes.store'), [
+            'department_member_id' => $member->id,
+            'scope_type' => 'program',
+            'scope_id' => $program->id,
+            'scope_code' => $program->code,
+            'scope_name' => $program->name,
+            'context' => 'pmc_support',
+            'can_manage' => 1,
+        ])->assertRedirect();
+
+        $scope->refresh();
+        $this->assertTrue($scope->is_active);
+        $this->assertTrue($scope->can_manage);
+        $this->assertNull($scope->deactivated_by);
+        $this->assertNull($scope->deactivated_at);
+        $this->assertSame(1, AcademicScopeAssignment::where('user_id', $member->user_id)
+            ->where('scope_type', 'program')
+            ->where('scope_id', $program->id)
+            ->where('context', 'pmc_support')
+            ->count());
     }
 
     public function test_academic_hierarchy_service_exposes_acad_structure(): void

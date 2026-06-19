@@ -192,6 +192,11 @@ class DepartmentHierarchyService
 
     public function canConfigureDepartmentHierarchy(User $actor, Department|string|null $department): bool
     {
+        $department = $this->resolveDepartment($department);
+        if (!$department || !$department->is_active) {
+            return false;
+        }
+
         if ($actor->hasRole('admin')) {
             return true;
         }
@@ -203,6 +208,11 @@ class DepartmentHierarchyService
 
     public function canManageRoleLevel(User $actor, Department|string|null $department, int $targetLevel): bool
     {
+        $department = $this->resolveDepartment($department);
+        if (!$department || !$department->is_active) {
+            return false;
+        }
+
         if ($actor->hasRole('admin')) {
             return true;
         }
@@ -260,7 +270,7 @@ class DepartmentHierarchyService
             ->get()
             ->filter(fn (DepartmentMember $member) => $this->memberCanConfigureDepartment($member))
             ->pluck('department')
-            ->filter()
+            ->filter(fn (?Department $department) => $department && $department->is_active)
             ->unique('id')
             ->values();
     }
@@ -284,13 +294,18 @@ class DepartmentHierarchyService
             ->get()
             ->filter(fn (DepartmentMember $member) => $this->memberCanAccessGovernance($member))
             ->pluck('department')
-            ->filter()
+            ->filter(fn (?Department $department) => $department && $department->is_active)
             ->unique('id')
             ->values();
     }
 
     public function canAccessDepartmentGovernance(User $user, Department|string|null $department): bool
     {
+        $department = $this->resolveDepartment($department);
+        if (!$department || !$department->is_active) {
+            return false;
+        }
+
         if ($user->hasRole('admin')) {
             return true;
         }
@@ -302,6 +317,11 @@ class DepartmentHierarchyService
 
     public function canManageDepartmentSettings(User $user, Department|string|null $department): bool
     {
+        $department = $this->resolveDepartment($department);
+        if (!$department || !$department->is_active) {
+            return false;
+        }
+
         if ($user->hasRole('admin')) {
             return true;
         }
@@ -314,7 +334,7 @@ class DepartmentHierarchyService
     public function isFeatureEnabled(Department|string|null $department, string $featureKey, bool $default = true): bool
     {
         $department = $this->resolveDepartment($department);
-        if (!$department) {
+        if (!$department || !$department->is_active) {
             return false;
         }
 
@@ -333,7 +353,7 @@ class DepartmentHierarchyService
     public function registeredFeatures(Department|string|null $department): Collection
     {
         $department = $this->resolveDepartment($department);
-        if (!$department) {
+        if (!$department || !$department->is_active) {
             return collect();
         }
 
@@ -360,7 +380,7 @@ class DepartmentHierarchyService
     public function featureRows(Department|string|null $department): Collection
     {
         $department = $this->resolveDepartment($department);
-        if (!$department) {
+        if (!$department || !$department->is_active) {
             return collect();
         }
 
@@ -388,7 +408,7 @@ class DepartmentHierarchyService
     public function setFeature(User $actor, Department|string|null $department, string $featureKey, string $featureName, bool $enabled): DepartmentFeatureSetting
     {
         $department = $this->resolveDepartment($department);
-        abort_unless($department && $this->canManageDepartmentSettings($actor, $department), 403);
+        abort_unless($department && $department->is_active && $this->canManageDepartmentSettings($actor, $department), 403);
         $registeredFeature = $this->registeredFeature($department, $featureKey);
         abort_unless($registeredFeature, 422, 'Unknown department feature key.');
         $featureName = $registeredFeature['feature_name'];
@@ -413,7 +433,7 @@ class DepartmentHierarchyService
     public function impersonatableMembers(User $actor, Department|string|null $department): Collection
     {
         $department = $this->resolveDepartment($department);
-        if (!$department) {
+        if (!$department || !$department->is_active) {
             return collect();
         }
 

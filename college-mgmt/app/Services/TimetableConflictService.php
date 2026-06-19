@@ -127,11 +127,28 @@ class TimetableConflictService {
 
         $conflicts = [];
 
-        if ($classroom && $batch && $classroom->capacity < $batch->student_count) {
-            $shortage = $batch->student_count - $classroom->capacity;
-            $conflicts[] = "Capacity warning: Room {$classroom->room_number} (capacity {$classroom->capacity}) is too small for {$batch->name} ({$batch->student_count} students, shortage: {$shortage}).";
+        $batchSize = $batch ? $this->batchSize($batch) : 0;
+
+        if ($classroom && $batch && $classroom->capacity < $batchSize) {
+            $shortage = $batchSize - $classroom->capacity;
+            $conflicts[] = "Capacity warning: Room {$classroom->room_number} (capacity {$classroom->capacity}) is too small for {$batch->name} ({$batchSize} students, shortage: {$shortage}).";
         }
 
         return $conflicts;
+    }
+
+    private function batchSize(\App\Models\Batch $batch): int
+    {
+        if (array_key_exists('student_count', $batch->getAttributes()) && $batch->getAttribute('student_count') !== null) {
+            return (int) $batch->getAttribute('student_count');
+        }
+
+        if ($batch->relationLoaded('students') && $batch->students->count() > 0) {
+            return $batch->students->count();
+        }
+
+        $studentCount = $batch->students()->count();
+
+        return $studentCount > 0 ? $studentCount : (int) $batch->intake_capacity;
     }
 }

@@ -99,6 +99,45 @@
     </div>
 </div>
 
+@if($hostelFeeDemands->isNotEmpty())
+<div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-house-door me-2 text-success"></i>Hostel Fee Demands</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Month</th>
+                        <th>Room</th>
+                        <th>Due Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach($hostelFeeDemands as $demand)
+                @php
+                    $isHostelOverdue = $demand->status === 'pending' && $demand->due_date && $demand->due_date->isPast();
+                @endphp
+                <tr>
+                    <td>{{ $demand->month }}</td>
+                    <td>{{ $demand->allocation?->room?->block?->name ?? 'Hostel' }} / Room {{ $demand->allocation?->room?->room_number ?? '-' }}</td>
+                    <td>{{ $demand->due_date ? $demand->due_date->format('d M Y') : '-' }}</td>
+                    <td class="{{ $demand->status === 'pending' ? 'text-danger fw-semibold' : 'text-success' }}">Rs. {{ number_format($demand->amount, 0) }}</td>
+                    <td>
+                        <span class="badge {{ $isHostelOverdue ? 'bg-danger' : ($demand->status === 'paid' ? 'bg-success' : ($demand->status === 'waived' ? 'bg-secondary' : 'bg-warning text-dark')) }}">
+                            {{ $isHostelOverdue ? 'Overdue' : ucfirst($demand->status) }}
+                        </span>
+                    </td>
+                </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
+
 <div class="card">
     <div class="card-header fw-semibold"><i class="bi bi-receipt me-2 text-primary"></i>Payment History</div>
     <div class="card-body p-0">

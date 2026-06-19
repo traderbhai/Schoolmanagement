@@ -121,6 +121,66 @@ class StudentMarksAppealWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_appeal_history_but_cannot_create_new_marks_appeal(): void
+    {
+        $fixture = $this->studentWithResult();
+        $fixture['student']->update(['status' => 'inactive']);
+
+        MarksAppeal::create([
+            'student_id' => $fixture['student']->id,
+            'exam_result_id' => $fixture['result']->id,
+            'reason' => 'totalling_error',
+            'description' => 'Historical appeal before archival.',
+            'marks_claimed' => 38,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.appeals.index'))
+            ->assertOk()
+            ->assertSee('Quantitative Techniques')
+            ->assertSee('Mid Term Retest')
+            ->assertSee('Pending')
+            ->assertSee('New appeals locked for inactive profiles')
+            ->assertDontSee('New Appeal');
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.appeals.create'))
+            ->assertRedirect(route('student.appeals.index'))
+            ->assertSessionHas('error', 'New marks appeals are available only for active students. Contact the Exam Cell for archived result corrections.');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.appeals.store'), [
+                'exam_result_id' => $fixture['result']->id,
+                'reason' => 'wrong_entry',
+                'description' => 'Inactive student appeal attempt.',
+                'marks_claimed' => 42,
+            ])
+            ->assertRedirect(route('student.appeals.index'))
+            ->assertSessionHas('error', 'New marks appeals are available only for active students. Contact the Exam Cell for archived result corrections.');
+
+        $this->assertSame(1, MarksAppeal::where('student_id', $fixture['student']->id)->count());
+    }
+
+    public function test_student_appeal_create_hides_results_that_already_have_an_appeal(): void
+    {
+        $fixture = $this->studentWithResult();
+        MarksAppeal::create([
+            'student_id' => $fixture['student']->id,
+            'exam_result_id' => $fixture['result']->id,
+            'reason' => 'totalling_error',
+            'description' => 'Already submitted for this result.',
+            'marks_claimed' => 38,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.appeals.create'))
+            ->assertOk()
+            ->assertDontSee('Mid Term Retest')
+            ->assertDontSee('Quantitative Techniques');
+    }
+
     public function test_student_cannot_claim_marks_above_exam_total_or_duplicate_appeal(): void
     {
         $fixture = $this->studentWithResult();

@@ -51,16 +51,28 @@ class AssignmentController extends Controller
         });
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $assignments = Assignment::whereIn('subject_id', $this->teacherSubjectIds())
+        $subjectIds = $this->teacherSubjectIds();
+
+        $assignments = Assignment::whereIn('subject_id', $subjectIds)
             ->where('created_by', auth()->id())
             ->with('subject')
-            ->withCount('submissions')
+            ->when($request->filled('subject_id'), function ($query) use ($request, $subjectIds) {
+                $subjectId = (int) $request->subject_id;
+
+                return in_array($subjectId, $subjectIds, true)
+                    ? $query->where('subject_id', $subjectId)
+                    : $query->whereRaw('1 = 0');
+            })
             ->latest()
             ->paginate(15);
 
-        $subjects = Subject::whereIn('id', $this->teacherSubjectIds())->get();
+        $assignments->getCollection()->each(function (Assignment $assignment) {
+            $assignment->setAttribute('submissions_count', $this->rosterSubmissionCount($assignment));
+        });
+
+        $subjects = Subject::whereIn('id', $subjectIds)->get();
         $canManageAssignments = $this->activeTeacher()?->status === 'active';
         return view('teacher.assignments.index', compact('assignments', 'subjects', 'canManageAssignments'));
     }
@@ -86,13 +98,20 @@ class AssignmentController extends Controller
             'description'          => 'nullable|string',
             'instructions'         => 'nullable|string',
             'max_marks'            => 'required|integer|min:1',
-            'due_at'               => 'required|date',
+            'due_at'               => 'required|date|after:now',
             'allow_late_submission'=> 'boolean',
             'late_penalty_percent' => 'nullable|integer|min:0|max:100',
             'attachment'           => 'nullable|file|max:10240',
         ]);
         $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
+
+        $title = trim((string) $request->input('title'));
+        if ($title === '') {
+            return back()
+                ->withErrors(['title' => 'Enter a non-blank assignment title.'])
+                ->withInput();
+        }
 
         $path = $request->hasFile('attachment')
             ? $request->file('attachment')->store('assignments', 'public') : null;
@@ -101,9 +120,9 @@ class AssignmentController extends Controller
             'subject_id'            => $request->subject_id,
             'created_by'            => auth()->id(),
             'term_id'               => Term::latest('start_date')->first()?->id,
-            'title'                 => $request->title,
-            'description'           => $request->description,
-            'instructions'          => $request->instructions,
+            'title'                 => $title,
+            'description'           => trim((string) $request->input('description', '')),
+            'instructions'          => trim((string) $request->input('instructions', '')) ?: null,
             'attachment_path'       => $path,
             'max_marks'             => $request->max_marks,
             'due_at'                => $request->due_at,
@@ -119,12 +138,14 @@ class AssignmentController extends Controller
     {
         if ($assignment->created_by !== auth()->id()) abort(403);
 
+        $enrolledStudents = $this->assignmentRosterQuery($assignment)->with('user')->get();
+        $rosterStudentIds = $enrolledStudents->pluck('id');
+
         $submissions = AssignmentSubmission::where('assignment_id', $assignment->id)
+            ->whereIn('student_id', $rosterStudentIds)
             ->with(['student.user'])
             ->latest('submitted_at')
             ->get();
-
-        $enrolledStudents = $this->assignmentRosterQuery($assignment)->with('user')->get();
 
         $submittedIds = $submissions->pluck('student_id')->toArray();
         $notSubmitted = $enrolledStudents->whereNotIn('id', $submittedIds);
@@ -133,11 +154,22 @@ class AssignmentController extends Controller
         return view('teacher.assignments.submissions', compact('assignment', 'submissions', 'notSubmitted', 'canGradeSubmissions'));
     }
 
+    private function rosterSubmissionCount(Assignment $assignment): int
+    {
+        return AssignmentSubmission::where('assignment_id', $assignment->id)
+            ->whereIn('student_id', $this->assignmentRosterQuery($assignment)->select('students.id'))
+            ->count();
+    }
+
     public function grade(Request $request, AssignmentSubmission $submission)
     {
         $this->ensureActiveTeacher();
         abort_unless($submission->assignment && $submission->assignment->created_by === auth()->id(), 403);
         abort_unless($this->assignmentRosterQuery($submission->assignment)->whereKey($submission->student_id)->exists(), 403);
+
+        if ($submission->status === 'graded') {
+            return back()->with('error', 'This submission is already graded and cannot be changed through the standard grading route.');
+        }
 
         $request->validate([
             'marks_obtained' => 'required|numeric|min:0|max:'.$submission->assignment->max_marks,

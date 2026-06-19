@@ -6,6 +6,9 @@ use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\ApplicantScholarship;
 use App\Models\Batch;
+use App\Models\Department;
+use App\Models\DepartmentMember;
+use App\Models\DepartmentRole;
 use App\Models\Program;
 use App\Models\RequiredDocument;
 use App\Models\ScholarshipScheme;
@@ -25,6 +28,15 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
         Role::firstOrCreate(['name' => 'admission_officer', 'guard_name' => 'web']);
         $user = User::factory()->create();
         $user->assignRole('admission_officer');
+
+        return $user;
+    }
+
+    private function admissionUserWithRole(string $role): User
+    {
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
 
         return $user;
     }
@@ -212,6 +224,112 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
         $this->assertSame(0, ApplicantScholarship::count());
     }
 
+    public function test_applicant_scholarship_cannot_be_awarded_after_final_negative_applicant_state(): void
+    {
+        $officer = $this->admissionOfficer();
+        $scheme = $this->scheme();
+
+        foreach (['rejected', 'withdrawn', 'enrolled'] as $status) {
+            $applicant = $this->applicant(['status' => $status]);
+
+            $this->actingAs($officer)
+                ->post(route('admission.applicants.scholarships.store', $applicant), [
+                    'scheme_id' => $scheme->id,
+                    'awarded_amount' => 1000,
+                ])
+                ->assertSessionHasErrors('scheme_id');
+        }
+
+        $this->assertSame(0, ApplicantScholarship::count());
+    }
+
+    public function test_applicant_scholarship_routes_respect_admission_hierarchy_scope(): void
+    {
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $manager = $this->admissionUserWithRole('admission_manager');
+        $directReport = $this->admissionUserWithRole('admission_counsellor');
+        $outsideCounsellor = $this->admissionUserWithRole('admission_counsellor');
+        $managerRole = DepartmentRole::where('department_id', $department->id)->where('code', 'admission_manager')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)->where('code', 'admission_counsellor')->firstOrFail();
+        $managerMember = DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $managerRole->id,
+            'user_id' => $manager->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $directReport->id,
+            'reports_to_member_id' => $managerMember->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $outsideCounsellor->id,
+        ]);
+
+        $scheme = $this->scheme(['name' => 'Scoped Applicant Scholarship']);
+        $visibleApplicant = $this->applicant(['assigned_to' => $directReport->id]);
+        $visibleApplicant->user->update(['name' => 'Visible Scholarship Applicant']);
+        $hiddenApplicant = $this->applicant(['assigned_to' => $outsideCounsellor->id]);
+        $hiddenApplicant->user->update(['name' => 'Hidden Scholarship Applicant']);
+
+        $visibleAward = ApplicantScholarship::create([
+            'applicant_id' => $visibleApplicant->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 2000,
+            'status' => 'awarded',
+            'awarded_by' => $directReport->id,
+            'awarded_at' => now(),
+        ]);
+        $hiddenAward = ApplicantScholarship::create([
+            'applicant_id' => $hiddenApplicant->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 3000,
+            'status' => 'awarded',
+            'awarded_by' => $outsideCounsellor->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('admission.scholarship-disbursements.index'))
+            ->assertOk()
+            ->assertSee('Visible Scholarship Applicant')
+            ->assertDontSee('Hidden Scholarship Applicant')
+            ->assertSee('2,000')
+            ->assertDontSee('5,000');
+
+        $this->actingAs($manager)
+            ->post(route('admission.applicants.scholarships.store', $hiddenApplicant), [
+                'scheme_id' => $scheme->id,
+                'awarded_amount' => 1000,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->delete(route('admission.scholarships.destroy', $hiddenAward))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->post(route('admission.scholarships.disburse', $hiddenAward), [
+                'disbursement_ref' => 'UTR-HIDDEN-SCHOLARSHIP',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('awarded', $hiddenAward->fresh()->status);
+        $this->assertNull($hiddenAward->fresh()->disbursement_ref);
+
+        $this->actingAs($manager)
+            ->post(route('admission.scholarships.disburse', $visibleAward), [
+                'disbursement_ref' => 'UTR-VISIBLE-SCHOLARSHIP',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('disbursed', $visibleAward->fresh()->status);
+        $this->assertSame('UTR-VISIBLE-SCHOLARSHIP', $visibleAward->fresh()->disbursement_ref);
+    }
+
     public function test_applicant_scholarship_disbursement_rechecks_award_integrity_and_preserves_notes(): void
     {
         $officer = $this->admissionOfficer();
@@ -254,6 +372,87 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
         $this->assertStringContainsString('Paid through bank transfer.', $award->notes);
     }
 
+    public function test_applicant_scholarship_disbursement_rechecks_scheme_proof_and_final_applicant_state(): void
+    {
+        $officer = $this->admissionOfficer();
+
+        $inactiveScheme = $this->scheme(['is_active' => false]);
+        $inactiveSchemeAward = ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $inactiveScheme->id,
+            'awarded_amount' => 1000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $inactiveSchemeAward), [
+                'disbursement_ref' => 'UTR-INACTIVE-SCHEME',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('awarded', $inactiveSchemeAward->fresh()->status);
+        $this->assertNull($inactiveSchemeAward->fresh()->disbursement_ref);
+
+        $proofScheme = $this->scheme(['requires_document' => true]);
+        $missingProofAward = ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $proofScheme->id,
+            'awarded_amount' => 1000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $missingProofAward), [
+                'disbursement_ref' => 'UTR-MISSING-PROOF',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('awarded', $missingProofAward->fresh()->status);
+        $this->assertNull($missingProofAward->fresh()->disbursement_ref);
+
+        $withdrawnApplicant = $this->applicant(['status' => 'withdrawn']);
+        $withdrawnAward = ApplicantScholarship::create([
+            'applicant_id' => $withdrawnApplicant->id,
+            'scheme_id' => $this->scheme()->id,
+            'awarded_amount' => 1000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $withdrawnAward), [
+                'disbursement_ref' => 'UTR-WITHDRAWN-APPLICANT',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('awarded', $withdrawnAward->fresh()->status);
+        $this->assertNull($withdrawnAward->fresh()->disbursement_ref);
+
+        $enrolledApplicant = $this->applicant(['status' => 'enrolled']);
+        $enrolledAward = ApplicantScholarship::create([
+            'applicant_id' => $enrolledApplicant->id,
+            'scheme_id' => $this->scheme()->id,
+            'awarded_amount' => 1000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $enrolledAward), [
+                'disbursement_ref' => 'UTR-ENROLLED-APPLICANT',
+            ])
+            ->assertSessionHasErrors('scholarship');
+
+        $this->assertSame('awarded', $enrolledAward->fresh()->status);
+        $this->assertNull($enrolledAward->fresh()->disbursement_ref);
+    }
+
     public function test_applicant_scholarship_disbursement_reference_must_be_unique(): void
     {
         $officer = $this->admissionOfficer();
@@ -279,7 +478,7 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
 
         $this->actingAs($officer)
             ->post(route('admission.scholarships.disburse', $award), [
-                'disbursement_ref' => $disbursed->disbursement_ref,
+                'disbursement_ref' => ' utr-duplicate ',
             ])
             ->assertSessionHasErrors('disbursement_ref');
 
@@ -337,5 +536,87 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
         $scheme->refresh();
         $this->assertSame(2, $scheme->available_seats);
         $this->assertSame('25000.00', $scheme->max_amount);
+    }
+
+    public function test_scholarship_scheme_with_active_records_cannot_change_eligibility_contract(): void
+    {
+        $officer = $this->admissionOfficer();
+        $program = Program::factory()->create(['is_active' => true]);
+        $scheme = $this->scheme([
+            'program_id' => $program->id,
+            'min_cgpa' => 7.5,
+            'max_family_income' => 500000,
+            'requires_document' => false,
+            'is_active' => true,
+        ]);
+        StudentScholarshipApplication::create([
+            'student_id' => Student::factory()->create(['program_id' => $program->id, 'status' => 'active'])->id,
+            'scholarship_scheme_id' => $scheme->id,
+            'reason' => str_repeat('Pending student scholarship reason. ', 2),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($officer)
+            ->put(route('admission.scholarship-schemes.update', $scheme), [
+                'name' => $scheme->name,
+                'scheme_code' => $scheme->scheme_code,
+                'type' => $scheme->type,
+                'criteria' => $scheme->criteria,
+                'program_id' => $program->id,
+                'min_cgpa' => 8.0,
+                'max_family_income' => 500000,
+                'requires_document' => true,
+                'max_amount' => 25000,
+                'available_seats' => 2,
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors('scholarship_scheme');
+
+        $scheme->refresh();
+        $this->assertSame('7.50', $scheme->min_cgpa);
+        $this->assertFalse($scheme->requires_document);
+
+        $this->actingAs($officer)
+            ->put(route('admission.scholarship-schemes.update', $scheme), [
+                'name' => 'Renamed Merit Scholarship',
+                'scheme_code' => $scheme->scheme_code,
+                'type' => $scheme->type,
+                'criteria' => 'Updated description without changing eligibility.',
+                'program_id' => $program->id,
+                'min_cgpa' => 7.5,
+                'max_family_income' => 500000,
+                'requires_document' => false,
+                'max_amount' => 26000,
+                'available_seats' => 3,
+                'is_active' => true,
+            ])
+            ->assertRedirect(route('admission.scholarship-schemes.index'))
+            ->assertSessionHas('success', 'Scholarship scheme updated.');
+
+        $scheme->refresh();
+        $this->assertSame('Renamed Merit Scholarship', $scheme->name);
+        $this->assertSame('26000.00', $scheme->max_amount);
+        $this->assertSame(3, $scheme->available_seats);
+    }
+
+    public function test_scholarship_scheme_with_active_records_cannot_be_toggled_directly(): void
+    {
+        $officer = $this->admissionOfficer();
+        $scheme = $this->scheme(['is_active' => true]);
+        ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 12000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarship-schemes.toggle', $scheme))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Scholarship schemes with active applications or awards cannot be activated or deactivated directly. Create a new scheme version or close existing applications first.');
+
+        $this->assertTrue($scheme->fresh()->is_active);
     }
 }

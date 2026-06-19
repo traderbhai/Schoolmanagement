@@ -15,6 +15,7 @@ use App\Models\Program;
 use App\Models\ScoringParameter;
 use App\Models\SelectionProcessStep;
 use App\Models\SelectionSession;
+use App\Models\SessionApplicant;
 use App\Models\User;
 use App\Services\AdmissionAssessmentPanelService;
 use App\Services\AdmissionCalendarService;
@@ -158,6 +159,62 @@ class AdmissionOsV031Test extends TestCase
                 ->assertDontSee('Illuminate\\Database\\QueryException')
                 ->assertDontSee('LARAVEL');
         }
+    }
+
+    public function test_call_letter_requires_active_session_assignment(): void
+    {
+        $admin = $this->admin();
+        $program = Program::factory()->create();
+        $step = SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'Case Discussion',
+            'type' => 'gd',
+            'step_order' => 1,
+            'max_score' => 50,
+            'weightage' => 50,
+            'is_active' => true,
+        ]);
+        $session = SelectionSession::create([
+            'selection_process_step_id' => $step->id,
+            'program_id' => $program->id,
+            'session_name' => 'Case Panel',
+            'scheduled_date' => today()->addDay(),
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'status' => 'scheduled',
+            'created_by' => $admin->id,
+        ]);
+
+        $assigned = Applicant::factory()->create(['program_id' => $program->id, 'status' => 'shortlisted']);
+        $unassigned = Applicant::factory()->create(['program_id' => $program->id, 'status' => 'shortlisted']);
+        $final = Applicant::factory()->create(['program_id' => $program->id, 'status' => 'enrolled']);
+
+        SessionApplicant::create([
+            'selection_session_id' => $session->id,
+            'applicant_id' => $assigned->id,
+            'assigned_at' => now(),
+            'attendance_status' => 'pending',
+        ]);
+        SessionApplicant::create([
+            'selection_session_id' => $session->id,
+            'applicant_id' => $final->id,
+            'assigned_at' => now(),
+            'attendance_status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.applicants.call-letter', $unassigned))
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->get(route('admission.applicants.call-letter', $final))
+            ->assertNotFound();
+
+        $response = $this->actingAs($admin)
+            ->get(route('admission.applicants.call-letter', $assigned));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
     }
 
     private function admin(): User

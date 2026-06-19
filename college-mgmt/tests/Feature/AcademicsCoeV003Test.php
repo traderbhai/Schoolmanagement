@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
@@ -101,6 +103,54 @@ class AcademicsCoeV003Test extends TestCase
 
         $this->assertTrue($titles->contains('End Term Operations Demo'));
         $this->assertFalse($titles->contains('Hidden Exam Subject'));
+    }
+
+    public function test_coe_official_result_metrics_use_exam_publication_boundary(): void
+    {
+        $fixture = $this->seedCoeFixture();
+        $examUser = User::where('email', 'exam@college.com')->firstOrFail();
+        $service = app(AcademicCoeOperatingService::class);
+        $beforeMarks = $service->marksResults($examUser)['metrics'];
+        $beforeTranscripts = $service->transcripts($examUser)['metrics'];
+
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['subject']->id,
+            'exam_date' => now()->subDay(),
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 30,
+            'remarks' => 'Published',
+            'is_absent' => false,
+        ]);
+
+        $afterDraftMarks = $service->marksResults($examUser)['metrics'];
+        $afterDraftTranscripts = $service->transcripts($examUser)['metrics'];
+        $this->assertSame($beforeMarks['published_exams'], $afterDraftMarks['published_exams']);
+        $this->assertSame($beforeTranscripts['result_records'], $afterDraftTranscripts['result_records']);
+
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['subject']->id,
+            'exam_date' => now()->subDay(),
+            'published_at' => now(),
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $publishedExam->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 75,
+            'is_absent' => false,
+        ]);
+
+        $afterPublishedMarks = $service->marksResults($examUser)['metrics'];
+        $afterPublishedTranscripts = $service->transcripts($examUser)['metrics'];
+        $this->assertSame($beforeMarks['published_exams'] + 1, $afterPublishedMarks['published_exams']);
+        $this->assertSame($beforeTranscripts['result_records'] + 1, $afterPublishedTranscripts['result_records']);
     }
 
     public function test_non_academic_user_cannot_access_coe_operating_system(): void

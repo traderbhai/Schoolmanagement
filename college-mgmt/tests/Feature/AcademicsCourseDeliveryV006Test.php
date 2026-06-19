@@ -3,12 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Attendance;
+use App\Models\Course;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
 use App\Models\Teacher;
+use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use App\Services\AcademicCourseDeliveryService;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
@@ -96,6 +101,134 @@ class AcademicsCourseDeliveryV006Test extends TestCase
         $titles = collect($items)->pluck('title');
 
         $this->assertFalse($titles->contains('Hidden Delivery Subject'));
+    }
+
+    public function test_course_delivery_attendance_interventions_ignore_draft_timetable_history(): void
+    {
+        $fixture = $this->seedCourseFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+
+        $officialStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Official Course Delivery Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+        $draftOnlyStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Course Delivery Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+
+        $publishedEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $officialStudent->id,
+                'timetable_entry_id' => $publishedEntry->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'absent',
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $draftOnlyStudent->id,
+                'timetable_entry_id' => $draftEntry->id,
+                'date' => now()->subDays($day + 3)->toDateString(),
+                'status' => 'absent',
+            ]);
+        }
+
+        $data = app(AcademicCourseDeliveryService::class)->attendanceInterventions($dean);
+        $titles = collect($data['items'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Official Course Delivery Risk'));
+        $this->assertFalse($titles->contains('Draft Course Delivery Risk'));
+    }
+
+    public function test_course_delivery_session_metrics_treat_draft_version_entries_as_unpublished(): void
+    {
+        $fixture = $this->seedCourseFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+        $term = \App\Models\Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+        $service = app(AcademicCourseDeliveryService::class);
+        $before = $service->sessionDelivery($dean)['metrics'];
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $dean->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $publishedVersion->id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $dean->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '09:00:00', 'end_time' => '10:00:00', 'sort_order' => 2])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+
+        $after = $service->sessionDelivery($dean)['metrics'];
+
+        $this->assertSame($before['published_sessions'] + 1, $after['published_sessions']);
+        $this->assertSame($before['draft_sessions'] + 1, $after['draft_sessions']);
+        $this->assertSame($before['today_sessions'] + 1, $after['today_sessions']);
     }
 
     public function test_non_academic_user_cannot_access_course_delivery_os(): void

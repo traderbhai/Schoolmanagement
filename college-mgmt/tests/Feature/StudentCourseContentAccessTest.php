@@ -304,6 +304,57 @@ class StudentCourseContentAccessTest extends TestCase
         $this->assertTrue($discussion->fresh()->is_resolved);
     }
 
+    public function test_inactive_student_can_view_discussions_but_cannot_participate(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $subject = Subject::factory()->create(['name' => 'Archived Discussion Subject']);
+        $this->enroll($student, $subject);
+        $discussion = SubjectDiscussion::create([
+            'subject_id' => $subject->id,
+            'posted_by' => $student->user_id,
+            'title' => 'Historical question',
+            'body' => 'This thread remains visible.',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.discussions.index', $subject))
+            ->assertOk()
+            ->assertSee('Historical question')
+            ->assertSee('Discussion posting is locked')
+            ->assertSee('Active students only')
+            ->assertDontSee('Ask a Question');
+
+        $this->actingAs($student->user)
+            ->get(route('student.discussions.show', [$subject, $discussion]))
+            ->assertOk()
+            ->assertSee('Historical question')
+            ->assertSee('Discussion replies and status updates are locked')
+            ->assertDontSee('Mark Resolved')
+            ->assertDontSee('Post Reply');
+
+        $this->actingAs($student->user)
+            ->post(route('student.discussions.store', $subject), [
+                'title' => 'Inactive question',
+                'body' => 'Inactive profile should not post.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($student->user)
+            ->post(route('student.discussions.reply', [$subject, $discussion]), [
+                'body' => 'Inactive reply should not be accepted.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($student->user)
+            ->post(route('student.discussions.resolve', [$subject, $discussion]))
+            ->assertForbidden();
+
+        $this->assertSame(1, SubjectDiscussion::where('posted_by', $student->user_id)->count());
+        $this->assertSame(0, SubjectDiscussionReply::where('discussion_id', $discussion->id)->count());
+        $this->assertFalse($discussion->fresh()->is_resolved);
+    }
+
     public function test_student_cannot_view_or_submit_assignment_outside_enrolled_subject(): void
     {
         $student = $this->student();
@@ -369,6 +420,62 @@ class StudentCourseContentAccessTest extends TestCase
             'assignment_id' => $assignment->id,
             'student_id' => $student->id,
             'answer_text' => 'Submitted from legacy enrollment.',
+        ]);
+    }
+
+    public function test_student_cannot_submit_empty_assignment_response(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $assignment = Assignment::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Evidence Required Assignment',
+            'description' => 'Submission must include answer text or a file.',
+            'due_at' => now()->addDays(3),
+            'is_published' => true,
+        ]);
+        $this->enroll($student, $subject);
+
+        $this->actingAs($student->user)
+            ->post(route('student.assignments.submit', $assignment), ['answer_text' => '   '])
+            ->assertSessionHasErrors('answer_text');
+
+        $this->assertDatabaseMissing('assignment_submissions', [
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+    public function test_inactive_student_can_view_assignment_but_cannot_submit_coursework(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $subject = Subject::factory()->create();
+        $assignment = Assignment::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Archived Student Assignment',
+            'description' => 'Visible but not submittable by inactive students.',
+            'due_at' => now()->addDays(3),
+            'is_published' => true,
+        ]);
+        $this->enroll($student, $subject);
+
+        $this->actingAs($student->user)
+            ->get(route('student.assignments.show', $assignment))
+            ->assertOk()
+            ->assertSee('Archived Student Assignment');
+
+        $this->actingAs($student->user)
+            ->post(route('student.assignments.submit', $assignment), [
+                'answer_text' => 'Inactive student should not submit.',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('assignment_submissions', [
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
         ]);
     }
 
@@ -501,6 +608,70 @@ class StudentCourseContentAccessTest extends TestCase
         ]);
     }
 
+    public function test_inactive_student_can_view_quiz_but_cannot_start_or_submit_attempt(): void
+    {
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Archived Student Quiz',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'is_published' => true,
+            'show_result_immediately' => true,
+            'total_marks' => 1,
+        ]);
+        $question = QuizQuestion::create([
+            'quiz_id' => $quiz->id,
+            'question_text' => 'Can inactive students attempt?',
+            'type' => 'mcq',
+            'marks' => 1,
+            'order' => 1,
+        ]);
+        $correct = QuizOption::create([
+            'quiz_question_id' => $question->id,
+            'option_text' => 'No',
+            'is_correct' => true,
+            'order' => 1,
+        ]);
+        $this->enroll($student, $subject);
+
+        $this->actingAs($student->user)
+            ->get(route('student.quizzes.show', $quiz))
+            ->assertOk()
+            ->assertSee('Archived Student Quiz');
+
+        $this->actingAs($student->user)
+            ->post(route('student.quizzes.start', $quiz))
+            ->assertForbidden();
+
+        QuizAttempt::create([
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(10),
+            'is_completed' => false,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.quizzes.submit', $quiz), [
+                'answers' => [$question->id => $correct->id],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('quiz_attempts', [
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'is_completed' => false,
+            'score' => null,
+        ]);
+        $this->assertDatabaseMissing('quiz_answers', [
+            'quiz_question_id' => $question->id,
+            'quiz_option_id' => $correct->id,
+        ]);
+    }
+
     public function test_quiz_submission_does_not_store_option_from_another_question(): void
     {
         $student = $this->student();
@@ -625,6 +796,92 @@ class StudentCourseContentAccessTest extends TestCase
             'is_completed' => false,
             'score' => null,
         ]);
+    }
+
+    public function test_student_cannot_submit_quiz_after_attempt_duration_expires(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Timed Quiz',
+            'starts_at' => now()->subHour(),
+            'ends_at' => now()->addHour(),
+            'duration_minutes' => 10,
+            'is_published' => true,
+            'total_marks' => 1,
+        ]);
+        $question = QuizQuestion::create([
+            'quiz_id' => $quiz->id,
+            'question_text' => 'Answer before timer expires.',
+            'type' => 'mcq',
+            'marks' => 1,
+            'order' => 1,
+        ]);
+        $correct = QuizOption::create([
+            'quiz_question_id' => $question->id,
+            'option_text' => 'Correct',
+            'is_correct' => true,
+            'order' => 1,
+        ]);
+        $this->enroll($student, $subject);
+
+        $attempt = QuizAttempt::create([
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subMinutes(11),
+            'is_completed' => false,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.quizzes.submit', $quiz), ['answers' => [$question->id => $correct->id]])
+            ->assertForbidden();
+
+        $attempt->refresh();
+        $this->assertFalse($attempt->is_completed);
+        $this->assertNull($attempt->score);
+        $this->assertDatabaseMissing('quiz_answers', [
+            'quiz_attempt_id' => $attempt->id,
+            'quiz_question_id' => $question->id,
+            'quiz_option_id' => $correct->id,
+        ]);
+    }
+
+    public function test_student_cannot_view_quiz_result_after_quiz_is_unpublished(): void
+    {
+        $student = $this->student();
+        $subject = Subject::factory()->create();
+        $quiz = Quiz::create([
+            'subject_id' => $subject->id,
+            'created_by' => $this->teacher()->id,
+            'title' => 'Unpublished Result Quiz',
+            'starts_at' => now()->subHours(2),
+            'ends_at' => now()->subHour(),
+            'is_published' => true,
+            'show_result_immediately' => true,
+            'total_marks' => 1,
+        ]);
+        $this->enroll($student, $subject);
+        QuizAttempt::create([
+            'quiz_id' => $quiz->id,
+            'student_id' => $student->id,
+            'started_at' => now()->subHours(2),
+            'submitted_at' => now()->subHour(),
+            'score' => 1,
+            'is_completed' => true,
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.quizzes.result', $quiz))
+            ->assertOk()
+            ->assertSee('Unpublished Result Quiz');
+
+        $quiz->forceFill(['is_published' => false])->save();
+
+        $this->actingAs($student->user)
+            ->get(route('student.quizzes.result', $quiz))
+            ->assertNotFound();
     }
 
     public function test_student_cannot_view_quiz_result_until_results_are_released(): void

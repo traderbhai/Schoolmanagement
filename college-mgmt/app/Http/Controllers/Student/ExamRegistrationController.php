@@ -22,8 +22,17 @@ class ExamRegistrationController extends Controller {
 
         // Attendance eligibility per subject
         $attendancePct = [];
+        $eligibleSubjectIds = $this->examEligibilityScope($student)['subject_ids'];
         $attendances = Attendance::with('timetableEntry.subject')
-            ->where('student_id', $student->id)->get()
+            ->where('student_id', $student->id)
+            ->whereHas('timetableEntry', function ($entryQuery) use ($eligibleSubjectIds) {
+                $this->publishedTimetableScope($entryQuery);
+
+                if ($eligibleSubjectIds !== []) {
+                    $entryQuery->whereIn('subject_id', $eligibleSubjectIds);
+                }
+            })
+            ->get()
             ->groupBy(fn($a) => $a->timetableEntry?->subject_id);
         foreach ($attendances as $sid => $recs) {
             if (!$sid) continue;
@@ -54,6 +63,10 @@ class ExamRegistrationController extends Controller {
     public function register(Exam $exam) {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+        if ($student->status !== 'active') {
+            return back()->with('error', 'Exam registration is available only for active students. Contact the Exam Cell for archived records.');
+        }
+
         abort_unless((int) $exam->program_id === (int) $student->program_id, 403);
         abort_unless($this->studentCanAccessExam($student, $exam), 403);
         abort_if($exam->exam_date && $exam->exam_date->isPast(), 422, 'Registration is closed for this exam.');
@@ -74,7 +87,10 @@ class ExamRegistrationController extends Controller {
 
         // Attendance check
         $recs = Attendance::where('student_id',$student->id)
-            ->whereHas('timetableEntry', fn($q) => $q->where('subject_id',$exam->subject_id))
+            ->whereHas('timetableEntry', function ($query) use ($exam) {
+                $this->publishedTimetableScope($query)
+                    ->where('subject_id', $exam->subject_id);
+            })
             ->get();
         $total   = $recs->count();
         $present = $recs->whereIn('status',['present','late'])->count();
@@ -180,5 +196,16 @@ class ExamRegistrationController extends Controller {
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
     }
 }

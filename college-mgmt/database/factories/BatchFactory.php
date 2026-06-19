@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class BatchFactory extends Factory
 {
+    private static int $codeSequence = 1;
+
     /**
      * Define the model's default state.
      *
@@ -21,7 +23,7 @@ class BatchFactory extends Factory
             'program_id'       => \App\Models\Program::factory(),
             'academic_year_id' => \App\Models\AcademicYear::factory(),
             'name'             => 'Batch ' . $this->faker->year,
-            'code'             => strtoupper($this->faker->lexify('B????')),
+            'code'             => sprintf('B%06d', self::$codeSequence++),
             'start_date'       => now()->startOfYear(),
             'end_date'         => now()->endOfYear(),
             'intake_capacity'  => 60,

@@ -14,6 +14,7 @@ class SoftConstraintService
         $entries = TimetableEntry::where('term_id', $termId)
             ->where('program_id', $programId)
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
+            ->where('is_active', true)
             ->with(['subject', 'batch', 'teacher.user', 'slot'])
             ->orderBy('day_of_week')
             ->orderBy('timetable_slot_id')
@@ -46,7 +47,7 @@ class SoftConstraintService
     /**
      * Check if subjects are spread across the week (not all on one day).
      */
-    private function checkSubjectSpread(array $entries): array
+    private function checkSubjectSpread(iterable $entries): array
     {
         $issues = [];
 
@@ -87,10 +88,10 @@ class SoftConstraintService
     /**
      * Check if lab sessions are grouped together.
      */
-    private function checkLabGrouping(array $entries): array
+    private function checkLabGrouping(iterable $entries): array
     {
         $issues = [];
-        $labEntries = array_filter($entries, function ($e) {
+        $labEntries = collect($entries)->filter(function ($e) {
             return strpos(strtolower($e->subject->name ?? ''), 'lab') !== false;
         });
 
@@ -134,7 +135,7 @@ class SoftConstraintService
     /**
      * Check if assignments violate teacher availability preferences.
      */
-    private function checkTeacherAvailability(array $entries, int $termId): array
+    private function checkTeacherAvailability(iterable $entries, int $termId): array
     {
         $issues = [];
         $availabilities = TeacherAvailability::where('term_id', $termId)->get();
@@ -146,7 +147,7 @@ class SoftConstraintService
                     && $a->timetable_slot_id === $entry->timetable_slot_id;
             });
 
-            if ($availability && $availability->availability_type === 'unavailable') {
+            if ($availability && $availability->availability === 'unavailable') {
                 $issues[] = [
                     'type' => 'unavailable_time_assigned',
                     'severity' => 'warning',
@@ -166,7 +167,7 @@ class SoftConstraintService
     /**
      * Check if any assignments violate break times.
      */
-    private function checkBreakTimes(array $entries): array
+    private function checkBreakTimes(iterable $entries): array
     {
         $issues = [];
         $breaks = \App\Models\TimetableSlot::where('is_break', true)->pluck('id')->toArray();
@@ -192,7 +193,7 @@ class SoftConstraintService
     /**
      * Check for large gaps in teacher schedule (more than 2 hours between classes).
      */
-    private function checkTeacherGaps(array $entries): array
+    private function checkTeacherGaps(iterable $entries): array
     {
         $issues = [];
 

@@ -3,11 +3,20 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Attendance;
+use App\Models\Course;
+use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
+use App\Models\Teacher;
+use App\Models\Term;
+use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Services\AcademicProgramLeadershipService;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,6 +108,176 @@ class AcademicsProgramLeadershipV005Test extends TestCase
         $titles = collect($data['items'])->pluck('title');
 
         $this->assertFalse($titles->contains('Hidden Program Leadership Subject'));
+    }
+
+    public function test_program_leadership_student_success_ignores_draft_timetable_attendance(): void
+    {
+        $fixture = $this->seedProgramFixture();
+        $leader = User::where('email', 'chair@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+
+        $officialStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Official Program Leadership Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+        $draftOnlyStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Program Leadership Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+
+        $publishedEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $officialStudent->id,
+                'timetable_entry_id' => $publishedEntry->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'absent',
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $draftOnlyStudent->id,
+                'timetable_entry_id' => $draftEntry->id,
+                'date' => now()->subDays($day + 3)->toDateString(),
+                'status' => 'absent',
+            ]);
+        }
+
+        $data = app(AcademicProgramLeadershipService::class)->studentSuccess($leader);
+        $titles = collect($data['items'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Official Program Leadership Risk'));
+        $this->assertFalse($titles->contains('Draft Program Leadership Risk'));
+    }
+
+    public function test_program_leadership_student_success_uses_only_published_results_for_weak_performance(): void
+    {
+        $fixture = $this->seedProgramFixture();
+        $leader = User::where('email', 'chair@college.com')->firstOrFail();
+
+        $publishedStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Published Program Weak Result'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+        $draftStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Program Weak Result'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'published_at' => now(),
+            'passing_marks' => 40,
+            'total_marks' => 100,
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'published_at' => null,
+            'passing_marks' => 40,
+            'total_marks' => 100,
+        ]);
+
+        ExamResult::factory()->create(['exam_id' => $publishedExam->id, 'student_id' => $publishedStudent->id, 'marks_obtained' => 24]);
+        ExamResult::factory()->create(['exam_id' => $draftExam->id, 'student_id' => $draftStudent->id, 'marks_obtained' => 14]);
+
+        $data = app(AcademicProgramLeadershipService::class)->studentSuccess($leader);
+        $titles = collect($data['items'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Published Program Weak Result'));
+        $this->assertFalse($titles->contains('Draft Program Weak Result'));
+    }
+
+    public function test_program_leadership_course_delivery_treats_draft_version_entries_as_unpublished(): void
+    {
+        $fixture = $this->seedProgramFixture();
+        $leader = User::where('email', 'chair@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+        $service = app(AcademicProgramLeadershipService::class);
+        $before = $service->courseDelivery($leader);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $leader->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1])->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $publishedVersion->id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $leader->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '09:00:00', 'end_time' => '10:00:00', 'sort_order' => 2])->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+
+        $after = $service->courseDelivery($leader);
+
+        $this->assertSame($before['metrics']['published_slots'] + 1, $after['metrics']['published_slots']);
+        $this->assertSame($before['metrics']['draft_timetable'] + 1, $after['metrics']['draft_timetable']);
     }
 
     public function test_non_academic_user_cannot_access_program_leadership_os(): void

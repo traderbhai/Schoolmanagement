@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{FeePaymentRequest, FeeDemand};
+use App\Models\{FeePaymentRequest, FeeDemand, FeePayment};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +23,9 @@ class FeePaymentRequestController extends Controller {
         $requests = FeePaymentRequest::where('student_id', $student->id)
             ->with('feeDemand')->orderByDesc('submitted_at')->paginate(15);
         $demands = $this->outstandingDemandsFor($student->id);
-        return view('student.fee-payment-request.index', compact('requests', 'demands', 'student'));
+        $canSubmitPaymentProof = $student->status === 'active' && $demands->isNotEmpty();
+
+        return view('student.fee-payment-request.index', compact('requests', 'demands', 'student', 'canSubmitPaymentProof'));
     }
 
     public function create() {
@@ -36,6 +38,12 @@ class FeePaymentRequestController extends Controller {
         }
 
         $demands = $this->outstandingDemandsFor($student->id);
+
+        if ($demands->isEmpty()) {
+            return redirect()->route('student.fee-payment.index')
+                ->with('error', 'There are no outstanding academic fee demands available for payment proof submission.');
+        }
+
         return view('student.fee-payment-request.create', compact('demands'));
     }
 
@@ -58,6 +66,25 @@ class FeePaymentRequestController extends Controller {
         ]);
 
         $outstandingDemands = $this->outstandingDemandsFor($student->id);
+        $transactionRef = trim((string) ($data['transaction_ref'] ?? ''));
+        $normalizedTransactionRef = strtolower($transactionRef);
+        $pendingProofAmount = (float) FeePaymentRequest::where('student_id', $student->id)
+            ->where('status', 'pending')
+            ->sum('amount');
+        $totalOpenAmount = $outstandingDemands->sum(fn (FeeDemand $demand) => $this->openAmount($demand));
+        $availableOpenAmount = max(0, (float) $totalOpenAmount - $pendingProofAmount);
+
+        if ($transactionRef !== '' && FeePayment::where('status', 'paid')->whereRaw('LOWER(transaction_id) = ?', [$normalizedTransactionRef])->exists()) {
+            return back()
+                ->withErrors(['transaction_ref' => 'This transaction reference is already linked to a verified fee receipt. Contact accounts if this is a correction.'])
+                ->withInput();
+        }
+
+        if ($transactionRef !== '' && FeePaymentRequest::where('status', 'pending')->whereRaw('LOWER(transaction_ref) = ?', [$normalizedTransactionRef])->exists()) {
+            return back()
+                ->withErrors(['transaction_ref' => 'This transaction reference is already pending verification. Wait for accounts review or contact accounts if this is a correction.'])
+                ->withInput();
+        }
 
         if (!empty($data['fee_demand_id'])) {
             $demand = FeeDemand::where('student_id', $student->id)
@@ -83,12 +110,17 @@ class FeePaymentRequestController extends Controller {
                     ->withInput();
             }
         } else {
-            $totalOpenAmount = $outstandingDemands->sum(fn (FeeDemand $demand) => $this->openAmount($demand));
             if ((float) $data['amount'] > $totalOpenAmount) {
                 return back()
                     ->withErrors(['amount' => 'Payment proof amount cannot exceed your total open fee balance of INR ' . number_format($totalOpenAmount, 2) . '.'])
                     ->withInput();
             }
+        }
+
+        if ((float) $data['amount'] > $availableOpenAmount) {
+            return back()
+                ->withErrors(['amount' => 'Payment proof amount cannot exceed your remaining open fee balance after pending proofs of INR ' . number_format($availableOpenAmount, 2) . '.'])
+                ->withInput();
         }
 
         $proofPath = null;
@@ -102,7 +134,7 @@ class FeePaymentRequestController extends Controller {
             'amount'          => $data['amount'],
             'payment_method'  => $data['payment_method'],
             'bank_name'       => $data['bank_name'] ?? null,
-            'transaction_ref' => $data['transaction_ref'] ?? null,
+            'transaction_ref' => $transactionRef !== '' ? $transactionRef : null,
             'proof_path'      => $proofPath,
             'submitted_at'    => now(),
             'status'          => 'pending',

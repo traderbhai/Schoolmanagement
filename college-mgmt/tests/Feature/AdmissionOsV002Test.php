@@ -160,4 +160,78 @@ class AdmissionOsV002Test extends TestCase
         $this->assertSame(1, AdmissionAssignmentEvent::where('subject_type', Lead::class)->where('subject_id', $primary->id)->count());
         $this->assertSame('not_interested', $duplicate->fresh()->status);
     }
+
+    public function test_completed_lead_followup_cannot_be_completed_again(): void
+    {
+        $head = $this->admissionUser('admission_head');
+        $this->member($head, 'admission_head');
+        $lead = Lead::factory()->create(['assigned_to' => $head->id]);
+        $completedAt = now()->subDay()->seconds(0);
+        $followUp = LeadFollowUp::create([
+            'lead_id' => $lead->id,
+            'assigned_to' => $head->id,
+            'type' => 'call',
+            'scheduled_at' => now()->addHour(),
+            'completed_at' => $completedAt,
+            'notes' => 'Already handled',
+        ]);
+
+        $this->actingAs($head)
+            ->from(route('admission.leads.follow-ups.calendar'))
+            ->patch(route('admission.leads.follow-ups.complete', $followUp))
+            ->assertRedirect(route('admission.leads.follow-ups.calendar'))
+            ->assertSessionHas('error', 'This follow-up is already completed and cannot be completed again.');
+
+        $this->assertSame($completedAt->toDateTimeString(), $followUp->fresh()->completed_at->toDateTimeString());
+    }
+
+    public function test_legacy_lead_followup_routes_are_hierarchy_scoped(): void
+    {
+        $head = $this->admissionUser('admission_head');
+        $manager = $this->admissionUser('admission_manager');
+        $outsideCounsellor = $this->admissionUser('admission_counsellor');
+        $headMember = $this->member($head, 'admission_head');
+        $this->member($manager, 'admission_manager', $headMember);
+        $this->member($outsideCounsellor, 'admission_counsellor', $headMember);
+        $lead = Lead::factory()->create(['assigned_to' => $outsideCounsellor->id, 'name' => 'Sibling Lead']);
+        $followUp = LeadFollowUp::create([
+            'lead_id' => $lead->id,
+            'assigned_to' => $outsideCounsellor->id,
+            'type' => 'call',
+            'scheduled_at' => now()->addDay(),
+            'notes' => 'Sibling follow-up note',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('admission.leads.follow-ups.calendar'))
+            ->assertOk()
+            ->assertDontSee('Sibling Lead')
+            ->assertDontSee('Sibling follow-up note');
+
+        $this->actingAs($manager)
+            ->get(route('admission.leads.follow-ups.calendar', ['counsellor_id' => $outsideCounsellor->id]))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->patch(route('admission.leads.follow-ups.complete', $followUp))
+            ->assertForbidden();
+
+        $this->assertNull($followUp->fresh()->completed_at);
+
+        $this->actingAs($manager)
+            ->post(route('admission.leads.follow-ups.store', $lead), [
+                'type' => 'call',
+                'scheduled_at' => now()->addDays(2)->toDateTimeString(),
+                'assigned_to' => $manager->id,
+                'notes' => 'Unauthorized follow-up',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->post(route('admission.leads.assign', $lead), ['assigned_to' => $manager->id])
+            ->assertForbidden();
+
+        $this->assertSame($outsideCounsellor->id, $lead->fresh()->assigned_to);
+        $this->assertDatabaseMissing('lead_follow_ups', ['notes' => 'Unauthorized follow-up']);
+    }
 }

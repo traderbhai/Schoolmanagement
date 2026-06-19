@@ -33,6 +33,8 @@ class SeatMatrixController extends Controller
 
     public function store(Request $request, Program $program)
     {
+        abort_unless($program->is_active, 422, 'Seat matrix can be configured only for active programs.');
+
         $validated = $request->validate([
             'batch_id'         => 'nullable|exists:batches,id',
             'total_seats'      => 'required|integer|min:1',
@@ -45,6 +47,8 @@ class SeatMatrixController extends Controller
             'nri_quota'        => 'required|integer|min:0',
             'defence_quota'    => 'required|integer|min:0',
         ]);
+
+        $this->validateSeatMatrixScopeAndTotals($validated, $program);
 
         $exists = SeatMatrix::where('program_id', $program->id)
             ->where('batch_id', $validated['batch_id'] ?? null)
@@ -68,6 +72,9 @@ class SeatMatrixController extends Controller
 
     public function update(Request $request, SeatMatrix $seatMatrix)
     {
+        $seatMatrix->load('program');
+        abort_unless($seatMatrix->program?->is_active, 422, 'Seat matrix can be updated only for active programs.');
+
         $validated = $request->validate([
             'total_seats'      => 'required|integer|min:1',
             'general_seats'    => 'required|integer|min:0',
@@ -79,6 +86,8 @@ class SeatMatrixController extends Controller
             'nri_quota'        => 'required|integer|min:0',
             'defence_quota'    => 'required|integer|min:0',
         ]);
+
+        $this->validateSeatMatrixScopeAndTotals($validated, $seatMatrix->program);
 
         $committed = $this->committedSeatUsage($seatMatrix);
         if ((int) $validated['total_seats'] < $committed['total']) {
@@ -112,6 +121,39 @@ class SeatMatrixController extends Controller
         $seatMatrix->delete();
         return redirect()->route('admission.seat-matrices.index', $program)
             ->with('success', 'Seat matrix deleted.');
+    }
+
+    private function validateSeatMatrixScopeAndTotals(array $validated, Program $program): void
+    {
+        if (!empty($validated['batch_id'])) {
+            $validBatch = Batch::where('id', $validated['batch_id'])
+                ->where('program_id', $program->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if (!$validBatch) {
+                throw ValidationException::withMessages([
+                    'batch_id' => 'Seat matrix batch must be an active batch for the selected program.',
+                ]);
+            }
+        }
+
+        $allocatedSeats = collect([
+            'general_seats',
+            'obc_seats',
+            'sc_seats',
+            'st_seats',
+            'ews_seats',
+            'management_quota',
+            'nri_quota',
+            'defence_quota',
+        ])->sum(fn (string $column) => (int) ($validated[$column] ?? 0));
+
+        if ($allocatedSeats > (int) $validated['total_seats']) {
+            throw ValidationException::withMessages([
+                'total_seats' => 'Total seats cannot be lower than the sum of category and quota seats.',
+            ]);
+        }
     }
 
     private function hasSeatDecisionHistory(SeatMatrix $seatMatrix): bool

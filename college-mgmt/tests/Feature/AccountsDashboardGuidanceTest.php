@@ -198,6 +198,54 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->assertStringNotContainsString('999,999', $content);
     }
 
+    public function test_accounts_demand_letter_is_limited_to_active_open_demands(): void
+    {
+        $user = $this->accountsUser();
+        $student = Student::factory()->create(['status' => 'active']);
+        $inactiveStudent = Student::factory()->create(['status' => 'inactive']);
+        $term = Term::factory()->create(['program_id' => $student->program_id]);
+        $inactiveTerm = Term::factory()->create(['program_id' => $inactiveStudent->program_id]);
+
+        $openDemand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'final_amount' => 25000,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+        $paidDemand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'final_amount' => 25000,
+            'penalty_amount' => 0,
+            'status' => 'fully_paid',
+        ]);
+        $inactiveStudentDemand = FeeDemand::factory()->create([
+            'student_id' => $inactiveStudent->id,
+            'term_id' => $inactiveTerm->id,
+            'final_amount' => 25000,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.fee-demands.demand-letter', $openDemand))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($user)
+            ->from(route('accounts.outstanding'))
+            ->get(route('accounts.fee-demands.demand-letter', $paidDemand))
+            ->assertRedirect(route('accounts.outstanding'))
+            ->assertSessionHas('error', 'Demand letters are available only for open outstanding fee demands.');
+
+        $this->actingAs($user)
+            ->from(route('accounts.outstanding'))
+            ->get(route('accounts.fee-demands.demand-letter', $inactiveStudentDemand))
+            ->assertRedirect(route('accounts.outstanding'))
+            ->assertSessionHas('error', 'Demand letters are available only for active students.');
+    }
+
     public function test_accounts_exports_write_activity_logs_with_row_counts_and_filters(): void
     {
         $user = $this->accountsUser();

@@ -17,12 +17,13 @@
 </div>
 
 <div class="alert alert-info py-2 px-3 mb-3 d-flex flex-wrap align-items-center gap-3" style="font-size:.85rem;">
-  <span><i class="bi bi-people me-1"></i><strong>{{ $registrations->count() }}</strong> registration(s)</span>
+  <span><i class="bi bi-people me-1"></i><strong>{{ $registrations->where('status', 'registered')->count() }}</strong> active registration(s)</span>
   @if($event->seats)
     <span>{{ $event->seats }} seats</span>
   @endif
-  <span class="text-success">{{ $registrations->where('attended', true)->count() }} attended</span>
-  <span class="text-muted">{{ $registrations->where('attended', false)->count() }} pending attendance</span>
+  <span class="text-success">{{ $registrations->where('attended', true)->where('status', 'registered')->count() }} attended</span>
+  <span class="text-muted">{{ $registrations->where('attended', false)->where('status', 'registered')->count() }} pending attendance</span>
+  <span class="text-secondary">{{ $registrations->where('status', 'cancelled')->count() }} cancelled</span>
 </div>
 
 <div class="card">
@@ -47,10 +48,16 @@
             <td class="small">{{ $reg->student?->enrollment_number ?? '-' }}</td>
             <td class="small text-muted">{{ $reg->created_at->format('d M Y H:i') }}</td>
             <td>
-              <span class="badge bg-{{ $reg->attended ? 'success' : 'secondary' }}">{{ $reg->attended ? 'Attended' : 'Registered' }}</span>
+              @if($reg->status === 'cancelled')
+                <span class="badge bg-secondary">Cancelled</span>
+              @else
+                <span class="badge bg-{{ $reg->attended ? 'success' : 'secondary' }}">{{ $reg->attended ? 'Attended' : 'Registered' }}</span>
+              @endif
             </td>
             <td class="text-end pe-3">
-              @if($reg->attended)
+              @if($reg->status === 'cancelled')
+                <span class="badge bg-secondary-subtle text-secondary">Cancelled history</span>
+              @elseif($reg->attended)
                 <span class="badge bg-success-subtle text-success">Attendance locked</span>
               @else
                 <form method="POST" action="{{ route('cmc.events.registrations.attendance', [$event, $reg]) }}" class="d-inline">

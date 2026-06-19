@@ -10,17 +10,20 @@ use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Models\ProgramSeatMatrix;
+use App\Services\DepartmentHierarchyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class MeritListController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function index(Program $program)
     {
         $batches = Batch::orderBy('name')->get();
         $batchId = request('batch_id');
 
-        $query = MeritListEntry::where('program_id', $program->id);
+        $query = $this->scopedMeritQuery($program);
         if ($batchId) {
             $query->where('batch_id', $batchId);
         }
@@ -44,6 +47,8 @@ class MeritListController extends Controller
 
     public function generate(Request $request, Program $program)
     {
+        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+
         $request->validate([
             'batch_id'              => 'nullable|exists:batches,id',
             'academic_weight'       => 'nullable|numeric|min:0|max:100',
@@ -58,6 +63,7 @@ class MeritListController extends Controller
         // Get applicants
         $query = Applicant::where('program_id', $program->id)
             ->whereIn('status', ['shortlisted', 'under_review', 'selected']);
+        $this->applyMeritApplicantVisibility($query, $request->user());
 
         if ($batchId) {
             $query->where('batch_id', $batchId);
@@ -231,8 +237,7 @@ class MeritListController extends Controller
         $decision  = request('decision');
         $quotaFilter = request('quota_type');
 
-        $query = MeritListEntry::where('program_id', $program->id)
-            ->with(['applicant.user', 'decidedBy']);
+        $query = $this->scopedMeritQuery($program)->with(['applicant.user', 'decidedBy']);
 
         if ($batchId) {
             $query->where('batch_id', $batchId);
@@ -281,16 +286,18 @@ class MeritListController extends Controller
 
         $categories = ['general','obc','obc_nc','sc','st','ews','pwd','nri','management_quota'];
 
-        $entryQuery = MeritListEntry::where('program_id', $program->id)
+        $entryQuery = $this->scopedMeritQuery($program)
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId));
 
         $report = [];
         foreach ($categories as $cat) {
             $seatsTotal   = $seatMatrix ? $seatMatrix->getSeatsForCategory($cat) : 0;
             $catEntries   = (clone $entryQuery)->where('category', $cat);
-            $applied      = Applicant::where('program_id', $program->id)
+            $appliedQuery = Applicant::where('program_id', $program->id)
                 ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
-                ->where('category', $cat)->count();
+                ->where('category', $cat);
+            $this->applyMeritApplicantVisibility($appliedQuery, request()->user());
+            $applied = $appliedQuery->count();
             $scored       = (clone $catEntries)->whereNotNull('composite_score')->count();
             $selected     = (clone $catEntries)->where('decision', 'selected')->count();
             $vacant       = max(0, $seatsTotal - $selected);
@@ -331,6 +338,9 @@ class MeritListController extends Controller
 
     public function updateDecision(Request $request, MeritListEntry $entry)
     {
+        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+        $this->guardEntryScope($entry);
+
         $request->validate([
             'decision' => 'required|in:selected,waitlisted,rejected',
             'notes'    => 'nullable|string',
@@ -338,6 +348,11 @@ class MeritListController extends Controller
 
         if ($this->entryHasActiveOffer($entry)) {
             return back()->with('error', 'Merit decisions linked to active offer letters are locked.');
+        }
+
+        $entry->loadMissing('applicant');
+        if ($this->entryApplicantIsFinal($entry)) {
+            return back()->with('error', 'Merit decisions are locked for applicants in a final admission state.');
         }
 
         if ($entry->decision !== 'pending' && $entry->decision !== $request->decision) {
@@ -360,13 +375,15 @@ class MeritListController extends Controller
 
     public function bulkDecide(Request $request, Program $program)
     {
+        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+
         $request->validate([
             'accept_top'   => 'required|integer|min:1',
             'waitlist_next' => 'nullable|integer|min:0',
             'batch_id'     => 'nullable|exists:batches,id',
         ]);
 
-        $query = MeritListEntry::where('program_id', $program->id)
+        $query = $this->scopedMeritQuery($program)
             ->where('decision', 'pending')
             ->orderBy('rank');
 
@@ -379,23 +396,35 @@ class MeritListController extends Controller
         $acceptTop    = (int) $request->accept_top;
         $waitlistNext = (int) ($request->waitlist_next ?? 0);
 
-        foreach ($entries as $i => $entry) {
+        $decidableEntries = $entries
+            ->load(['applicant'])
+            ->reject(fn (MeritListEntry $entry) => $this->entryApplicantIsFinal($entry) || $this->entryHasActiveOffer($entry))
+            ->values();
+
+        $selectedCount = 0;
+        $waitlistedCount = 0;
+
+        foreach ($decidableEntries as $i => $entry) {
             if ($i < $acceptTop) {
                 $entry->update([
                     'decision'   => 'selected',
                     'decided_by' => auth()->id(),
                     'decided_at' => now(),
                 ]);
+                $selectedCount++;
             } elseif ($i < $acceptTop + $waitlistNext) {
                 $entry->update([
                     'decision'   => 'waitlisted',
                     'decided_by' => auth()->id(),
                     'decided_at' => now(),
                 ]);
+                $waitlistedCount++;
             }
         }
 
-        return back()->with('success', "Bulk decision applied: {$acceptTop} selected, {$waitlistNext} waitlisted.");
+        $skipped = $entries->count() - $decidableEntries->count();
+
+        return back()->with('success', "Bulk decision applied: {$selectedCount} selected, {$waitlistedCount} waitlisted. Skipped {$skipped} locked applicant(s).");
     }
 
     private function entryHasActiveOffer(MeritListEntry $entry): bool
@@ -403,6 +432,13 @@ class MeritListController extends Controller
         return OfferLetter::where('applicant_id', $entry->applicant_id)
             ->whereIn('status', ['issued', 'accepted'])
             ->exists();
+    }
+
+    private function entryApplicantIsFinal(MeritListEntry $entry): bool
+    {
+        $status = $entry->applicant?->status;
+
+        return in_array($status, ['rejected', 'withdrawn', 'enrolled'], true);
     }
 
     private function lockedOfferEntryCount(int $programId, ?int $batchId = null): int
@@ -417,8 +453,7 @@ class MeritListController extends Controller
     {
         $batchId = request('batch_id');
 
-        $query = MeritListEntry::where('program_id', $program->id)
-            ->with(['applicant.user', 'batch']);
+        $query = $this->scopedMeritQuery($program)->with(['applicant.user', 'batch']);
 
         if ($batchId) {
             $query->where('batch_id', $batchId);
@@ -441,7 +476,7 @@ class MeritListController extends Controller
     {
         $batchId = request('batch_id');
 
-        $entries = MeritListEntry::where('program_id', $program->id)
+        $entries = $this->scopedMeritQuery($program)
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
             ->with(['applicant.user', 'batch', 'decidedBy'])
             ->orderBy('rank')
@@ -479,5 +514,37 @@ class MeritListController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function scopedMeritQuery(Program $program)
+    {
+        return MeritListEntry::query()
+            ->where('program_id', $program->id)
+            ->whereHas('applicant', function ($query) {
+                $this->applyMeritApplicantVisibility($query, request()->user());
+            });
+    }
+
+    private function guardEntryScope(MeritListEntry $entry): void
+    {
+        $entry->loadMissing('applicant');
+        abort_unless(
+            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $entry->applicant?->assigned_to, true),
+            403
+        );
+    }
+
+    private function applyMeritApplicantVisibility($query, $user): void
+    {
+        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+            return;
+        }
+
+        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+
+        $query->where(function ($scope) use ($visibleUserIds) {
+            $scope->whereIn('assigned_to', $visibleUserIds)
+                ->orWhereNull('assigned_to');
+        });
     }
 }

@@ -102,6 +102,7 @@
                     <div>
                         <div class="fw-semibold">Pending Verification</div>
                         <small>Our accounts team will verify your payment shortly.</small>
+                        @if(in_array($applicant->status, ['shortlisted', 'selected'], true))
                         <form method="POST" action="{{ route('applicant.fees.gateway.initiate', $payment) }}" class="mt-3">
                             @csrf
                             <button class="btn btn-sm btn-primary">
@@ -109,6 +110,11 @@
                             </button>
                             <span class="small text-muted ms-2">Manual proof remains valid if online payment is not available.</span>
                         </form>
+                        @else
+                            <div class="small text-muted mt-2">
+                                Online payment actions are closed for your current application status.
+                            </div>
+                        @endif
                     </div>
                 </li>
                 @endif

@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Student, Teacher, Program, Batch, Exam, ExamResult, Attendance,
     Placement, PlacementDrive, FeeDemand, FeePayment, Lead, Applicant,
@@ -7,6 +8,8 @@ use App\Models\{Student, Teacher, Program, Batch, Exam, ExamResult, Attendance,
 
 class InstitutionalKpiController extends Controller {
     public function index() {
+        abort_unless(request()->user() && AccessControl::canViewRegulatoryReports(request()->user()), 403);
+
         // Enrollment KPIs
         $totalStudents   = Student::where('status','active')->count();
         $totalGraduated  = Student::where('status','graduated')->count();
@@ -21,7 +24,9 @@ class InstitutionalKpiController extends Controller {
         $attendancePct = $totalAtt > 0 ? round(($presentAtt/$totalAtt)*100,1) : 0;
 
         // Exam pass rate
-        $allResults = ExamResult::with('exam')->get();
+        $allResults = ExamResult::with('exam')
+            ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
+            ->get();
         $passCount = $allResults->filter(fn($r) => $r->exam && $r->marks_obtained >= ($r->exam->passing_marks ?? 40))->count();
         $passRate = $allResults->count() > 0 ? round(($passCount/$allResults->count())*100,1) : 0;
 
@@ -51,7 +56,9 @@ class InstitutionalKpiController extends Controller {
         // Program health
         $programs = Program::where('is_active',true)->withCount(['students'=>fn($q)=>$q->where('status','active')])->get()
             ->map(function($prog) {
-                $results = ExamResult::whereHas('exam',fn($q)=>$q->where('program_id',$prog->id))->with('exam')->get();
+                $results = ExamResult::whereHas('exam', fn($q) => $q
+                    ->whereNotNull('published_at')
+                    ->where('program_id', $prog->id))->with('exam')->get();
                 $total = $results->count();
                 $passed = $total > 0 ? $results->filter(fn($r)=>$r->exam && $r->marks_obtained>=($r->exam->passing_marks??40))->count() : 0;
                 $prog->pass_rate = $total > 0 ? round(($passed/$total)*100,1) : null;

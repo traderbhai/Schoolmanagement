@@ -16,6 +16,12 @@ class ProfileController extends Controller
 
     public function update(Request $request)
     {
+        $teacher = auth()->user()->teacher;
+
+        if (! $teacher || $teacher->status !== 'active') {
+            return back()->with('error', 'Profile updates are locked because this teacher profile is not active.');
+        }
+
         $request->validate([
             'designation'    => 'nullable|string|max:100',
             'phone'          => 'nullable|string|max:20',
@@ -23,7 +29,6 @@ class ProfileController extends Controller
             'qualification'  => 'nullable|string|max:200',
         ]);
 
-        $teacher = auth()->user()->teacher;
         $teacher->update($request->only(['designation', 'phone', 'specialization', 'qualification']));
 
         return back()->with('success', 'Profile updated successfully.');

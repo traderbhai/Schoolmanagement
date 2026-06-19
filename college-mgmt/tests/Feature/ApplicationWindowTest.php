@@ -248,6 +248,52 @@ class ApplicationWindowTest extends TestCase
         $this->assertDatabaseMissing('applicants', ['user_id' => null]);
     }
 
+    public function test_applicant_registration_uses_available_window_when_older_open_window_is_full(): void
+    {
+        $program = Program::factory()->create();
+        $fullBatch = Batch::factory()->create(['program_id' => $program->id]);
+        $availableBatch = Batch::factory()->create(['program_id' => $program->id]);
+        $fullWindow = ApplicationWindow::create([
+            'program_id' => $program->id,
+            'batch_id' => $fullBatch->id,
+            'opens_at' => now()->subDays(2),
+            'closes_at' => now()->addDays(5),
+            'capacity_limit' => 1,
+            'current_applications' => 1,
+            'is_active' => true,
+        ]);
+        $availableWindow = ApplicationWindow::create([
+            'program_id' => $program->id,
+            'batch_id' => $availableBatch->id,
+            'opens_at' => now()->subDay(),
+            'closes_at' => now()->addDays(10),
+            'capacity_limit' => 10,
+            'current_applications' => 2,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('apply.program', $program))
+            ->assertOk()
+            ->assertSee($availableBatch->name)
+            ->assertDontSee($fullBatch->name);
+
+        $this->post(route('apply.program.register', $program), [
+            'name' => 'Available Window Applicant',
+            'email' => 'available.window@example.com',
+            'phone' => '1234509876',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('applicant.dashboard'));
+
+        $this->assertDatabaseHas('applicants', [
+            'program_id' => $program->id,
+            'batch_id' => $availableBatch->id,
+            'status' => 'draft',
+        ]);
+        $this->assertSame(1, $fullWindow->fresh()->current_applications);
+        $this->assertSame(3, $availableWindow->fresh()->current_applications);
+    }
+
     public function test_applicant_can_apply_when_window_open(): void
     {
         $program = Program::factory()->create();
@@ -375,6 +421,97 @@ class ApplicationWindowTest extends TestCase
         ]);
     }
 
+    public function test_application_window_batch_must_belong_to_selected_program(): void
+    {
+        $program = Program::factory()->create();
+        $otherProgram = Program::factory()->create();
+        $foreignBatch = Batch::factory()->create(['program_id' => $otherProgram->id]);
+        $window = ApplicationWindow::create([
+            'program_id' => $program->id,
+            'opens_at' => now()->addDay()->setTime(9, 0),
+            'closes_at' => now()->addDays(10)->setTime(17, 0),
+            'capacity_limit' => 100,
+            'is_active' => true,
+        ]);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->post(route('admission.application-windows.store', $program), [
+                'batch_id' => $foreignBatch->id,
+                'opens_at' => now()->addDay()->setTime(9, 0)->format('Y-m-d H:i'),
+                'closes_at' => now()->addDays(10)->setTime(17, 0)->format('Y-m-d H:i'),
+                'capacity_limit' => 100,
+                'description' => 'Foreign batch attempt',
+            ])
+            ->assertSessionHasErrors('batch_id');
+
+        $this->actingAs($officer)
+            ->put(route('admission.application-windows.update', $window), [
+                'batch_id' => $foreignBatch->id,
+                'opens_at' => $window->opens_at->format('Y-m-d H:i'),
+                'closes_at' => $window->closes_at->format('Y-m-d H:i'),
+                'capacity_limit' => 100,
+                'is_active' => true,
+                'description' => 'Foreign batch update attempt',
+            ])
+            ->assertSessionHasErrors('batch_id');
+
+        $this->assertDatabaseMissing('application_windows', [
+            'program_id' => $program->id,
+            'batch_id' => $foreignBatch->id,
+        ]);
+        $this->assertNull($window->fresh()->batch_id);
+    }
+
+    public function test_public_apply_ignores_stale_windows_with_inactive_program_or_foreign_batch(): void
+    {
+        $inactiveProgram = Program::factory()->create(['name' => 'Inactive Window Program', 'is_active' => false]);
+        $foreignBatchProgram = Program::factory()->create(['name' => 'Foreign Batch Program', 'is_active' => true]);
+        $otherProgram = Program::factory()->create(['is_active' => true]);
+        $foreignBatch = Batch::factory()->create(['program_id' => $otherProgram->id, 'name' => 'Wrong 2026 Batch']);
+
+        ApplicationWindow::create([
+            'program_id' => $inactiveProgram->id,
+            'opens_at' => now()->subDay(),
+            'closes_at' => now()->addDays(10),
+            'is_active' => true,
+        ]);
+        ApplicationWindow::create([
+            'program_id' => $foreignBatchProgram->id,
+            'batch_id' => $foreignBatch->id,
+            'opens_at' => now()->subDay(),
+            'closes_at' => now()->addDays(10),
+            'is_active' => true,
+        ]);
+
+        $this->get(route('apply'))
+            ->assertStatus(200)
+            ->assertSee('No application intakes are open right now')
+            ->assertDontSee('Inactive Window Program')
+            ->assertDontSee('Foreign Batch Program')
+            ->assertDontSee('Wrong 2026 Batch');
+
+        $this->get(route('apply.program', $inactiveProgram))
+            ->assertRedirect(route('apply'))
+            ->assertSessionHas('error', 'Applications for this program are not currently open.');
+
+        $this->post(route('apply.program.register', $foreignBatchProgram), [
+            'name' => 'Foreign Batch Applicant',
+            'email' => 'foreign.batch@example.com',
+            'phone' => '9999999999',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+            ->assertRedirect(route('apply'))
+            ->assertSessionHas('error', 'Applications for this program are not currently open.');
+
+        $this->assertDatabaseMissing('applicants', [
+            'program_id' => $foreignBatchProgram->id,
+            'batch_id' => $foreignBatch->id,
+        ]);
+    }
+
     public function test_admission_officer_can_toggle_window_active(): void
     {
         $window = ApplicationWindow::create([
@@ -391,5 +528,102 @@ class ApplicationWindowTest extends TestCase
 
         $window->refresh();
         $this->assertFalse($window->is_active);
+    }
+
+    public function test_application_window_with_intake_history_cannot_be_deleted_or_rebounded(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $otherBatch = Batch::factory()->create(['program_id' => $program->id]);
+        $window = ApplicationWindow::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'opens_at' => now()->subDays(2)->setTime(9, 0),
+            'closes_at' => now()->addDays(10)->setTime(17, 0),
+            'capacity_limit' => 25,
+            'current_applications' => 3,
+            'is_active' => true,
+            'description' => 'Original intake window',
+        ]);
+
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->from(route('admission.application-windows.index', $program))
+            ->delete(route('admission.application-windows.destroy', $window))
+            ->assertRedirect(route('admission.application-windows.index', $program))
+            ->assertSessionHas('error', 'Application windows with applicant intake history cannot be deleted. Deactivate the window or create a new intake window instead.');
+
+        $this->assertDatabaseHas('application_windows', ['id' => $window->id]);
+
+        $this->actingAs($officer)
+            ->from(route('admission.application-windows.edit', $window))
+            ->put(route('admission.application-windows.update', $window), [
+                'batch_id' => $otherBatch->id,
+                'opens_at' => now()->addDays(1)->setTime(9, 0)->format('Y-m-d H:i'),
+                'closes_at' => now()->addDays(20)->setTime(17, 0)->format('Y-m-d H:i'),
+                'capacity_limit' => 25,
+                'is_active' => true,
+                'description' => 'Changed intake timeline',
+            ])
+            ->assertRedirect(route('admission.application-windows.edit', $window))
+            ->assertSessionHasErrors('application_window');
+
+        $window->refresh();
+        $this->assertSame($batch->id, $window->batch_id);
+        $this->assertSame('Original intake window', $window->description);
+    }
+
+    public function test_application_window_with_history_allows_safe_description_active_and_capacity_growth_only(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $window = ApplicationWindow::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'opens_at' => now()->subDays(2)->setTime(9, 0),
+            'closes_at' => now()->addDays(10)->setTime(17, 0),
+            'capacity_limit' => 25,
+            'current_applications' => 3,
+            'is_active' => true,
+            'description' => 'Original intake window',
+        ]);
+
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->from(route('admission.application-windows.edit', $window))
+            ->put(route('admission.application-windows.update', $window), [
+                'batch_id' => $batch->id,
+                'opens_at' => $window->opens_at->format('Y-m-d H:i'),
+                'closes_at' => $window->closes_at->format('Y-m-d H:i'),
+                'capacity_limit' => 2,
+                'is_active' => true,
+                'description' => 'Unsafe lower capacity',
+            ])
+            ->assertRedirect(route('admission.application-windows.edit', $window))
+            ->assertSessionHasErrors('application_window');
+
+        $window->refresh();
+        $this->assertSame(25, $window->capacity_limit);
+        $this->assertSame('Original intake window', $window->description);
+
+        $this->actingAs($officer)
+            ->put(route('admission.application-windows.update', $window), [
+                'batch_id' => $batch->id,
+                'opens_at' => $window->opens_at->format('Y-m-d H:i'),
+                'closes_at' => $window->closes_at->format('Y-m-d H:i'),
+                'capacity_limit' => 40,
+                'is_active' => false,
+                'description' => 'Expanded capacity after review',
+            ])
+            ->assertRedirect(route('admission.application-windows.index', $program));
+
+        $window->refresh();
+        $this->assertSame(40, $window->capacity_limit);
+        $this->assertFalse($window->is_active);
+        $this->assertSame('Expanded capacity after review', $window->description);
     }
 }

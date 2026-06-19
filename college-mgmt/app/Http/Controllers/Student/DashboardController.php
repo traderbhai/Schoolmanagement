@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam, Enrollment, Student, StudentSubjectEnrollment, Term};
+use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam, Enrollment, Student, StudentSubjectEnrollment, Term, TimetableEntry, HostelFeeDemand};
 use App\Models\{Assignment, Quiz, LeaveApplication, AcademicEvent, SubjectAnnouncement};
 use App\Services\TimetableService;
 
@@ -16,23 +16,21 @@ class DashboardController extends Controller
         $currentSemester = Semester::current();
         $notices = Notice::active()->where(fn($q) => $q->where('audience','all')->orWhere('audience','students'))->latest()->take(3)->get();
         $slots = TimetableSlot::where('is_active',true)->orderBy('sort_order')->get();
-        $grid = $currentSemester ? $this->service->buildWeeklyGrid($currentSemester->id, $student->course_id) : [];
-
         $todayDay = now()->dayOfWeekIso; // 1=Mon...6=Sat
-        $todayClasses = [];
-        if (isset($grid[$todayDay])) {
-            $todayClasses = array_filter($grid[$todayDay]);
-        }
+        $todayClasses = $currentSemester
+            ? $this->studentTimetableEntriesForDay($student, $currentSemester->id, $todayDay)
+            : collect();
 
-        // Attendance overall
-        $totalAttendance   = Attendance::where('student_id', $student->id)->count();
-        $presentAttendance = Attendance::where('student_id', $student->id)->whereIn('status', ['present','late'])->count();
+        // Attendance overall - only published timetable history is student-visible.
+        $attendanceQuery = $this->studentPublishedAttendanceQuery($student);
+        $totalAttendance   = (clone $attendanceQuery)->count();
+        $presentAttendance = (clone $attendanceQuery)->whereIn('status', ['present','late'])->count();
         $attendanceOverall = $totalAttendance > 0 ? round(($presentAttendance / $totalAttendance) * 100) : null;
 
         // Per-subject attendance - flag low ones
         $lowAttendanceSubjects = [];
-        $attendanceBySubject = Attendance::with('timetableEntry.subject')
-            ->where('student_id', $student->id)
+        $attendanceBySubject = $this->studentPublishedAttendanceQuery($student)
+            ->with('timetableEntry.subject')
             ->get()
             ->groupBy(fn($a) => $a->timetableEntry?->subject?->name ?? 'Unknown');
         foreach ($attendanceBySubject as $subjName => $records) {
@@ -86,6 +84,9 @@ class DashboardController extends Controller
             $feePaid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
             $feeOutstanding = max(0, $feeDue - $feePaid);
         }
+        $feeOutstanding += (float) HostelFeeDemand::where('student_id', $student->id)
+            ->where('status', 'pending')
+            ->sum('amount');
 
         // Upcoming assignments (due within 7 days)
         $upcomingAssignments = collect();
@@ -130,6 +131,7 @@ class DashboardController extends Controller
                         }
                     })
                     ->where('exam_date', '>', now())
+                    ->whereNull('published_at')
                     ->with('subject')
                     ->orderBy('exam_date')
                     ->take(5)
@@ -157,10 +159,68 @@ class DashboardController extends Controller
         } catch (\Exception $e) {}
 
         return view('student.dashboard', compact(
-            'student', 'currentSemester', 'notices', 'slots', 'grid', 'todayClasses',
+            'student', 'currentSemester', 'notices', 'slots', 'todayClasses',
             'attendanceOverall', 'lowAttendanceSubjects', 'sgpa', 'cgpa', 'feeOutstanding',
             'upcomingAssignments', 'pendingAssignmentCount', 'upcomingExams', 'upcomingEvents', 'pendingLeaves'
         ));
+    }
+
+    private function studentTimetableEntriesForDay(Student $student, int $semesterId, int $dayOfWeek)
+    {
+        $subjectIds = $this->enrolledSubjectIds($student);
+
+        if ($subjectIds === []) {
+            return collect();
+        }
+
+        return TimetableEntry::whereIn('subject_id', $subjectIds)
+            ->where('semester_id', $semesterId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            })
+            ->when($student->program_id, fn($q) => $q->where(function ($query) use ($student) {
+                $query->whereNull('program_id')->orWhere('program_id', $student->program_id);
+            }))
+            ->when($student->batch_id, fn($q) => $q->where(function ($query) use ($student) {
+                $query->whereNull('batch_id')->orWhere('batch_id', $student->batch_id);
+            }))
+            ->when($student->current_term_id, fn($q) => $q->where(function ($query) use ($student) {
+                $query->whereNull('term_id')->orWhere('term_id', $student->current_term_id);
+            }))
+            ->with(['subject', 'classroom', 'teacher.user', 'slot'])
+            ->get()
+            ->sortBy(fn($entry) => optional($entry->slot)->sort_order ?? 0)
+            ->keyBy('timetable_slot_id');
+    }
+
+    private function studentPublishedAttendanceQuery(Student $student)
+    {
+        $subjectIds = $this->enrolledSubjectIds($student);
+
+        return Attendance::where('student_id', $student->id)
+            ->when($subjectIds === [], fn($query) => $query->whereRaw('1 = 0'))
+            ->whereHas('timetableEntry', function ($query) use ($student, $subjectIds) {
+                $query->whereIn('subject_id', $subjectIds)
+                    ->where('is_active', true)
+                    ->where('status', 'published')
+                    ->where(function ($versionQuery) {
+                        $versionQuery->whereNull('timetable_version_id')
+                            ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+                    })
+                    ->when($student->program_id, fn($scope) => $scope->where(function ($programScope) use ($student) {
+                        $programScope->whereNull('program_id')->orWhere('program_id', $student->program_id);
+                    }))
+                    ->when($student->batch_id, fn($scope) => $scope->where(function ($batchScope) use ($student) {
+                        $batchScope->whereNull('batch_id')->orWhere('batch_id', $student->batch_id);
+                    }))
+                    ->when($student->current_term_id, fn($scope) => $scope->where(function ($termScope) use ($student) {
+                        $termScope->whereNull('term_id')->orWhere('term_id', $student->current_term_id);
+                    }));
+            });
     }
 
     private function examEligibilityScope(Student $student): array
@@ -199,5 +259,22 @@ class DashboardController extends Controller
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function enrolledSubjectIds(Student $student): array
+    {
+        return StudentSubjectEnrollment::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->when($student->current_term_id, fn($query) => $query->where('term_id', $student->current_term_id))
+            ->pluck('subject_id')
+            ->merge(Enrollment::where('student_id', $student->id)
+                ->whereIn('status', ['active', 'enrolled'])
+                ->when($student->current_term_id, fn($query) => $query->where('term_id', $student->current_term_id))
+                ->pluck('subject_id'))
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

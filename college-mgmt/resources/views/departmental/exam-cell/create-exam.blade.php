@@ -92,6 +92,20 @@
                     @error('term_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
 
+                {{-- Semester --}}
+                <div class="col-md-6">
+                    <label for="semester_id" class="form-label fw-semibold">Semester <span class="text-danger">*</span></label>
+                    <select name="semester_id" id="semester_id" class="form-select @error('semester_id') is-invalid @enderror" required>
+                        <option value="">Select Semester</option>
+                        @foreach($semesters as $semester)
+                        <option value="{{ $semester->id }}" {{ old('semester_id') == $semester->id ? 'selected' : '' }}>
+                            {{ $semester->name }}
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('semester_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
                 {{-- Exam Date --}}
                 <div class="col-md-6">
                     <label for="exam_date" class="form-label fw-semibold">Exam Date <span class="text-danger">*</span></label>

@@ -4,16 +4,21 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Applicant, EnrollmentConfirmation, Program, Batch, RequiredDocument, Specialization, Term};
+use App\Services\DepartmentHierarchyService;
 use App\Services\EnrollmentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class EnrollmentController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function index(Request $request)
     {
-        $query = EnrollmentConfirmation::with(['applicant.program', 'applicant.user', 'student.user', 'batch'])
-            ->where('status', 'completed')
+        $scopedCompleted = $this->scopedCompletedEnrollmentQuery();
+        $query = (clone $scopedCompleted)
+            ->with(['applicant.program', 'applicant.user', 'student.user', 'batch'])
             ->latest();
 
         if ($request->filled('program_id')) {
@@ -27,8 +32,8 @@ class EnrollmentController extends Controller
         $programs = Program::where('is_active', true)->get();
         $batches  = Batch::orderByDesc('id')->get();
 
-        $totalEnrolled = EnrollmentConfirmation::where('status', 'completed')->count();
-        $thisMonth     = EnrollmentConfirmation::where('status', 'completed')
+        $totalEnrolled = (clone $scopedCompleted)->count();
+        $thisMonth     = (clone $scopedCompleted)
             ->whereMonth('confirmed_at', now()->month)
             ->whereYear('confirmed_at', now()->year)
             ->count();
@@ -40,6 +45,8 @@ class EnrollmentController extends Controller
 
     public function create(Applicant $applicant)
     {
+        $this->guardApplicantScope($applicant);
+
         $applicant->load(['program', 'batch', 'documents', 'payments', 'user']);
 
         $isSelected       = $applicant->status === 'selected';
@@ -68,7 +75,10 @@ class EnrollmentController extends Controller
         $alreadyEnrolled  = $applicant->enrollmentConfirmation()->exists();
         $canEnroll = $isSelected && $hasVerifiedPayment && $hasVerifiedMandatoryDocs && ! $alreadyEnrolled;
 
-        $specializations = Specialization::all();
+        $specializations = Specialization::where('program_id', $applicant->program_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
         $terms = $applicant->batch_id
             ? Term::where('batch_id', $applicant->batch_id)->orderBy('term_number')->get()
             : collect();
@@ -83,10 +93,22 @@ class EnrollmentController extends Controller
 
     public function store(Request $request, Applicant $applicant)
     {
+        $this->guardApplicantScope($applicant);
+
         $request->validate([
             'roll_number' => 'required|string|max:50',
-            'specialization_id' => 'nullable|exists:specializations,id',
-            'term_id'     => 'nullable|exists:terms,id',
+            'specialization_id' => [
+                'nullable',
+                Rule::exists('specializations', 'id')
+                    ->where('program_id', $applicant->program_id)
+                    ->where('is_active', true),
+            ],
+            'term_id' => [
+                'nullable',
+                Rule::exists('terms', 'id')
+                    ->where('program_id', $applicant->program_id)
+                    ->where('batch_id', $applicant->batch_id),
+            ],
             'notes'       => 'nullable|string|max:1000',
         ]);
 
@@ -103,14 +125,45 @@ class EnrollmentController extends Controller
 
     public function show(EnrollmentConfirmation $confirmation)
     {
+        $this->guardConfirmationScope($confirmation);
+
         $confirmation->load(['applicant.program', 'applicant.batch', 'applicant.user', 'student.user', 'confirmedBy', 'batch', 'term']);
         return view('admission.enrollment.show', compact('confirmation'));
     }
 
     public function printLetter(EnrollmentConfirmation $confirmation)
     {
+        $this->guardConfirmationScope($confirmation);
+
+        if ($confirmation->status !== 'completed' || ! $confirmation->student_id || ! $confirmation->enrollment_number) {
+            return back()->with('error', 'Enrollment letter is available only after enrollment is completed.');
+        }
+
         $confirmation->load(['applicant.program', 'applicant.batch', 'applicant.payments', 'student.user', 'confirmedBy', 'batch', 'term']);
         $pdf = Pdf::loadView('admission.enrollment.letter', compact('confirmation'));
         return $pdf->download('enrollment-letter-' . $confirmation->enrollment_number . '.pdf');
+    }
+
+    private function guardApplicantScope(Applicant $applicant): void
+    {
+        abort_unless(
+            $this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $applicant->assigned_to, false),
+            403
+        );
+    }
+
+    private function guardConfirmationScope(EnrollmentConfirmation $confirmation): void
+    {
+        $confirmation->loadMissing('applicant');
+        $this->guardApplicantScope($confirmation->applicant);
+    }
+
+    private function scopedCompletedEnrollmentQuery()
+    {
+        return EnrollmentConfirmation::query()
+            ->where('status', 'completed')
+            ->whereHas('applicant', function ($query) {
+                $this->hierarchy->applyApplicantVisibility($query, auth()->user(), 'ADM');
+            });
     }
 }

@@ -10,7 +10,12 @@ use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamResult;
 use App\Models\FeeDemand;
+use App\Models\FeePayment;
 use App\Models\FeeStructure;
+use App\Models\HostelAllocation;
+use App\Models\HostelBlock;
+use App\Models\HostelFeeDemand;
+use App\Models\HostelRoom;
 use App\Models\Notice;
 use App\Models\ParentProfile;
 use App\Models\Program;
@@ -22,6 +27,7 @@ use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -116,6 +122,95 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertDontSee('999,999');
     }
 
+    public function test_parent_fee_page_shows_only_paid_receipt_history(): void
+    {
+        [$user, $student] = $this->parentWithStudent();
+        $structure = FeeStructure::create([
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'academic_year_id' => AcademicYear::factory()->create()->id,
+            'fee_type' => 'Tuition',
+            'amount' => 20000,
+        ]);
+
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $structure->id,
+            'amount_paid' => 5000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'PARENT-PAID-001',
+            'payment_method' => 'online',
+            'status' => 'paid',
+        ]);
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $structure->id,
+            'amount_paid' => 7000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'PARENT-PENDING-001',
+            'payment_method' => 'online',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parent.children.fees', $student))
+            ->assertOk()
+            ->assertSee('PARENT-PAID-001')
+            ->assertDontSee('PARENT-PENDING-001');
+    }
+
+    public function test_parent_dashboard_and_fee_page_include_hostel_fee_dues(): void
+    {
+        [$user, $student] = $this->parentWithStudent();
+        $block = HostelBlock::create([
+            'name' => 'Parent Visible Hostel',
+            'gender' => 'mixed',
+            'total_floors' => 2,
+            'is_active' => true,
+        ]);
+        $room = HostelRoom::create([
+            'hostel_block_id' => $block->id,
+            'room_number' => '502',
+            'floor' => 2,
+            'room_type' => 'single',
+            'capacity' => 1,
+            'monthly_fee' => 7200,
+            'status' => 'available',
+        ]);
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subMonth()->toDateString(),
+            'status' => 'active',
+        ]);
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => '2026-06',
+            'amount' => 7200,
+            'status' => 'pending',
+            'due_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parent.dashboard'))
+            ->assertOk()
+            ->assertSee('Fee demand is overdue')
+            ->assertSee('Rs. 7,200')
+            ->assertSee('Open demands: 1');
+
+        $this->actingAs($user)
+            ->get(route('parent.children.fees', $student))
+            ->assertOk()
+            ->assertSee('Fee follow-up needed')
+            ->assertSee('Hostel Fee Demands')
+            ->assertSee('Parent Visible Hostel')
+            ->assertSee('Room 502')
+            ->assertSee('Rs. 7,200')
+            ->assertSee('Overdue');
+    }
+
     public function test_parent_attendance_and_results_use_canonical_enrolled_subjects_only(): void
     {
         [$user, $student, $semester, $enrolledSubject, $unenrolledSubject] = $this->parentAcademicFixture();
@@ -162,6 +257,78 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertSee('88')
             ->assertDontSee('Parent Draft Result Exam')
             ->assertDontSee('99.00');
+    }
+
+    public function test_parent_attendance_excludes_draft_timetable_rows_and_draft_versions(): void
+    {
+        [$user, $student, $semester, $enrolledSubject] = $this->parentAcademicFixture();
+        $draftSubject = Subject::factory()->create([
+            'program_id' => $student->program_id,
+            'term_number' => 1,
+            'name' => 'Parent Draft Timetable Subject',
+        ]);
+        $draftVersionSubject = Subject::factory()->create([
+            'program_id' => $student->program_id,
+            'term_number' => 1,
+            'name' => 'Parent Draft Version Subject',
+        ]);
+        foreach ([$draftSubject, $draftVersionSubject] as $subject) {
+            StudentSubjectEnrollment::create([
+                'student_id' => $student->id,
+                'subject_id' => $subject->id,
+                'term_id' => $student->current_term_id,
+                'enrollment_type' => 'compulsory',
+                'status' => 'active',
+            ]);
+        }
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $student->program_id,
+            'term_id' => $student->current_term_id,
+            'batch_id' => $student->batch_id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+
+        foreach ([
+            [$draftSubject, 'draft', null],
+            [$draftVersionSubject, 'published', $draftVersion->id],
+        ] as [$subject, $status, $versionId]) {
+            $entry = TimetableEntry::factory()->create([
+                'program_id' => $student->program_id,
+                'batch_id' => $student->batch_id,
+                'course_id' => $student->course_id,
+                'term_id' => $student->current_term_id,
+                'semester_id' => $semester->id,
+                'subject_id' => $subject->id,
+                'teacher_id' => Teacher::factory()->create()->id,
+                'classroom_id' => Classroom::factory()->create()->id,
+                'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+                'day_of_week' => now()->dayOfWeekIso,
+                'is_active' => true,
+                'status' => $status,
+                'timetable_version_id' => $versionId,
+            ]);
+            Attendance::create([
+                'student_id' => $student->id,
+                'timetable_entry_id' => $entry->id,
+                'date' => now()->toDateString(),
+                'status' => 'absent',
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('parent.children.attendance', ['student' => $student, 'semester_id' => $semester->id]))
+            ->assertOk()
+            ->assertSee('Parent Enrolled Subject')
+            ->assertSee('100%')
+            ->assertDontSee('Parent Draft Timetable Subject')
+            ->assertDontSee('Parent Draft Version Subject');
+
+        $this->actingAs($user)
+            ->get(route('parent.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Attendance needs attention');
     }
 
     public function test_parent_dashboard_notice_preview_respects_audience_and_active_dates(): void

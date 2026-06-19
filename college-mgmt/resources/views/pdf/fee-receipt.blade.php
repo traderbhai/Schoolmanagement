@@ -38,7 +38,7 @@
   </div>
   <div class="box">
     <div class="label">Course</div>
-    <div class="value">{{ $payment->student->course->name ?? '—' }}</div>
+    <div class="value">{{ $payment->student->course->name ?? '-' }}</div>
   </div>
   <div class="box">
     <div class="label">Payment Date</div>
@@ -59,14 +59,14 @@
   <tbody>
     <tr>
       <td>{{ $payment->feeStructure->name ?? 'Fee Payment' }}</td>
-      <td>{{ ucfirst($payment->feeStructure->fee_type ?? '—') }}</td>
+      <td>{{ ucfirst($payment->feeStructure->fee_type ?? '-') }}</td>
       <td>{{ ucfirst($payment->payment_method) }}</td>
       <td><span class="badge-paid">{{ strtoupper($payment->status) }}</span></td>
-      <td style="text-align:right">₹{{ number_format($payment->amount, 2) }}</td>
+      <td style="text-align:right">INR {{ number_format($payment->amount_paid, 2) }}</td>
     </tr>
     <tr class="amount-row">
       <td colspan="4" style="text-align:right">Total Amount Paid</td>
-      <td style="text-align:right">₹{{ number_format($payment->amount, 2) }}</td>
+      <td style="text-align:right">INR {{ number_format($payment->amount_paid, 2) }}</td>
     </tr>
   </tbody>
 </table>
@@ -79,7 +79,7 @@
 @endif
 
 <div class="footer">
-  Generated on {{ now()->format('d M Y, h:i A') }} &bull; This is a computer-generated receipt. No signature required.
+  Generated on {{ now()->format('d M Y, h:i A') }} | This is a computer-generated receipt. No signature required.
 </div>
 
 </body>

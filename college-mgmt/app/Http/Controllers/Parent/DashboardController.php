@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Parent;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeDemand, FeePayment, Semester, Term, Enrollment};
+use App\Models\{ParentProfile, Student, Notice, Attendance, ExamResult, FeeDemand, FeePayment, HostelFeeDemand, Semester, Term, Enrollment};
 use App\Services\GradeService;
 use Illuminate\Support\Facades\Auth;
 
@@ -27,7 +27,7 @@ class DashboardController extends Controller
         $childrenData = $children->map(function ($student) {
             $subjectIds = $this->enrolledSubjectIds($student);
             $attendanceQuery = Attendance::where('student_id', $student->id)
-                ->whereHas('timetableEntry', fn($q) => $q->whereIn('subject_id', $subjectIds));
+                ->whereHas('timetableEntry', fn($q) => $this->publishedTimetableScope($q)->whereIn('subject_id', $subjectIds));
             $totalAtt = (clone $attendanceQuery)->count();
             $presentAtt = (clone $attendanceQuery)->whereIn('status', ['present', 'late'])->count();
             $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100) : null;
@@ -116,11 +116,14 @@ class DashboardController extends Controller
             $attendances = Attendance::with(['timetableEntry.subject', 'timetableEntry.slot'])
                 ->where('student_id', $student->id)
                 ->whereHas('timetableEntry', function ($q) use ($semesterId, $termIds) {
-                    $q->where('semester_id', $semesterId);
+                    $this->publishedTimetableScope($q)
+                        ->where(function ($scope) use ($semesterId, $termIds) {
+                            $scope->where('semester_id', $semesterId);
 
-                    if ($termIds !== []) {
-                        $q->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 })
                 ->whereHas('timetableEntry', fn($q) => $q->whereIn('subject_id', $subjectIds))
                 ->get();
@@ -187,14 +190,18 @@ class DashboardController extends Controller
         $parent = $this->getParent();
         abort_unless($parent->students->contains($student), 403);
 
-        $payments = $student->feePayments()->with('feeStructure')->latest()->get();
+        $payments = $student->feePayments()->with('feeStructure')->where('status', 'paid')->latest()->get();
         $feeDemands = $student->feeDemands()->with('term')->latest('due_date')->get();
+        $hostelFeeDemands = HostelFeeDemand::with('allocation.room.block')
+            ->where('student_id', $student->id)
+            ->latest('due_date')
+            ->get();
         $finance = $this->studentFinance($student);
         $feeDue = $finance['total_billed'];
         $feePaid = $finance['paid'];
         $balance = $finance['balance'];
 
-        return view('parent.fees', compact('parent', 'student', 'payments', 'feeDemands', 'finance', 'feeDue', 'feePaid', 'balance'));
+        return view('parent.fees', compact('parent', 'student', 'payments', 'feeDemands', 'hostelFeeDemands', 'finance', 'feeDue', 'feePaid', 'balance'));
     }
 
     public function notices()
@@ -211,21 +218,36 @@ class DashboardController extends Controller
     {
         $demands = FeeDemand::where('student_id', $student->id)->get();
         $activeDemands = $demands->whereIn('status', self::ACTIVE_DEMAND_STATUSES);
+        $hostelDemands = HostelFeeDemand::where('student_id', $student->id)->get();
+        $activeHostelDemands = $hostelDemands->where('status', 'pending');
 
         $totalDemanded = $demands->sum(fn($demand) => (float) $demand->final_amount);
         $activePenalty = $activeDemands->sum(fn($demand) => (float) ($demand->penalty_amount ?? 0));
-        $balance = $activeDemands->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
+        $hostelOpenAmount = $activeHostelDemands->sum(fn($demand) => (float) $demand->amount);
+        $hostelBilled = $hostelDemands->sum(fn($demand) => (float) $demand->amount);
+        $balance = $activeDemands->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0))
+            + $hostelOpenAmount;
         $paid = FeePayment::where('student_id', $student->id)->where('status', 'paid')->sum('amount_paid');
-        $overdueCount = $activeDemands->filter(fn($demand) => $this->isDemandOverdue($demand))->count();
-        $nextDueDate = $activeDemands->pluck('due_date')->filter()->sort()->first();
+        $academicOverdueCount = $activeDemands->filter(fn($demand) => $this->isDemandOverdue($demand))->count();
+        $hostelOverdueCount = $activeHostelDemands
+            ->filter(fn($demand) => $demand->due_date && $demand->due_date->lt(now()->startOfDay()))
+            ->count();
+        $nextDueDate = $activeDemands
+            ->pluck('due_date')
+            ->merge($activeHostelDemands->pluck('due_date'))
+            ->filter()
+            ->sort()
+            ->first();
 
         return [
-            'total_billed' => $totalDemanded + $activePenalty,
+            'total_billed' => $totalDemanded + $activePenalty + $hostelBilled,
             'paid' => (float) $paid,
             'balance' => $balance,
-            'open_demand_count' => $activeDemands->count(),
-            'overdue_count' => $overdueCount,
+            'open_demand_count' => $activeDemands->count() + $activeHostelDemands->count(),
+            'overdue_count' => $academicOverdueCount + $hostelOverdueCount,
             'next_due_date' => $nextDueDate,
+            'hostel_balance' => $hostelOpenAmount,
+            'hostel_open_count' => $activeHostelDemands->count(),
         ];
     }
 
@@ -308,5 +330,15 @@ class DashboardController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($scope) {
+                $scope->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            });
     }
 }

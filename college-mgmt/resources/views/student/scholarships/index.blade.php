@@ -30,6 +30,12 @@
         </div>
     @endif
 
+    @unless($canApplyForScholarships)
+        <div class="alert alert-warning">
+            Scholarship application submission is locked because this student profile is not active. Existing scholarship history remains available for reference.
+        </div>
+    @endunless
+
     @if($myApplications->isNotEmpty())
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header fw-semibold"><i class="bi bi-clock-history me-2"></i>My Applications</div>
@@ -114,13 +120,15 @@
                             <span class="badge bg-{{ $badge }}">{{ ucfirst($myApplications[$scheme->id]->status) }}</span>
                         @elseif(!$eligibility['eligible'])
                             <span class="badge bg-danger">Not Eligible</span>
+                        @elseif(!$canApplyForScholarships)
+                            <span class="badge bg-secondary">Locked</span>
                         @else
                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#applyScholarship{{ $scheme->id }}">Apply</button>
                         @endif
                     </div>
                 </div>
 
-                @if(!$applied && $eligibility['eligible'])
+                @if(!$applied && $eligibility['eligible'] && $canApplyForScholarships)
                     <div class="collapse mt-3" id="applyScholarship{{ $scheme->id }}">
                         <form method="POST" action="{{ route('student.scholarships.apply', $scheme) }}" enctype="multipart/form-data">
                             @csrf

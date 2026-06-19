@@ -131,7 +131,7 @@
                         <td class="small text-muted">{{ $entry->applicant->application_number }}</td>
                         @foreach($steps as $stepId => $step)
                         <td class="text-center small">
-                            @php $ss = ($entry->step_scores ?? [])[$stepId] ?? null; @endphp
+                            @php($ss = ($entry->step_scores ?? [])[$stepId] ?? null)
                             @if($ss)
                                 {{ number_format($ss['percentage'] ?? 0, 1) }}%
                             @else

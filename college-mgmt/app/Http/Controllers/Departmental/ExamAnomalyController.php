@@ -26,6 +26,17 @@ class ExamAnomalyController extends Controller {
             'severity'=>'required|in:low,medium,high,critical',
             'action_taken'=>'nullable|in:warning,debarred,cancelled,none',
         ]);
+
+        $exam = Exam::findOrFail($v['exam_id']);
+        if ($exam->published_at) {
+            return back()->withErrors(['exam_id' => 'New exam anomalies cannot be logged after results are published. Use marks appeal/correction workflows for post-publication issues.'])->withInput();
+        }
+
+        $student = Student::findOrFail($v['student_id']);
+        if ((int) $student->program_id !== (int) $exam->program_id) {
+            return back()->withErrors(['student_id' => 'Selected student does not belong to the selected exam program.'])->withInput();
+        }
+
         ExamAnomalyLog::create(array_merge($v,['reported_by'=>auth()->id()]));
         return redirect()->route('exam-cell.anomalies.index')->with('success','Anomaly logged.');
     }

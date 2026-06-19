@@ -7,6 +7,7 @@ use App\Models\AcademicPmcStudentIntervention;
 use App\Models\AcademicPmcStudentSuccessPlan;
 use App\Models\Batch;
 use App\Models\Department;
+use App\Models\Exam;
 use App\Models\ExamResult;
 use App\Models\Program;
 use App\Models\Student;
@@ -42,7 +43,22 @@ class AcademicsPmcV057Test extends TestCase
             'guardian_phone' => '9999990000',
             'status' => 'active',
         ]);
-        ExamResult::factory()->count(2)->create(['student_id' => $student->id, 'marks_obtained' => 30, 'grade' => 'F', 'is_absent' => true]);
+        $subject = Subject::where('program_id', $program->id)->firstOrFail();
+        foreach (range(1, 2) as $index) {
+            $exam = Exam::factory()->create([
+                'program_id' => $program->id,
+                'subject_id' => $subject->id,
+                'published_at' => now(),
+                'name' => 'Published Risk Exam '.$index,
+            ]);
+            ExamResult::factory()->create([
+                'exam_id' => $exam->id,
+                'student_id' => $student->id,
+                'marks_obtained' => 30,
+                'grade' => 'F',
+                'is_absent' => true,
+            ]);
+        }
         StudentGrievance::create([
             'student_id' => $student->id,
             'program_id' => $program->id,
@@ -105,5 +121,40 @@ class AcademicsPmcV057Test extends TestCase
             ->assertSee('Intervention Lifecycle')
             ->assertSee('Parent / Guardian Escalations')
             ->assertSee('Refresh Risk Signals');
+    }
+
+    public function test_pmc_student_success_refresh_ignores_unpublished_exam_results(): void
+    {
+        [$chair] = $this->seedFixture();
+        $studentUser = User::factory()->create(['name' => 'PMC Draft Marks Only']);
+        $student = Student::factory()->create([
+            'user_id' => $studentUser->id,
+            'department_id' => Department::where('code', 'MGT')->firstOrFail()->id,
+            'program_id' => Program::where('code', 'PGDM')->firstOrFail()->id,
+            'batch_id' => Batch::where('code', 'PGDM-26')->firstOrFail()->id,
+            'status' => 'active',
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'subject_id' => Subject::where('program_id', $student->program_id)->firstOrFail()->id,
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $student->id,
+            'marks_obtained' => 20,
+            'grade' => 'F',
+            'is_absent' => true,
+        ]);
+
+        $this->actingAs($chair)
+            ->post(route('academics.pmc.student-success-v004.refresh'))
+            ->assertRedirect();
+
+        $plan = AcademicPmcStudentSuccessPlan::where('student_id', $student->id)->where('risk_type', 'retention_risk')->firstOrFail();
+        $this->assertSame(0.0, (float) $plan->signals['average_marks']);
+        $this->assertSame(0, (int) $plan->signals['exam_absences']);
+        $this->assertNotContains('Average marks below 45', $plan->signals['reasons']);
+        $this->assertNotContains('Exam/internal assessment absence', $plan->signals['reasons']);
     }
 }

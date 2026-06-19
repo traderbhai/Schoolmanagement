@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Course, Department};
 use Illuminate\Http\Request;
@@ -8,14 +9,20 @@ use Illuminate\Validation\ValidationException;
 class CourseController extends Controller
 {
     public function index() {
+        $this->authorizeAcademicStructure();
+
         $courses = Course::with('department')->withCount('students')->paginate(15);
         return view('admin.courses.index', compact('courses'));
     }
     public function create() {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.courses.create', compact('departments'));
     }
     public function store(Request $request) {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'department_id'   => 'required|exists:departments,id',
             'name'            => 'required|string|max:255',
@@ -28,14 +35,20 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'Course created.');
     }
     public function show(Course $course) {
+        $this->authorizeAcademicStructure();
+
         $course->load(['department','students.user']);
         return view('admin.courses.show', compact('course'));
     }
     public function edit(Course $course) {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.courses.edit', compact('course','departments'));
     }
     public function update(Request $request, Course $course) {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'department_id'   => 'required|exists:departments,id',
             'name'            => 'required|string|max:255',
@@ -62,6 +75,8 @@ class CourseController extends Controller
         return redirect()->route('admin.courses.index')->with('success', 'Updated.');
     }
     public function destroy(Course $course) {
+        $this->authorizeAcademicStructure();
+
         if ($this->hasOperationalDependencies($course)) {
             return redirect()->route('admin.courses.index')
                 ->with('error', 'Courses with students, fees, admissions, exams, or timetable entries cannot be deleted because academic history depends on them.');
@@ -94,5 +109,10 @@ class CourseController extends Controller
             && ! (bool) $data['is_active']
             && (bool) $course->is_active
             && $course->students()->where('status', 'active')->exists();
+    }
+
+    private function authorizeAcademicStructure(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
     }
 }

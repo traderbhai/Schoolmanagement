@@ -139,8 +139,8 @@
                                     <tr>
                                         <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
                                         <td class="fw-semibold small">{{ $entry->subject->name ?? '-' }}</td>
-                                        <td class="text-muted small">{{ $entry->teacher?->name ?? '-' }}</td>
-                                        <td class="text-muted small">{{ $entry->room ?? '-' }}</td>
+                                        <td class="text-muted small">{{ $entry->teacher?->user?->name ?? '-' }}</td>
+                                        <td class="text-muted small">{{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? '-' }}</td>
                                     </tr>
                                     @endif
                                 @endforeach

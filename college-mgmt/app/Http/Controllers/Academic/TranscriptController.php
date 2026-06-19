@@ -33,15 +33,35 @@ class TranscriptController extends Controller {
 
     public function generatePdf(Student $student) {
         $student->load(['user','program','batch']);
-        ['semesterReports' => $semesterReports, 'cgpa' => $cgpa, 'totalCredits' => $totalCredits] = $this->buildTranscriptReport($student);
+        $transcript = AcademicTranscript::where('student_id', $student->id)
+            ->where('status', 'issued')
+            ->latest('issued_at')
+            ->first();
 
-        // Save transcript record
-        AcademicTranscript::updateOrCreate(['student_id'=>$student->id], [
-            'cgpa'=>$cgpa,'total_credits_earned'=>$totalCredits,
-            'status'=>'issued','issued_by'=>auth()->id(),'issued_at'=>now(),
-        ]);
+        if ($transcript && $this->hasUsableSnapshot($transcript)) {
+            ['semesterReports' => $semesterReports, 'cgpa' => $cgpa, 'totalCredits' => $totalCredits] = $this->reportFromSnapshot($transcript);
+        } else {
+            ['semesterReports' => $semesterReports, 'cgpa' => $cgpa, 'totalCredits' => $totalCredits] = $this->buildTranscriptReport($student);
+            $snapshot = $this->snapshotReport($semesterReports, $cgpa, $totalCredits);
 
-        $pdf = Pdf::loadView('pdf.academic-transcript', compact('student','semesterReports','cgpa','totalCredits'))
+            if ($transcript) {
+                $transcript->update(['semester_data' => $snapshot]);
+            } else {
+                $transcript = AcademicTranscript::create([
+                    'student_id' => $student->id,
+                    'cgpa' => $cgpa,
+                    'total_credits_earned' => $totalCredits,
+                    'status' => 'issued',
+                    'issued_by' => auth()->id(),
+                    'issued_at' => now(),
+                    'semester_data' => $snapshot,
+                ]);
+            }
+        }
+
+        $issuedAt = $transcript?->issued_at ?? now();
+
+        $pdf = Pdf::loadView('pdf.academic-transcript', compact('student','semesterReports','cgpa','totalCredits','issuedAt'))
             ->setPaper('a4','portrait');
         return $pdf->stream("transcript-{$student->enrollment_number}.pdf");
     }
@@ -162,5 +182,60 @@ class TranscriptController extends Controller {
             ->pluck('id')
             ->map(fn($id) => (int) $id)
             ->all();
+    }
+
+    private function hasUsableSnapshot(AcademicTranscript $transcript): bool
+    {
+        return is_array($transcript->semester_data)
+            && array_key_exists('semester_reports', $transcript->semester_data)
+            && array_key_exists('cgpa', $transcript->semester_data)
+            && array_key_exists('total_credits', $transcript->semester_data);
+    }
+
+    private function snapshotReport(array $semesterReports, float $cgpa, int $totalCredits): array
+    {
+        return [
+            'version' => 1,
+            'cgpa' => $cgpa,
+            'total_credits' => $totalCredits,
+            'semester_reports' => collect($semesterReports)->map(function (array $report) {
+                return [
+                    'term' => [
+                        'id' => $report['term']->id,
+                        'name' => $report['term']->name,
+                        'term_number' => $report['term']->term_number,
+                    ],
+                    'sgpa' => $report['sgpa'],
+                    'earned_credits' => $report['earned_credits'],
+                    'total_credits' => $report['total_credits'],
+                    'subjects' => collect($report['subjects'])->map(function (array $subject) {
+                        return [
+                            'subject' => [
+                                'id' => $subject['subject']?->id,
+                                'name' => $subject['subject']?->name,
+                                'code' => $subject['subject']?->code,
+                            ],
+                            'credits' => $subject['credits'],
+                            'obtained' => $subject['obtained'],
+                            'total' => $subject['total'],
+                            'pct' => $subject['pct'],
+                            'grade' => $subject['grade'],
+                            'status' => $subject['status'],
+                        ];
+                    })->values()->all(),
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    private function reportFromSnapshot(AcademicTranscript $transcript): array
+    {
+        $snapshot = $transcript->semester_data;
+
+        return [
+            'semesterReports' => $snapshot['semester_reports'] ?? [],
+            'cgpa' => (float) ($snapshot['cgpa'] ?? $transcript->cgpa),
+            'totalCredits' => (int) ($snapshot['total_credits'] ?? $transcript->total_credits_earned),
+        ];
     }
 }

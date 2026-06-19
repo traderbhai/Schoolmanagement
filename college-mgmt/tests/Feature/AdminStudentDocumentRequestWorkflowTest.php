@@ -36,6 +36,15 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
         return $user;
     }
 
+    private function userWithRole(string $role): User
+    {
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        return $user;
+    }
+
     private function student(): Student
     {
         Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
@@ -149,6 +158,70 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
         Mail::assertQueued(StudentDocumentRequestUpdated::class, 2);
     }
 
+    public function test_program_chair_cannot_directly_view_or_process_student_document_requests(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+
+        $student = $this->student();
+        $chair = $this->userWithRole('program_chair');
+        $readyPath = 'student-documents/'.$student->id.'/ready-bonafide.pdf';
+        Storage::disk('local')->put($readyPath, 'ready document bytes');
+
+        $pendingRequest = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'bonafide',
+            'purpose' => 'Visa',
+            'status' => 'pending',
+        ]);
+        $approvedRequest = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'character',
+            'purpose' => 'Higher studies',
+            'status' => 'approved',
+        ]);
+        $readyRequest = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'fee_letter',
+            'purpose' => 'Loan',
+            'status' => 'ready',
+            'output_path' => $readyPath,
+            'fulfilled_at' => now(),
+        ]);
+
+        $this->actingAs($chair)
+            ->get(route('admin.document-requests.index'))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->patch(route('admin.document-requests.approve', $pendingRequest), [
+                'notes' => 'Unauthorized approval.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->patch(route('admin.document-requests.reject', $pendingRequest), [
+                'notes' => 'Unauthorized rejection.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->post(route('admin.document-requests.fulfill', $approvedRequest), [
+                'document_file' => UploadedFile::fake()->create('character.pdf', 48, 'application/pdf'),
+                'notes' => 'Unauthorized fulfillment.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get(route('admin.document-requests.download', $readyRequest))
+            ->assertForbidden();
+
+        $this->assertSame('pending', $pendingRequest->fresh()->status);
+        $this->assertSame('approved', $approvedRequest->fresh()->status);
+        $this->assertNull($approvedRequest->fresh()->output_path);
+        Mail::assertNothingQueued();
+    }
+
     public function test_admin_can_upload_ready_document_for_student_download(): void
     {
         Mail::fake();
@@ -194,6 +267,30 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
             ->assertHeader('content-disposition');
     }
 
+    public function test_admin_cannot_download_stale_output_path_for_non_ready_document_request(): void
+    {
+        Storage::fake('local');
+        $student = $this->student();
+        $admin = $this->admin();
+        $path = 'student-documents/' . $student->id . '/stale-bonafide.pdf';
+        Storage::disk('local')->put($path, 'stale document bytes');
+
+        foreach (['pending', 'approved', 'rejected'] as $status) {
+            $request = DocumentRequest::create([
+                'student_id' => $student->id,
+                'document_type' => 'bonafide',
+                'purpose' => 'Stale path check',
+                'status' => $status,
+                'output_path' => $path,
+                'fulfilled_at' => $status === 'rejected' ? now() : null,
+            ]);
+
+            $this->actingAs($admin)
+                ->get(route('admin.document-requests.download', $request))
+                ->assertNotFound();
+        }
+    }
+
     public function test_admin_cannot_mark_pending_document_request_ready_without_approval(): void
     {
         Storage::fake('local');
@@ -218,6 +315,56 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
         $this->assertNull($request->fulfilled_at);
         $this->assertNull($request->output_path);
         $this->assertCount(0, Storage::disk('local')->allFiles());
+    }
+
+    public function test_admin_cannot_approve_or_fulfill_document_request_after_student_is_archived(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+
+        $student = $this->student();
+        $student->update(['status' => 'inactive']);
+
+        $pendingRequest = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'bonafide',
+            'purpose' => 'Created before archival',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patch(route('admin.document-requests.approve', $pendingRequest), [
+                'notes' => 'Trying stale approval.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Document request cannot be processed because the student profile is not active.');
+
+        $pendingRequest->refresh();
+        $this->assertSame('pending', $pendingRequest->status);
+        $this->assertNull($pendingRequest->reviewed_by);
+
+        $approvedRequest = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'character',
+            'purpose' => 'Approved before archival',
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.document-requests.fulfill', $approvedRequest), [
+                'document_file' => UploadedFile::fake()->create('character.pdf', 48, 'application/pdf'),
+                'notes' => 'Trying stale fulfillment.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Document request cannot be processed because the student profile is not active.');
+
+        $approvedRequest->refresh();
+        $this->assertSame('approved', $approvedRequest->status);
+        $this->assertNull($approvedRequest->fulfilled_at);
+        $this->assertNull($approvedRequest->output_path);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+
+        Mail::assertNothingQueued();
     }
 
     public function test_rejecting_requires_staff_notes(): void
@@ -406,6 +553,43 @@ class AdminStudentDocumentRequestWorkflowTest extends TestCase
         $request->refresh();
         $this->assertSame('approved', $request->status);
         $this->assertSame($admin->id, $request->reviewed_by);
+    }
+
+    public function test_ready_noc_download_rechecks_clearance_before_streaming(): void
+    {
+        Storage::fake('local');
+        $student = $this->student();
+        $admin = $this->admin();
+        $path = 'student-documents/' . $student->id . '/noc.pdf';
+        Storage::disk('local')->put($path, 'issued noc bytes');
+
+        $request = DocumentRequest::create([
+            'student_id' => $student->id,
+            'document_type' => 'noc',
+            'purpose' => 'Higher studies',
+            'status' => 'ready',
+            'output_path' => $path,
+            'fulfilled_at' => now(),
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.documents.download', $request))
+            ->assertOk();
+
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 4500,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.document-requests.download', $request))
+            ->assertForbidden();
+
+        $this->actingAs($student->user)
+            ->get(route('student.documents.download', $request))
+            ->assertForbidden();
     }
 
     public function test_document_request_notifications_link_to_student_documents(): void

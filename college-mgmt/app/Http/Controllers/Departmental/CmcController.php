@@ -143,8 +143,8 @@ class CmcController extends Controller
             'status'          => 'required|in:upcoming,ongoing,completed,cancelled',
         ]);
 
-        if (($data['last_apply_date'] ?? null) && ($data['drive_date'] ?? null) && $data['last_apply_date'] > $data['drive_date']) {
-            return back()->withErrors(['last_apply_date' => 'Application deadline cannot be after the placement drive date.'])->withInput();
+        if ($message = $this->lifecycle->validateDriveCreate($data)) {
+            return back()->withErrors(['placement_drive' => $message])->withInput();
         }
 
         PlacementDrive::create($data);
@@ -308,7 +308,9 @@ class CmcController extends Controller
 
     public function events(Request $request)
     {
-        $query = CareerEvent::with('organizer')->withCount('registrations')->latest('event_date');
+        $query = CareerEvent::with('organizer')
+            ->withCount(['activeRegistrations as registrations_count', 'registrations as total_registrations_count'])
+            ->latest('event_date');
         if ($request->filled('type') && array_key_exists($request->type, CareerEvent::TYPE_LABELS)) $query->where('event_type', $request->type);
         $events = $query->paginate(25)->withQueryString();
         return view('departmental.cmc.events', compact('events'));
@@ -355,7 +357,7 @@ class CmcController extends Controller
             'is_published'          => 'boolean',
         ]);
 
-        $registeredCount = $event->registrations()->count();
+        $registeredCount = $event->activeRegistrations()->count();
         if ($registeredCount > 0) {
             $message = $this->registeredEventContractChangeMessage($event, $data);
             if ($message) {
@@ -397,6 +399,14 @@ class CmcController extends Controller
     public function updateEventAttendance(Request $request, CareerEvent $event, CareerEventRegistration $registration)
     {
         abort_unless((int) $registration->career_event_id === (int) $event->id, 404);
+
+        if ($registration->status !== 'registered') {
+            return back()->with('error', 'Cancelled career event registrations cannot be marked attended.');
+        }
+
+        if ($event->event_date && $event->event_date->isFuture()) {
+            return back()->withErrors(['attended' => 'Attendance can be marked only on or after the event date.']);
+        }
 
         $data = $request->validate([
             'attended' => 'required|boolean',

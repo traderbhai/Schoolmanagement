@@ -35,7 +35,7 @@ class ProgramChairController extends Controller
 
         $currentTerm = Term::latest('start_date')->first();
         $subjectsThisTerm = Subject::whereIn('program_id', $programIds)
-            ->when($currentTerm, fn($q) => $q->where('term_id', $currentTerm->id))
+            ->when($currentTerm, fn($q) => $q->where('term_number', $currentTerm->term_number))
             ->count();
 
         $examCount = Exam::whereYear('exam_date', now()->year)
@@ -43,7 +43,9 @@ class ProgramChairController extends Controller
             ->count();
 
         // Average marks
-        $avgMarks = ExamResult::whereHas('exam', fn($q) => $q->whereIn('program_id', $programIds))->avg('marks_obtained');
+        $avgMarks = ExamResult::whereHas('exam', fn($q) => $q
+            ->whereNotNull('published_at')
+            ->whereIn('program_id', $programIds))->avg('marks_obtained');
         $avgMarks = $avgMarks ? round($avgMarks, 1) : '—';
 
         // Pending approvals
@@ -51,12 +53,18 @@ class ProgramChairController extends Controller
         $avgMarks = is_numeric($avgMarks) ? $avgMarks : '-';
 
         // Attendance % for these programs
-        $attTotal = Attendance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))->count();
-        $attPresent = Attendance::whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))->where('status', 'present')->count();
+        $attTotal = $this->officialAttendanceQuery()
+            ->whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
+            ->count();
+        $attPresent = $this->officialAttendanceQuery()
+            ->whereHas('student', fn($q) => $q->whereIn('program_id', $programIds))
+            ->where('status', 'present')
+            ->count();
         $attendancePct = $attTotal > 0 ? round(($attPresent / $attTotal) * 100, 1) : 0;
 
         // Recent exams
         $recentExams = Exam::whereIn('program_id', $programIds)
+            ->whereNotNull('published_at')
             ->with(['subject', 'results'])
             ->latest('exam_date')
             ->take(6)
@@ -70,6 +78,7 @@ class ProgramChairController extends Controller
 
         // Pre-aggregate attendance per subject (join through timetable_entries)
         $subjectAttData = \App\Models\Attendance::join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+            ->tap(fn ($query) => $this->publishedTimetableJoinScope($query))
             ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
             ->groupBy('timetable_entries.subject_id')
             ->get()
@@ -97,12 +106,15 @@ class ProgramChairController extends Controller
 
             $studentAttBySubject = \App\Models\Attendance::whereIn('attendances.student_id', $studentIds)
                 ->join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+                ->tap(fn ($query) => $this->publishedTimetableJoinScope($query))
                 ->selectRaw('attendances.student_id, timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
                 ->groupBy('attendances.student_id', 'timetable_entries.subject_id')
                 ->get()
                 ->groupBy('student_id');
 
             $studentResults = \App\Models\ExamResult::whereIn('student_id', $studentIds)
+                ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
+                ->with('exam')
                 ->get()
                 ->groupBy('student_id');
 
@@ -371,6 +383,39 @@ class ProgramChairController extends Controller
         return ApprovalWorkflow::where('approver_role', 'program_chair')
             ->where('status', 'pending')
             ->whereHasMorph('approvable', [Applicant::class], fn($q) => $q->whereIn('program_id', $programIds));
+    }
+
+    private function officialAttendanceQuery()
+    {
+        return Attendance::query()
+            ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function publishedTimetableJoinScope($query)
+    {
+        return $query
+            ->where('timetable_entries.is_active', true)
+            ->where('timetable_entries.status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_entries.timetable_version_id')
+                    ->orWhereExists(function ($exists) {
+                        $exists->selectRaw('1')
+                            ->from('timetable_versions')
+                            ->whereColumn('timetable_versions.id', 'timetable_entries.timetable_version_id')
+                            ->where('timetable_versions.status', 'published');
+                    });
+            });
     }
 
     private function authorizeProgramApproval(ApprovalWorkflow $approval): void

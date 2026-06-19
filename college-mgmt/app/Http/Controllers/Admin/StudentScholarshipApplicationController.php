@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\Program;
 use App\Models\StudentScholarshipApplication;
+use App\Services\AcademicAccessPolicyService;
 use App\Services\GradeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,8 +14,12 @@ use Illuminate\Support\Facades\Storage;
 
 class StudentScholarshipApplicationController extends Controller
 {
+    public function __construct(private AcademicAccessPolicyService $policy) {}
+
     public function index(Request $request)
     {
+        $this->policy->authorizeScholarships($request->user());
+
         $query = StudentScholarshipApplication::with(['student.user', 'student.program', 'scheme', 'reviewer'])
             ->latest();
 
@@ -49,8 +54,14 @@ class StudentScholarshipApplicationController extends Controller
 
     public function shortlist(Request $request, StudentScholarshipApplication $application)
     {
+        $this->policy->authorizeScholarships($request->user());
+
         if ($application->status !== 'pending') {
             return back()->with('error', 'Only pending scholarship applications can be shortlisted.');
+        }
+
+        if ($blocker = $this->approvalBlocker($application)) {
+            return back()->withErrors(['scholarship' => $blocker]);
         }
 
         $data = $request->validate([
@@ -70,6 +81,8 @@ class StudentScholarshipApplicationController extends Controller
 
     public function approve(Request $request, StudentScholarshipApplication $application)
     {
+        $this->policy->authorizeScholarships($request->user());
+
         if (! in_array($application->status, ['pending', 'shortlisted'], true)) {
             return back()->with('error', 'Only pending or shortlisted scholarship applications can be approved.');
         }
@@ -106,8 +119,10 @@ class StudentScholarshipApplicationController extends Controller
 
     public function reject(Request $request, StudentScholarshipApplication $application)
     {
-        if ($application->status === 'disbursed') {
-            return back()->with('error', 'Disbursed scholarship applications cannot be rejected.');
+        $this->policy->authorizeScholarships($request->user());
+
+        if (! in_array($application->status, ['pending', 'shortlisted'], true)) {
+            return back()->with('error', 'Only pending or shortlisted scholarship applications can be rejected. Approved or disbursed scholarships require an audited reversal workflow.');
         }
 
         $data = $request->validate([
@@ -129,6 +144,8 @@ class StudentScholarshipApplicationController extends Controller
 
     public function disburse(Request $request, StudentScholarshipApplication $application)
     {
+        $this->policy->authorizeScholarships($request->user());
+
         $application = StudentScholarshipApplication::query()
             ->whereKey($application->id)
             ->lockForUpdate()
@@ -139,9 +156,14 @@ class StudentScholarshipApplicationController extends Controller
         }
 
         $data = $request->validate([
-            'disbursement_ref' => 'required|string|max:100|unique:student_scholarship_applications,disbursement_ref',
+            'disbursement_ref' => 'required|string|max:100',
             'review_note' => 'nullable|string|max:1000',
         ]);
+        $data['disbursement_ref'] = trim($data['disbursement_ref']);
+
+        if ($this->disbursementReferenceExists($data['disbursement_ref'], $application)) {
+            return back()->withErrors(['disbursement_ref' => 'This disbursement reference is already linked to another scholarship.'])->withInput();
+        }
 
         $scheme = $application->scheme;
         if ($blocker = $this->approvalBlocker($application)) {
@@ -180,6 +202,8 @@ class StudentScholarshipApplicationController extends Controller
 
     public function downloadProof(StudentScholarshipApplication $application)
     {
+        $this->policy->authorizeScholarships(request()->user());
+
         abort_unless($application->documents_path, 404);
         abort_unless(Storage::disk('local')->exists($application->documents_path), 404);
 
@@ -277,5 +301,16 @@ class StudentScholarshipApplicationController extends Controller
                 ->whereIn('status', ['approved', 'disbursed'])
                 ->whereKeyNot($application->id)
                 ->count();
+    }
+
+    private function disbursementReferenceExists(string $reference, StudentScholarshipApplication $application): bool
+    {
+        $normalized = strtolower(trim($reference));
+
+        return StudentScholarshipApplication::query()
+            ->whereNotNull('disbursement_ref')
+            ->whereRaw('LOWER(disbursement_ref) = ?', [$normalized])
+            ->whereKeyNot($application->id)
+            ->exists();
     }
 }

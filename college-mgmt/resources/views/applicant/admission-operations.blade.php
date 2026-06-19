@@ -13,6 +13,12 @@
     </div>
 
     @if(session('success'))<div class="alert alert-success py-2">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="alert alert-warning py-2">{{ session('error') }}</div>@endif
+    @unless($canRequestAssessmentChanges)
+        <div class="alert alert-secondary py-2">
+            Assessment reschedule requests are closed because this application is already in a final admission state.
+        </div>
+    @endunless
 
     <div class="row g-3">
         <div class="col-lg-7">
@@ -29,6 +35,7 @@
                                 <td>{{ $slot->venue ?: $slot->online_link ?: 'To be announced' }}</td>
                                 <td><span class="badge text-bg-info">{{ str_replace('_', ' ', $slot->status) }}</span></td>
                                 <td>
+                                    @if($canRequestAssessmentChanges)
                                     <form method="POST" action="{{ route('applicant.admission-operations.reschedule') }}" class="d-flex gap-1">
                                         @csrf
                                         <input type="hidden" name="slot_assignment_id" value="{{ $slot->id }}">
@@ -41,6 +48,9 @@
                                         <input name="reason" class="form-control form-control-sm" placeholder="Reason" required>
                                         <button class="btn btn-sm btn-primary">Send</button>
                                     </form>
+                                    @else
+                                        <span class="badge text-bg-secondary">Closed</span>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

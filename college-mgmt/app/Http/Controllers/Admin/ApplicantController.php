@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\Program;
@@ -10,12 +11,15 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class ApplicantController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeLegacyAdmissionOperations($request);
+
         $query = Applicant::with(['user', 'program', 'batch'])
             ->latest();
 
@@ -39,18 +43,27 @@ class ApplicantController extends Controller
 
     public function show(Applicant $applicant)
     {
+        $this->authorizeLegacyAdmissionOperations(request());
+
         $applicant->load(['user', 'program', 'batch', 'documents.requiredDocument', 'reviewer']);
         return view('admin.applicants.show', compact('applicant'));
     }
 
     public function store(Request $request)
     {
+        $this->authorizeLegacyAdmissionOperations($request);
+
         $validated = $request->validate([
             'name'       => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email',
             'phone'      => 'nullable|string|max:20',
-            'program_id' => 'required|exists:programs,id',
-            'batch_id'   => 'nullable|exists:batches,id',
+            'program_id' => ['required', Rule::exists('programs', 'id')->where('is_active', true)],
+            'batch_id'   => [
+                'nullable',
+                Rule::exists('batches', 'id')
+                    ->where('program_id', $request->input('program_id'))
+                    ->whereIn('status', ['upcoming', 'active']),
+            ],
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -79,8 +92,18 @@ class ApplicantController extends Controller
 
     public function saveNotes(Request $request, Applicant $applicant)
     {
+        $this->authorizeLegacyAdmissionOperations($request);
+
         $request->validate(['notes' => 'nullable|string|max:5000']);
         $applicant->update(['notes' => $request->notes]);
         return back()->with('success', 'Notes saved.');
+    }
+
+    private function authorizeLegacyAdmissionOperations(Request $request): void
+    {
+        abort_unless(
+            $request->user() && AccessControl::canManageLegacyAdmissionOperations($request->user()),
+            403
+        );
     }
 }

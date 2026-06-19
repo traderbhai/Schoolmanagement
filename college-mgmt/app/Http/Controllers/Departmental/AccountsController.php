@@ -167,6 +167,19 @@ class AccountsController extends Controller
     public function demandLetter(FeeDemand $feeDemand)
     {
         $feeDemand->load(['student.user', 'student.program', 'term']);
+
+        if (! $feeDemand->student || $feeDemand->student->status !== 'active') {
+            return redirect()
+                ->route('accounts.outstanding')
+                ->with('error', 'Demand letters are available only for active students.');
+        }
+
+        if (! in_array($feeDemand->status, self::ACTIVE_DEMAND_STATUSES, true)) {
+            return redirect()
+                ->route('accounts.outstanding')
+                ->with('error', 'Demand letters are available only for open outstanding fee demands.');
+        }
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
             'departmental.accounts.demand-letter-pdf',
             compact('feeDemand')

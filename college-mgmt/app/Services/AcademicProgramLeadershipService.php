@@ -95,7 +95,9 @@ class AcademicProgramLeadershipService
         )->orderBy('name')->limit(25)->get();
 
         $draftTimetable = $this->applyProgramScope(
-            TimetableEntry::with(['program', 'subject', 'teacher.user'])->where('is_active', true)->where('status', '!=', 'published'),
+            TimetableEntry::with(['program', 'subject', 'teacher.user'])
+                ->where('is_active', true)
+                ->where(fn (Builder $query) => $this->unpublishedTimetableScope($query)),
             $programIds
         )->orderBy('day_of_week')->limit(25)->get();
 
@@ -105,7 +107,7 @@ class AcademicProgramLeadershipService
             'metrics' => [
                 'faculty_gaps' => $facultyGaps->count(),
                 'draft_timetable' => $draftTimetable->count(),
-                'published_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true)->where('status', 'published'), $programIds)->count(),
+                'published_slots' => $this->applyProgramScope(TimetableEntry::where(fn (Builder $query) => $this->publishedTimetableScope($query)), $programIds)->count(),
                 'faculty_assignments' => $this->applyProgramScope(SubjectFacultyAssignment::query(), $programIds)->count(),
             ],
             'items' => collect($facultyGaps->map(fn (Subject $subject) => [
@@ -129,6 +131,7 @@ class AcademicProgramLeadershipService
 
         $attendanceRisk = Attendance::with('student.user')
             ->selectRaw('student_id, count(*) as exception_count')
+            ->whereHas('timetableEntry', fn (Builder $query) => $this->publishedTimetableScope($query))
             ->whereIn('student_id', $studentIds)
             ->whereIn('status', ['absent', 'late'])
             ->groupBy('student_id')
@@ -138,7 +141,9 @@ class AcademicProgramLeadershipService
 
         $weakPerformance = ExamResult::with(['student.user', 'exam.subject'])
             ->whereIn('student_id', $studentIds)
-            ->whereHas('exam', fn (Builder $query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+            ->whereHas('exam', fn (Builder $query) => $query
+                ->whereNotNull('published_at')
+                ->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
             ->limit(25)
             ->get();
 
@@ -289,6 +294,31 @@ class AcademicProgramLeadershipService
             'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned program work',
             'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit program scope assigned yet',
         ];
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function unpublishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(function (Builder $statusQuery) {
+                $statusQuery->where('status', '!=', 'published')
+                    ->orWhere(function (Builder $versionQuery) {
+                        $versionQuery->where('status', 'published')
+                            ->whereNotNull('timetable_version_id')
+                            ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
+                    });
+            });
     }
 
     private function studentLabel(?Student $student, mixed $fallbackId): string

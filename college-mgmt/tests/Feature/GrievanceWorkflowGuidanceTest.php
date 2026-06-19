@@ -142,6 +142,34 @@ class GrievanceWorkflowGuidanceTest extends TestCase
             ->assertSee('Marks were updated after exam-cell verification.');
     }
 
+    public function test_program_chair_cannot_use_global_admin_grievance_queue(): void
+    {
+        $student = $this->student();
+        $chair = $this->userWithRole('program_chair');
+        $grievance = $this->grievance($student, ['status' => 'open']);
+
+        $this->actingAs($chair)
+            ->get(route('admin.grievances.index'))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get(route('admin.grievances.show', $grievance))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->patch(route('admin.grievances.update', $grievance), [
+                'status' => 'resolved',
+                'resolution_notes' => 'Unauthorized global resolution.',
+            ])
+            ->assertForbidden();
+
+        $grievance->refresh();
+        $this->assertSame('open', $grievance->status);
+        $this->assertNull($grievance->resolved_at);
+        $this->assertNull($grievance->resolved_by);
+        $this->assertNull($grievance->resolution_notes);
+    }
+
     public function test_admin_cannot_resolve_or_close_without_resolution_notes(): void
     {
         $student = $this->student();
@@ -190,6 +218,35 @@ class GrievanceWorkflowGuidanceTest extends TestCase
         $this->assertSame('Reopened because student submitted additional evidence.', $grievance->resolution_notes);
         $this->assertNull($grievance->resolved_at);
         $this->assertNull($grievance->resolved_by);
+    }
+
+    public function test_admin_cannot_reopen_or_rewrite_closed_grievance_history(): void
+    {
+        $student = $this->student();
+        $admin = $this->userWithRole('admin');
+        $assignee = $this->userWithRole('hod');
+        $grievance = $this->grievance($student, [
+            'status' => 'closed',
+            'assigned_to' => $assignee->id,
+            'resolution_notes' => 'Student accepted the department resolution.',
+            'resolved_at' => now(),
+            'resolved_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.grievances.update', $grievance), [
+                'status' => 'under_review',
+                'assigned_to' => null,
+                'resolution_notes' => 'Trying to reopen closed history.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Closed grievance history cannot be changed from the standard admin update route.');
+
+        $grievance->refresh();
+        $this->assertSame('closed', $grievance->status);
+        $this->assertSame($assignee->id, $grievance->assigned_to);
+        $this->assertSame('Student accepted the department resolution.', $grievance->resolution_notes);
+        $this->assertSame($admin->id, $grievance->resolved_by);
     }
 
     public function test_student_can_close_resolved_grievance_once(): void

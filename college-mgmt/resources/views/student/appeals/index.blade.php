@@ -5,9 +5,13 @@
 @section('content')
 <div class="container-fluid py-3" style="max-width:960px">
     <div class="d-flex justify-content-end mb-3">
+        @if($canCreateAppeal)
         <a href="{{ route('student.appeals.create') }}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>New Appeal
         </a>
+        @else
+        <span class="badge bg-secondary-subtle text-secondary border">New appeals locked for inactive profiles</span>
+        @endif
     </div>
 
     @if($appeals->isEmpty())

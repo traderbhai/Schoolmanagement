@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Exam, Program, Student, StudentSubjectEnrollment, Subject, Term, User};
+use App\Models\{Exam, ExamRegistration, Program, Student, StudentSubjectEnrollment, Subject, Term, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -50,6 +50,14 @@ class StudentAdmitCardWorkflowTest extends TestCase
             'enrollment_type' => 'compulsory',
             'status' => 'active',
         ]);
+        ExamRegistration::create([
+            'student_id' => $student->id,
+            'exam_id' => $eligibleExam->id,
+            'status' => 'approved',
+            'attendance_eligible' => true,
+            'fee_cleared' => true,
+            'approved_by' => User::factory()->create()->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('student.admit-cards.index'))
@@ -61,6 +69,133 @@ class StudentAdmitCardWorkflowTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('student.admit-cards.download', $otherExam))
+            ->assertForbidden();
+    }
+
+    public function test_student_admit_card_requires_approved_registration_fee_and_attendance_clearance(): void
+    {
+        [$user, $student, $program] = $this->makeStudent();
+        $term = Term::factory()->create();
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Operations Research']);
+        $exam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'name' => 'Operations Research Final',
+            'exam_date' => now()->addWeek(),
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+
+        foreach ([
+            ['status' => 'pending', 'attendance_eligible' => true, 'fee_cleared' => true],
+            ['status' => 'approved', 'attendance_eligible' => false, 'fee_cleared' => true],
+            ['status' => 'approved', 'attendance_eligible' => true, 'fee_cleared' => false],
+        ] as $state) {
+            ExamRegistration::query()->delete();
+            ExamRegistration::create([
+                'student_id' => $student->id,
+                'exam_id' => $exam->id,
+                ...$state,
+            ]);
+
+            $this->actingAs($user)
+                ->get(route('student.admit-cards.index'))
+                ->assertStatus(200)
+                ->assertDontSee('Operations Research Final');
+
+            $this->actingAs($user)
+                ->get(route('student.admit-cards.download', $exam))
+                ->assertForbidden();
+        }
+    }
+
+    public function test_inactive_student_cannot_view_or_download_admit_card_from_stale_approval(): void
+    {
+        [$user, $student, $program] = $this->makeStudent();
+        $term = Term::factory()->create();
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Archived Student Subject']);
+        $exam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'name' => 'Archived Student Final',
+            'exam_date' => now()->addWeek(),
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        ExamRegistration::create([
+            'student_id' => $student->id,
+            'exam_id' => $exam->id,
+            'status' => 'approved',
+            'attendance_eligible' => true,
+            'fee_cleared' => true,
+            'approved_by' => User::factory()->create()->id,
+        ]);
+        $student->update(['status' => 'inactive']);
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.index'))
+            ->assertStatus(200)
+            ->assertDontSee('Archived Student Final')
+            ->assertDontSee(route('student.admit-cards.download', $exam), false);
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.download', $exam))
+            ->assertForbidden();
+    }
+
+    public function test_result_published_exam_does_not_issue_admit_card_from_stale_approval(): void
+    {
+        [$user, $student, $program] = $this->makeStudent();
+        $term = Term::factory()->create();
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Published Result Subject']);
+        $exam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'name' => 'Published Result Future Exam',
+            'exam_date' => now()->addWeek(),
+            'published_at' => now(),
+            'published_by' => User::factory()->create()->id,
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        ExamRegistration::create([
+            'student_id' => $student->id,
+            'exam_id' => $exam->id,
+            'status' => 'approved',
+            'attendance_eligible' => true,
+            'fee_cleared' => true,
+            'approved_by' => User::factory()->create()->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.index'))
+            ->assertStatus(200)
+            ->assertDontSee('Published Result Future Exam')
+            ->assertDontSee(route('student.admit-cards.download', $exam), false);
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.download', $exam))
             ->assertForbidden();
     }
 }

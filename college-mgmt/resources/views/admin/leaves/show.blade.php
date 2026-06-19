@@ -9,6 +9,11 @@
 
 @section('content')
 
+@php
+    $requesterName = $leave->teacher?->user?->name ?? $leave->student?->user?->name ?? '-';
+    $requesterType = $leave->teacher_id ? 'Teacher' : ($leave->student_id ? 'Student' : '-');
+@endphp
+
 <div class="d-flex justify-content-end mb-3">
     <a href="{{ route('admin.leaves.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
 </div>
@@ -19,7 +24,8 @@
             <div class="card-header"><strong>Leave Details</strong></div>
             <div class="card-body">
                 <table class="table table-sm table-borderless mb-0" style="font-size:.88rem">
-                    <tr><td class="text-muted" style="width:40%">Teacher</td><td class="fw-semibold">{{ $leave->teacher?->user?->name ?? '—' }}</td></tr>
+                    <tr><td class="text-muted" style="width:40%">Requester</td><td class="fw-semibold">{{ $requesterName }}</td></tr>
+                    <tr><td class="text-muted">Requester Type</td><td>{{ $requesterType }}</td></tr>
                     <tr><td class="text-muted">Leave Type</td><td>{{ ucfirst($leave->leave_type) }}</td></tr>
                     <tr><td class="text-muted">From Date</td><td>{{ $leave->from_date->format('d M Y') }}</td></tr>
                     <tr><td class="text-muted">To Date</td><td>{{ $leave->to_date->format('d M Y') }}</td></tr>

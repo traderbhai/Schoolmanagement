@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -8,6 +9,8 @@ class SettingsController extends Controller
 {
     public function index()
     {
+        $this->authorizeSystemConfiguration();
+
         $settings = $this->loadSettings();
         $phpVersion = phpversion();
         $laravelVersion = app()->version();
@@ -16,12 +19,16 @@ class SettingsController extends Controller
 
     public function branding()
     {
+        $this->authorizeSystemConfiguration();
+
         $settings = $this->loadSettings();
         return view('admin.settings.branding', compact('settings'));
     }
 
     public function update(Request $r)
     {
+        $this->authorizeSystemConfiguration();
+
         $r->validate([
             'institute_name' => 'required|string|max:191',
             'short_name' => 'nullable|string|max:50',
@@ -46,6 +53,8 @@ class SettingsController extends Controller
 
     public function apiDocs()
     {
+        $this->authorizeSystemConfiguration();
+
         return view('admin.settings.api-docs');
     }
 
@@ -62,5 +71,10 @@ class SettingsController extends Controller
             'primary_color' => '#4f46e5',
         ];
         return json_decode(file_get_contents($path), true) ?? [];
+    }
+
+    private function authorizeSystemConfiguration(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageSystemConfiguration(auth()->user()), 403);
     }
 }

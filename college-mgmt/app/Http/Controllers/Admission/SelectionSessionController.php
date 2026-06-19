@@ -13,9 +13,12 @@ use App\Models\SessionApplicant;
 use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SelectionSessionController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function index(Request $request)
     {
         $query = SelectionSession::with(['step', 'program', 'batch', 'sessionApplicants']);
@@ -82,6 +85,8 @@ class SelectionSessionController extends Controller
             'conducted_by' => 'nullable|exists:users,id',
         ]);
 
+        $this->validateSessionScope($data);
+
         $data['created_by'] = auth()->id();
         $data['status']     = $data['status'] ?? 'scheduled';
 
@@ -90,6 +95,7 @@ class SelectionSessionController extends Controller
         if ($request->boolean('auto_assign')) {
             $applicantsQuery = Applicant::where('program_id', $request->program_id)
                 ->where('status', 'shortlisted');
+            $this->applySessionApplicantVisibility($applicantsQuery, $request->user());
             if ($request->batch_id) {
                 $applicantsQuery->where('batch_id', $request->batch_id);
             }
@@ -106,15 +112,20 @@ class SelectionSessionController extends Controller
 
     public function show(SelectionSession $session)
     {
-        $session->load(['step', 'program', 'batch', 'conductedBy', 'sessionApplicants.applicant.user']);
+        $session->load(['step', 'program', 'batch', 'conductedBy']);
+        $visibleSessionApplicants = $session->sessionApplicants()
+            ->whereHas('applicant', fn ($query) => $this->applySessionApplicantVisibility($query, request()->user()))
+            ->with('applicant.user')
+            ->get();
+        $session->setRelation('sessionApplicants', $visibleSessionApplicants);
 
         // Stats
         $stats = [
-            'total'   => $session->sessionApplicants->count(),
-            'present' => $session->sessionApplicants->where('attendance_status', 'present')->count(),
-            'absent'  => $session->sessionApplicants->where('attendance_status', 'absent')->count(),
-            'pending' => $session->sessionApplicants->where('attendance_status', 'pending')->count(),
-            'excused' => $session->sessionApplicants->where('attendance_status', 'excused')->count(),
+            'total'   => $visibleSessionApplicants->count(),
+            'present' => $visibleSessionApplicants->where('attendance_status', 'present')->count(),
+            'absent'  => $visibleSessionApplicants->where('attendance_status', 'absent')->count(),
+            'pending' => $visibleSessionApplicants->where('attendance_status', 'pending')->count(),
+            'excused' => $visibleSessionApplicants->where('attendance_status', 'excused')->count(),
         ];
 
         // Shortlisted applicants not yet assigned
@@ -123,6 +134,7 @@ class SelectionSessionController extends Controller
             ->where('program_id', $session->program_id)
             ->where('status', 'shortlisted')
             ->whereNotIn('id', $assignedIds)
+            ->tap(fn ($query) => $this->applySessionApplicantVisibility($query, request()->user()))
             ->get();
 
         $panelSummary = app(\App\Services\AdmissionAssessmentPanelService::class)->summaryForSession($session);
@@ -144,6 +156,10 @@ class SelectionSessionController extends Controller
 
     public function update(Request $request, SelectionSession $session)
     {
+        if ($session->status !== 'scheduled') {
+            return redirect()->route('admission.sessions.show', $session)->with('error', 'Only scheduled sessions can be edited.');
+        }
+
         $data = $request->validate([
             'selection_process_step_id' => 'required|exists:selection_process_steps,id',
             'program_id'   => 'required|exists:programs,id',
@@ -158,6 +174,8 @@ class SelectionSessionController extends Controller
             'conducted_by' => 'nullable|exists:users,id',
         ]);
 
+        $this->validateSessionScope($data);
+
         $session->update($data);
 
         return redirect()->route('admission.sessions.show', $session)->with('success', 'Session updated successfully.');
@@ -165,12 +183,8 @@ class SelectionSessionController extends Controller
 
     public function destroy(SelectionSession $session)
     {
-        $hasAttendance = $session->sessionApplicants()
-            ->where('attendance_status', '!=', 'pending')
-            ->exists();
-
-        if ($hasAttendance) {
-            return back()->with('error', 'Cannot delete session: attendance has already been recorded.');
+        if ($this->hasAssessmentHistory($session)) {
+            return back()->with('error', 'Cannot delete session: assigned candidates, attendance, panels, scores, or assessment history already exist.');
         }
 
         $session->delete();
@@ -180,12 +194,38 @@ class SelectionSessionController extends Controller
 
     public function assignApplicants(Request $request, SelectionSession $session)
     {
+        if (! in_array($session->status, ['scheduled', 'ongoing'], true)) {
+            return back()->with('error', 'Candidates can be assigned only to scheduled or ongoing sessions.');
+        }
+
         $request->validate([
             'applicant_ids'   => 'required|array',
             'applicant_ids.*' => 'exists:applicants,id',
         ]);
 
         $session->load(['step']);
+        $applicants = Applicant::whereIn('id', $request->applicant_ids)
+            ->get()
+            ->keyBy('id');
+        $invalidApplicants = collect($request->applicant_ids)
+            ->filter(function ($applicantId) use ($session, $applicants) {
+                $applicant = $applicants->get((int) $applicantId);
+
+                return ! $applicant
+                    || (int) $applicant->program_id !== (int) $session->program_id
+                    || ($session->batch_id && (int) $applicant->batch_id !== (int) $session->batch_id)
+                    || $applicant->status !== 'shortlisted';
+            });
+        $hiddenApplicants = collect($request->applicant_ids)
+            ->filter(fn ($applicantId) => ! $this->canViewApplicantId((int) $applicantId, $request->user()));
+
+        if ($invalidApplicants->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'applicant_ids' => 'Candidates must be shortlisted applicants for this session program and batch.',
+            ]);
+        }
+        abort_if($hiddenApplicants->isNotEmpty(), 403);
+
         foreach ($request->applicant_ids as $applicantId) {
             $created = SessionApplicant::firstOrCreate([
                 'selection_session_id' => $session->id,
@@ -208,6 +248,12 @@ class SelectionSessionController extends Controller
 
     public function removeApplicant(SelectionSession $session, Applicant $applicant)
     {
+        $this->guardApplicantScope($applicant);
+
+        if ($session->status !== 'scheduled') {
+            return back()->with('error', 'Candidates can be removed only from scheduled sessions before assessment activity starts.');
+        }
+
         $pivot = SessionApplicant::where('selection_session_id', $session->id)
             ->where('applicant_id', $applicant->id)
             ->first();
@@ -225,6 +271,10 @@ class SelectionSessionController extends Controller
 
     public function markAttendance(Request $request, SelectionSession $session)
     {
+        if (! in_array($session->status, ['scheduled', 'ongoing'], true)) {
+            return back()->with('error', 'Attendance can be recorded only for scheduled or ongoing sessions.');
+        }
+
         $request->validate([
             'attendance'           => 'required|array',
             'attendance.*'         => 'in:pending,present,absent,excused',
@@ -233,6 +283,8 @@ class SelectionSessionController extends Controller
         ]);
 
         foreach ($request->attendance as $applicantId => $status) {
+            abort_unless($this->canViewApplicantId((int) $applicantId, $request->user()), 403);
+
             $pivot = SessionApplicant::where('selection_session_id', $session->id)
                 ->where('applicant_id', $applicantId)
                 ->first();
@@ -255,8 +307,16 @@ class SelectionSessionController extends Controller
 
     public function completeSession(SelectionSession $session)
     {
-        if (!app(DepartmentHierarchyService::class)->canApproveAdmission(auth()->user())) {
+        if (!$this->hierarchy->canApproveAdmission(auth()->user())) {
             return back()->with('error', 'Only authorized admission leadership can complete a session.');
+        }
+
+        if (! in_array($session->status, ['scheduled', 'ongoing'], true)) {
+            return back()->with('error', 'Only scheduled or ongoing sessions can be completed.');
+        }
+
+        if ($session->sessionApplicants()->where('attendance_status', 'pending')->exists()) {
+            return back()->with('error', 'Resolve all pending candidate attendance before completing the session.');
         }
 
         $session->update(['status' => 'completed']);
@@ -266,14 +326,37 @@ class SelectionSessionController extends Controller
 
     public function dispatchCallLetters(SelectionSession $session)
     {
-        $session->load(['sessionApplicants.applicant.user', 'program']);
+        if (! in_array($session->status, ['scheduled', 'ongoing'], true)) {
+            return back()->with('error', 'Call letters can be dispatched only for scheduled or ongoing sessions.');
+        }
+
+        $session->load(['program', 'step']);
+        $sessionApplicants = $session->sessionApplicants()
+            ->whereHas('applicant', fn ($query) => $this->applySessionApplicantVisibility($query, request()->user()))
+            ->with('applicant.user')
+            ->get();
 
         $sent = 0;
+        $skipped = 0;
         $service = app(\App\Services\AdmissionNotificationService::class);
 
-        foreach ($session->sessionApplicants as $sa) {
+        foreach ($sessionApplicants as $sa) {
             $applicant = $sa->applicant;
-            if (!$applicant) continue;
+            if (!$this->isEligibleForCallLetter($sa)) {
+                $skipped++;
+                continue;
+            }
+
+            $actionUrl = route('admission.applicants.call-letter', $applicant);
+            $existingNotice = \App\Models\Notification::where('user_id', $applicant->user_id)
+                ->where('type', 'call_letter')
+                ->where('action_url', $actionUrl)
+                ->exists();
+
+            if ($existingNotice) {
+                $skipped++;
+                continue;
+            }
 
             // Create a DB notification for the call letter
             \App\Models\Notification::create([
@@ -281,6 +364,7 @@ class SelectionSessionController extends Controller
                 'title'    => 'Interview Call Letter',
                 'message'  => "You have been scheduled for " . ($session->step->name ?? 'selection') . " on " . ($session->scheduled_date ? \Carbon\Carbon::parse($session->scheduled_date)->format('d M Y') : 'TBD') . " at " . ($session->venue ?? 'venue TBD') . ". Please report 30 minutes early.",
                 'type'     => 'call_letter',
+                'action_url' => $actionUrl,
                 'read_at'  => null,
             ]);
 
@@ -301,6 +385,80 @@ class SelectionSessionController extends Controller
             $sent++;
         }
 
-        return back()->with('success', "Call letters dispatched to {$sent} candidate(s).");
+        return back()->with('success', "Call letters dispatched to {$sent} candidate(s). {$skipped} skipped.");
+    }
+
+    private function validateSessionScope(array $data): void
+    {
+        $step = SelectionProcessStep::find($data['selection_process_step_id'] ?? null);
+        if (! $step || (int) $step->program_id !== (int) ($data['program_id'] ?? 0) || ! $step->is_active) {
+            throw ValidationException::withMessages([
+                'selection_process_step_id' => 'Selection step must be active and belong to the selected program.',
+            ]);
+        }
+
+        if (! empty($data['batch_id'])) {
+            $validBatch = Batch::where('id', $data['batch_id'])
+                ->where('program_id', $data['program_id'])
+                ->where('status', 'active')
+                ->exists();
+
+            if (! $validBatch) {
+                throw ValidationException::withMessages([
+                    'batch_id' => 'Selection session batch must be an active batch for the selected program.',
+                ]);
+            }
+        }
+    }
+
+    private function hasAssessmentHistory(SelectionSession $session): bool
+    {
+        return $session->sessionApplicants()->exists()
+            || $session->assessmentPanels()->exists()
+            || $session->panelAssignments()->exists()
+            || \App\Models\ApplicantScore::where('selection_session_id', $session->id)->exists()
+            || \App\Models\AdmissionAssessmentArtifact::where('selection_session_id', $session->id)->exists()
+            || \App\Models\AdmissionAssessmentLifecycleEvent::where('selection_session_id', $session->id)->exists()
+            || \App\Models\AdmissionAssessmentReschedule::where('from_session_id', $session->id)->orWhere('to_session_id', $session->id)->exists();
+    }
+
+    private function isEligibleForCallLetter(SessionApplicant $assignment): bool
+    {
+        $applicant = $assignment->applicant;
+
+        return $applicant
+            && $applicant->user_id
+            && ! in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true)
+            && (int) $applicant->program_id === (int) $assignment->session?->program_id
+            && ! in_array($assignment->attendance_status, ['absent', 'excused'], true);
+    }
+
+    private function applySessionApplicantVisibility($query, $user): void
+    {
+        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+            return;
+        }
+
+        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+
+        $query->where(function ($scope) use ($visibleUserIds) {
+            $scope->whereIn('assigned_to', $visibleUserIds)
+                ->orWhereNull('assigned_to');
+        });
+    }
+
+    private function guardApplicantScope(Applicant $applicant): void
+    {
+        abort_unless(
+            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, true),
+            403
+        );
+    }
+
+    private function canViewApplicantId(int $applicantId, $user): bool
+    {
+        $assignedTo = Applicant::whereKey($applicantId)->value('assigned_to');
+
+        return $this->hierarchy->canViewAssignedUser($user, 'ADM', $assignedTo, true);
     }
 }

@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Mail\OfferLetterMail;
 use App\Models\Applicant;
 use App\Models\Batch;
+use App\Models\Department;
+use App\Models\DepartmentMember;
+use App\Models\DepartmentRole;
 use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
@@ -93,6 +96,77 @@ class OfferLetterTest extends TestCase
         $this->assertNotNull($offer);
         $this->assertEquals('issued', $offer->status);
         $this->assertTrue($offer->acceptance_deadline->isFuture());
+    }
+
+    public function test_staff_offer_generation_skips_final_state_applicants(): void
+    {
+        Mail::fake();
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $officer = User::factory()->create(['password' => Hash::make('password')]);
+        $officer->assignRole('admission_officer');
+
+        $withdrawn = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'withdrawn',
+        ]);
+        $enrolled = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'enrolled',
+        ]);
+
+        foreach ([[$withdrawn, 1], [$enrolled, 2]] as [$applicant, $rank]) {
+            MeritListEntry::create([
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'applicant_id' => $applicant->id,
+                'rank' => $rank,
+                'total_weighted_score' => 90 - $rank,
+                'composite_score' => 90 - $rank,
+                'decision' => 'selected',
+                'decided_by' => $officer->id,
+                'decided_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($officer)
+            ->post(route('admission.offer-letters.bulk-generate', $program), [
+                'acceptance_days' => 14,
+                'batch_id' => $batch->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Generated 0 offer letter(s).');
+
+        $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $withdrawn->id]);
+        $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $enrolled->id]);
+    }
+
+    public function test_staff_direct_merit_offer_generation_skips_final_state_applicant_ids(): void
+    {
+        Mail::fake();
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'status' => 'active']);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+        $rejected = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'rejected',
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.admission.offer-letters.bulk-generate'), [
+                'program_id' => $program->id,
+                'applicant_ids' => [$rejected->id],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Offer letters generated: 0. Skipped (already exist): 1.');
+
+        $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $rejected->id]);
     }
 
     public function test_applicant_can_accept_offer(): void
@@ -256,6 +330,48 @@ class OfferLetterTest extends TestCase
 
         $this->assertSame('issued', $offer->fresh()->status);
         $this->assertSame('rejected', $applicant->fresh()->status);
+    }
+
+    public function test_stale_pending_offer_pages_hide_actions_for_final_state_applicants(): void
+    {
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'enrolled',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $officer->id,
+        ]);
+
+        $this->actingAs($applicantUser)
+            ->get(route('applicant.offer-letters.show', $offer))
+            ->assertOk()
+            ->assertSee('Offer Response Closed')
+            ->assertDontSee('Accept Offer')
+            ->assertDontSee('Decline Offer')
+            ->assertDontSee('Yes, Accept')
+            ->assertDontSee('Yes, Decline');
+
+        $this->actingAs($officer)
+            ->get(route('admission.offer-letters.show', $offer))
+            ->assertOk()
+            ->assertSee('Offer actions locked.')
+            ->assertDontSee('Mark as Accepted')
+            ->assertDontSee('Mark as Declined');
     }
 
     public function test_offer_letter_promotion_on_decline(): void
@@ -579,5 +695,193 @@ class OfferLetterTest extends TestCase
 
         $response = $this->actingAs($officer)->get(route('admission.offer-letters.export', $offer));
         $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+    }
+
+    public function test_staff_offer_letters_respect_assignment_scope(): void
+    {
+        Mail::fake();
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+
+        $hiddenUser = User::factory()->create(['name' => 'Hidden Offer Applicant']);
+        $hiddenApplicant = Applicant::factory()->create([
+            'user_id' => $hiddenUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+            'assigned_to' => $assignedCounsellor->id,
+        ]);
+        $visibleUser = User::factory()->create(['name' => 'Visible Offer Applicant']);
+        $visibleApplicant = Applicant::factory()->create([
+            'user_id' => $visibleUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+            'assigned_to' => $peerCounsellor->id,
+        ]);
+
+        foreach ([[$hiddenApplicant, 1], [$visibleApplicant, 2]] as [$applicant, $rank]) {
+            MeritListEntry::create([
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'applicant_id' => $applicant->id,
+                'rank' => $rank,
+                'total_weighted_score' => 90 - $rank,
+                'composite_score' => 90 - $rank,
+                'decision' => 'selected',
+                'decided_by' => $assignedCounsellor->id,
+                'decided_at' => now(),
+            ]);
+        }
+
+        $hiddenOffer = OfferLetter::create([
+            'applicant_id' => $hiddenApplicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $assignedCounsellor->id,
+        ]);
+        $visibleOffer = OfferLetter::create([
+            'applicant_id' => $visibleApplicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $peerCounsellor->id,
+        ]);
+
+        $response = $this->actingAs($peerCounsellor)
+            ->get(route('admission.offer-letters.index', $program));
+
+        $response->assertOk()
+            ->assertSee('Visible Offer Applicant')
+            ->assertDontSee('Hidden Offer Applicant')
+            ->assertViewHas('stats', fn (array $stats) => $stats['total'] === 1 && $stats['issued'] === 1);
+        $this->assertCount(1, $response->viewData('offerLetters'));
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.offer-letters.show', $hiddenOffer))
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.offer-letters.export', $hiddenOffer))
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.offer-letters.accept', $hiddenOffer))
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.offer-letters.decline', $hiddenOffer), ['reason' => 'Out of scope'])
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.offer-letters.bulk-generate', $program), [
+                'acceptance_days' => 14,
+                'batch_id' => $batch->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Generated 0 offer letter(s).');
+
+        $hiddenOffer->delete();
+        $visibleOffer->delete();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.offer-letters.bulk-generate', $program), [
+                'acceptance_days' => 14,
+                'batch_id' => $batch->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Generated 1 offer letter(s).');
+
+        $this->assertDatabaseMissing('offer_letters', [
+            'applicant_id' => $hiddenApplicant->id,
+        ]);
+        $this->assertDatabaseHas('offer_letters', [
+            'applicant_id' => $visibleApplicant->id,
+            'status' => 'issued',
+        ]);
+    }
+
+    public function test_offer_letter_pdf_download_is_blocked_after_final_admission_status(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'enrolled',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => User::factory()->create()->id,
+        ]);
+
+        $this->actingAs($applicantUser)
+            ->get(route('applicant.offer-letters.pdf', $offer))
+            ->assertRedirect(route('applicant.offer-letters.show', $offer))
+            ->assertSessionHas('error', 'This offer letter is no longer downloadable because your admission application is already in a final state.');
+    }
+
+    public function test_staff_offer_letter_pdf_export_is_blocked_after_final_admission_status(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $applicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'withdrawn',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => $officer->id,
+        ]);
+
+        $this->actingAs($officer)
+            ->from(route('admission.offer-letters.show', $offer))
+            ->get(route('admission.offer-letters.export', $offer))
+            ->assertRedirect(route('admission.offer-letters.show', $offer))
+            ->assertSessionHas('error', 'This offer letter is locked because the applicant is already in a final admission state.');
     }
 }

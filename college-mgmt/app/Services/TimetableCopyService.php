@@ -95,12 +95,18 @@ class TimetableCopyService
                 try {
                     // Delete existing entry for this slot in target term (if replace mode)
                     if ($options['replace_existing'] ?? false) {
-                        TimetableEntry::where('program_id', $programId)
-                            ->where('term_id', $targetTermId)
-                            ->where('day_of_week', $source->day_of_week)
-                            ->where('timetable_slot_id', $source->timetable_slot_id)
-                            ->where('batch_id', $source->batch_id)
-                            ->delete();
+                        $replaceError = $this->replaceDraftSlot(
+                            $programId,
+                            $targetTermId,
+                            (int) $source->batch_id,
+                            (int) $source->day_of_week,
+                            (int) $source->timetable_slot_id
+                        );
+
+                        if ($replaceError !== null) {
+                            $errors[] = "Skipped {$source->batch?->name} {$this->getDayName((int) $source->day_of_week)}: {$replaceError}";
+                            continue;
+                        }
                     }
 
                     // Create new entry in target term
@@ -118,6 +124,8 @@ class TimetableCopyService
                     }
 
                     TimetableEntry::create([
+                        'semester_id' => $options['semester_id'] ?? $source->semester_id,
+                        'course_id' => $options['course_id'] ?? $source->course_id,
                         'program_id' => $programId,
                         'term_id' => $targetTermId,
                         'batch_id' => $source->batch_id,
@@ -192,5 +200,31 @@ class TimetableCopyService
     {
         $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
         return $days[$day] ?? 'Unknown';
+    }
+
+    private function replaceDraftSlot(int $programId, int $termId, int $batchId, int $dayOfWeek, int $slotId): ?string
+    {
+        $existing = TimetableEntry::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->where('batch_id', $batchId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('timetable_slot_id', $slotId)
+            ->withCount(['attendances', 'substitutions'])
+            ->get();
+
+        $locked = $existing->first(fn (TimetableEntry $entry): bool =>
+            $entry->status !== 'draft'
+            || $entry->timetable_version_id !== null
+            || $entry->attendances_count > 0
+            || $entry->substitutions_count > 0
+        );
+
+        if ($locked) {
+            return 'existing timetable history is locked; use the PMC revision/version workflow';
+        }
+
+        $existing->each->delete();
+
+        return null;
     }
 }

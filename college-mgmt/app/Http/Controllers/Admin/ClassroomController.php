@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Services\TimetableService;
@@ -11,11 +12,19 @@ class ClassroomController extends Controller
     public function __construct(private TimetableService $service) {}
 
     public function index() {
+        $this->authorizeAcademicScheduling();
+
         $classrooms = Classroom::paginate(20);
         return view('admin.classrooms.index', compact('classrooms'));
     }
-    public function create() { return view('admin.classrooms.create'); }
+    public function create() {
+        $this->authorizeAcademicScheduling();
+
+        return view('admin.classrooms.create');
+    }
     public function store(Request $request) {
+        $this->authorizeAcademicScheduling();
+
         $data = $request->validate([
             'name'          => 'required|string|max:100',
             'room_number'   => 'required|string|max:20|unique:classrooms',
@@ -30,12 +39,20 @@ class ClassroomController extends Controller
         return redirect()->route('admin.classrooms.index')->with('success', 'Classroom added.');
     }
     public function show(Classroom $classroom) {
+        $this->authorizeAcademicScheduling();
+
         $currentSemester = \App\Models\Semester::current();
         $utilization = $currentSemester ? $this->service->getClassroomUtilization($classroom->id, $currentSemester->id) : 0;
         return view('admin.classrooms.show', compact('classroom','utilization'));
     }
-    public function edit(Classroom $classroom) { return view('admin.classrooms.edit', compact('classroom')); }
+    public function edit(Classroom $classroom) {
+        $this->authorizeAcademicScheduling();
+
+        return view('admin.classrooms.edit', compact('classroom'));
+    }
     public function update(Request $request, Classroom $classroom) {
+        $this->authorizeAcademicScheduling();
+
         $data = $request->validate([
             'name'          => 'required|string|max:100',
             'room_number'   => 'required|string|max:20|unique:classrooms,room_number,'.$classroom->id,
@@ -71,6 +88,8 @@ class ClassroomController extends Controller
         return redirect()->route('admin.classrooms.index')->with('success', 'Updated.');
     }
     public function destroy(Classroom $classroom) {
+        $this->authorizeAcademicScheduling();
+
         if ($this->hasOperationalDependencies($classroom)) {
             return redirect()->route('admin.classrooms.index')
                 ->with('error', 'Classrooms with timetable or exam history cannot be deleted because room allocation history depends on them.');
@@ -78,6 +97,11 @@ class ClassroomController extends Controller
 
         $classroom->delete();
         return redirect()->route('admin.classrooms.index')->with('success', 'Deleted.');
+    }
+
+    private function authorizeAcademicScheduling(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicScheduling(auth()->user()), 403);
     }
 
     private function hasOperationalDependencies(Classroom $classroom): bool

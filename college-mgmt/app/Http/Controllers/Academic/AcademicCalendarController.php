@@ -27,8 +27,10 @@ class AcademicCalendarController extends Controller
         return view('academic.academic-calendars.index', compact('events', 'terms', 'termId'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $this->policy->authorizeAcademicPlanning($request->user());
+
         $terms = Term::select('id', 'name')->get();
         return view('academic.academic-calendars.create', compact('terms'));
     }
@@ -58,8 +60,10 @@ class AcademicCalendarController extends Controller
         return view('academic.academic-calendars.show', compact('academicCalendar'));
     }
 
-    public function edit(AcademicCalendar $academicCalendar)
+    public function edit(Request $request, AcademicCalendar $academicCalendar)
     {
+        $this->policy->authorizeAcademicPlanning($request->user());
+
         $terms = Term::select('id', 'name')->get();
         return view('academic.academic-calendars.edit', compact('academicCalendar', 'terms'));
     }
@@ -67,6 +71,10 @@ class AcademicCalendarController extends Controller
     public function update(Request $request, AcademicCalendar $academicCalendar)
     {
         $this->policy->authorizeAcademicPlanning($request->user());
+
+        if ($academicCalendar->isPast()) {
+            return back()->with('error', 'Past academic calendar events are locked for academic history. Add a new revision event instead of editing history.');
+        }
 
         $validated = $request->validate([
             'event_date' => 'required|date',
@@ -86,9 +94,13 @@ class AcademicCalendarController extends Controller
     {
         $this->policy->authorizeAcademicPlanning($request->user());
 
+        if ($academicCalendar->isPast()) {
+            return back()->with('error', 'Past academic calendar events are locked for academic history and cannot be deleted.');
+        }
+
         $academicCalendar->delete();
         return redirect()->route('academic.academic-calendars.index')
-            ->with('success', 'Calendar event deleted successfully');
+            ->with('success', 'Calendar event archived successfully');
     }
 
     public function getEvents(Request $request)

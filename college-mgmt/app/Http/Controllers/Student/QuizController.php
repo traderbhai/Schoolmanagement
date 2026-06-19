@@ -20,6 +20,11 @@ class QuizController extends Controller
         return $student;
     }
 
+    private function ensureActiveStudent($student): void
+    {
+        abort_unless($student?->status === 'active', 403, 'Only active students can attempt quizzes.');
+    }
+
     private function ensureEnrolled($student, Quiz $quiz): void
     {
         abort_unless($this->isEnrolledForQuiz($student, $quiz), 403, 'You are not enrolled in this subject.');
@@ -101,6 +106,7 @@ class QuizController extends Controller
     public function start(Request $request, Quiz $quiz)
     {
         $student = $this->getStudent();
+        $this->ensureActiveStudent($student);
         abort_unless($quiz->isActive(), 403, 'This quiz is not currently active.');
         $this->ensureEnrolled($student, $quiz);
 
@@ -129,6 +135,7 @@ class QuizController extends Controller
     public function submitAttempt(Request $request, Quiz $quiz)
     {
         $student = $this->getStudent();
+        $this->ensureActiveStudent($student);
         abort_unless($quiz->isActive(), 403, 'This quiz is not currently active.');
         $this->ensureEnrolled($student, $quiz);
 
@@ -136,6 +143,10 @@ class QuizController extends Controller
             ->where('student_id', $student->id)
             ->where('is_completed', false)
             ->firstOrFail();
+
+        if ($quiz->duration_minutes && $attempt->started_at && now()->gt($attempt->started_at->copy()->addMinutes((int) $quiz->duration_minutes))) {
+            abort(403, 'This quiz attempt has exceeded the allowed duration.');
+        }
 
         $answers = $request->input('answers', []);
         $score = 0;
@@ -178,6 +189,7 @@ class QuizController extends Controller
     {
         $student = $this->getStudent();
         $this->ensureEnrolled($student, $quiz);
+        abort_unless($quiz->is_published, 404);
 
         if (! $quiz->show_result_immediately && $quiz->isActive()) {
             return redirect()->route('student.quizzes.index')

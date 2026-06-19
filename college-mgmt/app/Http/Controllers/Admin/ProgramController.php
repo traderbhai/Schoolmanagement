@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Program, Department};
 use App\Services\AcademicMasterDataIntegrityService;
@@ -12,18 +13,24 @@ class ProgramController extends Controller
 
     public function index()
     {
+        $this->authorizeAcademicStructure();
+
         $programs = Program::with('department', 'batches')->withCount('students', 'subjects', 'batches')->get();
         return view('admin.programs.index', compact('programs'));
     }
 
     public function create()
     {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active', true)->get();
         return view('admin.programs.create', compact('departments'));
     }
 
     public function store(Request $r)
     {
+        $this->authorizeAcademicStructure();
+
         $r->validate([
             'name'          => 'required|string|max:191',
             'code'          => 'required|string|max:20|unique:programs,code',
@@ -38,6 +45,8 @@ class ProgramController extends Controller
 
     public function show(Program $program)
     {
+        $this->authorizeAcademicStructure();
+
         $program->load('department', 'specializations', 'batches.terms', 'batches.academicYear');
         $studentCount = $program->students()->count();
         $activeBatch  = $program->batches()->where('status', 'active')->with('terms')->first();
@@ -46,12 +55,16 @@ class ProgramController extends Controller
 
     public function edit(Program $program)
     {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active', true)->get();
         return view('admin.programs.edit', compact('program', 'departments'));
     }
 
     public function update(Request $r, Program $program)
     {
+        $this->authorizeAcademicStructure();
+
         $validated = $r->validate([
             'name'          => 'required|string|max:191',
             'code'          => 'required|string|max:20|unique:programs,code,' . $program->id,
@@ -78,6 +91,8 @@ class ProgramController extends Controller
 
     public function destroy(Program $program)
     {
+        $this->authorizeAcademicStructure();
+
         $dependencies = $this->integrity->dependencyLabels('program', $program->id);
 
         if ($dependencies !== []) {
@@ -86,5 +101,10 @@ class ProgramController extends Controller
 
         $program->delete();
         return redirect()->route('admin.programs.index')->with('success', 'Program deleted.');
+    }
+
+    private function authorizeAcademicStructure(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
     }
 }

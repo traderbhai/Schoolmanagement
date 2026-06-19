@@ -21,8 +21,18 @@ class AcademicSummaryController extends Controller {
         $totalCreditsEnrolled = $enrolledSubjects->sum(fn($e) => $e->subject->credits ?? 0);
 
         // Current term attendance %
-        $totalSessions = Attendance::where('student_id', $student->id)->count();
-        $presentSessions = Attendance::where('student_id', $student->id)
+        $publishedAttendanceQuery = Attendance::where('student_id', $student->id)
+            ->whereHas('timetableEntry', function ($query) {
+                $query->where('is_active', true)
+                    ->where('status', 'published')
+                    ->where(function ($versionQuery) {
+                        $versionQuery->whereNull('timetable_version_id')
+                            ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+                    });
+            });
+
+        $totalSessions = (clone $publishedAttendanceQuery)->count();
+        $presentSessions = (clone $publishedAttendanceQuery)
             ->where('status', 'present')->count();
         $overallAttendance = $totalSessions > 0 ? round($presentSessions / $totalSessions * 100, 1) : null;
 

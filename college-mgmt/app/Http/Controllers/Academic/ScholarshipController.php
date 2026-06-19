@@ -14,13 +14,17 @@ class ScholarshipController extends Controller
 
     public function index()
     {
+        $this->policy->authorizeScholarships(request()->user());
+
         $scholarships = Scholarship::with('student')->paginate(15);
         return view('academic.scholarships.index', compact('scholarships'));
     }
 
     public function create()
     {
-        $students = Student::select('id', 'name')->get();
+        $this->policy->authorizeScholarships(request()->user());
+
+        $students = Student::where('status', 'active')->select('id', 'enrollment_number')->get();
         return view('academic.scholarships.create', compact('students'));
     }
 
@@ -42,6 +46,7 @@ class ScholarshipController extends Controller
 
         $validated = $this->normalizeScholarshipPayload($validated);
         $this->assertHasDiscount($validated);
+        $this->assertActiveStudentForActiveScholarship($validated);
         $this->assertNoDuplicateActiveScholarship($validated);
 
         Scholarship::create($validated);
@@ -52,12 +57,16 @@ class ScholarshipController extends Controller
 
     public function show(Scholarship $scholarship)
     {
+        $this->policy->authorizeScholarships(request()->user());
+
         $scholarship->load('student');
         return view('academic.scholarships.show', compact('scholarship'));
     }
 
     public function edit(Scholarship $scholarship)
     {
+        $this->policy->authorizeScholarships(request()->user());
+
         $students = Student::select('id', 'name')->get();
         return view('academic.scholarships.edit', compact('scholarship', 'students'));
     }
@@ -79,7 +88,9 @@ class ScholarshipController extends Controller
 
         $validated = $this->normalizeScholarshipPayload($validated + ['student_id' => $scholarship->student_id]);
         $this->assertHasDiscount($validated);
+        $this->assertActiveStudentForActiveScholarship($validated);
         $this->assertNoDuplicateActiveScholarship($validated, $scholarship);
+        $this->assertNoAppliedFeeDemandHistoryChange($scholarship, $validated);
         unset($validated['student_id']);
 
         $scholarship->update($validated);
@@ -91,6 +102,11 @@ class ScholarshipController extends Controller
     public function destroy(Request $request, Scholarship $scholarship)
     {
         $this->policy->authorizeScholarships($request->user());
+
+        if ($this->hasAppliedFeeDemandDeduction($scholarship)) {
+            return redirect()->route('academic.scholarships.show', $scholarship)
+                ->with('error', 'This scholarship is linked to fee demand discount history and cannot be archived. Use an audited fee adjustment workflow instead.');
+        }
 
         $scholarship->update(['status' => 'inactive']);
 
@@ -135,5 +151,51 @@ class ScholarshipController extends Controller
             ->exists();
 
         abort_if($duplicate, 422, 'An overlapping active scholarship with the same name and type already exists for this student.');
+    }
+
+    private function assertActiveStudentForActiveScholarship(array $validated): void
+    {
+        if (($validated['status'] ?? null) !== 'active') {
+            return;
+        }
+
+        $student = Student::find($validated['student_id']);
+
+        abort_if(
+            ! $student || $student->status !== 'active',
+            422,
+            'Active scholarships can be assigned only to active students. Archive or reactivate the student profile before creating a live fee discount.'
+        );
+    }
+
+    private function assertNoAppliedFeeDemandHistoryChange(Scholarship $scholarship, array $validated): void
+    {
+        if (! $this->hasAppliedFeeDemandDeduction($scholarship)) {
+            return;
+        }
+
+        abort_if(
+            $this->changesFinancialCommitment($scholarship, $validated),
+            422,
+            'This scholarship is linked to fee demand discount history and its financial terms cannot be changed. Use an audited fee adjustment workflow instead.'
+        );
+    }
+
+    private function changesFinancialCommitment(Scholarship $scholarship, array $validated): bool
+    {
+        return (string) $validated['name'] !== (string) $scholarship->name
+            || (string) $validated['type'] !== (string) $scholarship->type
+            || (string) $validated['status'] !== (string) $scholarship->status
+            || number_format((float) $validated['percentage'], 2, '.', '') !== number_format((float) $scholarship->percentage, 2, '.', '')
+            || number_format((float) ($validated['fixed_amount'] ?? 0), 2, '.', '') !== number_format((float) ($scholarship->fixed_amount ?? 0), 2, '.', '')
+            || (string) ($validated['valid_from'] ?? '') !== (string) ($scholarship->valid_from?->toDateString() ?? '')
+            || (string) ($validated['valid_to'] ?? '') !== (string) ($scholarship->valid_to?->toDateString() ?? '');
+    }
+
+    private function hasAppliedFeeDemandDeduction(Scholarship $scholarship): bool
+    {
+        return \App\Models\FeeDemand::where('student_id', $scholarship->student_id)
+            ->where('scholarship_deduction', '>', 0)
+            ->exists();
     }
 }

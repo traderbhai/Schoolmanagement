@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\Models\AcademicPmcTimetableNotification;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\Batch;
+use App\Models\Course;
 use App\Models\Department;
 use App\Models\Program;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Term;
+use App\Models\TimetableEntry;
 use App\Models\TimetableVersion;
 use App\Models\User;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
@@ -78,9 +81,26 @@ class AcademicsPmcTimetableV043Test extends TestCase
         ])->assertRedirect();
         $this->assertDatabaseHas('academic_pmc_timetable_version_workflows', ['timetable_version_id' => $published->id, 'lifecycle_status' => 'revision_requested']);
 
+        $entry = TimetableEntry::factory()->create([
+            'semester_id' => Semester::factory()->create()->id,
+            'course_id' => Course::factory()->create()->id,
+            'timetable_version_id' => $published->id,
+            'status' => 'published',
+            'is_active' => true,
+            'day_of_week' => 1,
+        ]);
+
         $this->actingAs($dean)->post(route('academics.pmc.timetable-versions-v041.rollback', $published), [
             'decision_reason' => 'Rollback to prior working version.',
         ])->assertRedirect();
-        $this->assertTrue(AcademicPmcTimetableVersionWorkflow::where('rollback_from_version_id', $published->id)->where('approval_status', 'dean_rollback')->exists());
+        $rollbackWorkflow = AcademicPmcTimetableVersionWorkflow::where('rollback_from_version_id', $published->id)
+            ->where('approval_status', 'dean_rollback')
+            ->latest('id')
+            ->firstOrFail();
+        $this->assertSame($rollbackWorkflow->timetable_version_id, $entry->fresh()->timetable_version_id);
+        $this->assertDatabaseHas('timetable_versions', [
+            'id' => $rollbackWorkflow->timetable_version_id,
+            'status' => 'published',
+        ]);
     }
 }

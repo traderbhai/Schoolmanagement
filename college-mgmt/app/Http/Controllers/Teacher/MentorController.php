@@ -39,8 +39,10 @@ class MentorController extends Controller
             ->get()
             ->map(function ($student) {
                 // Attendance % overall
-                $total   = Attendance::where('student_id', $student->id)->count();
-                $present = Attendance::where('student_id', $student->id)->where('status','present')->count();
+                $attendanceQuery = Attendance::where('student_id', $student->id)
+                    ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+                $total = (clone $attendanceQuery)->count();
+                $present = (clone $attendanceQuery)->whereIn('status', ['present', 'late'])->count();
                 $student->att_pct = $total > 0 ? round($present / $total * 100, 1) : null;
 
                 // Unread messages
@@ -92,6 +94,7 @@ class MentorController extends Controller
         // Attendance by subject
         $attBySubject = Attendance::where('student_id', $student->id)
             ->with('timetableEntry.subject')
+            ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query))
             ->get()
             ->filter(fn ($attendance) => $attendance->timetableEntry?->subject)
             ->groupBy(fn ($attendance) => $attendance->timetableEntry->subject_id)
@@ -106,6 +109,7 @@ class MentorController extends Controller
 
         // Exam results
         $results = ExamResult::where('student_id', $student->id)
+            ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
             ->with(['exam.subject'])
             ->latest('id')
             ->take(10)
@@ -152,5 +156,16 @@ class MentorController extends Controller
         ]);
 
         return back()->with('success', 'Meeting scheduled.');
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
     }
 }

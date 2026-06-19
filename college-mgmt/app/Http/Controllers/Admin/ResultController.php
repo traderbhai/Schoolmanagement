@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Student, Semester, Course};
 use App\Services\GradeService;
@@ -13,6 +14,8 @@ class ResultController extends Controller
 
     public function index(Request $request)
     {
+        abort_unless(auth()->user() && AccessControl::canManageExams(auth()->user()), 403);
+
         $students  = Student::with('user')->where('status', 'active')->get();
         $semesters = Semester::with('academicYear')->latest()->get();
         $report    = null;

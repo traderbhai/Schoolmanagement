@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@extends('layouts.applicant')
+
+@section('title', 'Offer Letters')
+@section('page-title', 'Offer Letters')
 
 @section('content')
 <div class="container-fluid py-4">

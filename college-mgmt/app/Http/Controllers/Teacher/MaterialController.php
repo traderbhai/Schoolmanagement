@@ -78,6 +78,12 @@ class MaterialController extends Controller
         $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
 
+        if (! $request->hasFile('file') && ! $request->filled('external_url') && trim((string) $request->input('description', '')) === '') {
+            return back()
+                ->withErrors(['file' => 'Attach a file, add an external URL, or enter a description before publishing study material.'])
+                ->withInput();
+        }
+
         $path = null;
         $sizeKb = null;
         if ($request->hasFile('file')) {

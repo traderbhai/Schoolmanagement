@@ -110,7 +110,9 @@ class AcademicDeanAttentionService
     private function weakPerformance(): Collection
     {
         return ExamResult::with(['student.user', 'exam.subject'])
-            ->whereHas('exam', fn ($query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+            ->whereHas('exam', fn ($query) => $query
+                ->whereNotNull('published_at')
+                ->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
             ->limit(25)
             ->get()
             ->map(fn (ExamResult $result) => $this->item($this->studentLabel($result->student, $result->student_id), ($result->exam?->subject?->code ?? 'Exam') . ' below pass mark', 'high', 'program', 'Program Director', null, route('dean.academics'), 'Review performance support'));

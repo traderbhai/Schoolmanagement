@@ -205,6 +205,30 @@ class TransportWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_transport_assignment_cannot_start_in_future_as_active_capacity(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $vehicle = $this->vehicle(['capacity' => 1]);
+        $student = $this->student('Future Transport Student');
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.assignments.store'), [
+                'student_id' => $student->id,
+                'transport_route_id' => $route->id,
+                'transport_stop_id' => $stop->id,
+                'transport_vehicle_id' => $vehicle->id,
+                'start_date' => now()->addDay()->toDateString(),
+            ])
+            ->assertSessionHasErrors('start_date');
+
+        $this->assertDatabaseMissing('transport_assignments', [
+            'student_id' => $student->id,
+            'transport_vehicle_id' => $vehicle->id,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_transport_assignment_rejects_inactive_stop_and_hides_inactive_options(): void
     {
         $admin = $this->userWithRole('admin');
@@ -254,6 +278,60 @@ class TransportWorkflowTest extends TestCase
 
         $this->assertSame('maintenance', $inactiveVehicle->fresh()->status);
         $this->assertFalse($inactiveRoute->fresh()->is_active);
+    }
+
+    public function test_transport_stop_cannot_be_added_to_inactive_route_through_direct_post(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $inactiveRoute = TransportRoute::create([
+            'name' => 'Archived West Route',
+            'code' => 'AWR-01',
+            'start_point' => 'Old Depot',
+            'end_point' => 'Campus',
+            'distance_km' => 9,
+            'monthly_fee' => 2100,
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.stops.store'), [
+                'transport_route_id' => $inactiveRoute->id,
+                'name' => 'Archived Stop',
+                'sequence' => 1,
+                'pickup_time' => '08:10',
+                'drop_time' => '17:20',
+                'monthly_fee_override' => 2000,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('transport_route_id');
+
+        $this->assertDatabaseMissing('transport_stops', [
+            'transport_route_id' => $inactiveRoute->id,
+            'name' => 'Archived Stop',
+        ]);
+    }
+
+    public function test_transport_stop_sequence_must_be_unique_within_route(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route] = $this->routeWithStop();
+
+        $this->actingAs($admin)
+            ->post(route('admin.transport.stops.store'), [
+                'transport_route_id' => $route->id,
+                'name' => 'Duplicate Sequence Stop',
+                'sequence' => 1,
+                'pickup_time' => '08:20',
+                'drop_time' => '17:35',
+                'monthly_fee_override' => 2600,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('sequence');
+
+        $this->assertDatabaseMissing('transport_stops', [
+            'transport_route_id' => $route->id,
+            'name' => 'Duplicate Sequence Stop',
+        ]);
     }
 
     public function test_admin_can_update_vehicle_when_capacity_and_status_are_safe(): void
@@ -463,5 +541,49 @@ class TransportWorkflowTest extends TestCase
             ->assertSee('Ramesh Driver')
             ->assertSee('Rs. 2,750.00')
             ->assertSee('Carry transport ID card.');
+    }
+
+    public function test_student_current_transport_hides_inactive_route_vehicle_or_inactive_profile(): void
+    {
+        [$route, $stop] = $this->routeWithStop();
+        $vehicle = $this->vehicle();
+        $student = $this->student('Stale Transport Student');
+
+        TransportAssignment::create([
+            'student_id' => $student->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'transport_vehicle_id' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+            'notes' => 'Stale current transport should not show.',
+        ]);
+
+        $route->update(['is_active' => false]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.transport.index'))
+            ->assertOk()
+            ->assertSee('No Active Transport Assignment')
+            ->assertDontSee('Stale current transport should not show.');
+
+        $route->update(['is_active' => true]);
+        $vehicle->update(['status' => 'maintenance']);
+
+        $this->actingAs($student->user)
+            ->get(route('student.transport.index'))
+            ->assertOk()
+            ->assertSee('No Active Transport Assignment')
+            ->assertDontSee('Stale current transport should not show.');
+
+        $vehicle->update(['status' => 'active']);
+        $student->update(['status' => 'inactive']);
+
+        $this->actingAs($student->user)
+            ->get(route('student.transport.index'))
+            ->assertOk()
+            ->assertSee('No Active Transport Assignment')
+            ->assertDontSee('Stale current transport should not show.');
     }
 }

@@ -42,11 +42,19 @@ class TimetableService
     /**
      * Build a weekly grid: day => slot_id => entry|null
      */
-    public function buildWeeklyGrid(int $semesterId, ?int $courseId = null, ?int $teacherId = null): array
+    public function buildWeeklyGrid(int $semesterId, ?int $courseId = null, ?int $teacherId = null, bool $officialOnly = false): array
     {
         $query = TimetableEntry::with(['subject', 'teacher.user', 'classroom', 'slot', 'course'])
             ->where('semester_id', $semesterId)
             ->where('is_active', true);
+
+        if ($officialOnly) {
+            $query->where('status', 'published')
+                ->where(function ($versionQuery) {
+                    $versionQuery->whereNull('timetable_version_id')
+                        ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+                });
+        }
 
         if ($courseId) {
             $query->where('course_id', $courseId);

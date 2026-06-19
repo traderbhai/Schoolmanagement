@@ -17,6 +17,10 @@ class ProfileController extends Controller {
         $student = auth()->user()->student;
         $user = auth()->user();
 
+        if (! $student || $student->status !== 'active') {
+            return back()->with('error', 'Profile updates are locked because this student profile is not active.');
+        }
+
         $request->validate([
             'name'            => 'required|string|max:255',
             'phone'           => 'nullable|string|max:20',

@@ -73,11 +73,44 @@ class AdmissionOsV039Test extends TestCase
         $applicant = Applicant::whereNotNull('user_id')->firstOrFail();
         $other = Applicant::whereNotNull('user_id')->where('id', '!=', $applicant->id)->firstOrFail();
         $otherAssignment = DB::table('admission_assessment_slot_assignments')->where('applicant_id', $other->id)->firstOrFail();
+        $applicant->update(['status' => 'submitted']);
 
         $this->actingAs($applicant->user)->post(route('applicant.admission-operations.reschedule'), [
             'slot_assignment_id' => $otherAssignment->id,
             'reason' => 'Trying to access another applicant assignment.',
         ])->assertNotFound();
+    }
+
+    public function test_final_state_applicant_cannot_request_assessment_reschedule(): void
+    {
+        $this->seed(\Database\Seeders\MasterDemoSeeder::class);
+        $applicant = Applicant::whereNotNull('user_id')->firstOrFail();
+        $assignment = DB::table('admission_assessment_slot_assignments')
+            ->where('applicant_id', $applicant->id)
+            ->firstOrFail();
+        $applicant->update(['status' => 'enrolled']);
+
+        $this->actingAs($applicant->user)
+            ->get(route('applicant.admission-operations.index'))
+            ->assertOk()
+            ->assertSee('Assessment reschedule requests are closed')
+            ->assertSee('Closed')
+            ->assertDontSee('Staff suggested slot');
+
+        $this->actingAs($applicant->user)
+            ->post(route('applicant.admission-operations.reschedule'), [
+                'slot_assignment_id' => $assignment->id,
+                'reason' => 'Trying to reschedule after enrollment.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Assessment reschedule requests are closed because this application is already in a final admission state.');
+
+        $this->assertDatabaseMissing('admission_assessment_reschedule_requests', [
+            'applicant_id' => $applicant->id,
+            'slot_assignment_id' => $assignment->id,
+            'reason' => 'Trying to reschedule after enrollment.',
+            'status' => 'pending',
+        ]);
     }
 
     public function test_assessment_bulk_assignment_check_in_and_evaluator_replacement(): void

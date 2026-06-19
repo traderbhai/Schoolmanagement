@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Company;
@@ -11,6 +12,8 @@ class CompanyController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizePlacementOperations($request);
+
         $companies = Company::withCount('drives')
             ->when($request->search, fn($q, $v) =>
                 $q->where(fn($sq) =>
@@ -32,11 +35,15 @@ class CompanyController extends Controller
 
     public function create()
     {
+        $this->authorizePlacementOperations(request());
+
         return view('admin.companies.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorizePlacementOperations($request);
+
         $request->validate([
             'name'          => 'required|string|max:191',
             'industry'      => 'nullable|string|max:191',
@@ -56,11 +63,15 @@ class CompanyController extends Controller
 
     public function edit(Company $company)
     {
+        $this->authorizePlacementOperations(request());
+
         return view('admin.companies.edit', compact('company'));
     }
 
     public function update(Request $request, Company $company)
     {
+        $this->authorizePlacementOperations($request);
+
         $request->validate([
             'name'          => 'required|string|max:191',
             'industry'      => 'nullable|string|max:191',
@@ -94,6 +105,8 @@ class CompanyController extends Controller
 
     public function destroy(Company $company)
     {
+        $this->authorizePlacementOperations(request());
+
         $hasOperationalHistory = $company->hasOperationalHistory();
 
         if ($hasOperationalHistory) {
@@ -105,5 +118,10 @@ class CompanyController extends Controller
 
         $company->delete();
         return redirect()->route('admin.companies.index')->with('success', 'Company deleted.');
+    }
+
+    private function authorizePlacementOperations(Request $request): void
+    {
+        abort_unless($request->user() && AccessControl::canManagePlacementOperations($request->user()), 403);
     }
 }

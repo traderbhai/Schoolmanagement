@@ -118,6 +118,68 @@ class HostelFeeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_monthly_hostel_fee_generation_does_not_duplicate_student_after_transfer(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Transferred Fee Student');
+        $oldAllocation = HostelAllocation::create([
+            'hostel_room_id' => $this->room(['room_number' => '211'])->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subMonths(2)->toDateString(),
+            'allocated_to' => now()->subDays(10)->toDateString(),
+            'status' => 'transferred',
+        ]);
+        $this->allocation($student, $this->room(['room_number' => '212']));
+
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $oldAllocation->id,
+            'student_id' => $student->id,
+            'month' => '2026-06',
+            'amount' => 4500,
+            'status' => 'pending',
+            'due_date' => '2026-06-30',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.fees.generate'), [
+                'month' => '2026-06',
+                'due_date' => '2026-06-30',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Hostel fee demands generated: 0 created, 1 skipped.');
+
+        $this->assertSame(1, HostelFeeDemand::where('student_id', $student->id)->where('month', '2026-06')->count());
+    }
+
+    public function test_monthly_hostel_fee_generation_skips_allocations_starting_after_billing_month(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Future Allocation Fee Student');
+        $room = $this->room(['room_number' => '213']);
+
+        HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => '2026-07-01',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.fees.generate'), [
+                'month' => '2026-06',
+                'due_date' => '2026-06-30',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Hostel fee demands generated: 0 created, 1 skipped.');
+
+        $this->assertDatabaseMissing('hostel_fee_demands', [
+            'student_id' => $student->id,
+            'month' => '2026-06',
+        ]);
+    }
+
     public function test_admin_can_mark_pending_hostel_fee_paid_and_cannot_waive_paid_demand(): void
     {
         $admin = $this->userWithRole('admin');
@@ -149,6 +211,33 @@ class HostelFeeWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Only pending hostel fee demands can be waived.');
 
         $this->assertSame('paid', $demand->fresh()->status);
+    }
+
+    public function test_admin_cannot_mark_inactive_student_hostel_fee_paid_from_standard_queue(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Inactive Hostel Fee Payment Student');
+        $allocation = $this->allocation($student, $this->room(['room_number' => '252']));
+        $student->update(['status' => 'inactive']);
+
+        $demand = HostelFeeDemand::create([
+            'hostel_allocation_id' => $allocation->id,
+            'student_id' => $student->id,
+            'month' => '2026-06',
+            'amount' => 4500,
+            'status' => 'pending',
+            'due_date' => '2026-06-30',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.hostel.fees.paid', $demand))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Hostel fee demands for inactive or archived students cannot be marked paid from the standard hostel fee queue. Use a documented waiver or correction workflow instead.');
+
+        $demand->refresh();
+        $this->assertSame('pending', $demand->status);
+        $this->assertNull($demand->paid_at);
+        $this->assertNull($demand->paid_by);
     }
 
     public function test_hostel_fee_waiver_requires_reason_and_stores_audit_metadata(): void
@@ -222,6 +311,10 @@ class HostelFeeWorkflowTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Hostel Fee Demands')
             ->assertSee('Outstanding: Rs. 5,200.00')
+            ->assertSee('Balance Due')
+            ->assertSee('Rs. 5,200')
+            ->assertSee('Academic and hostel outstanding amount')
+            ->assertDontSee('Fully paid - No dues')
             ->assertSee('North Hostel')
             ->assertSee('Room 301')
             ->assertSee('2026-06')

@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Attendance, TimetableEntry, Student, Semester, Course, Term};
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -8,6 +9,8 @@ use Illuminate\Http\Request;
 class AttendanceController extends Controller
 {
     public function index(Request $request) {
+        $this->authorizeGlobalAttendanceManagement($request);
+
         $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
         $courses   = Course::where('is_active', true)->orderBy('name')->get();
         $students  = Student::with('user')->orderBy('id')->get();
@@ -16,6 +19,8 @@ class AttendanceController extends Controller
 
     public function entriesJson(Request $request)
     {
+        $this->authorizeGlobalAttendanceManagement($request);
+
         $request->validate([
             'semester_id' => 'required|exists:semesters,id',
             'course_id'   => 'required|exists:courses,id',
@@ -28,7 +33,7 @@ class AttendanceController extends Controller
             ->where('semester_id', $request->semester_id)
             ->where('course_id', $request->course_id)
             ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
+            ->where(fn($query) => $this->publishedTimetableScope($query))
             ->get()
             ->map(fn($e) => [
                 'id'    => $e->id,
@@ -39,12 +44,18 @@ class AttendanceController extends Controller
     }
 
     public function mark(Request $request) {
+        $this->authorizeGlobalAttendanceManagement($request);
+
         $request->validate([
             'timetable_entry_id' => 'required|exists:timetable_entries,id',
-            'date'               => 'required|date',
+            'date'               => 'required|date|before_or_equal:today',
         ]);
 
-        $entry = TimetableEntry::with(['course','subject'])->findOrFail($request->timetable_entry_id);
+        $dayOfWeek = (int) date('N', strtotime($request->date));
+        $entry = TimetableEntry::with(['course','subject'])
+            ->where(fn($query) => $this->publishedTimetableScope($query))
+            ->where('day_of_week', $dayOfWeek)
+            ->findOrFail($request->timetable_entry_id);
         $students = $this->eligibleStudentsForEntry($entry)->with(['user',
             'attendances' => fn($q) => $q->where('timetable_entry_id', $entry->id)->where('date', $request->date)
         ])->orderBy('roll_number')->get();
@@ -53,13 +64,24 @@ class AttendanceController extends Controller
     }
 
     public function store(Request $request) {
+        $this->authorizeGlobalAttendanceManagement($request);
+
         $request->validate([
             'timetable_entry_id' => 'required|exists:timetable_entries,id',
-            'date'               => 'required|date',
+            'date'               => 'required|date|before_or_equal:today',
             'attendance'         => 'required|array',
+            'attendance.*'       => 'required|in:present,absent,late,excused',
         ]);
 
-        $entry = TimetableEntry::findOrFail($request->timetable_entry_id);
+        $entry = TimetableEntry::where(fn($query) => $this->publishedTimetableScope($query))
+            ->findOrFail($request->timetable_entry_id);
+        $attendanceDay = (int) date('N', strtotime($request->date));
+        if ((int) $entry->day_of_week !== $attendanceDay) {
+            return back()
+                ->withErrors(['date' => 'Attendance date must match the selected class schedule.'])
+                ->withInput();
+        }
+
         $allowedStudentIds = $this->eligibleStudentsForEntry($entry)->pluck('id')->map(fn($id) => (string) $id)->all();
         $submittedStudentIds = array_map('strval', array_keys($request->attendance));
         abort_unless(empty(array_diff($submittedStudentIds, $allowedStudentIds)), 403, 'Attendance includes students outside this class roster.');
@@ -75,17 +97,22 @@ class AttendanceController extends Controller
     }
 
     public function report(Request $request) {
+        $this->authorizeGlobalAttendanceManagement($request);
+
         $report = null;
         if ($request->student_id && $request->semester_id) {
             $termIds = $this->termIdsForSemester((int) $request->semester_id);
             $report = Attendance::with(['timetableEntry.subject'])
                 ->where('student_id', $request->student_id)
                 ->whereHas('timetableEntry', function ($q) use ($request, $termIds) {
-                    $q->where('semester_id', $request->semester_id);
+                    $this->publishedTimetableScope($q)
+                        ->where(function ($scope) use ($request, $termIds) {
+                            $scope->where('semester_id', $request->semester_id);
 
-                    if ($termIds !== []) {
-                        $q->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 })
                 ->get()
                 ->groupBy('timetableEntry.subject.name');
@@ -97,16 +124,26 @@ class AttendanceController extends Controller
 
     public function export(Request $r)
     {
+        abort_unless(
+            $r->user()
+                && AccessControl::canManageGlobalAttendance($r->user())
+                && AccessControl::canExportGlobalStudentData($r->user()),
+            403
+        );
+
         $query = Attendance::with(['student.user', 'timetableEntry.subject'])
             ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
             ->when($r->semester_id, function ($q) use ($r) {
                 $termIds = $this->termIdsForSemester((int) $r->semester_id);
                 $q->whereHas('timetableEntry', function ($sq) use ($r, $termIds) {
-                    $sq->where('semester_id', $r->semester_id);
+                    $this->publishedTimetableScope($sq)
+                        ->where(function ($scope) use ($r, $termIds) {
+                            $scope->where('semester_id', $r->semester_id);
 
-                    if ($termIds !== []) {
-                        $sq->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 });
             })
             ->when($r->date_from, fn($q) => $q->whereDate('date', '>=', $r->date_from))
@@ -138,6 +175,8 @@ class AttendanceController extends Controller
 
     public function pdfReport(Request $r)
     {
+        $this->authorizeGlobalAttendanceManagement($r);
+
         $report = null;
         $student = null;
         $semester = null;
@@ -150,11 +189,14 @@ class AttendanceController extends Controller
             $report = Attendance::with(['timetableEntry.subject'])
                 ->where('student_id', $r->student_id)
                 ->whereHas('timetableEntry', function ($q) use ($r, $termIds) {
-                    $q->where('semester_id', $r->semester_id);
+                    $this->publishedTimetableScope($q)
+                        ->where(function ($scope) use ($r, $termIds) {
+                            $scope->where('semester_id', $r->semester_id);
 
-                    if ($termIds !== []) {
-                        $q->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 })
                 ->get()
                 ->groupBy('timetableEntry.subject.name');
@@ -219,5 +261,20 @@ class AttendanceController extends Controller
             ->pluck('id')
             ->map(fn($id) => (int) $id)
             ->all();
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($scope) {
+                $scope->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function authorizeGlobalAttendanceManagement(Request $request): void
+    {
+        abort_unless($request->user() && AccessControl::canManageGlobalAttendance($request->user()), 403);
     }
 }

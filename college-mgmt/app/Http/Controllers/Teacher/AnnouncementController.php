@@ -55,12 +55,28 @@ class AnnouncementController extends Controller
         $this->ensureActiveTeacher();
         $this->ensureTeachesSubject((int) $request->subject_id);
 
+        $title = trim((string) $request->input('title'));
+        $body = trim((string) $request->input('body'));
+        $errors = [];
+
+        if ($title === '') {
+            $errors['title'] = 'Enter a non-blank announcement title.';
+        }
+
+        if ($body === '') {
+            $errors['body'] = 'Enter non-blank announcement details.';
+        }
+
+        if ($errors !== []) {
+            return back()->withErrors($errors)->withInput();
+        }
+
         SubjectAnnouncement::create([
             'subject_id' => $request->subject_id,
             'posted_by'  => auth()->id(),
             'term_id'    => Term::latest('start_date')->first()?->id,
-            'title'      => $request->title,
-            'body'       => $request->body,
+            'title'      => $title,
+            'body'       => $body,
             'is_pinned'  => $request->boolean('is_pinned'),
         ]);
 

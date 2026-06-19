@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, ExamAnomalyLog, ExamResult, MarksAppeal, Notification, Program, Student, Subject, Term, Classroom};
+use App\Models\{Exam, ExamAnomalyLog, ExamRegistration, ExamResult, MarksAppeal, Notification, Program, Student, Subject, Term, Classroom, Semester};
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -84,8 +84,9 @@ class ExamCellController extends Controller
         $programs   = Program::where('is_active', true)->orderBy('name')->get();
         $subjects   = Subject::orderBy('name')->get();
         $terms      = Term::orderByDesc('start_date')->get();
+        $semesters  = Semester::orderByDesc('start_date')->get();
         $classrooms = Classroom::orderBy('name')->get();
-        return view('departmental.exam-cell.create-exam', compact('programs', 'subjects', 'terms', 'classrooms'));
+        return view('departmental.exam-cell.create-exam', compact('programs', 'subjects', 'terms', 'semesters', 'classrooms'));
     }
 
     public function storeExam(Request $request)
@@ -94,6 +95,7 @@ class ExamCellController extends Controller
             'name'         => 'required|string|max:255',
             'type'         => 'required|string|max:100',
             'program_id'   => 'required|exists:programs,id',
+            'semester_id'  => 'nullable|exists:semesters,id',
             'subject_id'   => 'required|exists:subjects,id',
             'term_id'      => 'nullable|exists:terms,id',
             'exam_date'    => 'required|date',
@@ -103,6 +105,12 @@ class ExamCellController extends Controller
             'passing_marks'=> 'nullable|numeric|min:0',
             'classroom_id' => 'nullable|exists:classrooms,id',
         ]);
+        $semesterWasSubmitted = $request->filled('semester_id');
+        $data = $this->normalizeExamSemester($data);
+
+        if ($errors = $this->examAcademicContractErrors($data, $semesterWasSubmitted)) {
+            return back()->withInput()->withErrors($errors);
+        }
 
         Exam::create($data);
         return redirect()->route('exam-cell.exams')->with('success', 'Exam scheduled successfully.');
@@ -113,8 +121,9 @@ class ExamCellController extends Controller
         $programs   = Program::where('is_active', true)->orderBy('name')->get();
         $subjects   = Subject::orderBy('name')->get();
         $terms      = Term::orderByDesc('start_date')->get();
+        $semesters  = Semester::orderByDesc('start_date')->get();
         $classrooms = Classroom::orderBy('name')->get();
-        return view('departmental.exam-cell.edit-exam', compact('exam', 'programs', 'subjects', 'terms', 'classrooms'));
+        return view('departmental.exam-cell.edit-exam', compact('exam', 'programs', 'subjects', 'terms', 'semesters', 'classrooms'));
     }
 
     public function updateExam(Request $request, Exam $exam)
@@ -128,6 +137,7 @@ class ExamCellController extends Controller
             'name'         => 'required|string|max:255',
             'type'         => 'required|string|max:100',
             'program_id'   => 'required|exists:programs,id',
+            'semester_id'  => 'nullable|exists:semesters,id',
             'subject_id'   => 'required|exists:subjects,id',
             'term_id'      => 'nullable|exists:terms,id',
             'exam_date'    => 'required|date',
@@ -137,6 +147,17 @@ class ExamCellController extends Controller
             'passing_marks'=> 'nullable|numeric|min:0',
             'classroom_id' => 'nullable|exists:classrooms,id',
         ]);
+        $semesterWasSubmitted = $request->filled('semester_id');
+        $data = $this->normalizeExamSemester($data, $exam);
+
+        if ($errors = $this->examAcademicContractErrors($data, $semesterWasSubmitted)) {
+            return back()->withInput()->withErrors($errors);
+        }
+
+        if ($this->hasExamOperationalHistory($exam) && $this->changesExamContract($exam, $data)) {
+            return redirect()->route('exam-cell.exams')
+                ->with('error', 'Exams with result or registration history cannot have program, subject, term, type, or marks-scale fields changed.');
+        }
 
         $exam->update($data);
         return redirect()->route('exam-cell.exams')->with('success', 'Exam updated.');
@@ -146,6 +167,10 @@ class ExamCellController extends Controller
     {
         if ($exam->published_at) {
             return back()->with('error', 'Published exams cannot be deleted because official result history is locked.');
+        }
+
+        if ($this->hasExamOperationalHistory($exam)) {
+            return back()->with('error', 'Exams with result or registration history cannot be deleted. Archive or cancel through an audited exam workflow instead.');
         }
 
         $exam->delete();
@@ -185,6 +210,10 @@ class ExamCellController extends Controller
     {
         if ($exam->published_at) {
             return back()->with('error', 'Published results are locked. Reopen through an approved correction workflow before editing marks.');
+        }
+
+        if ($exam->exam_date && $exam->exam_date->isFuture()) {
+            return back()->with('error', 'Exam results cannot be entered before the exam date.');
         }
 
         $request->validate([
@@ -243,6 +272,10 @@ class ExamCellController extends Controller
     {
         if ($exam->published_at) {
             return back()->with('error', 'Results are already published for this exam.');
+        }
+
+        if ($exam->exam_date && $exam->exam_date->isFuture()) {
+            return back()->with('error', 'Results cannot be published before the exam date.');
         }
 
         $eligibleStudentIds = $this->eligibleStudentQuery($exam)
@@ -325,7 +358,7 @@ class ExamCellController extends Controller
 
         if ($request->filled('exam_id')) {
             $selectedExam = Exam::with(['subject', 'program', 'classroom'])->findOrFail($request->exam_id);
-            $students = $this->eligibleStudentQuery($selectedExam)->with('user')->get();
+            $students = $this->hallTicketEligibleStudentQuery($selectedExam)->with('user')->get();
         }
 
         return view('departmental.exam-cell.hall-tickets', compact('programs', 'exams', 'students', 'selectedExam'));
@@ -333,7 +366,7 @@ class ExamCellController extends Controller
 
     public function downloadHallTicket(Exam $exam, Student $student)
     {
-        abort_unless($this->eligibleStudentQuery($exam)->whereKey($student->id)->exists(), 403);
+        abort_unless($this->hallTicketEligibleStudentQuery($exam)->whereKey($student->id)->exists(), 403);
 
         $exam->load(['subject', 'program', 'classroom', 'term']);
         $student->load('user');
@@ -367,6 +400,12 @@ class ExamCellController extends Controller
             return back()->with('error', 'Reviewed marks appeal history cannot be changed.');
         }
 
+        $result = $appeal->examResult;
+        $exam = $result?->exam;
+        if (! $result || ! $exam || ! $exam->published_at || $result->is_absent || (int) $result->student_id !== (int) $appeal->student_id) {
+            return back()->with('error', 'This marks appeal is no longer valid for correction because the official published result is unavailable or not appealable.');
+        }
+
         $action = $request->action;
         $remarks = trim((string) $request->remarks);
 
@@ -379,7 +418,7 @@ class ExamCellController extends Controller
                 return back()->withErrors(['revised_marks' => 'Revised marks are required when approving an appeal.']);
             }
 
-            $totalMarks = $appeal->examResult?->exam?->total_marks;
+            $totalMarks = $exam->total_marks;
             if ($totalMarks !== null && (float) $request->revised_marks > (float) $totalMarks) {
                 return back()->withErrors(['revised_marks' => 'Revised marks cannot exceed the exam total marks.']);
             }
@@ -396,7 +435,7 @@ class ExamCellController extends Controller
         ]);
 
         if ($request->action === 'approved' && $request->revised_marks !== null) {
-            $appeal->examResult?->update(['marks_obtained' => $request->revised_marks]);
+            $result->update(['marks_obtained' => $request->revised_marks]);
         }
 
         return back()->with('success', 'Appeal reviewed.');
@@ -485,5 +524,132 @@ class ExamCellController extends Controller
         }
 
         return $query->orderBy('enrollment_number');
+    }
+
+    private function hallTicketEligibleStudentQuery(Exam $exam)
+    {
+        if ($exam->published_at) {
+            return Student::query()->whereRaw('1 = 0');
+        }
+
+        return $this->eligibleStudentQuery($exam)
+            ->whereHas('examRegistrations', function ($query) use ($exam) {
+                $query->where('exam_id', $exam->id)
+                    ->where('status', 'approved')
+                    ->where('attendance_eligible', true)
+                    ->where('fee_cleared', true);
+            });
+    }
+
+    private function hasExamOperationalHistory(Exam $exam): bool
+    {
+        return $exam->results()->exists()
+            || ExamRegistration::where('exam_id', $exam->id)->exists();
+    }
+
+    private function changesExamContract(Exam $exam, array $data): bool
+    {
+        foreach (['program_id', 'semester_id', 'subject_id', 'term_id', 'type', 'total_marks', 'passing_marks'] as $field) {
+            if ((string) ($exam->{$field} ?? '') !== (string) ($data[$field] ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function examAcademicContractErrors(array $data, bool $semesterWasSubmitted = false): array
+    {
+        $errors = [];
+        $program = Program::find($data['program_id'] ?? null);
+        if (! $program || ! $program->is_active) {
+            $errors['program_id'] = 'Select an active program for this exam.';
+        }
+
+        $subject = Subject::find($data['subject_id'] ?? null);
+        if (! $subject || ! $subject->is_active) {
+            $errors['subject_id'] = 'Select an active subject for this exam.';
+        } elseif ($program && $subject->program_id !== null && (int) $subject->program_id !== (int) $program->id) {
+            $errors['subject_id'] = 'Selected subject does not belong to the selected program.';
+        }
+
+        if (! empty($data['term_id'])) {
+            $term = Term::find($data['term_id']);
+            if (! $term || (int) $term->program_id !== (int) ($data['program_id'] ?? 0)) {
+                $errors['term_id'] = 'Selected term does not belong to the selected program.';
+            }
+        }
+
+        $semester = Semester::find($data['semester_id'] ?? null);
+        if (! $semester) {
+            $errors['semester_id'] = 'Select a valid semester for this exam.';
+        } elseif ($semesterWasSubmitted && ! empty($data['term_id'])) {
+            $term = $term ?? Term::find($data['term_id']);
+            if ($term && (int) $semester->number !== (int) $term->term_number) {
+                $errors['semester_id'] = 'Selected semester does not match the selected term.';
+            }
+        }
+
+        if (! empty($data['start_time']) && ! empty($data['end_time']) && $data['end_time'] <= $data['start_time']) {
+            $errors['end_time'] = 'Exam end time must be after the start time.';
+        }
+
+        if (isset($data['passing_marks'], $data['total_marks']) && (float) $data['passing_marks'] > (float) $data['total_marks']) {
+            $errors['passing_marks'] = 'Passing marks cannot be greater than total marks.';
+        }
+
+        if (
+            $semester
+            && ! empty($data['exam_date'])
+            && $semester->start_date
+            && $semester->end_date
+        ) {
+            $examDate = \Illuminate\Support\Carbon::parse($data['exam_date'])->startOfDay();
+            $startsOn = \Illuminate\Support\Carbon::parse($semester->start_date)->startOfDay();
+            $endsOn = \Illuminate\Support\Carbon::parse($semester->end_date)->startOfDay();
+
+            if ($examDate->lt($startsOn) || $examDate->gt($endsOn)) {
+                $errors['exam_date'] = 'Exam date must fall within the selected semester window.';
+            }
+        }
+
+        if (! empty($data['classroom_id'])) {
+            $classroom = Classroom::find($data['classroom_id']);
+            if (! $classroom || ! $classroom->is_active) {
+                $errors['classroom_id'] = 'Select an active classroom for this exam.';
+            }
+        }
+
+        return $errors;
+    }
+
+    private function normalizeExamSemester(array $data, ?Exam $exam = null): array
+    {
+        if (! empty($data['semester_id'])) {
+            return $data;
+        }
+
+        if ($exam?->semester_id) {
+            $data['semester_id'] = $exam->semester_id;
+
+            return $data;
+        }
+
+        if (! empty($data['term_id'])) {
+            $term = Term::find($data['term_id']);
+            $semester = $term
+                ? Semester::where('number', $term->term_number)->first()
+                    ?: Semester::where('name', $term->name)->first()
+                : null;
+            if ($semester) {
+                $data['semester_id'] = $semester->id;
+
+                return $data;
+            }
+        }
+
+        $data['semester_id'] = Semester::current()?->id ?? Semester::first()?->id;
+
+        return $data;
     }
 }

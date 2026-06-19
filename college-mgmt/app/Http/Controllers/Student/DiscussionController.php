@@ -15,6 +15,7 @@ class DiscussionController extends Controller {
     public function index(Subject $subject) {
         $student = $this->student();
         $this->ensureEnrolled($student, $subject);
+        $canParticipate = $student->status === 'active';
 
         $discussions = SubjectDiscussion::where('subject_id', $subject->id)
             ->withCount('replies')
@@ -23,23 +24,25 @@ class DiscussionController extends Controller {
             ->latest()
             ->paginate(20);
 
-        return view('student.discussions.index', compact('subject', 'discussions'));
+        return view('student.discussions.index', compact('subject', 'discussions', 'canParticipate'));
     }
 
     public function show(Subject $subject, SubjectDiscussion $discussion) {
         abort_if($discussion->subject_id !== $subject->id, 404);
         $student = $this->student();
         $this->ensureEnrolled($student, $subject);
+        $canParticipate = $student->status === 'active';
 
         $discussion->increment('views');
         $discussion->load(['author', 'replies.author']);
 
-        return view('student.discussions.show', compact('subject', 'discussion'));
+        return view('student.discussions.show', compact('subject', 'discussion', 'canParticipate'));
     }
 
     public function store(Request $request, Subject $subject) {
         $student = $this->student();
         $termId = $this->ensureEnrolled($student, $subject);
+        abort_unless($student->status === 'active', 403, 'Discussion posting is available only for active students.');
 
         $request->validate([
             'title' => 'required|string|max:255',
@@ -62,6 +65,7 @@ class DiscussionController extends Controller {
         abort_if($discussion->subject_id !== $subject->id, 404);
         $student = $this->student();
         $this->ensureEnrolled($student, $subject);
+        abort_unless($student->status === 'active', 403, 'Discussion replies are available only for active students.');
 
         $request->validate(['body' => 'required|string|max:3000']);
 
@@ -76,7 +80,9 @@ class DiscussionController extends Controller {
 
     public function markResolved(Subject $subject, SubjectDiscussion $discussion) {
         abort_if($discussion->subject_id !== $subject->id, 404);
-        $this->ensureEnrolled($this->student(), $subject);
+        $student = $this->student();
+        $this->ensureEnrolled($student, $subject);
+        abort_unless($student->status === 'active', 403, 'Discussion updates are available only for active students.');
         abort_if($discussion->posted_by !== Auth::id(), 403);
         $discussion->update(['is_resolved' => true]);
         return back()->with('success', 'Marked as resolved.');

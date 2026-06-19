@@ -21,6 +21,8 @@ class AcademicScopeAssignment extends Model
         'ends_on',
         'assigned_by',
         'assigned_at',
+        'deactivated_by',
+        'deactivated_at',
         'metadata',
     ];
 
@@ -30,12 +32,14 @@ class AcademicScopeAssignment extends Model
         'starts_on' => 'date',
         'ends_on' => 'date',
         'assigned_at' => 'datetime',
+        'deactivated_at' => 'datetime',
         'metadata' => 'array',
     ];
 
     public function member() { return $this->belongsTo(DepartmentMember::class, 'department_member_id'); }
     public function user() { return $this->belongsTo(User::class); }
     public function assignedBy() { return $this->belongsTo(User::class, 'assigned_by'); }
+    public function deactivatedBy() { return $this->belongsTo(User::class, 'deactivated_by'); }
 
     public function scopeCurrentlyActive(Builder $query): Builder
     {

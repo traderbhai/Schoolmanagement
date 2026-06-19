@@ -78,14 +78,22 @@ class ApprovalChainService
         }
 
         $nextStep = $steps[$nextStepIndex];
+        $workflowType = $approval->workflow_type ?? 'general';
+        $nextStepOrder = $approval->step_order + 1;
 
-        return ApprovalWorkflow::create([
+        return ApprovalWorkflow::firstOrCreate([
+            'approvable_type'    => $approval->approvable_type,
+            'approvable_id'      => $approval->approvable_id,
+            'workflow_type'      => $workflowType,
+            'step_order'         => $nextStepOrder,
+            'parent_approval_id' => $approval->id,
+        ], [
             'approvable_type'    => $approval->approvable_type,
             'approvable_id'      => $approval->approvable_id,
             'approver_role'      => $nextStep['role'],
             'status'             => 'pending',
-            'step_order'         => $approval->step_order + 1,
-            'workflow_type'      => $approval->workflow_type,
+            'step_order'         => $nextStepOrder,
+            'workflow_type'      => $workflowType,
             'sla_hours'          => $nextStep['sla_hours'],
             'due_at'             => now()->addHours($nextStep['sla_hours']),
             'parent_approval_id' => $approval->id,

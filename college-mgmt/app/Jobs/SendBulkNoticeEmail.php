@@ -19,6 +19,17 @@ class SendBulkNoticeEmail implements ShouldQueue
 
     public function handle(): void
     {
+        $notice = Notice::query()->find($this->notice->getKey());
+        if (! $notice
+            || ! $notice->is_published
+            || ! in_array($notice->audience, ['all', 'students'], true)
+            || $notice->publish_date?->gt(now())
+            || ($notice->expiry_date && $notice->expiry_date->lt(now()))) {
+            return;
+        }
+
+        $this->notice = $notice;
+
         Student::with('user')->where('status', 'active')->each(function (Student $student) {
             Mail::to($student->user->email)->queue(new NoticeMail($this->notice));
         });

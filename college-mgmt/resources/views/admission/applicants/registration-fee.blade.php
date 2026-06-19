@@ -65,6 +65,17 @@
         <i class="bi bi-arrow-left me-1"></i> Back to Applicant
     </a>
 
+@elseif($registrationFeeLocked ?? false)
+    <div class="alert alert-warning">
+        <i class="bi bi-lock-fill me-2"></i>
+        <strong>Registration fee recording is locked.</strong>
+        This application is already in a final admission state, so new registration fee details cannot be recorded through the standard workflow.
+    </div>
+
+    <a href="{{ route('admission.applicants.show', $applicant) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Applicant
+    </a>
+
 @else
     {{-- Not yet paid — show the payment form --}}
 

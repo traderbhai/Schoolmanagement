@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\AccessControl;
 use App\Mail\GenericBulkMail;
 use App\Models\Applicant;
 use App\Models\Batch;
@@ -18,6 +19,8 @@ class BulkMailController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizeBulkMail($request);
+
         $programs  = Program::where('is_active', true)->orderBy('name')->get();
         $batches   = Batch::orderBy('name')->get();
         $count     = null;
@@ -31,12 +34,16 @@ class BulkMailController extends Controller
 
     public function previewCount(Request $request)
     {
+        $this->authorizeBulkMail($request);
+
         $count = $this->countAudience($request);
         return response()->json(['count' => $count]);
     }
 
     public function send(Request $request)
     {
+        $this->authorizeBulkMail($request);
+
         $request->validate([
             'audience'   => 'required|string',
             'subject'    => 'required|string|max:255',
@@ -115,5 +122,10 @@ class BulkMailController extends Controller
                     ->when($request->program_id, fn($q) => $q->where('program_id', $request->program_id))
                     ->when($request->batch_id, fn($q) => $q->where('batch_id', $request->batch_id));
             });
+    }
+
+    private function authorizeBulkMail(Request $request): void
+    {
+        abort_unless(AccessControl::canSendGlobalBulkMail($request->user()), 403);
     }
 }

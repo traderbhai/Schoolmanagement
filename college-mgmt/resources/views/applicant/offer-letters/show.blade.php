@@ -1,4 +1,7 @@
-@extends('layouts.app')
+@extends('layouts.applicant')
+
+@section('title', 'Offer Letter')
+@section('page-title', 'Offer Letter')
 
 @section('content')
 <div class="container py-4">
@@ -119,7 +122,7 @@
                 </div>
             </div>
 
-            @if($offerLetter->isPending())
+            @if($offerLetter->isPending() && ! $locked)
                 <div class="card">
                     <div class="card-header bg-light">
                         <h5 class="mb-0">Your Response</h5>
@@ -139,7 +142,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Accept Modal -->
                 <div class="modal fade" id="acceptModal" tabindex="-1">
                     <div class="modal-dialog">
@@ -196,6 +198,11 @@
                             </form>
                         </div>
                     </div>
+                </div>
+            @elseif($offerLetter->isPending() && $locked)
+                <div class="alert alert-warning">
+                    <h5>Offer Response Closed</h5>
+                    <p class="mb-0">Your application is already in a final admission state, so this offer can no longer be accepted or declined online.</p>
                 </div>
             @elseif($offerLetter->isAccepted())
                 <div class="alert alert-success">

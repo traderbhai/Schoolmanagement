@@ -201,6 +201,221 @@ class AdmissionPaymentVerificationIntegrityTest extends TestCase
         ]);
     }
 
+    public function test_applicant_cannot_submit_duplicate_pending_admission_payment_reference_across_installments(): void
+    {
+        $payment = $this->payment('pending');
+        $applicant = $payment->applicant;
+        $secondInstallment = AdmissionFeeInstallment::create([
+            'program_id' => $applicant->program_id,
+            'batch_id' => $applicant->batch_id,
+            'name' => 'Admission Second Installment',
+            'amount' => 12000,
+            'installment_number' => 2,
+            'due_date' => now()->addDays(15)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $payment->update(['transaction_reference' => 'UPI-PENDING-ADM-DUP']);
+
+        $this->actingAs($this->applicantUser($applicant))
+            ->post(route('applicant.fees.store', $secondInstallment), $this->paymentPayload([
+                'amount_paid' => 12000,
+                'transaction_reference' => 'UPI-PENDING-ADM-DUP',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('transaction_reference');
+
+        $this->assertSame(1, AdmissionPayment::where('transaction_reference', 'UPI-PENDING-ADM-DUP')->count());
+        $this->assertDatabaseMissing('admission_payments', [
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $secondInstallment->id,
+            'transaction_reference' => 'UPI-PENDING-ADM-DUP',
+        ]);
+    }
+
+    public function test_applicant_pending_admission_payment_reference_duplicate_check_is_case_insensitive(): void
+    {
+        $payment = $this->payment('pending');
+        $applicant = $payment->applicant;
+        $secondInstallment = AdmissionFeeInstallment::create([
+            'program_id' => $applicant->program_id,
+            'batch_id' => $applicant->batch_id,
+            'name' => 'Admission Case Check Installment',
+            'amount' => 12000,
+            'installment_number' => 2,
+            'due_date' => now()->addDays(15)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $payment->update(['transaction_reference' => 'UPI-PENDING-ADM-CASE']);
+
+        $this->actingAs($this->applicantUser($applicant))
+            ->post(route('applicant.fees.store', $secondInstallment), $this->paymentPayload([
+                'amount_paid' => 12000,
+                'transaction_reference' => 'upi-pending-adm-case',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('transaction_reference');
+
+        $this->assertSame(1, AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', ['upi-pending-adm-case'])->count());
+    }
+
+    public function test_applicant_cannot_submit_admission_payment_over_installment_or_with_verified_reference(): void
+    {
+        $verified = $this->payment('verified');
+        $applicant = $verified->applicant;
+        $installment = $verified->installment;
+
+        $this->actingAs($this->applicantUser($applicant))
+            ->post(route('applicant.fees.store', $installment), $this->paymentPayload([
+                'transaction_reference' => 'UPI-OVERPAY-ADM',
+                'amount_paid' => 15001,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This fee installment has already been verified. Contact admissions for corrections.');
+
+        $rejected = $this->payment('rejected');
+        $rejectedApplicant = $rejected->applicant;
+        $rejectedInstallment = $rejected->installment;
+
+        $this->actingAs($this->applicantUser($rejectedApplicant))
+            ->post(route('applicant.fees.store', $rejectedInstallment), $this->paymentPayload([
+                'transaction_reference' => 'UPI-OVERPAY-ADM',
+                'amount_paid' => 15001,
+            ]))
+            ->assertSessionHasErrors('amount_paid');
+
+        $this->actingAs($this->applicantUser($rejectedApplicant))
+            ->post(route('applicant.fees.store', $rejectedInstallment), $this->paymentPayload([
+                'transaction_reference' => $verified->transaction_reference,
+                'amount_paid' => 15000,
+            ]))
+            ->assertSessionHasErrors('transaction_reference');
+
+        $this->assertDatabaseMissing('admission_payments', [
+            'applicant_id' => $rejectedApplicant->id,
+            'transaction_reference' => $verified->transaction_reference,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_applicant_verified_admission_payment_reference_duplicate_check_is_case_insensitive(): void
+    {
+        $verified = $this->payment('verified');
+        $verified->update(['transaction_reference' => 'UPI-VERIFIED-ADM-CASE']);
+        $rejected = $this->payment('rejected');
+
+        $this->actingAs($this->applicantUser($rejected->applicant))
+            ->post(route('applicant.fees.store', $rejected->installment), $this->paymentPayload([
+                'transaction_reference' => 'upi-verified-adm-case',
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('transaction_reference');
+
+        $this->assertSame(1, AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', ['upi-verified-adm-case'])->count());
+    }
+
+    public function test_admin_cannot_verify_stale_admission_payment_over_installment_or_duplicate_reference(): void
+    {
+        $admin = $this->admin();
+        $verified = $this->payment('verified');
+
+        $overpay = $this->payment('pending');
+        $overpay->update(['amount_paid' => 15001]);
+
+        $this->actingAs($admin)
+            ->post(route('admission.payments.verify', $overpay))
+            ->assertSessionHasErrors('amount_paid');
+
+        $overpay->refresh();
+        $this->assertSame('pending', $overpay->status);
+        $this->assertNull($overpay->verified_at);
+
+        $duplicate = $this->payment('pending');
+        $duplicate->update(['transaction_reference' => $verified->transaction_reference]);
+
+        $this->actingAs($admin)
+            ->post(route('admission.payments.verify', $duplicate))
+            ->assertSessionHasErrors('transaction_reference');
+
+        $duplicate->refresh();
+        $this->assertSame('pending', $duplicate->status);
+        $this->assertNull($duplicate->verified_at);
+    }
+
+    public function test_admin_verify_admission_payment_duplicate_reference_check_is_case_insensitive(): void
+    {
+        $admin = $this->admin();
+        $verified = $this->payment('verified');
+        $verified->update(['transaction_reference' => 'UPI-ADMIN-ADM-CASE']);
+        $duplicate = $this->payment('pending');
+        $duplicate->update(['transaction_reference' => 'upi-admin-adm-case']);
+
+        $this->actingAs($admin)
+            ->post(route('admission.payments.verify', $duplicate))
+            ->assertSessionHasErrors('transaction_reference');
+
+        $duplicate->refresh();
+        $this->assertSame('pending', $duplicate->status);
+        $this->assertNull($duplicate->verified_at);
+        $this->assertSame(1, AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', ['upi-admin-adm-case'])->where('status', 'verified')->count());
+    }
+
+    public function test_admin_cannot_verify_stale_admission_payment_after_applicant_admission_window_closed(): void
+    {
+        $admin = $this->admin();
+
+        foreach (['rejected', 'withdrawn', 'enrolled'] as $status) {
+            $payment = $this->payment('pending');
+            $payment->applicant->update(['status' => $status]);
+
+            $this->actingAs($admin)
+                ->post(route('admission.payments.verify', $payment), [
+                    'verification_notes' => 'Trying to verify stale admission payment.',
+                ])
+                ->assertRedirect()
+                ->assertSessionHas('error', 'Admission payment verification is closed for the applicant current status. Use the audited correction or refund workflow instead.');
+
+            $payment->refresh();
+            $this->assertSame('pending', $payment->status);
+            $this->assertNull($payment->verified_at);
+            $this->assertNull($payment->verified_by);
+        }
+    }
+
+    public function test_admin_cannot_verify_stale_admission_payment_for_inactive_or_mismatched_installment(): void
+    {
+        $admin = $this->admin();
+
+        $inactive = $this->payment('pending');
+        $inactive->installment->update(['is_active' => false]);
+
+        $this->actingAs($admin)
+            ->post(route('admission.payments.verify', $inactive), [
+                'verification_notes' => 'Trying to verify inactive installment.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Admission payment verification is closed because the linked fee installment is no longer active.');
+
+        $inactive->refresh();
+        $this->assertSame('pending', $inactive->status);
+        $this->assertNull($inactive->verified_at);
+
+        $mismatched = $this->payment('pending');
+        $mismatched->installment->update(['program_id' => Applicant::factory()->create()->program_id]);
+
+        $this->actingAs($admin)
+            ->post(route('admission.payments.verify', $mismatched), [
+                'verification_notes' => 'Trying to verify wrong program installment.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Admission payment verification is closed because the linked fee installment is not available for the applicant program.');
+
+        $mismatched->refresh();
+        $this->assertSame('pending', $mismatched->status);
+        $this->assertNull($mismatched->verified_at);
+    }
+
     public function test_applicant_cannot_submit_payment_against_unavailable_installment(): void
     {
         $applicant = Applicant::factory()->create(['status' => 'selected']);
@@ -238,6 +453,30 @@ class AdmissionPaymentVerificationIntegrityTest extends TestCase
             ->assertSessionHas('error', 'Only pending admission payments can be paid online.');
 
         $this->assertNull($payment->fresh()->gateway_order_id);
+    }
+
+    public function test_enrolled_applicant_cannot_initiate_gateway_order_for_stale_pending_payment(): void
+    {
+        Department::firstOrCreate(['code' => 'ADM'], ['name' => 'Admissions']);
+        $payment = $this->payment('pending');
+        $applicant = $payment->applicant;
+        $applicant->update(['status' => 'enrolled']);
+
+        $this->actingAs($this->applicantUser($applicant))
+            ->get(route('applicant.fees.show', $payment))
+            ->assertOk()
+            ->assertSee('Online payment actions are closed for your current application status.')
+            ->assertDontSee('Pay Online / Create Gateway Order');
+
+        $this->actingAs($this->applicantUser($applicant))
+            ->post(route('applicant.fees.gateway.initiate', $payment))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Online payment is available only while your admission fee payment window is active.');
+
+        $payment->refresh();
+        $this->assertSame('pending', $payment->status);
+        $this->assertNull($payment->gateway_order_id);
+        $this->assertNull($payment->gateway_payment_id);
     }
 
     public function test_gateway_webhook_does_not_mutate_finalized_admission_payment_records(): void

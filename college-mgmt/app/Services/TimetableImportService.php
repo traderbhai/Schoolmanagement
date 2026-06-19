@@ -142,7 +142,7 @@ class TimetableImportService
      * Import CSV rows into database.
      * Returns ['success' => bool, 'imported' => int, 'errors' => array]
      */
-    public function importCSV(UploadedFile $file, int $programId, int $termId, ?int $batchId = null): array
+    public function importCSV(UploadedFile $file, int $programId, int $termId, ?int $batchId = null, array $options = []): array
     {
         $imported = 0;
         $errors = [];
@@ -160,17 +160,23 @@ class TimetableImportService
                 $actualBatchId = $batchId ?? (int)$data['batch_id'];
 
                 try {
-                    // Clear existing for this slot
-                    TimetableEntry::where([
-                        'program_id'        => $programId,
-                        'term_id'           => $termId,
-                        'batch_id'          => $actualBatchId,
-                        'day_of_week'       => (int)$data['day_of_week'],
-                        'timetable_slot_id' => (int)$data['timetable_slot_id'],
-                    ])->delete();
+                    $replaceError = $this->replaceDraftSlot(
+                        $programId,
+                        $termId,
+                        (int) $actualBatchId,
+                        (int) $data['day_of_week'],
+                        (int) $data['timetable_slot_id']
+                    );
+
+                    if ($replaceError !== null) {
+                        $errors[] = "Row {$rowNum}: {$replaceError}";
+                        continue;
+                    }
 
                     // Create entry
                     TimetableEntry::create([
+                        'semester_id'       => $options['semester_id'] ?? null,
+                        'course_id'         => $options['course_id'] ?? null,
                         'program_id'        => $programId,
                         'term_id'           => $termId,
                         'batch_id'          => $actualBatchId,
@@ -226,5 +232,31 @@ class TimetableImportService
     {
         $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
         return $days[$day] ?? 'Unknown';
+    }
+
+    private function replaceDraftSlot(int $programId, int $termId, int $batchId, int $dayOfWeek, int $slotId): ?string
+    {
+        $existing = TimetableEntry::where([
+            'program_id' => $programId,
+            'term_id' => $termId,
+            'batch_id' => $batchId,
+            'day_of_week' => $dayOfWeek,
+            'timetable_slot_id' => $slotId,
+        ])->withCount(['attendances', 'substitutions'])->get();
+
+        $locked = $existing->first(fn (TimetableEntry $entry): bool =>
+            $entry->status !== 'draft'
+            || $entry->timetable_version_id !== null
+            || $entry->attendances_count > 0
+            || $entry->substitutions_count > 0
+        );
+
+        if ($locked) {
+            return 'Existing timetable history for this slot is locked. Use the PMC revision/version workflow instead of import replacement.';
+        }
+
+        $existing->each->delete();
+
+        return null;
     }
 }

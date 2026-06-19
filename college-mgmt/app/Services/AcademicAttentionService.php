@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AcademicTranscript;
+use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
 use App\Models\Attendance;
 use App\Models\CourseFeedback;
@@ -134,9 +135,27 @@ class AcademicAttentionService
         return $query->whereIn($column, $programIds);
     }
 
+    private function scopeApprovalsToPrograms(Builder $query, ?Collection $programIds): Builder
+    {
+        if ($programIds === null) {
+            return $query;
+        }
+
+        if ($programIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $approvalScope) use ($programIds) {
+            $approvalScope
+                ->whereHasMorph('approvable', [CurriculumChange::class], fn (Builder $approvable) => $approvable->whereIn('program_id', $programIds))
+                ->orWhereHasMorph('approvable', [Applicant::class], fn (Builder $approvable) => $approvable->whereIn('program_id', $programIds));
+        });
+    }
+
     private function pendingApprovals(?Collection $programIds): array
     {
         $query = ApprovalWorkflow::query()->where('status', 'pending');
+        $this->scopeApprovalsToPrograms($query, $programIds);
 
         return $this->queuePayload('pending_approvals', 'Pending academic approvals', 'Approvals awaiting Dean, PMC, HoD, or CoE action.', 'governance', 'high', $query, function ($row) {
             return [
@@ -151,6 +170,7 @@ class AcademicAttentionService
     private function overdueApprovals(?Collection $programIds): array
     {
         $query = ApprovalWorkflow::query()->where('status', 'pending')->whereNotNull('due_at')->where('due_at', '<', now());
+        $this->scopeApprovalsToPrograms($query, $programIds);
 
         return $this->queuePayload('overdue_approvals', 'Overdue approvals', 'SLA-breached academic approval items.', 'governance', 'critical', $query);
     }
@@ -183,7 +203,12 @@ class AcademicAttentionService
 
     private function draftTimetable(?Collection $programIds): array
     {
-        $query = $this->applyProgramScope(TimetableEntry::with(['program', 'subject'])->where('is_active', true)->where('status', '!=', 'published'), $programIds);
+        $query = $this->applyProgramScope(
+            TimetableEntry::with(['program', 'subject'])
+                ->where('is_active', true)
+                ->where(fn (Builder $query) => $this->unpublishedTimetableScope($query)),
+            $programIds
+        );
 
         return $this->queuePayload('draft_timetable', 'Timetable not published', 'Timetable entries still in draft or archived state.', 'pmc', 'medium', $query, fn ($row) => [
             'title' => $row->subject?->name ?? 'Timetable entry',
@@ -195,7 +220,14 @@ class AcademicAttentionService
 
     private function facultyWorkload(?Collection $programIds): array
     {
-        $query = $this->applyProgramScope(TimetableEntry::query()->selectRaw('teacher_id, count(*) as load_count')->where('is_active', true)->groupBy('teacher_id')->having('load_count', '>=', 5), $programIds);
+        $query = $this->applyProgramScope(
+            TimetableEntry::query()
+                ->selectRaw('teacher_id, count(*) as load_count')
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+                ->groupBy('teacher_id')
+                ->having('load_count', '>=', 5),
+            $programIds
+        );
         $teacherMap = Teacher::with('user')
             ->whereIn('id', (clone $query)->pluck('teacher_id')->filter()->unique())
             ->get()
@@ -215,6 +247,7 @@ class AcademicAttentionService
         $this->applyProgramScope($studentIds, $programIds);
         $query = Attendance::query()
             ->selectRaw('student_id, count(*) as absence_count')
+            ->whereHas('timetableEntry', fn (Builder $query) => $this->publishedTimetableScope($query))
             ->whereIn('status', ['absent', 'late'])
             ->whereIn('student_id', $studentIds->pluck('id'))
             ->groupBy('student_id')
@@ -249,7 +282,13 @@ class AcademicAttentionService
     private function examMarksPending(?Collection $programIds): array
     {
         $examIdsWithResults = ExamResult::query()->pluck('exam_id');
-        $query = $this->applyProgramScope(Exam::with(['program', 'subject'])->where('exam_date', '<=', now()->toDateString())->whereNotIn('id', $examIdsWithResults), $programIds);
+        $query = $this->applyProgramScope(
+            Exam::with(['program', 'subject'])
+                ->whereNull('published_at')
+                ->where('exam_date', '<=', now()->toDateString())
+                ->whereNotIn('id', $examIdsWithResults),
+            $programIds
+        );
 
         return $this->queuePayload('exam_marks_pending', 'Exam marks pending', 'Completed exams without marks entered.', 'coe', 'critical', $query, fn ($row) => [
             'title' => $row->name,
@@ -261,7 +300,13 @@ class AcademicAttentionService
 
     private function resultPublishPending(?Collection $programIds): array
     {
-        $query = $this->applyProgramScope(Exam::with(['program', 'subject'])->whereHas('results')->where('exam_date', '<=', now()->toDateString()), $programIds);
+        $query = $this->applyProgramScope(
+            Exam::with(['program', 'subject'])
+                ->whereHas('results')
+                ->whereNull('published_at')
+                ->where('exam_date', '<=', now()->toDateString()),
+            $programIds
+        );
 
         return $this->queuePayload('result_publish_pending', 'Result publish pending', 'Exams with marks present and result publishing still requiring CoE review.', 'coe', 'high', $query, fn ($row) => [
             'title' => $row->name,
@@ -397,6 +442,31 @@ class AcademicAttentionService
             'items' => collect(),
             'route' => route('academics.attention.queue', ['queue' => $key]),
         ];
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function unpublishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(function (Builder $statusQuery) {
+                $statusQuery->where('status', '!=', 'published')
+                    ->orWhere(function (Builder $versionQuery) {
+                        $versionQuery->where('status', 'published')
+                            ->whereNotNull('timetable_version_id')
+                            ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
+                    });
+            });
     }
 
     private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string

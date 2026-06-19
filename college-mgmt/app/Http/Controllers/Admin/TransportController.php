@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\TransportAssignment;
@@ -13,8 +14,10 @@ use Illuminate\Validation\Rule;
 
 class TransportController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $this->authorizeTransportOperations($request);
+
         $routes = TransportRoute::with('stops')->orderBy('name')->get();
         $vehicles = TransportVehicle::withCount(['assignments as active_assignments_count' => fn ($query) => $query->where('status', 'active')])
             ->orderBy('registration_number')
@@ -37,6 +40,8 @@ class TransportController extends Controller
 
     public function routeStore(Request $request)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'name' => 'required|string|max:120',
             'code' => 'required|string|max:30|unique:transport_routes,code',
@@ -53,6 +58,8 @@ class TransportController extends Controller
 
     public function stopStore(Request $request)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'transport_route_id' => 'required|exists:transport_routes,id',
             'name' => 'required|string|max:120',
@@ -62,6 +69,21 @@ class TransportController extends Controller
             'monthly_fee_override' => 'nullable|numeric|min:0',
         ]);
 
+        $route = TransportRoute::findOrFail($data['transport_route_id']);
+        if (! $route->is_active) {
+            return back()
+                ->withErrors(['transport_route_id' => 'Stops can be added only to active transport routes.'])
+                ->withInput();
+        }
+
+        if (TransportStop::where('transport_route_id', $route->id)
+            ->where('sequence', $data['sequence'])
+            ->exists()) {
+            return back()
+                ->withErrors(['sequence' => 'Another stop already uses this sequence on the selected route.'])
+                ->withInput();
+        }
+
         TransportStop::create($data + ['is_active' => true]);
 
         return back()->with('success', 'Transport stop added.');
@@ -69,6 +91,8 @@ class TransportController extends Controller
 
     public function vehicleStore(Request $request)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'registration_number' => 'required|string|max:30|unique:transport_vehicles,registration_number',
             'vehicle_type' => 'required|string|max:40',
@@ -86,6 +110,8 @@ class TransportController extends Controller
 
     public function vehicleUpdate(Request $request, TransportVehicle $vehicle)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'registration_number' => [
                 'required',
@@ -124,12 +150,14 @@ class TransportController extends Controller
 
     public function assignmentStore(Request $request)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'student_id' => 'required|exists:students,id',
             'transport_route_id' => 'required|exists:transport_routes,id',
             'transport_stop_id' => 'nullable|exists:transport_stops,id',
             'transport_vehicle_id' => 'nullable|exists:transport_vehicles,id',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|before_or_equal:today',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -188,6 +216,8 @@ class TransportController extends Controller
 
     public function assignmentEnd(Request $request, TransportAssignment $assignment)
     {
+        $this->authorizeTransportOperations($request);
+
         $data = $request->validate([
             'end_date' => 'required|date|before_or_equal:today',
         ]);
@@ -206,5 +236,13 @@ class TransportController extends Controller
         ]);
 
         return back()->with('success', 'Transport assignment ended.');
+    }
+
+    private function authorizeTransportOperations(Request $request): void
+    {
+        abort_unless(
+            $request->user() && AccessControl::canManageTransportOperations($request->user()),
+            403
+        );
     }
 }

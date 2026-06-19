@@ -10,20 +10,23 @@ use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Services\AdmissionSeatCapacityService;
+use App\Services\DepartmentHierarchyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
 class OfferLetterController extends Controller
 {
+    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+
     public function index(Program $program)
     {
         $batches = Batch::orderBy('name')->get();
         $batchId = request('batch_id');
         $status = request('status');
 
-        $query = OfferLetter::where('program_id', $program->id)
-            ->with(['applicant.user', 'issuedBy']);
+        $scopedQuery = $this->scopedOfferQuery($program);
+        $query = (clone $scopedQuery)->with(['applicant.user', 'issuedBy', 'batch']);
 
         if ($batchId) {
             $query->where('batch_id', $batchId);
@@ -35,10 +38,10 @@ class OfferLetterController extends Controller
         $offerLetters = $query->orderBy('created_at', 'desc')->paginate(50);
 
         $stats = [
-            'total'    => OfferLetter::where('program_id', $program->id)->count(),
-            'issued'   => OfferLetter::where('program_id', $program->id)->where('status', 'issued')->count(),
-            'accepted' => OfferLetter::where('program_id', $program->id)->where('status', 'accepted')->count(),
-            'declined' => OfferLetter::where('program_id', $program->id)->where('status', 'declined')->count(),
+            'total'    => (clone $scopedQuery)->count(),
+            'issued'   => (clone $scopedQuery)->where('status', 'issued')->count(),
+            'accepted' => (clone $scopedQuery)->where('status', 'accepted')->count(),
+            'declined' => (clone $scopedQuery)->where('status', 'declined')->count(),
         ];
 
         return view('admission.offer-letters.index', compact(
@@ -62,6 +65,7 @@ class OfferLetterController extends Controller
         // Get selected merit list entries
         $query = MeritListEntry::where('program_id', $program->id)
             ->where('decision', 'selected')
+            ->whereHas('applicant', fn ($q) => $this->applyOfferApplicantVisibility($q, $request->user()))
             ->with(['applicant.user']);
 
         if ($batchId) {
@@ -76,6 +80,10 @@ class OfferLetterController extends Controller
 
         $generated = 0;
         foreach ($entries as $entry) {
+            if (!$this->applicantCanReceiveOffer($entry->applicant)) {
+                continue;
+            }
+
             $existing = OfferLetter::where('applicant_id', $entry->applicant_id)
                 ->where('status', '!=', 'declined')
                 ->first();
@@ -100,12 +108,22 @@ class OfferLetterController extends Controller
 
     public function show(OfferLetter $offerLetter)
     {
+        $this->guardOfferScope($offerLetter);
+
         $offerLetter->load(['applicant.user', 'program', 'batch', 'issuedBy']);
-        return view('admission.offer-letters.show', compact('offerLetter'));
+        $locked = $this->applicantHasTerminalStatus($offerLetter);
+
+        return view('admission.offer-letters.show', compact('offerLetter', 'locked'));
     }
 
     public function exportPdf(OfferLetter $offerLetter)
     {
+        $this->guardOfferScope($offerLetter);
+
+        if ($this->applicantHasTerminalStatus($offerLetter)) {
+            return back()->with('error', 'This offer letter is locked because the applicant is already in a final admission state.');
+        }
+
         $offerLetter->load(['applicant.user', 'program', 'batch']);
 
         $pdf = Pdf::loadView('admission.offer-letters.pdf', ['offerLetter' => $offerLetter]);
@@ -115,6 +133,8 @@ class OfferLetterController extends Controller
 
     public function accept(Request $request, OfferLetter $offerLetter)
     {
+        $this->guardOfferScope($offerLetter);
+
         if ($offerLetter->status !== 'issued') {
             return back()->with('error', 'This offer letter cannot be accepted.');
         }
@@ -139,6 +159,8 @@ class OfferLetterController extends Controller
 
     public function decline(Request $request, OfferLetter $offerLetter)
     {
+        $this->guardOfferScope($offerLetter);
+
         $request->validate([
             'reason' => 'nullable|string|max:500',
         ]);
@@ -170,6 +192,7 @@ class OfferLetterController extends Controller
         $waitlisted = MeritListEntry::where('program_id', $programId)
             ->where('batch_id', $batchId)
             ->where('decision', 'waitlisted')
+            ->whereHas('applicant', fn ($q) => $this->applyOfferApplicantVisibility($q, request()->user()))
             ->with('applicant')
             ->orderBy('rank')
             ->first();
@@ -205,8 +228,13 @@ class OfferLetterController extends Controller
         ]);
 
         $program = \App\Models\Program::findOrFail($request->program_id);
-        $batch   = \App\Models\Batch::where('program_id', $program->id)
-                       ->where('is_active', true)->first();
+        $batchQuery = \App\Models\Batch::where('program_id', $program->id);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('batches', 'is_active')) {
+            $batchQuery->where('is_active', true);
+        } else {
+            $batchQuery->where('status', 'active');
+        }
+        $batch = $batchQuery->first();
 
         if (!$batch) {
             return back()->with('error', 'No active batch found for this program.');
@@ -214,10 +242,19 @@ class OfferLetterController extends Controller
 
         $generated = 0;
         $skipped   = 0;
+        $submittedApplicantIds = collect($request->applicant_ids)->map(fn ($id) => (int) $id)->unique()->values();
+        $visibleApplicantIds = Applicant::whereIn('id', $submittedApplicantIds)
+            ->where('program_id', $program->id)
+            ->tap(fn ($query) => $this->applyOfferApplicantVisibility($query, $request->user()))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
 
-        foreach ($request->applicant_ids as $applicantId) {
+        abort_unless($visibleApplicantIds->count() === $submittedApplicantIds->count(), 403);
+
+        foreach ($submittedApplicantIds as $applicantId) {
             $applicant = \App\Models\Applicant::find($applicantId);
             if (!$applicant || $applicant->program_id != $program->id) { $skipped++; continue; }
+            if (!$this->applicantCanReceiveOffer($applicant)) { $skipped++; continue; }
             if (\App\Models\OfferLetter::where('applicant_id', $applicant->id)->exists()) { $skipped++; continue; }
 
             \App\Models\OfferLetter::create([
@@ -251,7 +288,8 @@ class OfferLetterController extends Controller
         $acceptanceDays = (int) $request->acceptance_days;
 
         $query = MeritListEntry::where('program_id', $program->id)
-            ->where('decision', 'selected');
+            ->where('decision', 'selected')
+            ->whereHas('applicant', fn ($q) => $this->applyOfferApplicantVisibility($q, $request->user()));
 
         if ($batchId) {
             $query->where('batch_id', $batchId);
@@ -261,6 +299,11 @@ class OfferLetterController extends Controller
         $generated = 0;
 
         foreach ($entries as $entry) {
+            $entry->loadMissing('applicant');
+            if (!$this->applicantCanReceiveOffer($entry->applicant)) {
+                continue;
+            }
+
             $existing = OfferLetter::where('applicant_id', $entry->applicant_id)
                 ->where('status', '!=', 'declined')
                 ->first();
@@ -285,8 +328,45 @@ class OfferLetterController extends Controller
 
     private function applicantHasTerminalStatus(OfferLetter $offerLetter): bool
     {
-        $status = $offerLetter->applicant?->status;
+        $status = $offerLetter->applicant()->value('status');
 
         return in_array($status, ['rejected', 'withdrawn', 'enrolled'], true);
+    }
+
+    private function applicantCanReceiveOffer(?Applicant $applicant): bool
+    {
+        return $applicant && !in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true);
+    }
+
+    private function scopedOfferQuery(Program $program)
+    {
+        return OfferLetter::query()
+            ->where('program_id', $program->id)
+            ->whereHas('applicant', function ($query) {
+                $this->applyOfferApplicantVisibility($query, request()->user());
+            });
+    }
+
+    private function guardOfferScope(OfferLetter $offerLetter): void
+    {
+        $offerLetter->loadMissing('applicant');
+        abort_unless(
+            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $offerLetter->applicant?->assigned_to, false),
+            403
+        );
+    }
+
+    private function applyOfferApplicantVisibility($query, $user): void
+    {
+        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+            return;
+        }
+
+        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+
+        $query->where(function ($scope) use ($visibleUserIds) {
+            $scope->whereIn('assigned_to', $visibleUserIds)
+                ->orWhereNull('assigned_to');
+        });
     }
 }

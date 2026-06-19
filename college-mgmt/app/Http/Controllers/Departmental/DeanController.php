@@ -17,8 +17,9 @@ class DeanController extends Controller
         $totalExams      = Exam::whereYear('exam_date', now()->year)->count();
 
         // Attendance %
-        $totalAtt   = Attendance::count();
-        $presentAtt = Attendance::where('status', 'present')->count();
+        $officialAttendance = $this->officialAttendanceQuery();
+        $totalAtt = (clone $officialAttendance)->count();
+        $presentAtt = (clone $officialAttendance)->where('status', 'present')->count();
         $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0;
 
         // Pending approvals for dean
@@ -26,7 +27,8 @@ class DeanController extends Controller
             ->where('status', 'pending')->count();
 
         // At-risk students — single aggregate query instead of 2×N per-student queries
-        $attData = Attendance::where('date', '>=', now()->subDays(30))
+        $attData = $this->officialAttendanceQuery()
+            ->where('date', '>=', now()->subDays(30))
             ->selectRaw('student_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present_count')
             ->groupBy('student_id')
             ->get()
@@ -54,7 +56,9 @@ class DeanController extends Controller
             ->keyBy('department_id');
 
         $resultsByProgram = ExamResult::with('exam')
-            ->whereHas('exam', fn($q) => $q->whereHas('program', fn($p) => $p->where('is_active', true)))
+            ->whereHas('exam', fn($q) => $q
+                ->whereNotNull('published_at')
+                ->whereHas('program', fn($p) => $p->where('is_active', true)))
             ->get()
             ->groupBy(fn($result) => $result->exam?->program_id);
 
@@ -74,6 +78,7 @@ class DeanController extends Controller
 
         // Recent results
         $recentResults = ExamResult::with(['exam.program', 'student.user'])
+            ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
             ->latest()->take(8)->get();
 
         // Recent approvals
@@ -275,7 +280,11 @@ class DeanController extends Controller
     public function academics()
     {
         // Top performers — eager load exam results, compute avg in PHP
-        $topPerformers = Student::with(['user', 'program', 'examResults'])
+        $topPerformers = Student::with([
+                'user',
+                'program',
+                'examResults' => fn($query) => $query->whereHas('exam', fn($exam) => $exam->whereNotNull('published_at')),
+            ])
             ->where('status', 'active')
             ->get()
             ->filter(fn($s) => $s->examResults->count() > 0)
@@ -287,7 +296,13 @@ class DeanController extends Controller
             ->take(10);
 
         // At-risk: students with avg marks < 40% — eager load exam results
-        $atRisk = Student::with(['user', 'program', 'examResults.exam'])
+        $atRisk = Student::with([
+                'user',
+                'program',
+                'examResults' => fn($query) => $query
+                    ->whereHas('exam', fn($exam) => $exam->whereNotNull('published_at'))
+                    ->with('exam'),
+            ])
             ->where('status', 'active')
             ->get()
             ->map(function ($s) {
@@ -304,7 +319,9 @@ class DeanController extends Controller
         // Program-wise pass rate — bulk load results grouped by program
         $programIds = Program::where('is_active', true)->pluck('id');
         $resultsByProgram = ExamResult::with('exam')
-            ->whereHas('exam', fn($q) => $q->whereIn('program_id', $programIds))
+            ->whereHas('exam', fn($q) => $q
+                ->whereNotNull('published_at')
+                ->whereIn('program_id', $programIds))
             ->get()
             ->groupBy(fn($r) => $r->exam?->program_id);
 
@@ -325,6 +342,8 @@ class DeanController extends Controller
         $attendanceByProgram = Attendance::selectRaw(
             'students.program_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count'
         )->join('students', 'attendances.student_id', '=', 'students.id')
+         ->join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+         ->where(fn ($query) => $this->publishedTimetableJoinScope($query))
          ->groupBy('students.program_id')
          ->get()
          ->keyBy('program_id');
@@ -436,5 +455,38 @@ class DeanController extends Controller
         abort_unless($approval->approver_role === 'dean_academics', 403);
         abort_unless($approval->status === 'pending', 403);
         abort_unless($approval->approvable instanceof Applicant, 403);
+    }
+
+    private function officialAttendanceQuery()
+    {
+        return Attendance::query()
+            ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function publishedTimetableJoinScope($query)
+    {
+        return $query
+            ->where('timetable_entries.is_active', true)
+            ->where('timetable_entries.status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_entries.timetable_version_id')
+                    ->orWhereExists(function ($exists) {
+                        $exists->selectRaw('1')
+                            ->from('timetable_versions')
+                            ->whereColumn('timetable_versions.id', 'timetable_entries.timetable_version_id')
+                            ->where('timetable_versions.status', 'published');
+                    });
+            });
     }
 }

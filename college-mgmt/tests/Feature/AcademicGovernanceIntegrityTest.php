@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\CoPoMapping;
+use App\Models\CoAttainment;
 use App\Models\CourseOutcome;
 use App\Models\CurriculumChange;
+use App\Models\PoAttainment;
 use App\Models\Program;
 use App\Models\ProgramOutcome;
 use App\Models\Subject;
@@ -34,6 +36,19 @@ class AcademicGovernanceIntegrityTest extends TestCase
         $term = Term::factory()->create();
         $program = Program::factory()->create(['is_active' => true]);
         $subject = Subject::factory()->create(['program_id' => $program->id, 'is_active' => true]);
+        $event = \App\Models\AcademicCalendar::factory()->create([
+            'term_id' => $term->id,
+            'event_date' => now()->addWeek()->toDateString(),
+            'event_name' => 'Protected Calendar Form Event',
+        ]);
+
+        $this->actingAs($accounts)
+            ->get(route('academic.academic-calendars.create'))
+            ->assertForbidden();
+
+        $this->actingAs($accounts)
+            ->get(route('academic.academic-calendars.edit', $event))
+            ->assertForbidden();
 
         $this->actingAs($accounts)
             ->post(route('academic.academic-calendars.store'), [
@@ -107,6 +122,48 @@ class AcademicGovernanceIntegrityTest extends TestCase
         $this->assertSame('submitted', $change->fresh()->status);
     }
 
+    public function test_curriculum_change_submission_requires_active_program_and_matching_active_subject(): void
+    {
+        $chair = $this->userWithRole('program_chair');
+        $activeProgram = Program::factory()->create(['is_active' => true]);
+        $inactiveProgram = Program::factory()->create(['is_active' => false]);
+        $inactiveSubject = Subject::factory()->create(['program_id' => $activeProgram->id, 'is_active' => false]);
+        $otherProgramSubject = Subject::factory()->create(['program_id' => Program::factory()->create(['is_active' => true])->id, 'is_active' => true]);
+
+        $this->actingAs($chair)
+            ->post(route('academic.curriculum-changes.store'), [
+                'program_id' => $inactiveProgram->id,
+                'title' => 'Archived Program Proposal',
+                'description' => 'Should not create governance work for inactive program.',
+                'change_type' => 'modify_syllabus',
+            ])
+            ->assertSessionHasErrors('program_id');
+
+        $this->actingAs($chair)
+            ->post(route('academic.curriculum-changes.store'), [
+                'program_id' => $activeProgram->id,
+                'subject_id' => $inactiveSubject->id,
+                'title' => 'Inactive Subject Proposal',
+                'description' => 'Should not target inactive subject.',
+                'change_type' => 'modify_syllabus',
+            ])
+            ->assertSessionHasErrors('subject_id');
+
+        $this->actingAs($chair)
+            ->post(route('academic.curriculum-changes.store'), [
+                'program_id' => $activeProgram->id,
+                'subject_id' => $otherProgramSubject->id,
+                'title' => 'Mismatched Subject Proposal',
+                'description' => 'Should not target another program subject.',
+                'change_type' => 'modify_syllabus',
+            ])
+            ->assertSessionHasErrors('subject_id');
+
+        $this->assertDatabaseMissing('curriculum_changes', ['title' => 'Archived Program Proposal']);
+        $this->assertDatabaseMissing('curriculum_changes', ['title' => 'Inactive Subject Proposal']);
+        $this->assertDatabaseMissing('curriculum_changes', ['title' => 'Mismatched Subject Proposal']);
+    }
+
     public function test_dean_can_review_only_pending_curriculum_changes(): void
     {
         $dean = $this->userWithRole('dean_academics');
@@ -175,5 +232,139 @@ class AcademicGovernanceIntegrityTest extends TestCase
             ->assertStatus(422);
 
         $this->assertDatabaseHas('program_outcomes', ['id' => $po->id]);
+    }
+
+    public function test_obe_outcomes_with_mapping_history_lock_contract_fields_but_allow_description_updates(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $program = Program::factory()->create(['is_active' => true]);
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'is_active' => true]);
+        $co = CourseOutcome::create([
+            'subject_id' => $subject->id,
+            'code' => 'CO1',
+            'description' => 'Mapped course outcome.',
+            'bloom_level' => 'understand',
+            'is_active' => true,
+        ]);
+        $po = ProgramOutcome::create([
+            'program_id' => $program->id,
+            'code' => 'PO1',
+            'description' => 'Mapped program outcome.',
+            'category' => 'general',
+            'is_active' => true,
+        ]);
+        CoPoMapping::create([
+            'course_outcome_id' => $co->id,
+            'program_outcome_id' => $po->id,
+            'correlation_level' => 3,
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('academic.obe.co.update', $co), [
+                'code' => 'CO1A',
+                'description' => 'Attempt to rewrite mapped CO code.',
+                'bloom_level' => 'understand',
+                'is_active' => true,
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('course_outcomes', [
+            'id' => $co->id,
+            'code' => 'CO1',
+            'description' => 'Mapped course outcome.',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('academic.obe.co.update', $co), [
+                'code' => 'CO1',
+                'description' => 'Clarified mapped course outcome description.',
+                'bloom_level' => 'understand',
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('course_outcomes', [
+            'id' => $co->id,
+            'code' => 'CO1',
+            'description' => 'Clarified mapped course outcome description.',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('academic.obe.po.update', $po), [
+                'code' => 'PO1',
+                'description' => 'Attempt to rewrite mapped PO category.',
+                'category' => 'management',
+                'is_active' => true,
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('program_outcomes', [
+            'id' => $po->id,
+            'category' => 'general',
+            'description' => 'Mapped program outcome.',
+        ]);
+    }
+
+    public function test_obe_matrix_with_attainment_history_cannot_be_rewritten(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $program = Program::factory()->create(['is_active' => true]);
+        $term = Term::factory()->create(['program_id' => $program->id]);
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'is_active' => true]);
+        $co = CourseOutcome::create([
+            'subject_id' => $subject->id,
+            'code' => 'CO1',
+            'description' => 'Attained course outcome.',
+            'bloom_level' => 'apply',
+            'is_active' => true,
+        ]);
+        $po = ProgramOutcome::create([
+            'program_id' => $program->id,
+            'code' => 'PO1',
+            'description' => 'Attained program outcome.',
+            'category' => 'general',
+            'is_active' => true,
+        ]);
+        CoPoMapping::create([
+            'course_outcome_id' => $co->id,
+            'program_outcome_id' => $po->id,
+            'correlation_level' => 3,
+        ]);
+        CoAttainment::create([
+            'course_outcome_id' => $co->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'direct_attainment' => 72,
+            'indirect_attainment' => 68,
+            'final_attainment' => 70,
+            'target_attainment' => 60,
+            'target_met' => true,
+            'students_assessed' => 24,
+            'students_attained' => 18,
+        ]);
+        PoAttainment::create([
+            'program_outcome_id' => $po->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'attainment_value' => 70,
+            'target_value' => 60,
+            'target_met' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('academic.obe.matrix.save'), [
+                'program_id' => $program->id,
+                'subject_id' => $subject->id,
+                'mappings' => [
+                    $co->id => ['po_' . $po->id => 1],
+                ],
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('co_po_mappings', [
+            'course_outcome_id' => $co->id,
+            'program_outcome_id' => $po->id,
+            'correlation_level' => 3,
+        ]);
     }
 }

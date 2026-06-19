@@ -30,6 +30,10 @@ class OfferLetterController extends Controller
 
     public function show(OfferLetter $offerLetter)
     {
+        if (request()->is('applicant/offer-letters/*/pdf')) {
+            return $this->downloadPdf($offerLetter);
+        }
+
         $applicant = auth()->user()->applicant;
 
         if (!$applicant || $offerLetter->applicant_id !== $applicant->id) {
@@ -37,8 +41,9 @@ class OfferLetterController extends Controller
         }
 
         $offerLetter->load(['program', 'batch']);
+        $locked = $this->applicantHasTerminalStatus($offerLetter);
 
-        return view('applicant.offer-letters.show', compact('offerLetter'));
+        return view('applicant.offer-letters.show', compact('offerLetter', 'locked'));
     }
 
     public function downloadPdf(OfferLetter $offerLetter)
@@ -47,6 +52,11 @@ class OfferLetterController extends Controller
 
         if (!$applicant || $offerLetter->applicant_id !== $applicant->id) {
             return redirect()->route('applicant.dashboard')->with('error', 'Unauthorized.');
+        }
+
+        if ($this->applicantHasTerminalStatus($offerLetter)) {
+            return redirect()->route('applicant.offer-letters.show', $offerLetter)
+                ->with('error', 'This offer letter is no longer downloadable because your admission application is already in a final state.');
         }
 
         $offerLetter->load(['program', 'batch']);
@@ -151,7 +161,7 @@ class OfferLetterController extends Controller
 
     private function applicantHasTerminalStatus(OfferLetter $offerLetter): bool
     {
-        $status = $offerLetter->applicant?->status;
+        $status = $offerLetter->applicant()->value('status');
 
         return in_array($status, ['rejected', 'withdrawn', 'enrolled'], true);
     }

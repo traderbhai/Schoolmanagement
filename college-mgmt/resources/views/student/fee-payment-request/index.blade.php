@@ -4,7 +4,7 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-semibold mb-0">Fee Payment Submissions</h4>
-        @if($student->status === 'active')
+        @if($canSubmitPaymentProof)
             <a href="{{ route('student.fee-payment.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-lg me-1"></i>Submit Payment Proof
             </a>
@@ -14,6 +14,10 @@
     @if($student->status !== 'active')
         <div class="alert alert-info mb-4">
             New fee payment proofs are available only for active students. Contact accounts for archived records.
+        </div>
+    @elseif($demands->isEmpty())
+        <div class="alert alert-info mb-4">
+            There are no outstanding academic fee demands available for payment proof submission. Hostel fee dues, if any, are shown on Fee Status and handled through the hostel/accounts queue.
         </div>
     @endif
 

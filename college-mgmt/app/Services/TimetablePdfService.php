@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\{TimetableEntry, TimetableSlot, Batch, Program, Term};
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 
 class TimetablePdfService
 {
@@ -26,7 +27,7 @@ class TimetablePdfService
         $entries = TimetableEntry::where('program_id', $programId)
             ->where('term_id', $termId)
             ->where('batch_id', $batchId)
-            ->where('is_active', true)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->with(['subject', 'teacher.user', 'classroom', 'slot'])
             ->get()
             ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
@@ -52,7 +53,7 @@ class TimetablePdfService
     /**
      * Generate PDF for a teacher's timetable.
      */
-    public function generateTeacherPdf(int $termId, int $teacherId): \Barryvdh\DomPDF\PDF
+    public function generateTeacherPdf(int $termId, int $teacherId, ?array $programIds = null): \Barryvdh\DomPDF\PDF
     {
         $term = Term::find($termId);
         $teacher = \App\Models\Teacher::with('user')->find($teacherId);
@@ -66,7 +67,8 @@ class TimetablePdfService
         // Get entries for this teacher
         $entries = TimetableEntry::where('teacher_id', $teacherId)
             ->where('term_id', $termId)
-            ->where('is_active', true)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+            ->when($programIds !== null, fn($query) => $query->whereIn('program_id', $programIds))
             ->with(['subject', 'batch', 'classroom', 'slot', 'program'])
             ->get()
             ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
@@ -241,5 +243,20 @@ class TimetablePdfService
 </html>';
 
         return $html;
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery): void {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereExists(function ($exists): void {
+                        $exists->selectRaw('1')
+                            ->from('timetable_versions')
+                            ->whereColumn('timetable_versions.id', 'timetable_entries.timetable_version_id')
+                            ->where('timetable_versions.status', 'published');
+                    });
+            });
     }
 }

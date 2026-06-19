@@ -10,6 +10,11 @@
             <li class="breadcrumb-item active">Thread</li>
         </ol>
     </nav>
+    @unless($canParticipate)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-1"></i>Discussion replies and status updates are locked because your student profile is not active. The thread remains visible for history.
+        </div>
+    @endunless
 
     {{-- Original Question --}}
     <div class="card border-0 shadow-sm mb-3">
@@ -21,7 +26,7 @@
                     @endif
                     {{ $discussion->title }}
                 </h5>
-                @if(!$discussion->is_resolved && $discussion->posted_by === auth()->id())
+                @if($canParticipate && !$discussion->is_resolved && $discussion->posted_by === auth()->id())
                 <form method="POST" action="{{ route('student.discussions.resolve', [$subject, $discussion]) }}" class="ms-2">
                     @csrf
                     <button class="btn btn-sm btn-outline-success">Mark Resolved</button>
@@ -61,7 +66,7 @@
     @endif
 
     {{-- Reply form --}}
-    @if(!$discussion->is_resolved)
+    @if($canParticipate && !$discussion->is_resolved)
     <div class="card border-0 shadow-sm mt-3">
         <div class="card-header fw-semibold"><i class="bi bi-reply me-2"></i>Post a Reply</div>
         <div class="card-body">
@@ -74,6 +79,12 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Post Reply</button>
             </form>
+        </div>
+    </div>
+    @elseif(!$canParticipate && !$discussion->is_resolved)
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+            <span class="badge bg-secondary">Active students only</span>
         </div>
     </div>
     @endif

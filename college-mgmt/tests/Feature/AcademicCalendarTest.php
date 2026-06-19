@@ -59,7 +59,9 @@ class AcademicCalendarTest extends TestCase
 
     public function test_can_update_calendar_event()
     {
-        $event = AcademicCalendar::factory()->create();
+        $event = AcademicCalendar::factory()->create([
+            'event_date' => now()->addWeek()->toDateString(),
+        ]);
 
         $data = [
             'event_date' => now()->addMonth(),
@@ -68,18 +70,47 @@ class AcademicCalendarTest extends TestCase
             'is_holiday' => false,
         ];
 
-        $response = $this->put("/academic/academic-calendars/{$event->id}", $data);
+        $this->put("/academic/academic-calendars/{$event->id}", $data)
+            ->assertRedirect(route('academic.academic-calendars.show', $event));
 
         $this->assertEquals('Updated Event', $event->fresh()->event_name);
     }
 
-    public function test_can_delete_calendar_event()
+    public function test_can_archive_future_calendar_event()
     {
-        $event = AcademicCalendar::factory()->create();
+        $event = AcademicCalendar::factory()->create([
+            'event_date' => now()->addMonth()->toDateString(),
+        ]);
 
-        $response = $this->delete("/academic/academic-calendars/{$event->id}");
+        $this->delete("/academic/academic-calendars/{$event->id}")
+            ->assertRedirect('/academic/academic-calendars')
+            ->assertSessionHas('success', 'Calendar event archived successfully');
 
-        $this->assertDatabaseMissing('academic_calendars', ['id' => $event->id]);
+        $this->assertSoftDeleted('academic_calendars', ['id' => $event->id]);
+    }
+
+    public function test_past_calendar_event_cannot_be_edited_or_deleted(): void
+    {
+        $event = AcademicCalendar::factory()->create([
+            'event_date' => now()->subDay()->toDateString(),
+            'event_name' => 'Completed Exam Week',
+            'event_type' => 'exam_week',
+        ]);
+
+        $this->put("/academic/academic-calendars/{$event->id}", [
+            'event_date' => now()->addMonth()->toDateString(),
+            'event_name' => 'Rewritten Completed Event',
+            'event_type' => 'holiday',
+            'is_holiday' => true,
+        ])->assertSessionHas('error', 'Past academic calendar events are locked for academic history. Add a new revision event instead of editing history.');
+
+        $this->delete("/academic/academic-calendars/{$event->id}")
+            ->assertSessionHas('error', 'Past academic calendar events are locked for academic history and cannot be deleted.');
+
+        $event->refresh();
+        $this->assertSame('Completed Exam Week', $event->event_name);
+        $this->assertSame('exam_week', $event->event_type);
+        $this->assertNull($event->deleted_at);
     }
 
     public function test_holiday_event_type()

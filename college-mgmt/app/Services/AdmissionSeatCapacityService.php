@@ -74,7 +74,7 @@ class AdmissionSeatCapacityService
             ->where('program_id', $programId)
             ->when($batchId, fn ($query) => $query->where('batch_id', $batchId), fn ($query) => $query->whereNull('batch_id'))
             ->where('decision', 'selected')
-            ->whereHas('applicant', fn ($query) => $query->whereNotIn('status', ['rejected', 'withdrawn']))
+            ->whereHas('applicant', fn ($query) => $query->whereNotIn('status', ['rejected', 'withdrawn', 'enrolled']))
             ->pluck('applicant_id')
             ->all();
 

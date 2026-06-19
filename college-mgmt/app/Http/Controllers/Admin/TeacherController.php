@@ -1,11 +1,13 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{ActivityLog, Teacher, User, Department};
 use App\Services\TimetableService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class TeacherController extends Controller
 {
@@ -13,6 +15,8 @@ class TeacherController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
         $teachers = Teacher::with(['user','department'])
             ->when($request->department_id, fn($q,$v) => $q->where('department_id',$v))
             ->when($request->status, fn($q,$v) => $q->where('status',$v))
@@ -27,17 +31,21 @@ class TeacherController extends Controller
 
     public function create()
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.teachers.create', compact('departments'));
     }
 
     public function store(Request $request)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
         $request->validate([
             'name'            => 'required|string|max:255',
             'email'           => 'required|email|unique:users',
             'password'        => 'required|min:8',
-            'department_id'   => 'required|exists:departments,id',
+            'department_id'   => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
             'employee_id'     => 'required|unique:teachers',
             'designation'     => 'nullable|string|max:255',
             'employment_type' => 'required|in:full_time,part_time,visiting',
@@ -60,6 +68,8 @@ class TeacherController extends Controller
 
     public function show(Teacher $teacher)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $teacher->load(['user','department','timetableEntries.subject','timetableEntries.slot']);
         $currentSemester = \App\Models\Semester::current();
         $weeklyLoad = $currentSemester ? $this->service->getTeacherWeeklyLoad($teacher->id, $currentSemester->id) : 0;
@@ -68,18 +78,31 @@ class TeacherController extends Controller
 
     public function edit(Teacher $teacher)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.teachers.edit', compact('teacher','departments'));
     }
 
     public function update(Request $request, Teacher $teacher)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
+        if ($teacher->status === 'inactive') {
+            return back()->with('error', 'Archived teacher profiles are locked. Use a dedicated audited reactivation or correction workflow instead of ordinary edit.');
+        }
+
         $request->validate([
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email,'.$teacher->user_id,
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
             'status'        => 'required|in:active,inactive,on_leave',
         ]);
+
+        if ($request->status === 'inactive') {
+            return back()->with('error', 'Use the archive action to deactivate a teacher so roles and audit history are preserved.');
+        }
+
         $teacher->user->update(['name' => $request->name, 'email' => $request->email]);
         $teacher->update($request->only([
             'department_id','designation','qualification','specialization',
@@ -90,6 +113,8 @@ class TeacherController extends Controller
 
     public function destroy(Teacher $teacher)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $name = $teacher->user?->name ?? $teacher->employee_id;
         $teacher->update(['status' => 'inactive']);
         $teacher->user?->syncRoles([]);
@@ -97,5 +122,10 @@ class TeacherController extends Controller
         ActivityLog::record('archived', "Teacher archived instead of deleted to preserve teaching history: {$name}", $teacher);
 
         return redirect()->route('admin.teachers.index')->with('success', 'Teacher archived. Timetable, attendance, leave, and academic history was preserved.');
+    }
+
+    private function authorizeAcademicIdentityManagement(Request $request): void
+    {
+        abort_unless($request->user() && AccessControl::canManageAcademicIdentities($request->user()), 403);
     }
 }

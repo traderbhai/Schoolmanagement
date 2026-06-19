@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            @if($offerLetter->isPending())
+            @if($offerLetter->isPending() && ! $locked)
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">Admin Actions</h5>
@@ -113,6 +113,11 @@
                             <button type="submit" class="btn btn-danger">Mark as Declined</button>
                         </form>
                     </div>
+                </div>
+            @elseif($offerLetter->isPending() && $locked)
+                <div class="alert alert-warning">
+                    <strong>Offer actions locked.</strong>
+                    This applicant is already in a final admission state: {{ ucfirst($offerLetter->applicant->status) }}.
                 </div>
             @endif
         </div>

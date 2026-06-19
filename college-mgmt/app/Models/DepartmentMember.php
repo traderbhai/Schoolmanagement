@@ -9,11 +9,13 @@ class DepartmentMember extends Model
     protected $fillable = [
         'department_id', 'department_role_id', 'department_team_id', 'user_id',
         'reports_to_member_id', 'scope_rules', 'is_active',
+        'deactivated_by', 'deactivated_at',
     ];
 
     protected $casts = [
         'scope_rules' => 'array',
         'is_active' => 'boolean',
+        'deactivated_at' => 'datetime',
     ];
 
     public function department() { return $this->belongsTo(Department::class); }
@@ -22,4 +24,5 @@ class DepartmentMember extends Model
     public function user() { return $this->belongsTo(User::class); }
     public function manager() { return $this->belongsTo(self::class, 'reports_to_member_id'); }
     public function directReports() { return $this->hasMany(self::class, 'reports_to_member_id'); }
+    public function deactivatedBy() { return $this->belongsTo(User::class, 'deactivated_by'); }
 }

@@ -40,6 +40,19 @@ class FeeDemandController extends Controller
         $validated['scholarship_deduction'] = $validated['scholarship_deduction'] ?? 0;
         $validated['final_amount'] = max(0, $validated['total_amount'] - $validated['scholarship_deduction']);
 
+        $student = Student::findOrFail($validated['student_id']);
+        if ($student->status !== 'active') {
+            return back()->withErrors(['student_id' => 'Fee demands can be created only for active students.']);
+        }
+
+        if (FeeDemand::where('student_id', $validated['student_id'])->where('term_id', $validated['term_id'])->exists()) {
+            return back()->withErrors(['term_id' => 'A fee demand already exists for this student and term.']);
+        }
+
+        if ($validated['status'] === 'partially_paid') {
+            return back()->withErrors(['status' => 'A new fee demand cannot start as partially paid. Record an actual payment or verified proof first.']);
+        }
+
         if ($validated['status'] === 'fully_paid' && $validated['final_amount'] > 0) {
             return back()->withErrors(['status' => 'A new non-zero fee demand cannot be created as fully paid. Record a payment, verified proof, waiver, or scholarship adjustment first.']);
         }
@@ -86,6 +99,10 @@ class FeeDemandController extends Controller
             ]);
         }
 
+        if ($validated['status'] === 'partially_paid' && ! $feeDemand->hasFinancialActivity()) {
+            return back()->withErrors(['status' => 'A fee demand cannot be marked partially paid without linked payment activity. Record an actual payment or verified proof first.']);
+        }
+
         if ($validated['status'] === 'fully_paid' && $validated['final_amount'] > 0) {
             return back()->withErrors(['status' => 'A non-zero demand cannot be manually closed as fully paid. Record a payment, verified proof, waiver, or scholarship adjustment first.']);
         }
@@ -100,6 +117,11 @@ class FeeDemandController extends Controller
     {
         if ($feeDemand->status === 'fully_paid') {
             return back()->with('error', 'Fee demand is already fully paid.');
+        }
+
+        $feeDemand->loadMissing('student');
+        if ($feeDemand->student?->status !== 'active') {
+            return back()->with('error', 'Fee demands for inactive or archived students cannot be manually marked paid from the standard fee-demand workflow.');
         }
 
         if ($feeDemand->openBalance() > 0) {
@@ -165,10 +187,13 @@ class FeeDemandController extends Controller
     {
         // Apply 2% penalty per month on overdue demands
         $penaltyRate = 0.02;
-        $overdue = \App\Models\FeeDemand::where('status', 'pending')
+        $overdue = \App\Models\FeeDemand::with('student')
+            ->whereIn('status', ['pending', 'partially_paid'])
             ->whereNotNull('due_date')
             ->where('due_date', '<', now()->toDateString())
             ->where('penalty_amount', 0) // only apply once
+            ->where('final_amount', '>', 0)
+            ->whereHas('student', fn ($query) => $query->where('status', 'active'))
             ->get();
 
         $count = 0;
@@ -176,7 +201,10 @@ class FeeDemandController extends Controller
             $daysOverdue = now()->diffInDays($demand->due_date);
             $monthsOverdue = max(1, ceil($daysOverdue / 30));
             $penalty = round($demand->final_amount * $penaltyRate * $monthsOverdue, 2);
-            $demand->update(['penalty_amount' => $penalty]);
+            $demand->update([
+                'penalty_amount' => $penalty,
+                'status' => 'overdue',
+            ]);
             $count++;
         }
 
@@ -193,9 +221,15 @@ class FeeDemandController extends Controller
             return back()->with('error', 'Cannot delete this fee demand because payment requests or installment records are linked to it.');
         }
 
+        $feeDemand->update([
+            'cancelled_at' => now(),
+            'cancelled_by' => auth()->id(),
+            'cancellation_reason' => 'Cancelled before payment activity.',
+        ]);
         $feeDemand->delete();
+
         return redirect()->route('academic.fee-demands.index')
-            ->with('success', 'Fee demand deleted successfully');
+            ->with('success', 'Fee demand cancelled and retained for audit.');
     }
 
     private function studentAdmissionScholarshipDeduction(Student $student, float $totalFee): float

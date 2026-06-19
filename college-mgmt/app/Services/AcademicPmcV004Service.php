@@ -401,8 +401,9 @@ class AcademicPmcV004Service
 
         foreach ($students as $student) {
             $attendance = $student->calculateAttendancePercentage();
-            $marks = (float) ($student->examResults()->avg('marks_obtained') ?: 0);
-            $absences = $student->examResults()->where('is_absent', true)->count();
+            $publishedResults = $this->publishedStudentResults($student);
+            $marks = (float) ((clone $publishedResults)->avg('marks_obtained') ?: 0);
+            $absences = (clone $publishedResults)->where('is_absent', true)->count();
             $openGrievances = StudentGrievance::where('student_id', $student->id)->whereIn('status', ['open', 'under_review', 'escalated'])->count();
             $mentorMeetings = $student->mentorMeetings()->where('meeting_date', '>=', now()->subDays(30))->count();
 
@@ -463,6 +464,12 @@ class AcademicPmcV004Service
 
         $this->audit($actor, 'academic_pmc_v057_student_success_refreshed', 'PMC student success signals refreshed', null, ['students' => $refreshed, 'critical' => $critical]);
         return ['students' => $refreshed, 'critical' => $critical];
+    }
+
+    private function publishedStudentResults(Student $student)
+    {
+        return $student->examResults()
+            ->whereHas('exam', fn ($query) => $query->whereNotNull('published_at'));
     }
 
     public function createStudentIntervention(User $actor, AcademicPmcStudentSuccessPlan $plan, array $data): AcademicPmcStudentIntervention

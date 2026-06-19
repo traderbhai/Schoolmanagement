@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\AccessControl;
 use App\Models\StudentGrievance;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ class GrievanceController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeGlobalGrievances($request);
+
         $query = StudentGrievance::with(['student.user', 'assignedTo'])->latest();
 
         if ($request->filled('status'))   $query->where('status', $request->status);
@@ -32,6 +35,8 @@ class GrievanceController extends Controller
 
     public function show(StudentGrievance $grievance)
     {
+        $this->authorizeGlobalGrievances(request());
+
         $grievance->load(['student.user', 'student.program', 'assignedTo']);
         $staffUsers = User::whereHas('roles', fn($q) =>
             $q->whereIn('name', ['admin', 'dean_academics', 'exam_cell', 'hod'])
@@ -42,6 +47,12 @@ class GrievanceController extends Controller
 
     public function update(Request $request, StudentGrievance $grievance)
     {
+        $this->authorizeGlobalGrievances($request);
+
+        if ($grievance->status === 'closed') {
+            return back()->with('error', 'Closed grievance history cannot be changed from the standard admin update route.');
+        }
+
         $data = $request->validate([
             'status'      => 'required|in:open,under_review,escalated,resolved,closed',
             'resolution_notes'  => 'nullable|string|max:3000',
@@ -108,5 +119,10 @@ class GrievanceController extends Controller
             'route' => route('admin.grievances.index'),
             'action' => 'Review History',
         ];
+    }
+
+    private function authorizeGlobalGrievances(Request $request): void
+    {
+        abort_unless(AccessControl::canManageGlobalGrievances($request->user()), 403);
     }
 }

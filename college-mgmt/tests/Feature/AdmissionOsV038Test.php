@@ -129,6 +129,32 @@ class AdmissionOsV038Test extends TestCase
         $this->assertDatabaseHas('admission_selection_committee_decisions', ['applicant_id' => $applicant->id, 'decision' => 'waitlist']);
     }
 
+    public function test_selection_committee_cannot_change_final_state_applicant(): void
+    {
+        $this->seed(\Database\Seeders\MasterDemoSeeder::class);
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        $applicant = Applicant::factory()->create(['status' => 'enrolled']);
+
+        $this->actingAs($head)
+            ->post(route('admission.selection-committee.decide'), [
+                'applicant_id' => $applicant->id,
+                'decision' => 'selected',
+                'reason' => 'Trying to overwrite an enrolled applicant.',
+            ])
+            ->assertSessionHasErrors('applicant_id');
+
+        $this->assertSame('enrolled', $applicant->fresh()->status);
+        $this->assertDatabaseMissing('admission_selection_committee_decisions', [
+            'applicant_id' => $applicant->id,
+            'decision' => 'selected',
+        ]);
+        $this->assertDatabaseMissing('admission_sensitive_audit_events', [
+            'action' => 'selection_committee_decision',
+            'subject_type' => Applicant::class,
+            'subject_id' => $applicant->id,
+        ]);
+    }
+
     public function test_offer_waitlist_seat_release_deferral_and_joining_kit(): void
     {
         $this->seed(\Database\Seeders\MasterDemoSeeder::class);

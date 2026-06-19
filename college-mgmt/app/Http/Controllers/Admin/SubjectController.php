@@ -1,5 +1,6 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Subject, Department};
 use App\Services\AcademicMasterDataIntegrityService;
@@ -10,14 +11,20 @@ class SubjectController extends Controller
     public function __construct(private AcademicMasterDataIntegrityService $integrity) {}
 
     public function index() {
+        $this->authorizeAcademicStructure();
+
         $subjects = Subject::with('department')->paginate(20);
         return view('admin.subjects.index', compact('subjects'));
     }
     public function create() {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.subjects.create', compact('departments'));
     }
     public function store(Request $request) {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'department_id'  => 'required|exists:departments,id',
             'name'           => 'required|string|max:255',
@@ -31,13 +38,19 @@ class SubjectController extends Controller
         return redirect()->route('admin.subjects.index')->with('success', 'Subject created.');
     }
     public function show(Subject $subject) {
+        $this->authorizeAcademicStructure();
+
         return view('admin.subjects.show', compact('subject'));
     }
     public function edit(Subject $subject) {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::where('is_active',true)->get();
         return view('admin.subjects.edit', compact('subject','departments'));
     }
     public function update(Request $request, Subject $subject) {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'department_id'  => 'required|exists:departments,id',
             'name'           => 'required|string|max:255',
@@ -64,6 +77,8 @@ class SubjectController extends Controller
         return redirect()->route('admin.subjects.index')->with('success', 'Updated.');
     }
     public function destroy(Subject $subject) {
+        $this->authorizeAcademicStructure();
+
         $dependencies = $this->integrity->dependencyLabels('subject', $subject->id);
 
         if ($dependencies !== []) {
@@ -72,5 +87,10 @@ class SubjectController extends Controller
 
         $subject->delete();
         return redirect()->route('admin.subjects.index')->with('success', 'Deleted.');
+    }
+
+    private function authorizeAcademicStructure(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
     }
 }

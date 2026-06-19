@@ -2,8 +2,8 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
-                ElectiveRegistrationWindow, Department, AssessmentComponent};
+use App\Models\{AcademicPmcElectiveChoice, Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
+                ElectiveRegistrationWindow, Department, PmcAssessmentComponentConfig};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -54,6 +54,9 @@ class PmcCurriculumController extends Controller {
             'max_elective_choices'=> 'nullable|integer|min:1',
         ]);
 
+        $this->authorizeProgramScope((int) $request->program_id);
+        $this->validateSubjectForProgram((int) $request->subject_id, (int) $request->program_id);
+
         $existing = ProgramSubject::where([
             'program_id' => $request->program_id,
             'subject_id' => $request->subject_id,
@@ -80,6 +83,7 @@ class PmcCurriculumController extends Controller {
 
     // ── Remove subject from program-term ─────────────────────────────────────
     public function removeSubject(ProgramSubject $programSubject) {
+        $this->authorizeProgramScope((int) $programSubject->program_id);
         $programSubject->delete();
         return back()->with('success', 'Subject removed from curriculum.');
     }
@@ -136,6 +140,17 @@ class PmcCurriculumController extends Controller {
             'is_primary'  => 'boolean',
         ]);
 
+        $this->authorizeProgramScope((int) $request->program_id);
+        $this->validateSubjectForProgram((int) $request->subject_id, (int) $request->program_id);
+
+        if (! ProgramSubject::where('program_id', $request->program_id)
+            ->where('subject_id', $request->subject_id)
+            ->where('term_id', $request->term_id)
+            ->where('is_active', true)
+            ->exists()) {
+            return back()->withErrors(['subject_id' => 'Faculty can be assigned only to an active curriculum subject in the selected program and term.']);
+        }
+
         SubjectFacultyAssignment::updateOrCreate(
             [
                 'subject_id' => $request->subject_id,
@@ -154,6 +169,7 @@ class PmcCurriculumController extends Controller {
     }
 
     public function unassignFaculty(SubjectFacultyAssignment $assignment) {
+        $this->authorizeProgramScope((int) $assignment->program_id);
         $assignment->delete();
         return back()->with('success', 'Assignment removed.');
     }
@@ -211,6 +227,8 @@ class PmcCurriculumController extends Controller {
             'instructions'   => 'nullable|string|max:1000',
         ]);
 
+        $this->authorizeProgramScope((int) $request->program_id);
+
         ElectiveRegistrationWindow::create([
             'program_id'     => $request->program_id,
             'term_id'        => $request->term_id,
@@ -227,6 +245,16 @@ class PmcCurriculumController extends Controller {
 
     public function updateWindowStatus(Request $request, ElectiveRegistrationWindow $window) {
         $request->validate(['status' => 'required|in:draft,open,closed,finalized']);
+        $this->authorizeProgramScope((int) $window->program_id);
+
+        if ($window->status === 'finalized' && $request->status !== 'finalized') {
+            return back()->with('error', 'Finalized elective windows are locked. Create a new add/drop or revision window instead.');
+        }
+
+        if ($window->status === 'closed' && $request->status === 'open' && $this->windowHasSubmittedChoices($window)) {
+            return back()->with('error', 'Closed elective windows with submitted choices cannot be reopened. Create a new revision window instead.');
+        }
+
         $window->update(['status' => $request->status]);
         return back()->with('success', 'Window status updated to ' . $request->status . '.');
     }
@@ -247,7 +275,7 @@ class PmcCurriculumController extends Controller {
 
         $programSubjects = ProgramSubject::where('program_id', $selectedProgram?->id ?? 0)
             ->when($currentTerm, fn($q) => $q->where('term_id', $currentTerm->id))
-            ->with(['subject', 'subject.assessmentComponents' => fn($q) =>
+            ->with(['subject', 'subject.assessmentComponentConfigs' => fn($q) =>
                 $q->when($currentTerm, fn($q2) => $q2->where('term_id', $currentTerm->id))
             ])
             ->get();
@@ -259,6 +287,7 @@ class PmcCurriculumController extends Controller {
 
     public function saveAssessmentComponent(Request $request) {
         $request->validate([
+            'program_subject_id' => 'required|exists:program_subjects,id',
             'subject_id'  => 'required|exists:subjects,id',
             'term_id'     => 'required|exists:terms,id',
             'name'        => 'required|string|max:100',
@@ -266,18 +295,64 @@ class PmcCurriculumController extends Controller {
             'weightage'   => 'required|numeric|min:1|max:100',
         ]);
 
-        AssessmentComponent::updateOrCreate(
+        $programSubject = ProgramSubject::with(['program', 'subject', 'term'])
+            ->whereKey($request->program_subject_id)
+            ->firstOrFail();
+
+        if (! in_array((int) $programSubject->program_id, array_map('intval', $this->programIds()), true)) {
+            abort(403);
+        }
+
+        if ((int) $programSubject->subject_id !== (int) $request->subject_id
+            || (int) $programSubject->term_id !== (int) $request->term_id) {
+            return back()->with('error', 'Assessment component must belong to the selected curriculum subject and term.');
+        }
+
+        $existingTotal = PmcAssessmentComponentConfig::where('subject_id', $request->subject_id)
+            ->where('term_id', $request->term_id)
+            ->where('name', '!=', $request->name)
+            ->sum('weightage');
+
+        if (($existingTotal + (float) $request->weightage) > 100.0) {
+            return back()->withInput()->withErrors([
+                'weightage' => 'Assessment component weightage cannot exceed 100% for this subject and term.',
+            ]);
+        }
+
+        PmcAssessmentComponentConfig::updateOrCreate(
             [
                 'subject_id' => $request->subject_id,
                 'term_id'    => $request->term_id,
                 'name'       => $request->name,
             ],
             [
+                'program_subject_id' => $programSubject->id,
+                'program_id' => $programSubject->program_id,
                 'max_marks' => $request->max_marks,
                 'weightage' => $request->weightage,
+                'created_by' => Auth::id(),
             ]
         );
 
         return back()->with('success', 'Assessment component saved.');
+    }
+
+    private function authorizeProgramScope(int $programId): void
+    {
+        abort_unless(in_array($programId, array_map('intval', $this->programIds()), true), 403);
+    }
+
+    private function validateSubjectForProgram(int $subjectId, int $programId): void
+    {
+        $subject = Subject::findOrFail($subjectId);
+        abort_unless($subject->is_active && (int) $subject->program_id === $programId, 422, 'Selected subject must be active and belong to the selected program.');
+    }
+
+    private function windowHasSubmittedChoices(ElectiveRegistrationWindow $window): bool
+    {
+        return AcademicPmcElectiveChoice::where('program_id', $window->program_id)
+            ->where('term_id', $window->term_id)
+            ->whereIn('status', ['submitted', 'allocated', 'waitlisted'])
+            ->exists();
     }
 }

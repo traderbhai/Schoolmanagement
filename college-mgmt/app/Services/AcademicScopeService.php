@@ -51,6 +51,8 @@ class AcademicScopeService
                 'is_active' => true,
                 'assigned_by' => $actor->id,
                 'assigned_at' => now(),
+                'deactivated_by' => null,
+                'deactivated_at' => null,
                 'metadata' => $metadata,
             ]
         );
@@ -149,7 +151,11 @@ class AcademicScopeService
 
     public function deactivate(User $actor, AcademicScopeAssignment $assignment): void
     {
-        $assignment->update(['is_active' => false]);
+        $assignment->update([
+            'is_active' => false,
+            'deactivated_by' => $actor->id,
+            'deactivated_at' => now(),
+        ]);
 
         $this->academics->record(
             $actor,

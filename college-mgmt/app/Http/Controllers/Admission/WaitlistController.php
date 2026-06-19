@@ -58,10 +58,20 @@ class WaitlistController extends Controller
             return back()->with('error', 'This entry is not on the waitlist.');
         }
 
+        $entry->loadMissing('applicant');
+        if (! $entry->applicant || $this->applicantCannotBePromoted($entry->applicant)) {
+            return back()->with('error', 'This applicant is not eligible for waitlist promotion.');
+        }
+
+        if (OfferLetter::where('applicant_id', $entry->applicant_id)->whereIn('status', ['issued', 'accepted'])->exists()) {
+            return back()->with('error', 'This applicant already has an active offer.');
+        }
+
         // Check available seat
         $selectedCount = MeritListEntry::where('program_id', $entry->program_id)
             ->where('decision', 'selected')
             ->when($entry->batch_id, fn($q) => $q->where('batch_id', $entry->batch_id))
+            ->whereHas('applicant', fn ($query) => $query->whereNotIn('status', ['rejected', 'withdrawn', 'enrolled']))
             ->count();
 
         $seatMatrix = SeatMatrix::where('program_id', $entry->program_id)
@@ -114,6 +124,7 @@ class WaitlistController extends Controller
             ->merge(MeritListEntry::where('program_id', $programId)
                 ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
                 ->where('decision', 'selected')
+                ->whereHas('applicant', fn ($query) => $query->whereNotIn('status', ['rejected', 'withdrawn', 'enrolled']))
                 ->pluck('applicant_id'))
             ->merge(OfferLetter::where('program_id', $programId)
                 ->when($batchId, fn ($query) => $query->where('batch_id', $batchId))
@@ -127,6 +138,11 @@ class WaitlistController extends Controller
             ->values();
 
         return Applicant::whereIn('id', $applicantIds)->get();
+    }
+
+    private function applicantCannotBePromoted(Applicant $applicant): bool
+    {
+        return in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true);
     }
 
     private function seatCategoryForApplicant(string $category): string

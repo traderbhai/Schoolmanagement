@@ -129,14 +129,16 @@ class AcademicPmcOperatingService
     {
         $programIds = $this->visibleProgramIds($user);
         $draft = $this->applyProgramScope(
-            TimetableEntry::with(['program', 'subject', 'teacher.user', 'classroom'])->where('is_active', true)->where('status', '!=', 'published'),
+            TimetableEntry::with(['program', 'subject', 'teacher.user', 'classroom'])
+                ->where('is_active', true)
+                ->where(fn (Builder $query) => $this->unpublishedTimetableScope($query)),
             $programIds
         )->orderBy('day_of_week')->limit(25)->get();
 
         $conflicts = $this->applyProgramScope(
             TimetableEntry::query()
                 ->selectRaw('teacher_id, day_of_week, timetable_slot_id, count(*) as conflict_count')
-                ->where('is_active', true)
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
                 ->groupBy('teacher_id', 'day_of_week', 'timetable_slot_id')
                 ->having('conflict_count', '>', 1),
             $programIds
@@ -151,7 +153,7 @@ class AcademicPmcOperatingService
             'description' => 'Draft slots, publish readiness, faculty-room conflicts, and workload balance.',
             'metrics' => [
                 'draft_slots' => $draft->count(),
-                'published_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true)->where('status', 'published'), $programIds)->count(),
+                'published_slots' => $this->applyProgramScope(TimetableEntry::where(fn (Builder $query) => $this->publishedTimetableScope($query)), $programIds)->count(),
                 'teacher_conflicts' => $conflicts->count(),
                 'active_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true), $programIds)->count(),
             ],
@@ -177,6 +179,7 @@ class AcademicPmcOperatingService
         $attendanceRisk = Attendance::query()
             ->with(['student.user', 'student.program'])
             ->selectRaw('student_id, count(*) as exception_count')
+            ->whereHas('timetableEntry', fn (Builder $query) => $this->publishedTimetableScope($query))
             ->whereIn('student_id', $visibleStudentIds)
             ->whereIn('status', ['absent', 'late'])
             ->groupBy('student_id')
@@ -186,7 +189,9 @@ class AcademicPmcOperatingService
 
         $weakPerformance = ExamResult::with(['student.user', 'student.program', 'exam.subject'])
             ->whereIn('student_id', $visibleStudentIds)
-            ->whereHas('exam', fn (Builder $query) => $query->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+            ->whereHas('exam', fn (Builder $query) => $query
+                ->whereNotNull('published_at')
+                ->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
             ->limit(25)
             ->get();
 
@@ -311,6 +316,31 @@ class AcademicPmcOperatingService
             'label' => $scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Assigned PMC work',
             'detail' => $scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit PMC program scope assigned yet',
         ];
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function unpublishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where(function (Builder $statusQuery) {
+                $statusQuery->where('status', '!=', 'published')
+                    ->orWhere(function (Builder $versionQuery) {
+                        $versionQuery->where('status', 'published')
+                            ->whereNotNull('timetable_version_id')
+                            ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
+                    });
+            });
     }
 
     private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string

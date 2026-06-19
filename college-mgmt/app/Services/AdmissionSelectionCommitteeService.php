@@ -15,6 +15,12 @@ class AdmissionSelectionCommitteeService
             throw ValidationException::withMessages(['reason' => 'Decision reason is required.']);
         }
 
+        if ($this->isFinalApplicantState($applicant)) {
+            throw ValidationException::withMessages([
+                'applicant_id' => 'Committee decisions are locked for applicants in a final admission state.',
+            ]);
+        }
+
         $decisionId = DB::table('admission_selection_committee_decisions')->insertGetId([
             'applicant_id' => $applicant->id,
             'panel_id' => $data['panel_id'] ?? null,
@@ -45,5 +51,10 @@ class AdmissionSelectionCommitteeService
         ]);
 
         return $decisionId;
+    }
+
+    private function isFinalApplicantState(Applicant $applicant): bool
+    {
+        return in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true);
     }
 }

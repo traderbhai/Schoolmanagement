@@ -57,8 +57,8 @@ Route::prefix('applicant')->name('applicant.')->middleware(['auth', 'role:applic
     Route::post('fees/{installment}', [ApplicantPayment::class, 'store'])->name('fees.store');
     // Offer Letters
     Route::get('offer-letters', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'index'])->name('offer-letters.index');
-    Route::get('offer-letters/{offerLetter}', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'show'])->name('offer-letters.show');
     Route::get('offer-letters/{offerLetter}/pdf', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'downloadPdf'])->name('offer-letters.pdf');
+    Route::get('offer-letters/{offerLetter}', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'show'])->name('offer-letters.show');
     Route::post('offer-letters/{offerLetter}/accept', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'accept'])->name('offer-letters.accept');
     Route::post('offer-letters/{offerLetter}/decline', [\App\Http\Controllers\Applicant\OfferLetterController::class, 'decline'])->name('offer-letters.decline');
     Route::get('notifications', [\App\Http\Controllers\Applicant\NotificationPreferenceController::class, 'edit'])->name('notifications.edit');
@@ -438,6 +438,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::resource('academic-years', Admin\AcademicYearController::class);
     Route::resource('semesters',     Admin\SemesterController::class);
     Route::resource('teachers',      Admin\TeacherController::class);
+    Route::get('students/export', [Admin\StudentController::class, 'export'])->name('students.export');
     Route::resource('students',      Admin\StudentController::class);
     Route::get('document-requests', [Admin\StudentDocumentRequestController::class, 'index'])->name('document-requests.index');
     Route::patch('document-requests/{documentRequest}/approve', [Admin\StudentDocumentRequestController::class, 'approve'])->name('document-requests.approve');
@@ -463,6 +464,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::get('attendance/mark',   [Admin\AttendanceController::class, 'mark'])->name('attendance.mark');
     Route::post('attendance/store', [Admin\AttendanceController::class, 'store'])->name('attendance.store');
     Route::get('attendance/report', [Admin\AttendanceController::class, 'report'])->name('attendance.report');
+    Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
 
     // Exams
     Route::resource('exams', Admin\ExamController::class);
@@ -513,6 +515,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
 
     // Fees
     Route::get('fees/report', [Admin\FeeController::class, 'report'])->name('fees.report');
+    Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
     Route::get('fees/{payment}/receipt', [Admin\FeeController::class, 'receipt'])->name('fees.receipt');
     Route::resource('fees', Admin\FeeController::class);
     Route::get('fees-collect',   [Admin\FeeController::class, 'collectPayment'])->name('fees.collect');
@@ -539,11 +542,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::resource('placement-drives', Admin\PlacementDriveController::class);
     Route::post('placement-drives/{drive}/apply', [Admin\PlacementDriveController::class, 'apply'])->name('placement-drives.apply');
     Route::patch('placements/{placement}/status', [Admin\PlacementDriveController::class, 'updateApplication'])->name('placements.update-status');
-
-    // Export routes
-    Route::get('students/export', [Admin\StudentController::class, 'export'])->name('students.export');
-    Route::get('fees/export', [Admin\FeeController::class, 'export'])->name('fees.export');
-    Route::get('attendance/export', [Admin\AttendanceController::class, 'export'])->name('attendance.export');
 
     // Bulk Mail
     Route::get('bulk-mail', [Admin\BulkMailController::class, 'index'])->name('bulk-mail.index');

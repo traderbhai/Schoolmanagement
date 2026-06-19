@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -14,6 +15,8 @@ class RolePermissionController extends Controller
 {
     public function index()
     {
+        $this->authorizeRolePermissionManagement();
+
         $roles = Role::with('permissions')->orderBy('name')->get();
         $programs = Program::where('is_active', true)->orderBy('name')->get();
 
@@ -22,6 +25,8 @@ class RolePermissionController extends Controller
 
     public function hierarchy()
     {
+        $this->authorizeRolePermissionManagement();
+
         $roles = Role::with('permissions')->orderBy('name')->get();
 
         return view('admin.roles.hierarchy', compact('roles'));
@@ -29,6 +34,8 @@ class RolePermissionController extends Controller
 
     public function show(Role $role)
     {
+        $this->authorizeRolePermissionManagement();
+
         $role->load('permissions');
         $permissions = Permission::orderBy('name')->get();
         $programs = Program::where('is_active', true)->orderBy('name')->get();
@@ -43,6 +50,8 @@ class RolePermissionController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        $this->authorizeRolePermissionManagement();
+
         $validated = $request->validate([
             'permissions'   => 'array',
             'permissions.*' => 'integer|exists:permissions,id',
@@ -72,5 +81,10 @@ class RolePermissionController extends Controller
         ]);
 
         return back()->with('success', 'Permissions updated for ' . $role->name);
+    }
+
+    private function authorizeRolePermissionManagement(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageRoleAssignments(auth()->user()), 403);
     }
 }

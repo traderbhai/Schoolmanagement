@@ -69,7 +69,7 @@ class AttendanceController extends Controller
         $entries = TimetableEntry::with(['subject', 'course', 'classroom', 'slot'])
             ->where('teacher_id', $teacher->id)
             ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
+            ->where(fn($query) => $this->publishedTimetableScope($query))
             ->when($currentSemester, fn($q) => $q->where('semester_id', $currentSemester->id))
             ->get();
 
@@ -79,6 +79,8 @@ class AttendanceController extends Controller
         if ($request->entry_id) {
             $entry = TimetableEntry::with(['subject','course','slot','classroom'])
                 ->where('teacher_id', $teacher->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->where(fn($query) => $this->publishedTimetableScope($query))
                 ->findOrFail($request->entry_id);
 
             $students = $this->enrolledStudentsForEntry($entry)->with(['user',
@@ -97,12 +99,22 @@ class AttendanceController extends Controller
 
         $request->validate([
             'timetable_entry_id' => 'required|exists:timetable_entries,id',
-            'date'               => 'required|date',
+            'date'               => 'required|date|before_or_equal:today',
             'attendance'         => 'required|array',
+            'attendance.*'       => 'required|in:present,absent,late,excused',
         ]);
 
-        // Verify this entry belongs to the teacher
-        $entry = TimetableEntry::where('teacher_id', $teacher->id)->findOrFail($request->timetable_entry_id);
+        $entry = TimetableEntry::where('teacher_id', $teacher->id)
+            ->where(fn($query) => $this->publishedTimetableScope($query))
+            ->findOrFail($request->timetable_entry_id);
+
+        $attendanceDay = (int) date('N', strtotime($request->date));
+        if ((int) $entry->day_of_week !== $attendanceDay) {
+            return back()
+                ->withErrors(['date' => 'Attendance date must match the selected class schedule.'])
+                ->withInput();
+        }
+
         $allowedStudentIds = $this->enrolledStudentIdsForEntry($entry)->map(fn ($id) => (string) $id)->all();
         $submittedStudentIds = array_map('strval', array_keys($request->attendance));
         abort_unless(empty(array_diff($submittedStudentIds, $allowedStudentIds)), 403, 'Attendance includes students outside this class.');
@@ -115,5 +127,15 @@ class AttendanceController extends Controller
         }
 
         return redirect()->route('teacher.attendance.mark')->with('success', 'Attendance saved successfully.');
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($scope) {
+                $scope->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            });
     }
 }

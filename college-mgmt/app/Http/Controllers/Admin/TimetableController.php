@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
@@ -19,6 +20,8 @@ class TimetableController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizeAcademicScheduling();
+
         $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
         $courses = Course::where('is_active', true)->get();
         $currentSemester = Semester::current() ?? $semesters->first();
@@ -36,6 +39,8 @@ class TimetableController extends Controller
 
     public function create()
     {
+        $this->authorizeAcademicScheduling();
+
         $semesters = Semester::with('academicYear')->get();
         $courses = Course::where('is_active', true)->get();
         $subjects = Subject::where('is_active', true)->get();
@@ -50,6 +55,8 @@ class TimetableController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAcademicScheduling();
+
         $data = $request->validate([
             'semester_id'       => 'required|exists:semesters,id',
             'course_id'         => 'required|exists:courses,id',
@@ -76,12 +83,16 @@ class TimetableController extends Controller
 
     public function show(string $id)
     {
+        $this->authorizeAcademicScheduling();
+
         $entry = TimetableEntry::with(['semester', 'course', 'subject', 'teacher.user', 'classroom', 'slot'])->findOrFail($id);
         return view('admin.timetable.show', compact('entry'));
     }
 
     public function edit(string $id)
     {
+        $this->authorizeAcademicScheduling();
+
         $entry = TimetableEntry::findOrFail($id);
         $semesters = Semester::with('academicYear')->get();
         $courses = Course::where('is_active', true)->get();
@@ -97,6 +108,8 @@ class TimetableController extends Controller
 
     public function update(Request $request, string $id)
     {
+        $this->authorizeAcademicScheduling();
+
         $entry = TimetableEntry::findOrFail($id);
 
         if ($this->entryHasOperationalHistory($entry) || $entry->status === 'published') {
@@ -130,6 +143,8 @@ class TimetableController extends Controller
 
     public function destroy(string $id)
     {
+        $this->authorizeAcademicScheduling();
+
         $entry = TimetableEntry::findOrFail($id);
 
         if ($this->entryHasOperationalHistory($entry) || $entry->status === 'published') {
@@ -154,6 +169,8 @@ class TimetableController extends Controller
 
     public function teacherView(Request $request)
     {
+        $this->authorizeAcademicScheduling();
+
         $teachers = Teacher::with('user')->where('status', 'active')->get();
         $semesters = Semester::with('academicYear')->get();
         $semesterId = $request->semester_id ?? optional(Semester::current())->id;
@@ -163,5 +180,10 @@ class TimetableController extends Controller
         $grid = ($semesterId && $teacherId) ? $this->service->buildWeeklyGrid($semesterId, null, $teacherId) : [];
 
         return view('admin.timetable.teacher-view', compact('teachers', 'semesters', 'slots', 'grid', 'semesterId', 'teacherId'));
+    }
+
+    private function authorizeAcademicScheduling(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicScheduling(auth()->user()), 403);
     }
 }

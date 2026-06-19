@@ -90,7 +90,13 @@ class LeaveController extends Controller
             return back()->with('error', 'Cannot cancel this leave application.');
         }
 
-        $leave->delete();
+        $leave->update([
+            'status' => 'rejected',
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'admin_remarks' => 'Cancelled by teacher before review.',
+        ]);
+
         return back()->with('success', 'Leave application cancelled.');
     }
 }

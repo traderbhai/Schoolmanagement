@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Student, Program, Exam, ExamResult, Attendance, FeePayment, FeeStructure, Placement, Teacher, Batch};
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,8 @@ class AnalyticsController extends Controller
 {
     public function index()
     {
+        abort_unless(request()->user() && AccessControl::canViewInstitutionalAnalytics(request()->user()), 403);
+
         $currentYear = now()->year;
 
         // ── Program-wise cross-domain summary ─────────────────────────────────
@@ -23,15 +26,19 @@ class AnalyticsController extends Controller
                     ->pluck('id');
 
                 // Pass rate from ExamResult
-                $results = ExamResult::whereHas('exam', fn($q) => $q->where('program_id', $prog->id))->get();
+                $results = ExamResult::whereHas('exam', fn($q) => $q
+                    ->whereNotNull('published_at')
+                    ->where('program_id', $prog->id))->get();
                 $total = $results->count();
                 $passed = $results->filter(fn($r) => !$r->is_absent && $r->exam
                     && $r->marks_obtained >= $r->exam->passing_marks)->count();
                 $prog->pass_rate = $total > 0 ? round(($passed / $total) * 100, 1) : null;
 
                 // Attendance
-                $attTotal   = Attendance::whereIn('student_id', $studentIds)->count();
-                $attPresent = Attendance::whereIn('student_id', $studentIds)->where('status', 'present')->count();
+                $attendanceQuery = $this->officialAttendanceQuery()
+                    ->whereIn('student_id', $studentIds);
+                $attTotal = (clone $attendanceQuery)->count();
+                $attPresent = (clone $attendanceQuery)->where('status', 'present')->count();
                 $prog->att_pct = $attTotal > 0 ? round(($attPresent / $attTotal) * 100, 1) : null;
 
                 // Placement rate this year
@@ -47,6 +54,7 @@ class AnalyticsController extends Controller
         // ── Exam grade distribution ────────────────────────────────────────────
         // Compute grade letters from marks_obtained vs exam total_marks
         $examResults = ExamResult::with('exam')
+            ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
             ->whereYear('created_at', $currentYear)
             ->get();
 
@@ -95,8 +103,10 @@ class AnalyticsController extends Controller
             ->with(['user', 'program'])
             ->get()
             ->map(function ($s) {
-                $total   = Attendance::where('student_id', $s->id)->count();
-                $present = Attendance::where('student_id', $s->id)->where('status', 'present')->count();
+                $attendanceQuery = $this->officialAttendanceQuery()
+                    ->where('student_id', $s->id);
+                $total = (clone $attendanceQuery)->count();
+                $present = (clone $attendanceQuery)->where('status', 'present')->count();
                 $s->att_pct = $total > 0 ? round(($present / $total) * 100, 1) : null;
                 return $s;
             })
@@ -111,8 +121,10 @@ class AnalyticsController extends Controller
             ? round(($examResults->filter(fn($r) => !$r->is_absent && $r->exam
                 && $r->marks_obtained >= $r->exam->passing_marks)->count() / $examResults->count()) * 100, 1)
             : null;
-        $overallAttPct = Attendance::count() > 0
-            ? round((Attendance::where('status', 'present')->count() / Attendance::count()) * 100, 1)
+        $officialAttendance = $this->officialAttendanceQuery();
+        $overallAttendanceTotal = (clone $officialAttendance)->count();
+        $overallAttPct = $overallAttendanceTotal > 0
+            ? round(((clone $officialAttendance)->where('status', 'present')->count() / $overallAttendanceTotal) * 100, 1)
             : null;
 
         return view('admin.analytics', compact(
@@ -120,5 +132,22 @@ class AnalyticsController extends Controller
             'atRisk', 'totalStudents', 'totalTeachers', 'overallPassRate', 'overallAttPct',
             'currentYear'
         ));
+    }
+
+    private function officialAttendanceQuery()
+    {
+        return Attendance::query()
+            ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
     }
 }

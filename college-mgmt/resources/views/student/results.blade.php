@@ -22,9 +22,13 @@
                     </select>
                 </div>
             </form>
-            <a href="{{ route('student.transcript.download') }}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-file-earmark-text me-1"></i>Official Transcript PDF
-            </a>
+            @if($issuedTranscript)
+                <a href="{{ route('student.transcript.download') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-file-earmark-text me-1"></i>Official Transcript PDF
+                </a>
+            @else
+                <span class="badge bg-light text-muted border">Official transcript not issued</span>
+            @endif
         </div>
     </div>
 </div>
@@ -80,10 +84,12 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-table me-2"></i>Subject-wise Results</span>
-        @if($semesterId)
+        @if($semesterId && $gradeCardAvailable)
         <a href="{{ route('student.reports.grade-card', $semesterId) }}" target="_blank" class="btn btn-sm btn-primary">
             <i class="bi bi-file-earmark-pdf me-1"></i>Grade Card PDF
         </a>
+        @elseif($semesterId)
+        <span class="badge bg-light text-muted border">Grade card pending publication</span>
         @endif
     </div>
     <div class="table-responsive">

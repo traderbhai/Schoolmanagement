@@ -31,6 +31,19 @@ class CurriculumChangeController extends Controller {
             'description'=>'required|string',
             'change_type'=>'required|in:add_subject,remove_subject,modify_credits,modify_syllabus,add_elective',
         ]);
+
+        $program = Program::findOrFail($v['program_id']);
+        if (! $program->is_active) {
+            return back()->withErrors(['program_id' => 'Curriculum changes can be submitted only for active programs.'])->withInput();
+        }
+
+        if (! empty($v['subject_id'])) {
+            $subject = Subject::findOrFail($v['subject_id']);
+            if (! $subject->is_active || (int) $subject->program_id !== (int) $program->id) {
+                return back()->withErrors(['subject_id' => 'Selected subject must be active and belong to the selected program.'])->withInput();
+            }
+        }
+
         CurriculumChange::create(array_merge($v,['proposed_by'=>auth()->id(),'status'=>'submitted','submitted_at'=>now()]));
         return redirect()->route('academic.curriculum-changes.index')->with('success','Curriculum change submitted.');
     }

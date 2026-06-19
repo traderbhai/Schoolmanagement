@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Attendance, AttendanceCondonation, Batch, Classroom, Course, Enrollment, Program, RoleProgramAssignment, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, User};
+use App\Models\{Attendance, AttendanceCondonation, Batch, Classroom, Course, Enrollment, Program, RoleProgramAssignment, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, TimetableVersion, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -103,6 +103,27 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_teacher_attendance_rejects_invalid_status_values(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.attendance.mark'))
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['student']->id => 'holiday'],
+            ])
+            ->assertRedirect(route('teacher.attendance.mark'))
+            ->assertSessionHasErrors('attendance.' . $fixture['student']->id);
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+            'status' => 'holiday',
+        ]);
+    }
+
     public function test_student_attendance_summary_uses_canonical_term_timetable_entries(): void
     {
         $fixture = $this->fixture();
@@ -119,6 +140,149 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Canonical Attendance Subject')
             ->assertSee('100%');
+    }
+
+    public function test_student_attendance_excludes_draft_timetable_and_unenrolled_history(): void
+    {
+        $fixture = $this->fixture();
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+            'date' => now()->toDateString(),
+            'status' => 'present',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $draftSubject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Student Draft Attendance Subject',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $draftSubject->id,
+            'term_id' => $fixture['term']->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        $draftEntry = TimetableEntry::factory()->create([
+            'teacher_id' => $fixture['teacher']->id,
+            'subject_id' => $draftSubject->id,
+            'course_id' => $fixture['course']->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDay()->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $draftVersionSubject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Student Draft Version Attendance Subject',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $draftVersionSubject->id,
+            'term_id' => $fixture['term']->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['batch']->id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => $fixture['teacher']->user_id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'teacher_id' => $fixture['teacher']->id,
+            'subject_id' => $draftVersionSubject->id,
+            'course_id' => $fixture['course']->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(2)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $unenrolledSubject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Student Unenrolled Attendance Subject',
+        ]);
+        $unenrolledEntry = TimetableEntry::factory()->create([
+            'teacher_id' => $fixture['teacher']->id,
+            'subject_id' => $unenrolledSubject->id,
+            'course_id' => $fixture['course']->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $unenrolledEntry->id,
+            'date' => now()->subDays(3)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.attendance', ['semester_id' => $fixture['semester']->id]))
+            ->assertOk()
+            ->assertSee('Canonical Attendance Subject')
+            ->assertSee('100%')
+            ->assertDontSee('Student Draft Attendance Subject')
+            ->assertDontSee('Student Draft Version Attendance Subject')
+            ->assertDontSee('Student Unenrolled Attendance Subject');
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.attendance.sessions', [
+                'subject' => $fixture['subject']->id,
+                'semester_id' => $fixture['semester']->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Total Sessions')
+            ->assertSee('100%');
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.attendance.sessions', [
+                'subject' => $draftSubject->id,
+                'semester_id' => $fixture['semester']->id,
+            ]))
+            ->assertOk()
+            ->assertSee('0%')
+            ->assertDontSee('<span class="badge bg-danger">Absent</span>', false);
     }
 
     public function test_student_condonation_requires_enrolled_low_attendance_subject(): void
@@ -215,6 +379,88 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
             ->assertSessionHasErrors('subject_id');
 
         $this->assertSame(1, AttendanceCondonation::where('student_id', $fixture['student']->id)->count());
+    }
+
+    public function test_student_condonation_ignores_draft_timetable_attendance_history(): void
+    {
+        $fixture = $this->fixture();
+
+        foreach (range(1, 4) as $day) {
+            Attendance::create([
+                'student_id' => $fixture['student']->id,
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'present',
+                'marked_by' => $fixture['teacher']->user_id,
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'teacher_id' => Teacher::factory()->create()->id,
+            'subject_id' => $fixture['subject']->id,
+            'course_id' => $fixture['course']->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(10)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['batch']->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'teacher_id' => Teacher::factory()->create()->id,
+            'subject_id' => $fixture['subject']->id,
+            'course_id' => $fixture['course']->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(11)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.condonation.create'))
+            ->assertOk()
+            ->assertDontSee('Canonical Attendance Subject');
+
+        $this->actingAs($fixture['student']->user)
+            ->post(route('student.condonation.store'), [
+                'subject_id' => $fixture['subject']->id,
+                'reason' => 'Trying to request from draft-only attendance history.',
+            ])
+            ->assertSessionHasErrors('subject_id');
+
+        $this->assertSame(0, AttendanceCondonation::where('student_id', $fixture['student']->id)->count());
     }
 
     public function test_student_condonation_supports_legacy_active_enrollment(): void

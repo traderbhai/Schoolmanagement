@@ -12,7 +12,7 @@
                 </ol>
             </nav>
             <h4 class="fw-bold mb-0">Assign Role to User</h4>
-            <span class="text-muted small">Grant a role — optionally scoped to a program, with optional expiry</span>
+            <span class="text-muted small">Grant a global role with optional expiry. Use Scoped Role Assignments for program-level academic access.</span>
         </div>
     </div>
 
@@ -61,18 +61,15 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Program Scope <span class="text-muted small">(optional)</span></label>
-                            <select name="program_id" class="form-select @error('program_id') is-invalid @enderror">
-                                <option value="">Global — all programs</option>
-                                @foreach($programs as $program)
-                                <option value="{{ $program->id }}" {{ old('program_id') == $program->id ? 'selected' : '' }}>
-                                    {{ $program->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">Scope this role to a specific program (e.g., Program Chair for BCA only).</div>
+                            <label class="form-label fw-semibold">Scope</label>
+                            <div class="form-control bg-light text-muted">Global - all permitted records for the selected role</div>
+                            <div class="form-text">
+                                Program-level roles must be assigned from
+                                <a href="{{ route('admin.role-assignments.create') }}">Scoped Role Assignments</a>
+                                so the program and batch scope is enforced correctly.
+                            </div>
                             @error('program_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <div class="text-danger small mt-1">{{ $message }}</div>
                             @enderror
                         </div>
 

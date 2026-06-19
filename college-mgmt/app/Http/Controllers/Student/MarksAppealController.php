@@ -12,12 +12,18 @@ class MarksAppealController extends Controller {
         $appeals = MarksAppeal::with(['examResult.exam.subject'])
             ->where('student_id', $student->id)
             ->orderByDesc('created_at')->paginate(15);
-        return view('student.appeals.index', compact('appeals'));
+        $canCreateAppeal = $student->status === 'active';
+
+        return view('student.appeals.index', compact('appeals', 'canCreateAppeal'));
     }
 
     public function create() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+        if ($student->status !== 'active') {
+            return redirect()->route('student.appeals.index')
+                ->with('error', 'New marks appeals are available only for active students. Contact the Exam Cell for archived result corrections.');
+        }
         $results = $this->appealableResults($student)->orderByDesc('id')->get();
         return view('student.appeals.create', compact('results'));
     }
@@ -26,12 +32,24 @@ class MarksAppealController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
 
+        if ($student->status !== 'active') {
+            return redirect()->route('student.appeals.index')
+                ->with('error', 'New marks appeals are available only for active students. Contact the Exam Cell for archived result corrections.');
+        }
+
         $data = $request->validate([
             'exam_result_id' => 'required|exists:exam_results,id',
             'reason'         => 'required|string|max:255',
             'description'    => 'required|string|max:2000',
             'marks_claimed'  => 'required|numeric|min:0',
         ]);
+
+        abort_if(
+            MarksAppeal::where('student_id', $student->id)
+                ->where('exam_result_id', $data['exam_result_id'])->exists(),
+            422,
+            'You have already submitted an appeal for this result.'
+        );
 
         $result = $this->appealableResults($student)
             ->where('id', $data['exam_result_id'])
@@ -43,13 +61,6 @@ class MarksAppealController extends Controller {
                 ->withInput();
         }
 
-        // Only one appeal per result
-        abort_if(
-            MarksAppeal::where('student_id',$student->id)
-                ->where('exam_result_id',$result->id)->exists(),
-            422, 'You have already submitted an appeal for this result.'
-        );
-
         MarksAppeal::create(array_merge($data, ['student_id'=>$student->id]));
         return redirect()->route('student.appeals.index')
             ->with('success', 'Marks appeal submitted. The Exam Cell will review it.');
@@ -60,6 +71,12 @@ class MarksAppealController extends Controller {
         return ExamResult::with('exam.subject')
             ->where('student_id', $student->id)
             ->where('is_absent', false)
+            ->whereNotExists(function ($subquery) use ($student) {
+                $subquery->selectRaw('1')
+                    ->from('marks_appeals')
+                    ->where('marks_appeals.student_id', $student->id)
+                    ->whereColumn('marks_appeals.exam_result_id', 'exam_results.id');
+            })
             ->whereHas('exam', function ($examQuery) use ($student) {
                 $examQuery->whereNotNull('published_at')
                     ->where(function ($eligibleExam) use ($student) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\DepartmentMember;
@@ -23,6 +24,8 @@ class DepartmentHierarchyController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $departments = $this->hierarchy->manageableDepartments($request->user());
         abort_if($departments->isEmpty(), 403);
 
@@ -57,6 +60,8 @@ class DepartmentHierarchyController extends Controller
 
     public function storeRole(Request $request)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $validated = $request->validate([
             'department_id' => ['required', 'exists:departments,id'],
             'name' => ['required', 'string', 'max:255'],
@@ -89,6 +94,8 @@ class DepartmentHierarchyController extends Controller
                 'can_assign_work' => $request->boolean('can_assign_work'),
                 'permissions' => $permissions->all(),
                 'is_active' => true,
+                'deactivated_by' => null,
+                'deactivated_at' => null,
             ]
         );
 
@@ -105,6 +112,8 @@ class DepartmentHierarchyController extends Controller
 
     public function storeTeam(Request $request)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $validated = $request->validate([
             'department_id' => ['required', 'exists:departments,id'],
             'parent_id' => ['nullable', 'exists:department_teams,id'],
@@ -116,7 +125,22 @@ class DepartmentHierarchyController extends Controller
         abort_unless($this->hierarchy->canConfigureDepartmentHierarchy($request->user(), $department), 403);
         $this->assertTeamBelongsToDepartment($validated['parent_id'] ?? null, $department);
 
-        $team = DepartmentTeam::create($validated + ['is_active' => true]);
+        $team = DepartmentTeam::where('department_id', $department->id)
+            ->where('parent_id', $validated['parent_id'] ?? null)
+            ->where('name', $validated['name'])
+            ->where('type', $validated['type'])
+            ->where('is_active', false)
+            ->first();
+
+        if ($team) {
+            $team->update([
+                'is_active' => true,
+                'deactivated_by' => null,
+                'deactivated_at' => null,
+            ]);
+        } else {
+            $team = DepartmentTeam::create($validated + ['is_active' => true]);
+        }
 
         $this->hierarchy->recordActivity(
             $team->department,
@@ -131,6 +155,8 @@ class DepartmentHierarchyController extends Controller
 
     public function storeMember(Request $request)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $validated = $request->validate([
             'department_id' => ['required', 'exists:departments,id'],
             'department_role_id' => ['required', 'exists:department_roles,id'],
@@ -176,12 +202,21 @@ class DepartmentHierarchyController extends Controller
             abort_unless(!$lowestDirectReportLevel || (int) $role->level < $lowestDirectReportLevel, 422, 'Cannot move a manager below or beside active direct reports.');
         }
 
+        if (!$member) {
+            $member = DepartmentMember::where('department_id', $department->id)
+                ->where('user_id', $user->id)
+                ->where('department_role_id', $role->id)
+                ->first();
+        }
+
         if ($member) {
             $member->update([
                 'department_role_id' => $role->id,
                 'department_team_id' => $validated['department_team_id'] ?? null,
                 'reports_to_member_id' => $managerId,
                 'is_active' => true,
+                'deactivated_by' => null,
+                'deactivated_at' => null,
             ]);
         } else {
             $member = DepartmentMember::create([
@@ -209,13 +244,19 @@ class DepartmentHierarchyController extends Controller
 
     public function deactivateRole(Request $request, DepartmentRole $role)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $role->load('department');
         abort_unless($this->hierarchy->canConfigureDepartmentHierarchy($request->user(), $role->department), 403);
         abort_unless($this->hierarchy->canManageRoleLevel($request->user(), $role->department, (int) $role->level), 403);
         abort_if($role->members()->where('is_active', true)->exists(), 422, 'Cannot deactivate a role that still has active members.');
         abort_if($this->isLastActiveOwnerRole($role), 422, 'Cannot deactivate the last active owner/head role for a department.');
 
-        $role->update(['is_active' => false]);
+        $role->update([
+            'is_active' => false,
+            'deactivated_by' => $request->user()->id,
+            'deactivated_at' => now(),
+        ]);
         $this->hierarchy->recordActivity(
             $role->department,
             $request->user(),
@@ -229,12 +270,18 @@ class DepartmentHierarchyController extends Controller
 
     public function deactivateTeam(Request $request, DepartmentTeam $team)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $team->load('department');
         abort_unless($this->hierarchy->canConfigureDepartmentHierarchy($request->user(), $team->department), 403);
         abort_if($team->members()->where('is_active', true)->exists(), 422, 'Cannot deactivate a team that still has active members.');
         abort_if($team->children()->where('is_active', true)->exists(), 422, 'Cannot deactivate a team that still has active child teams.');
 
-        $team->update(['is_active' => false]);
+        $team->update([
+            'is_active' => false,
+            'deactivated_by' => $request->user()->id,
+            'deactivated_at' => now(),
+        ]);
         $this->hierarchy->recordActivity(
             $team->department,
             $request->user(),
@@ -248,6 +295,8 @@ class DepartmentHierarchyController extends Controller
 
     public function deactivateMember(Request $request, DepartmentMember $member)
     {
+        $this->authorizeAdminAliasIfPresent($request);
+
         $member->load(['department', 'role', 'user']);
         abort_unless($this->hierarchy->canConfigureDepartmentHierarchy($request->user(), $member->department), 403);
         abort_unless($this->hierarchy->canManageRoleLevel($request->user(), $member->department, (int) ($member->role?->level ?? 999)), 403);
@@ -257,7 +306,11 @@ class DepartmentHierarchyController extends Controller
             abort_unless($this->hierarchy->manageableMemberIds($request->user(), $member->department)->contains($member->id), 403);
         }
 
-        $member->update(['is_active' => false]);
+        $member->update([
+            'is_active' => false,
+            'deactivated_by' => $request->user()->id,
+            'deactivated_at' => now(),
+        ]);
         $this->hierarchy->recordActivity(
             $member->department,
             $request->user(),
@@ -268,6 +321,18 @@ class DepartmentHierarchyController extends Controller
         );
 
         return back()->with('success', 'Department member deactivated.');
+    }
+
+    private function authorizeAdminAliasIfPresent(Request $request): void
+    {
+        $routeName = $request->route()?->getName();
+
+        if ($routeName && str_starts_with($routeName, 'admin.department-hierarchy.')) {
+            abort_unless(
+                $request->user() && AccessControl::canManageSystemConfiguration($request->user()),
+                403
+            );
+        }
     }
 
     private function assertTeamBelongsToDepartment(?int $teamId, Department $department): void

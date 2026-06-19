@@ -3,26 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\AccessControl;
 use App\Mail\StudentDocumentRequestUpdated;
 use App\Models\DocumentRequest;
-use App\Models\FeeDemand;
-use App\Models\HostelFeeDemand;
 use App\Models\Notification;
 use App\Models\Program;
-use App\Services\LibraryFineService;
 use App\Services\NotificationService;
+use App\Services\StudentDocumentRequestClearanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class StudentDocumentRequestController extends Controller
 {
-    private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
-
-    public function __construct(private LibraryFineService $libraryFineService) {}
+    public function __construct(private StudentDocumentRequestClearanceService $clearance) {}
 
     public function index(Request $request)
     {
+        $this->authorizeDocumentRequests($request);
+
         $query = DocumentRequest::with(['student.user', 'student.program', 'reviewer'])
             ->latest();
 
@@ -61,11 +60,17 @@ class StudentDocumentRequestController extends Controller
 
     public function approve(Request $request, DocumentRequest $documentRequest)
     {
+        $this->authorizeDocumentRequests($request);
+
         if ($documentRequest->status !== 'pending') {
             return back()->with('error', 'Only pending document requests can be approved.');
         }
 
-        if ($blocker = $this->nocClearanceBlocker($documentRequest)) {
+        if ($blocker = $this->clearance->activeStudentBlocker($documentRequest)) {
+            return back()->with('error', $blocker);
+        }
+
+        if ($blocker = $this->clearance->nocClearanceBlocker($documentRequest)) {
             return back()->with('error', $blocker);
         }
 
@@ -86,6 +91,8 @@ class StudentDocumentRequestController extends Controller
 
     public function reject(Request $request, DocumentRequest $documentRequest)
     {
+        $this->authorizeDocumentRequests($request);
+
         if (! in_array($documentRequest->status, ['pending', 'approved'], true)) {
             return back()->with('error', 'Only pending or approved document requests can be rejected.');
         }
@@ -109,11 +116,17 @@ class StudentDocumentRequestController extends Controller
 
     public function fulfill(Request $request, DocumentRequest $documentRequest)
     {
+        $this->authorizeDocumentRequests($request);
+
         if ($documentRequest->status !== 'approved') {
             return back()->with('error', 'Only approved document requests can be marked ready.');
         }
 
-        if ($blocker = $this->nocClearanceBlocker($documentRequest)) {
+        if ($blocker = $this->clearance->activeStudentBlocker($documentRequest)) {
+            return back()->with('error', $blocker);
+        }
+
+        if ($blocker = $this->clearance->nocClearanceBlocker($documentRequest)) {
             return back()->with('error', $blocker);
         }
 
@@ -143,8 +156,13 @@ class StudentDocumentRequestController extends Controller
 
     public function download(DocumentRequest $documentRequest)
     {
+        $this->authorizeDocumentRequests(request());
+
+        abort_unless($documentRequest->status === 'ready', 404);
         abort_unless($documentRequest->output_path, 404);
         abort_unless(Storage::disk('local')->exists($documentRequest->output_path), 404);
+        abort_if($this->clearance->activeStudentBlocker($documentRequest), 403);
+        abort_if($this->clearance->nocClearanceBlocker($documentRequest), 403);
 
         return response()->download(
             Storage::disk('local')->path($documentRequest->output_path),
@@ -178,38 +196,9 @@ class StudentDocumentRequestController extends Controller
         ]);
     }
 
-    private function nocClearanceBlocker(DocumentRequest $documentRequest): ?string
+    private function authorizeDocumentRequests(Request $request): void
     {
-        if ($documentRequest->document_type !== 'noc') {
-            return null;
-        }
-
-        $studentUser = $documentRequest->student?->user;
-        if (! $studentUser) {
-            return 'NOC cannot be processed because the student user record is missing.';
-        }
-
-        $openFeeBalance = FeeDemand::where('student_id', $documentRequest->student_id)
-            ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
-            ->get(['final_amount', 'penalty_amount'])
-            ->sum(fn (FeeDemand $demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
-
-        if ($openFeeBalance > 0) {
-            return 'NOC cannot be processed until fee clearance is complete: INR ' . number_format($openFeeBalance, 2) . ' remains open.';
-        }
-
-        $openHostelFeeBalance = (float) HostelFeeDemand::where('student_id', $documentRequest->student_id)
-            ->where('status', 'pending')
-            ->sum('amount');
-
-        if ($openHostelFeeBalance > 0) {
-            return 'NOC cannot be processed until hostel fee clearance is complete: INR ' . number_format($openHostelFeeBalance, 2) . ' remains open.';
-        }
-
-        $eligibility = $this->libraryFineService->checkNocEligibility($studentUser->id);
-
-        return $eligibility['eligible']
-            ? null
-            : 'NOC cannot be processed until library clearance is complete: ' . $eligibility['reason'] . '.';
+        abort_unless(AccessControl::canManageStudentDocuments($request->user()), 403);
     }
+
 }

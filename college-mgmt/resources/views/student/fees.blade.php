@@ -47,7 +47,7 @@
 
     {{-- Balance Due --}}
     <div class="col-md-4">
-        @if($balance > 0)
+        @if($overallBalanceDue > 0)
         <div class="card border-0 h-100" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">
         @else
         <div class="card border-0 h-100" style="background:linear-gradient(135deg,#059669,#047857)">
@@ -56,13 +56,13 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="opacity-75 small fw-semibold mb-1">Balance Due</div>
-                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">Rs. {{ number_format($balance) }}</div>
+                        <div class="fw-bold lh-1 mt-1" style="font-size:2rem">Rs. {{ number_format($overallBalanceDue) }}</div>
                         <div class="opacity-75 mt-2" style="font-size:.78rem">
-                            {{ $balance > 0 ? 'Outstanding amount' : 'Fully paid - No dues' }}
+                            {{ $overallBalanceDue > 0 ? 'Academic and hostel outstanding amount' : 'Fully paid - No dues' }}
                         </div>
                     </div>
                     <div class="opacity-40">
-                        <i class="bi bi-{{ $balance > 0 ? 'exclamation-circle-fill' : 'check2-all' }}" style="font-size:2.5rem"></i>
+                        <i class="bi bi-{{ $overallBalanceDue > 0 ? 'exclamation-circle-fill' : 'check2-all' }}" style="font-size:2.5rem"></i>
                     </div>
                 </div>
             </div>

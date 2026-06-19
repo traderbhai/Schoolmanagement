@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\TimetableSlot;
 use Illuminate\Http\Request;
@@ -10,17 +11,23 @@ class TimetableSlotController extends Controller
 {
     public function index()
     {
+        $this->authorizeAcademicScheduling();
+
         $slots = TimetableSlot::orderBy('sort_order')->get();
         return view('admin.timetable-slots.index', compact('slots'));
     }
 
     public function create()
     {
+        $this->authorizeAcademicScheduling();
+
         return view('admin.timetable-slots.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorizeAcademicScheduling();
+
         $data = $request->validate([
             'name'       => 'required|string|max:50',
             'start_time' => 'required|date_format:H:i',
@@ -34,16 +41,22 @@ class TimetableSlotController extends Controller
 
     public function show(TimetableSlot $timetableSlot)
     {
+        $this->authorizeAcademicScheduling();
+
         return view('admin.timetable-slots.show', compact('timetableSlot'));
     }
 
     public function edit(TimetableSlot $timetableSlot)
     {
+        $this->authorizeAcademicScheduling();
+
         return view('admin.timetable-slots.edit', compact('timetableSlot'));
     }
 
     public function update(Request $request, TimetableSlot $timetableSlot)
     {
+        $this->authorizeAcademicScheduling();
+
         $data = $request->validate([
             'name'       => 'required|string|max:50',
             'start_time' => 'required|date_format:H:i',
@@ -72,6 +85,8 @@ class TimetableSlotController extends Controller
 
     public function destroy(TimetableSlot $timetableSlot)
     {
+        $this->authorizeAcademicScheduling();
+
         if ($this->hasOperationalDependencies($timetableSlot)) {
             return redirect()->route('admin.timetable-slots.index')
                 ->with('error', 'This time slot is already used in timetable, availability, or PMC planning records and cannot be deleted.');
@@ -79,6 +94,11 @@ class TimetableSlotController extends Controller
 
         $timetableSlot->delete();
         return redirect()->route('admin.timetable-slots.index')->with('success', 'Slot deleted.');
+    }
+
+    private function authorizeAcademicScheduling(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicScheduling(auth()->user()), 403);
     }
 
     private function hasOperationalDependencies(TimetableSlot $slot): bool

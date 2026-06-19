@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
@@ -10,6 +11,8 @@ class AuditController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeAuditLogAccess($request);
+
         $query = AuditLog::with('actor')->latest();
 
         if ($request->filled('action')) {
@@ -39,13 +42,17 @@ class AuditController extends Controller
         return view('admin.audit.index', compact('logs', 'actions'));
     }
 
-    public function show(AuditLog $log)
+    public function show(Request $request, AuditLog $log)
     {
+        $this->authorizeAuditLogAccess($request);
+
         return view('admin.audit.show', compact('log'));
     }
 
     public function search(Request $request)
     {
+        $this->authorizeAuditLogAccess($request);
+
         $query = AuditLog::with('actor')->latest();
 
         if ($request->filled('q')) {
@@ -58,5 +65,13 @@ class AuditController extends Controller
         $actions = [];
 
         return view('admin.audit.index', compact('logs', 'actions'));
+    }
+
+    private function authorizeAuditLogAccess(Request $request): void
+    {
+        abort_unless(
+            $request->user() && AccessControl::canViewGlobalActivityLogs($request->user()),
+            403
+        );
     }
 }

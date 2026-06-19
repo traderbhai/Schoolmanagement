@@ -2830,10 +2830,36 @@ class AcademicPmcTimetableV041Service
             'impact_summary' => $this->versionImpactSummary($version),
         ]);
 
+        $syncedEntries = $this->repointRollbackOperationalEntries($actor, $version, $rollback);
         $this->logLifecycleNotification($rollback, 'rollback', 'Timetable rollback published', 'students');
-        $this->audit($actor, 'academic_pmc_v043_timetable_rollback', 'Rollback published from timetable version #' . $version->version_number, $rollback);
+        $this->audit($actor, 'academic_pmc_v043_timetable_rollback', 'Rollback published from timetable version #' . $version->version_number, $rollback, [
+            'rollback_from_version_id' => $version->id,
+            'operational_entries_synced' => $syncedEntries,
+        ]);
 
         return $rollback;
+    }
+
+    private function repointRollbackOperationalEntries(User $actor, TimetableVersion $source, TimetableVersion $rollback): int
+    {
+        $updated = TimetableEntry::where('timetable_version_id', $source->id)->update([
+            'timetable_version_id' => $rollback->id,
+            'status' => 'published',
+            'is_active' => true,
+            'updated_at' => now(),
+        ]);
+
+        if ($updated > 0) {
+            return $updated;
+        }
+
+        $run = AcademicPmcTimetableGenerationRun::where('timetable_version_id', $source->id)->latest()->first();
+
+        if (! $run) {
+            return 0;
+        }
+
+        return $this->syncRunToOperationalTimetable($run, $rollback, $actor);
     }
 
     private function syncRunToOperationalTimetable(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): int
@@ -3030,6 +3056,10 @@ class AcademicPmcTimetableV041Service
 
     public function decideChange(User $actor, AcademicPmcTimetableChangeRequest $change, string $status, ?string $note): AcademicPmcTimetableChangeRequest
     {
+        if (! in_array($change->status, ['requested', 'pending', 'open', 'revision_requested'], true)) {
+            abort(422, 'Reviewed timetable change decisions are locked. Create a new change request for further revision.');
+        }
+
         if (in_array($status, ['rejected', 'revision_requested'], true) && ! $note) {
             abort(422, 'Decision note is required.');
         }

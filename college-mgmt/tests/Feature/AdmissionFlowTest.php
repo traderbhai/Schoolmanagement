@@ -11,10 +11,19 @@ use App\Models\{
     ApplicantDocument,
     Batch,
     Course,
+    Department,
+    DepartmentMember,
+    DepartmentRole,
     EnrollmentConfirmation,
     Program,
     RequiredDocument,
+    SelectionProcessStep,
+    SelectionSession,
+    ScoringParameter,
+    Specialization,
+    SessionApplicant,
     Student,
+    Term,
     User
 };
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -333,6 +342,205 @@ class AdmissionFlowTest extends TestCase
         Mail::assertQueued(EnrollmentConfirmed::class);
     }
 
+    public function test_application_pdf_requires_submitted_application(): void
+    {
+        [, $draft] = $this->makeApplicant();
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->get(route('admission.applicants.application-pdf', $draft))
+            ->assertNotFound();
+
+        $draft->update([
+            'status' => 'submitted',
+            'personal_data' => ['name' => 'Submitted Applicant', 'email' => 'submitted@example.test'],
+            'academic_data' => ['qualification' => 'Graduation'],
+        ]);
+
+        $response = $this->actingAs($officer)
+            ->get(route('admission.applicants.application-pdf', $draft));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_application_pdf_respects_assignment_scope(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [, $applicant] = $this->makeApplicant();
+        $applicant->update([
+            'status' => 'submitted',
+            'assigned_to' => $assignedCounsellor->id,
+            'personal_data' => ['name' => 'Scoped PDF Applicant', 'email' => 'scoped-pdf@example.test'],
+            'academic_data' => ['qualification' => 'Graduation'],
+        ]);
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.applicants.application-pdf', $applicant))
+            ->assertForbidden();
+
+        $response = $this->actingAs($assignedCounsellor)
+            ->get(route('admission.applicants.application-pdf', $applicant));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_admission_fee_receipt_respects_assignment_scope(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [, $applicant, $program, $batch] = $this->makeApplicant();
+        $applicant->update(['status' => 'selected', 'assigned_to' => $assignedCounsellor->id]);
+
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'name' => 'Scoped Receipt Fee',
+            'amount' => 10000,
+            'installment_number' => 1,
+            'due_date' => now()->addDays(7),
+            'is_active' => true,
+        ]);
+
+        $payment = AdmissionPayment::create([
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 10000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'SCOPED-RCP-' . $applicant->id,
+            'status' => 'verified',
+            'submitted_by' => $applicant->user_id,
+            'verified_by' => $assignedCounsellor->id,
+            'verified_at' => now(),
+        ]);
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.payments.receipt', $payment))
+            ->assertForbidden();
+
+        $response = $this->actingAs($assignedCounsellor)
+            ->get(route('admission.payments.receipt', $payment));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_call_letter_pdf_respects_assignment_scope(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [, $applicant, $program, $batch] = $this->makeApplicant();
+        $applicant->update([
+            'status' => 'shortlisted',
+            'assigned_to' => $assignedCounsellor->id,
+            'personal_data' => ['name' => 'Scoped Call Letter Applicant', 'email' => 'call-letter@example.test'],
+        ]);
+        $step = SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'Scoped Personal Interview',
+            'type' => 'pi',
+            'step_order' => 1,
+            'max_score' => 100,
+            'weightage' => 100,
+            'is_active' => true,
+        ]);
+        $session = SelectionSession::create([
+            'selection_process_step_id' => $step->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'session_name' => 'Scoped PI Session',
+            'scheduled_date' => now()->addDays(3)->toDateString(),
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'venue' => 'Interview Room 1',
+            'max_candidates' => 20,
+            'status' => 'scheduled',
+            'created_by' => $assignedCounsellor->id,
+        ]);
+        SessionApplicant::create([
+            'selection_session_id' => $session->id,
+            'applicant_id' => $applicant->id,
+            'assigned_at' => now(),
+            'attendance_status' => 'pending',
+        ]);
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.applicants.call-letter', $applicant))
+            ->assertForbidden();
+
+        $response = $this->actingAs($assignedCounsellor)
+            ->get(route('admission.applicants.call-letter', $applicant));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
     public function test_completed_enrollment_cannot_be_created_twice(): void
     {
         Mail::fake();
@@ -359,6 +567,373 @@ class AdmissionFlowTest extends TestCase
         $this->assertDatabaseCount('admission_handoff_records', 1);
         $this->assertDatabaseMissing('students', [
             'roll_number' => 'ENR-LOCK-002',
+        ]);
+    }
+
+    public function test_enrollment_rejects_specialization_and_term_outside_applicant_scope(): void
+    {
+        Mail::fake();
+
+        [, $applicant, $program, $batch] = $this->makeEnrollmentReadyApplicant();
+        $otherProgram = Program::factory()->create(['is_active' => true]);
+        $otherBatch = Batch::factory()->create(['program_id' => $program->id]);
+        $validSpecialization = Specialization::create([
+            'program_id' => $program->id,
+            'name' => 'Business Analytics',
+            'code' => 'BA-' . $applicant->id,
+            'is_active' => true,
+        ]);
+        $wrongProgramSpecialization = Specialization::create([
+            'program_id' => $otherProgram->id,
+            'name' => 'Other Program Specialization',
+            'code' => 'OPS-' . $applicant->id,
+            'is_active' => true,
+        ]);
+        $wrongBatchTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $otherBatch->id,
+            'term_number' => 1,
+            'name' => 'Other Batch Term',
+        ]);
+        $validTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Applicant Batch Term',
+        ]);
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->get(route('admission.enrollment.create', $applicant))
+            ->assertOk()
+            ->assertSee('Business Analytics')
+            ->assertDontSee('Other Program Specialization');
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'SCOPE-ENR-001',
+                'specialization_id' => $wrongProgramSpecialization->id,
+                'term_id' => $validTerm->id,
+            ])
+            ->assertSessionHasErrors('specialization_id');
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'SCOPE-ENR-002',
+                'specialization_id' => $validSpecialization->id,
+                'term_id' => $wrongBatchTerm->id,
+            ])
+            ->assertSessionHasErrors('term_id');
+
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('enrollment_confirmations', 0);
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'SCOPE-ENR-003',
+                'specialization_id' => $validSpecialization->id,
+                'term_id' => $validTerm->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('students', [
+            'roll_number' => 'SCOPE-ENR-003',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'specialization_id' => $validSpecialization->id,
+        ]);
+        $this->assertDatabaseHas('enrollment_confirmations', [
+            'applicant_id' => $applicant->id,
+            'term_id' => $validTerm->id,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_enrollment_letter_requires_completed_confirmation(): void
+    {
+        $officer = $this->admissionOfficer();
+
+        foreach (['processing', 'failed'] as $status) {
+            [, $applicant, , $batch] = $this->makeApplicant();
+
+            $confirmation = EnrollmentConfirmation::create([
+                'applicant_id' => $applicant->id,
+                'confirmed_by' => $officer->id,
+                'confirmed_at' => now(),
+                'enrollment_number' => 'ENR-STALE-' . strtoupper($status),
+                'roll_number' => 'ROLL-STALE',
+                'batch_id' => $batch->id,
+                'status' => $status,
+            ]);
+
+            $this->actingAs($officer)
+                ->from(route('admission.enrollment.show', $confirmation))
+                ->get(route('admission.enrollment.letter', $confirmation))
+                ->assertRedirect(route('admission.enrollment.show', $confirmation))
+                ->assertSessionHas('error', 'Enrollment letter is available only after enrollment is completed.');
+        }
+    }
+
+    public function test_completed_enrollment_letter_can_be_downloaded(): void
+    {
+        Mail::fake();
+
+        [, $applicant] = $this->makeEnrollmentReadyApplicant();
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'MBA-LETTER-001',
+                'notes' => 'Enrollment letter verification.',
+            ])
+            ->assertRedirect();
+
+        $confirmation = EnrollmentConfirmation::firstOrFail();
+
+        $response = $this->actingAs($officer)
+            ->get(route('admission.enrollment.letter', $confirmation));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_enrollment_confirmation_and_letter_respect_assignment_scope(): void
+    {
+        Mail::fake();
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [, $applicant] = $this->makeEnrollmentReadyApplicant();
+        $applicant->update(['assigned_to' => $assignedCounsellor->id]);
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.enrollment.create', $applicant))
+            ->assertForbidden();
+
+        $this->actingAs($assignedCounsellor)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'SCOPE-LETTER-001',
+                'notes' => 'Scoped enrollment letter.',
+            ])
+            ->assertRedirect();
+
+        $confirmation = EnrollmentConfirmation::firstOrFail();
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.enrollment.show', $confirmation))
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.enrollment.letter', $confirmation))
+            ->assertForbidden();
+
+        $response = $this->actingAs($assignedCounsellor)
+            ->get(route('admission.enrollment.letter', $confirmation));
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_enrollment_index_respects_assignment_scope(): void
+    {
+        Mail::fake();
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [$firstUser, $firstApplicant, $program, $batch] = $this->makeEnrollmentReadyApplicant();
+        [$secondUser, $secondApplicant] = $this->makeEnrollmentReadyApplicant($program, $batch);
+
+        $firstUser->update(['name' => 'Scoped Hidden Student']);
+        $secondUser->update(['name' => 'Scoped Visible Student']);
+        $firstApplicant->update(['assigned_to' => $assignedCounsellor->id]);
+        $secondApplicant->update(['assigned_to' => $peerCounsellor->id]);
+
+        $this->actingAs($assignedCounsellor)
+            ->post(route('admission.enrollment.store', $firstApplicant), [
+                'roll_number' => 'SCOPE-INDEX-001',
+                'notes' => 'Hidden from peer list.',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.enrollment.store', $secondApplicant), [
+                'roll_number' => 'SCOPE-INDEX-002',
+                'notes' => 'Visible to assigned counsellor.',
+            ])
+            ->assertRedirect();
+
+        $response = $this->actingAs($peerCounsellor)
+            ->get(route('admission.enrollment.index'));
+
+        $response->assertOk()
+            ->assertSee('Scoped Visible Student')
+            ->assertSee('SCOPE-INDEX-002')
+            ->assertDontSee('Scoped Hidden Student')
+            ->assertDontSee('SCOPE-INDEX-001')
+            ->assertViewHas('totalEnrolled', 1)
+            ->assertViewHas('thisMonth', 1);
+
+        $this->assertCount(1, $response->viewData('confirmations'));
+    }
+
+    public function test_assessment_scoring_respects_assignment_scope(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+
+        $department = Department::where('code', 'ADM')->firstOrFail();
+        $counsellorRole = DepartmentRole::where('department_id', $department->id)
+            ->where('code', 'admission_counsellor')
+            ->firstOrFail();
+
+        $assignedCounsellor = User::factory()->create();
+        $assignedCounsellor->assignRole('admission_counsellor');
+        $peerCounsellor = User::factory()->create();
+        $peerCounsellor->assignRole('admission_counsellor');
+
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $assignedCounsellor->id,
+        ]);
+        DepartmentMember::create([
+            'department_id' => $department->id,
+            'department_role_id' => $counsellorRole->id,
+            'user_id' => $peerCounsellor->id,
+        ]);
+
+        [$firstUser, $firstApplicant, $program, $batch] = $this->makeApplicant();
+        [$secondUser, $secondApplicant] = $this->makeApplicant($program);
+
+        $firstUser->update(['name' => 'Scoped Score Hidden']);
+        $secondUser->update(['name' => 'Scoped Score Visible']);
+        $firstApplicant->update([
+            'batch_id' => $batch->id,
+            'status' => 'shortlisted',
+            'assigned_to' => $assignedCounsellor->id,
+        ]);
+        $secondApplicant->update([
+            'batch_id' => $batch->id,
+            'status' => 'shortlisted',
+            'assigned_to' => $peerCounsellor->id,
+        ]);
+
+        $step = SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'Scoped PI Scoring',
+            'type' => 'pi',
+            'step_order' => 1,
+            'max_score' => 100,
+            'weightage' => 100,
+            'is_active' => true,
+        ]);
+        $parameter = ScoringParameter::create([
+            'selection_process_step_id' => $step->id,
+            'name' => 'Communication',
+            'max_score' => 10,
+            'sort_order' => 1,
+        ]);
+        $session = SelectionSession::create([
+            'selection_process_step_id' => $step->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'session_name' => 'Scoped Assessment Session',
+            'scheduled_date' => now()->addDay()->toDateString(),
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'venue' => 'Assessment Room',
+            'max_candidates' => 20,
+            'status' => 'ongoing',
+            'created_by' => $assignedCounsellor->id,
+        ]);
+        foreach ([$firstApplicant, $secondApplicant] as $applicant) {
+            SessionApplicant::create([
+                'selection_session_id' => $session->id,
+                'applicant_id' => $applicant->id,
+                'assigned_at' => now(),
+                'attendance_status' => 'present',
+            ]);
+        }
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.sessions.scores', $session))
+            ->assertOk()
+            ->assertSee('Scoped Score Visible')
+            ->assertDontSee('Scoped Score Hidden');
+
+        $this->actingAs($peerCounsellor)
+            ->get(route('admission.applicants.scorecard', $firstApplicant))
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.sessions.scores.save', $session), [
+                'scores' => [
+                    $firstApplicant->id => [
+                        'param_' . $parameter->id => 8,
+                        'remarks' => 'Out-of-scope score attempt.',
+                    ],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($peerCounsellor)
+            ->post(route('admission.sessions.scores.save', $session), [
+                'scores' => [
+                    $secondApplicant->id => [
+                        'param_' . $parameter->id => 9,
+                        'remarks' => 'Scoped score allowed.',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('applicant_scores', [
+            'applicant_id' => $firstApplicant->id,
+            'selection_session_id' => $session->id,
+        ]);
+        $this->assertDatabaseHas('applicant_scores', [
+            'applicant_id' => $secondApplicant->id,
+            'selection_session_id' => $session->id,
+            'total_score' => 9,
         ]);
     }
 

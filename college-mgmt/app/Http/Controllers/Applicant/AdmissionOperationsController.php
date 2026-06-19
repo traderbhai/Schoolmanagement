@@ -14,9 +14,11 @@ class AdmissionOperationsController extends Controller
     public function index(Request $request)
     {
         $applicant = $this->applicant($request);
+        $canRequestAssessmentChanges = ! $this->isFinalAdmissionState($applicant);
 
         return view('applicant.admission-operations', [
             'applicant' => $applicant,
+            'canRequestAssessmentChanges' => $canRequestAssessmentChanges,
             'slots' => DB::table('admission_assessment_slot_assignments')
                 ->join('admission_assessment_slots', 'admission_assessment_slots.id', '=', 'admission_assessment_slot_assignments.slot_id')
                 ->where('admission_assessment_slot_assignments.applicant_id', $applicant->id)
@@ -38,6 +40,11 @@ class AdmissionOperationsController extends Controller
     public function requestReschedule(Request $request, AdmissionAssessmentSlotService $service)
     {
         $applicant = $this->applicant($request);
+
+        if ($this->isFinalAdmissionState($applicant)) {
+            return back()->with('error', 'Assessment reschedule requests are closed because this application is already in a final admission state.');
+        }
+
         $data = $request->validate([
             'slot_assignment_id' => ['required', 'integer'],
             'requested_slot_id' => ['nullable', 'integer'],
@@ -71,5 +78,10 @@ class AdmissionOperationsController extends Controller
     private function applicant(Request $request): Applicant
     {
         return Applicant::where('user_id', $request->user()->id)->with(['user', 'program', 'batch'])->firstOrFail();
+    }
+
+    private function isFinalAdmissionState(Applicant $applicant): bool
+    {
+        return in_array($applicant->status, ['selected', 'rejected', 'withdrawn', 'enrolled'], true);
     }
 }

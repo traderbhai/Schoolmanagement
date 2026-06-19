@@ -77,6 +77,125 @@ class PlacementLifecycleIntegrityTest extends TestCase
         $this->assertDatabaseHas('placements', ['drive_id' => $drive->id, 'student_id' => $student->id]);
     }
 
+    public function test_broad_academic_role_cannot_mutate_admin_placement_or_company_routes(): void
+    {
+        $programChair = $this->userWithRole('program_chair');
+        $company = $this->company();
+        $drive = $this->drive(['company_id' => $company->id, 'status' => 'upcoming']);
+        $student = Student::factory()->create(['status' => 'active']);
+        $placement = Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'applied',
+        ]);
+
+        $this->actingAs($programChair)->get(route('admin.companies.index'))->assertForbidden();
+        $this->actingAs($programChair)->get(route('admin.companies.create'))->assertForbidden();
+        $this->actingAs($programChair)->post(route('admin.companies.store'), [
+            'name' => 'Unauthorized Recruiter',
+            'is_active' => '1',
+        ])->assertForbidden();
+        $this->actingAs($programChair)->put(route('admin.companies.update', $company), [
+            'name' => 'Changed Recruiter',
+            'is_active' => '1',
+        ])->assertForbidden();
+        $this->actingAs($programChair)->delete(route('admin.companies.destroy', $company))->assertForbidden();
+
+        $this->actingAs($programChair)->get(route('admin.placement-drives.index'))->assertForbidden();
+        $this->actingAs($programChair)->get(route('admin.placement-drives.show', $drive))->assertForbidden();
+        $this->actingAs($programChair)->post(route('admin.placement-drives.store'), $this->drivePayload([
+            'company_id' => $company->id,
+            'title' => 'Unauthorized Drive',
+        ]))->assertForbidden();
+        $this->actingAs($programChair)->put(route('admin.placement-drives.update', $drive), $this->drivePayload([
+            'company_id' => $company->id,
+            'title' => 'Changed Drive',
+        ]))->assertForbidden();
+        $this->actingAs($programChair)->post(route('admin.placement-drives.apply', $drive), [
+            'student_id' => $student->id,
+        ])->assertForbidden();
+        $this->actingAs($programChair)->patch(route('admin.placements.update-status', $placement), [
+            'application_status' => 'selected',
+        ])->assertForbidden();
+        $this->actingAs($programChair)->delete(route('admin.placement-drives.destroy', $drive))->assertForbidden();
+
+        $this->assertDatabaseMissing('companies', ['name' => 'Unauthorized Recruiter']);
+        $this->assertDatabaseMissing('placement_drives', ['title' => 'Unauthorized Drive']);
+        $this->assertSame($company->name, $company->fresh()->name);
+        $this->assertSame('upcoming', $drive->fresh()->status);
+        $this->assertSame('applied', $placement->fresh()->application_status);
+    }
+
+    public function test_cmc_keeps_admin_placement_operating_access(): void
+    {
+        $cmc = $this->userWithRole('cmc');
+        $company = $this->company();
+        $drive = $this->drive(['company_id' => $company->id, 'status' => 'ongoing']);
+        $student = Student::factory()->create(['status' => 'active']);
+
+        $this->actingAs($cmc)
+            ->get(route('admin.placement-drives.index'))
+            ->assertOk();
+
+        $this->actingAs($cmc)
+            ->post(route('admin.placement-drives.apply', $drive), [
+                'student_id' => $student->id,
+            ])
+            ->assertRedirect(route('admin.placement-drives.show', $drive));
+
+        $this->assertDatabaseHas('placements', [
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'applied',
+        ]);
+    }
+
+    public function test_placement_drives_cannot_be_created_for_inactive_company_partners(): void
+    {
+        $inactiveCompany = $this->company();
+        $inactiveCompany->update(['is_active' => false]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->from(route('cmc.drives.create'))
+            ->post(route('cmc.drives.store'), $this->drivePayload([
+                'company_id' => $inactiveCompany->id,
+                'title' => 'Inactive CMC Company Drive',
+            ]))
+            ->assertRedirect(route('cmc.drives.create'))
+            ->assertSessionHasErrors('placement_drive');
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->from(route('admin.placement-drives.create'))
+            ->post(route('admin.placement-drives.store'), $this->drivePayload([
+                'company_id' => $inactiveCompany->id,
+                'title' => 'Inactive Admin Company Drive',
+            ]))
+            ->assertRedirect(route('admin.placement-drives.create'))
+            ->assertSessionHasErrors('placement_drive');
+
+        $this->assertDatabaseMissing('placement_drives', ['title' => 'Inactive CMC Company Drive']);
+        $this->assertDatabaseMissing('placement_drives', ['title' => 'Inactive Admin Company Drive']);
+    }
+
+    public function test_placement_drive_cannot_be_moved_to_inactive_company_partner(): void
+    {
+        $activeCompany = $this->company();
+        $inactiveCompany = $this->company();
+        $inactiveCompany->update(['is_active' => false]);
+        $drive = $this->drive(['company_id' => $activeCompany->id, 'status' => 'upcoming']);
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->from(route('admin.placement-drives.edit', $drive))
+            ->put(route('admin.placement-drives.update', $drive), $this->drivePayload([
+                'company_id' => $inactiveCompany->id,
+                'status' => 'upcoming',
+            ]))
+            ->assertRedirect(route('admin.placement-drives.edit', $drive))
+            ->assertSessionHasErrors('placement_drive');
+
+        $this->assertSame($activeCompany->id, $drive->fresh()->company_id);
+    }
+
     public function test_cmc_cannot_complete_drive_with_open_applications_or_cancel_after_selection(): void
     {
         $drive = $this->drive(['status' => 'ongoing']);
@@ -132,6 +251,88 @@ class PlacementLifecycleIntegrityTest extends TestCase
         $this->assertSame(3, $drive->fresh()->vacancies);
     }
 
+    public function test_placement_drive_contract_fields_are_locked_after_applications_exist(): void
+    {
+        $drive = $this->drive(['status' => 'ongoing', 'package' => '6 LPA', 'vacancies' => 3]);
+        $replacementCompany = $this->company();
+        Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => Student::factory()->create()->id,
+            'application_status' => 'applied',
+        ]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->from(route('cmc.drives.edit', $drive))
+            ->put(route('cmc.drives.update', $drive), $this->drivePayload([
+                'company_id' => $replacementCompany->id,
+                'title' => 'Rewritten Drive Title',
+                'job_role' => 'Different Role',
+                'package' => '9 LPA',
+                'drive_date' => now()->addWeeks(2)->toDateString(),
+                'last_apply_date' => now()->addWeek()->toDateString(),
+                'vacancies' => 4,
+                'status' => 'ongoing',
+            ]))
+            ->assertRedirect(route('cmc.drives.edit', $drive))
+            ->assertSessionHasErrors('placement_drive');
+
+        $drive->refresh();
+        $this->assertNotSame($replacementCompany->id, $drive->company_id);
+        $this->assertSame('Lifecycle Drive', $drive->title);
+        $this->assertSame('Analyst', $drive->job_role);
+        $this->assertSame('6 LPA', $drive->package);
+        $this->assertSame(3, $drive->vacancies);
+
+        $this->actingAs($this->userWithRole('admin'))
+            ->from(route('admin.placement-drives.edit', $drive))
+            ->put(route('admin.placement-drives.update', $drive), $this->drivePayload([
+                'company_id' => $drive->company_id,
+                'title' => $drive->title,
+                'job_role' => 'Admin Rewritten Role',
+                'package' => $drive->package,
+                'drive_date' => $drive->drive_date->toDateString(),
+                'last_apply_date' => $drive->last_apply_date->toDateString(),
+                'vacancies' => $drive->vacancies,
+                'status' => $drive->status,
+            ]))
+            ->assertRedirect(route('admin.placement-drives.edit', $drive))
+            ->assertSessionHasErrors('placement_drive');
+
+        $this->assertSame('Analyst', $drive->fresh()->job_role);
+    }
+
+    public function test_safe_placement_drive_operational_notes_remain_editable_after_applications_exist(): void
+    {
+        $drive = $this->drive(['status' => 'ongoing']);
+        Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => Student::factory()->create()->id,
+            'application_status' => 'applied',
+        ]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->put(route('cmc.drives.update', $drive), $this->drivePayload([
+                'company_id' => $drive->company_id,
+                'title' => $drive->title,
+                'job_role' => $drive->job_role,
+                'package' => $drive->package,
+                'min_cgpa' => $drive->min_cgpa,
+                'drive_date' => $drive->drive_date->toDateString(),
+                'last_apply_date' => $drive->last_apply_date->toDateString(),
+                'vacancies' => $drive->vacancies,
+                'eligibility' => $drive->eligibility,
+                'location' => 'Updated Seminar Hall',
+                'description' => 'Updated reporting instructions only.',
+                'status' => $drive->status,
+            ]))
+            ->assertRedirect(route('cmc.drives'))
+            ->assertSessionHas('success', 'Drive updated.');
+
+        $drive->refresh();
+        $this->assertSame('Updated Seminar Hall', $drive->location);
+        $this->assertSame('Updated reporting instructions only.', $drive->description);
+    }
+
     public function test_final_application_decisions_cannot_be_changed_through_direct_status_routes(): void
     {
         $placement = Placement::create([
@@ -175,6 +376,38 @@ class PlacementLifecycleIntegrityTest extends TestCase
             ->assertSessionHasErrors('application_status');
 
         $this->assertSame('interview', $placement->fresh()->application_status);
+    }
+
+    public function test_selected_placement_requires_positive_offered_package(): void
+    {
+        $placement = Placement::create([
+            'drive_id' => $this->drive(['vacancies' => 2])->id,
+            'student_id' => Student::factory()->create()->id,
+            'application_status' => 'interview',
+        ]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->patch(route('cmc.placements.update-status', $placement), [
+                'application_status' => 'selected',
+                'offered_package' => null,
+                'remarks' => 'Trying to select without package.',
+            ])
+            ->assertSessionHasErrors('application_status');
+
+        $this->assertSame('interview', $placement->fresh()->application_status);
+        $this->assertNull($placement->fresh()->offered_package);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->patch(route('cmc.placements.update-status', $placement), [
+                'application_status' => 'selected',
+                'offered_package' => 6.5,
+                'remarks' => 'Offer confirmed.',
+            ])
+            ->assertRedirect();
+
+        $placement->refresh();
+        $this->assertSame('selected', $placement->application_status);
+        $this->assertEquals(6.5, $placement->offered_package);
     }
 
     public function test_admin_direct_add_student_respects_drive_lifecycle_and_duplicate_rules(): void

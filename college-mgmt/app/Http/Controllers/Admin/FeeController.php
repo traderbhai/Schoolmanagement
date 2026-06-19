@@ -1,10 +1,12 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
+use App\Helpers\AccessControl;
 use App\Jobs\SendFeeReceiptEmail;
 use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear, ActivityLog, FeeDemand, FeePaymentRequest};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class FeeController extends Controller
@@ -12,6 +14,8 @@ class FeeController extends Controller
     private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
 
     public function index(Request $request) {
+        $this->authorizeFeeManagement($request);
+
         $courses = Course::where('is_active', true)->orderBy('name')->get();
         $currentYear = AcademicYear::where('is_current', true)->first();
 
@@ -64,14 +68,18 @@ class FeeController extends Controller
     }
 
     public function create() {
+        $this->authorizeFeeManagement(request());
+
         $courses = Course::where('is_active',true)->get();
         $years = AcademicYear::all();
         return view('admin.fees.create', compact('courses','years'));
     }
 
     public function store(Request $request) {
+        $this->authorizeFeeManagement($request);
+
         $data = $request->validate([
-            'course_id'        => 'required|exists:courses,id',
+            'course_id'        => ['required', Rule::exists('courses', 'id')->where('is_active', true)],
             'academic_year_id' => 'required|exists:academic_years,id',
             'fee_type'         => 'required|string|max:100',
             'amount'           => 'required|numeric|min:0',
@@ -83,19 +91,25 @@ class FeeController extends Controller
     }
 
     public function show(FeeStructure $fee) {
+        $this->authorizeFeeManagement(request());
+
         $fee->load(['course','academicYear','payments.student.user']);
         return view('admin.fees.show', compact('fee'));
     }
 
     public function edit(FeeStructure $fee) {
+        $this->authorizeFeeManagement(request());
+
         $courses = Course::where('is_active',true)->get();
         $years = AcademicYear::all();
         return view('admin.fees.edit', compact('fee','courses','years'));
     }
 
     public function update(Request $request, FeeStructure $fee) {
+        $this->authorizeFeeManagement($request);
+
         $data = $request->validate([
-            'course_id'        => 'required|exists:courses,id',
+            'course_id'        => ['required', Rule::exists('courses', 'id')->where('is_active', true)],
             'academic_year_id' => 'required|exists:academic_years,id',
             'fee_type'         => 'required|string|max:100',
             'amount'           => 'required|numeric|min:0',
@@ -113,6 +127,8 @@ class FeeController extends Controller
     }
 
     public function destroy(FeeStructure $fee) {
+        $this->authorizeFeeManagement(request());
+
         if ($fee->payments()->exists()) {
             return redirect()->route('admin.fees.index')
                 ->with('error', 'This fee structure is linked to fee receipt history and cannot be deleted.');
@@ -123,6 +139,8 @@ class FeeController extends Controller
     }
 
     public function collectPayment(Request $request) {
+        $this->authorizeFeeManagement($request);
+
         $students = Student::with(['user', 'course'])->where('status','active')->get();
         $structures = FeeStructure::with(['course','academicYear'])->get();
 
@@ -132,7 +150,9 @@ class FeeController extends Controller
         $studentFees = collect();
         $studentPayments = collect();
         if ($request->student_id) {
-            $selectedStudent = Student::with(['user','course'])->find($request->student_id);
+            $selectedStudent = Student::with(['user','course'])
+                ->where('status', 'active')
+                ->find($request->student_id);
             if ($selectedStudent) {
                 $structures = FeeStructure::with(['course','academicYear'])
                     ->where('course_id', $selectedStudent->course_id)
@@ -171,17 +191,25 @@ class FeeController extends Controller
     }
 
     public function storePayment(Request $request) {
+        $this->authorizeFeeManagement($request);
+
         $data = $request->validate([
-            'student_id'       => 'required|exists:students,id',
+            'student_id'       => ['required', Rule::exists('students', 'id')->where('status', 'active')],
             'fee_structure_id' => 'required|exists:fee_structures,id',
-            'amount_paid'      => 'required|numeric|min:0',
+            'amount_paid'      => 'required|numeric|min:0.01',
             'payment_date'     => 'required|date',
             'payment_method'   => 'required|in:cash,cheque,online,neft,rtgs,upi',
-            'transaction_id'   => 'nullable|string',
+            'transaction_id'   => 'nullable|string|max:100',
             'remarks'          => 'nullable|string',
         ]);
         $student = Student::findOrFail($data['student_id']);
-        $feeStructure = FeeStructure::findOrFail($data['fee_structure_id']);
+        $feeStructure = FeeStructure::with('course')->findOrFail($data['fee_structure_id']);
+        if (! $feeStructure->course || ! $feeStructure->course->is_active) {
+            return back()
+                ->withInput()
+                ->withErrors(['fee_structure_id' => 'Select an active fee structure for an active course.']);
+        }
+
         if ((int) $feeStructure->course_id !== (int) $student->course_id) {
             return back()
                 ->withInput()
@@ -198,9 +226,30 @@ class FeeController extends Controller
             if ((float) $data['amount_paid'] > $openBalance) {
                 return back()
                     ->withInput()
-                    ->withErrors(['amount_paid' => 'Payment amount exceeds the student active fee demand balance.']);
+                ->withErrors(['amount_paid' => 'Payment amount exceeds the student active fee demand balance.']);
+            }
+        } else {
+            $paidAgainstStructure = (float) FeePayment::where('student_id', $student->id)
+                ->where('fee_structure_id', $feeStructure->id)
+                ->where('status', 'paid')
+                ->sum('amount_paid');
+            $remainingStructureBalance = max(0, (float) $feeStructure->amount - $paidAgainstStructure);
+
+            if ((float) $data['amount_paid'] > $remainingStructureBalance) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['amount_paid' => 'Payment amount exceeds the remaining fee structure balance.']);
             }
         }
+
+        $transactionId = trim((string) ($data['transaction_id'] ?? ''));
+        if ($transactionId !== '' && FeePayment::where('status', 'paid')->whereRaw('LOWER(transaction_id) = ?', [strtolower($transactionId)])->exists()) {
+            return back()
+                ->withInput()
+                ->withErrors(['transaction_id' => 'This transaction reference is already linked to a paid fee receipt. Use an audited correction workflow instead of recording it again.']);
+        }
+        $data['transaction_id'] = $transactionId !== '' ? $transactionId : null;
+        $data['payment_method'] = $this->feePaymentMethod($data['payment_method']);
 
         $data['receipt_number'] = 'RCP-' . strtoupper(uniqid());
         $data['status'] = 'paid';
@@ -213,11 +262,17 @@ class FeeController extends Controller
     }
 
     public function receipt(FeePayment $payment) {
+        $this->authorizeFeeManagement(request());
+
+        abort_unless($payment->status === 'paid', 404);
+
         $payment->load(['student.user', 'student.course', 'feeStructure.course', 'feeStructure.academicYear']);
         return view('admin.fees.receipt', compact('payment'));
     }
 
     public function report(Request $request) {
+        $this->authorizeFeeManagement($request);
+
         $courses = Course::where('is_active', true)->orderBy('name')->get();
         $academicYears = AcademicYear::orderByDesc('name')->get();
 
@@ -245,6 +300,8 @@ class FeeController extends Controller
 
     public function export(Request $r)
     {
+        $this->authorizeFeeManagement($r);
+
         $payments = FeePayment::with('student.user', 'student.course', 'feeStructure')
             ->when($r->course_id, fn($q) => $q->whereHas('student', fn($sq) => $sq->where('course_id', $r->course_id)))
             ->when($r->status, fn($q) => $q->where('status', $r->status))
@@ -280,6 +337,8 @@ class FeeController extends Controller
 
     public function paymentRequests(Request $request)
     {
+        $this->authorizeFeeManagement($request);
+
         $query = FeePaymentRequest::with(['student.user', 'student.course', 'feeDemand.term', 'verifier'])
             ->latest('submitted_at');
 
@@ -304,6 +363,8 @@ class FeeController extends Controller
 
     public function verifyPaymentRequest(Request $request, FeePaymentRequest $feePaymentRequest)
     {
+        $this->authorizeFeeManagement($request);
+
         if ($feePaymentRequest->status !== 'pending') {
             return back()->with('error', 'Only pending payment proofs can be verified.');
         }
@@ -316,6 +377,17 @@ class FeeController extends Controller
         $student = $feePaymentRequest->student;
         abort_unless($student, 404);
 
+        if ($student->status !== 'active') {
+            return back()->with('error', 'Payment proofs for inactive or archived students cannot be verified from the standard queue. Contact accounts for record correction.');
+        }
+
+        $transactionRef = trim((string) $feePaymentRequest->transaction_ref);
+        if ($transactionRef !== '' && FeePayment::where('status', 'paid')->whereRaw('LOWER(transaction_id) = ?', [strtolower($transactionRef)])->exists()) {
+            return back()->withErrors([
+                'transaction_ref' => 'This transaction reference is already linked to a paid fee receipt. Reject this proof or use an audited correction workflow.',
+            ]);
+        }
+
         $feeStructure = $this->feeStructureForStudent($student);
         if (! $feeStructure) {
             return back()->with('error', 'Cannot verify this payment proof because no fee structure is configured for the student course.');
@@ -323,6 +395,12 @@ class FeeController extends Controller
 
         $amount = (float) $feePaymentRequest->amount;
         $demand = $feePaymentRequest->feeDemand;
+        if ($demand && (int) $demand->student_id !== (int) $student->id) {
+            return back()->withErrors([
+                'fee_demand_id' => 'This payment proof is linked to another student fee demand and cannot be verified.',
+            ]);
+        }
+
         if ($demand && ! in_array($demand->status, self::ACTIVE_DEMAND_STATUSES, true)) {
             return back()->withErrors([
                 'fee_demand_id' => 'This payment proof is linked to a closed fee demand and cannot be verified.',
@@ -335,10 +413,12 @@ class FeeController extends Controller
                 return back()->withErrors(['amount' => 'Payment proof amount exceeds the current demand balance.']);
             }
         } elseif (! $demand) {
-            $openAmount = FeeDemand::where('student_id', $student->id)
+            $openDemands = FeeDemand::where('student_id', $student->id)
                 ->whereIn('status', self::ACTIVE_DEMAND_STATUSES)
-                ->get()
-                ->sum(fn (FeeDemand $openDemand) => (float) $openDemand->final_amount + (float) ($openDemand->penalty_amount ?? 0));
+                ->orderBy('due_date')
+                ->orderBy('id')
+                ->get();
+            $openAmount = $openDemands->sum(fn (FeeDemand $openDemand) => (float) $openDemand->final_amount + (float) ($openDemand->penalty_amount ?? 0));
 
             if ($amount > $openAmount) {
                 return back()->withErrors(['amount' => 'Payment proof amount exceeds the student current open fee balance.']);
@@ -352,13 +432,15 @@ class FeeController extends Controller
             'payment_date' => now()->toDateString(),
             'receipt_number' => 'RCP-' . strtoupper(uniqid()),
             'payment_method' => $this->feePaymentMethod($feePaymentRequest->payment_method),
-            'transaction_id' => $feePaymentRequest->transaction_ref,
+            'transaction_id' => $transactionRef !== '' ? $transactionRef : null,
             'status' => 'paid',
             'remarks' => trim('Verified from student proof request #' . $feePaymentRequest->id . '. ' . ($data['notes'] ?? '')),
         ]);
 
         if ($demand && in_array($demand->status, self::ACTIVE_DEMAND_STATUSES, true)) {
             $this->applyPaymentToDemand($demand, $amount);
+        } elseif (isset($openDemands)) {
+            $this->applyManualPaymentToDemands($openDemands, $amount);
         }
 
         $feePaymentRequest->update([
@@ -376,6 +458,8 @@ class FeeController extends Controller
 
     public function rejectPaymentRequest(Request $request, FeePaymentRequest $feePaymentRequest)
     {
+        $this->authorizeFeeManagement($request);
+
         if ($feePaymentRequest->status !== 'pending') {
             return back()->with('error', 'Only pending payment proofs can be rejected.');
         }
@@ -398,6 +482,8 @@ class FeeController extends Controller
 
     public function paymentRequestProof(FeePaymentRequest $feePaymentRequest)
     {
+        $this->authorizeFeeManagement(request());
+
         abort_unless($feePaymentRequest->proof_path, 404);
         abort_unless(Storage::disk('local')->exists($feePaymentRequest->proof_path), 404);
 
@@ -457,5 +543,10 @@ class FeeController extends Controller
             || (string) $data['fee_type'] !== (string) $fee->fee_type
             || number_format((float) $data['amount'], 2, '.', '') !== number_format((float) $fee->amount, 2, '.', '')
             || (int) ($data['semester_number'] ?? 0) !== (int) ($fee->semester_number ?? 0);
+    }
+
+    private function authorizeFeeManagement(Request $request): void
+    {
+        abort_unless(AccessControl::canManageFees($request->user()), 403);
     }
 }

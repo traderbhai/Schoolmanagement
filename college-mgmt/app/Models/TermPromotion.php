@@ -41,6 +41,11 @@ class TermPromotion extends Model
         return (int) $this->student?->current_term_id === (int) $this->current_term_id;
     }
 
+    public function studentIsActive(): bool
+    {
+        return $this->student?->status === 'active';
+    }
+
     public function targetTermIsValidProgression(): bool
     {
         $current = $this->currentTerm;

@@ -18,6 +18,10 @@ class GatewayPaymentController extends Controller
             abort(403);
         }
 
+        if (!in_array($applicant->status, ['shortlisted', 'selected'], true)) {
+            return back()->with('error', 'Online payment is available only while your admission fee payment window is active.');
+        }
+
         if ($payment->status !== 'pending') {
             return back()->with('error', 'Only pending admission payments can be paid online.');
         }

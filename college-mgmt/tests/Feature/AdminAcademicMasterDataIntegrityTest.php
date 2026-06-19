@@ -119,6 +119,83 @@ class AdminAcademicMasterDataIntegrityTest extends TestCase
         $this->assertDatabaseHas('batches', ['id' => $set['batch']->id, 'status' => 'active']);
     }
 
+    public function test_batch_creation_requires_active_program_and_dates_inside_academic_year(): void
+    {
+        $this->actingAs($this->admin());
+
+        $year = AcademicYear::factory()->create([
+            'name' => '2026-2027',
+            'start_year' => 2026,
+            'end_year' => 2027,
+            'start_date' => '2026-07-01',
+            'end_date' => '2027-06-30',
+        ]);
+        $inactiveProgram = Program::factory()->create(['is_active' => false]);
+        $activeProgram = Program::factory()->create(['is_active' => true]);
+
+        $this->post(route('admin.batches.store'), [
+            'program_id' => $inactiveProgram->id,
+            'academic_year_id' => $year->id,
+            'name' => 'Inactive Program Batch',
+            'code' => 'INACT-B',
+            'start_date' => '2026-07-01',
+            'end_date' => '2027-06-30',
+            'intake_capacity' => 60,
+            'status' => 'upcoming',
+        ])->assertSessionHasErrors('program_id');
+
+        $this->post(route('admin.batches.store'), [
+            'program_id' => $activeProgram->id,
+            'academic_year_id' => $year->id,
+            'name' => 'Out Of Year Batch',
+            'code' => 'OUTYR-B',
+            'start_date' => '2027-07-01',
+            'end_date' => '2028-06-30',
+            'intake_capacity' => 60,
+            'status' => 'upcoming',
+        ])->assertSessionHasErrors('academic_year_id');
+
+        $this->assertDatabaseMissing('batches', ['code' => 'INACT-B']);
+        $this->assertDatabaseMissing('batches', ['code' => 'OUTYR-B']);
+    }
+
+    public function test_batch_with_operational_history_cannot_have_academic_window_rewritten(): void
+    {
+        $this->actingAs($this->admin());
+
+        $set = $this->academicSet();
+        $year = AcademicYear::factory()->create([
+            'start_date' => '2026-07-01',
+            'end_date' => '2027-06-30',
+        ]);
+        $set['batch']->update([
+            'academic_year_id' => $year->id,
+            'start_date' => '2026-07-01',
+            'end_date' => '2027-06-30',
+            'status' => 'active',
+        ]);
+        Student::factory()->create([
+            'department_id' => $set['department']->id,
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+        ]);
+
+        $this->put(route('admin.batches.update', $set['batch']), [
+            'academic_year_id' => $year->id,
+            'name' => 'Rewritten Batch Dates',
+            'code' => $set['batch']->code,
+            'start_date' => '2026-08-01',
+            'end_date' => '2027-06-30',
+            'intake_capacity' => 60,
+            'status' => 'active',
+        ])->assertSessionHasErrors('batch');
+
+        $set['batch']->refresh();
+        $this->assertSame('2026-07-01', $set['batch']->start_date->toDateString());
+        $this->assertSame('2027-06-30', $set['batch']->end_date->toDateString());
+        $this->assertNotSame('Rewritten Batch Dates', $set['batch']->name);
+    }
+
     public function test_term_with_enrollment_history_cannot_be_deleted(): void
     {
         $this->actingAs($this->admin());
@@ -140,6 +217,144 @@ class AdminAcademicMasterDataIntegrityTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('terms', ['id' => $set['term']->id]);
+    }
+
+    public function test_term_update_ignores_direct_rebind_fields_and_locks_used_date_window(): void
+    {
+        $this->actingAs($this->admin());
+        $set = $this->academicSet();
+        $otherProgram = Program::factory()->create();
+        $otherBatch = Batch::factory()->create(['program_id' => $otherProgram->id]);
+        $student = Student::factory()->create([
+            'department_id' => $set['department']->id,
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $set['subject']->id,
+            'term_id' => $set['term']->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+
+        $set['term']->update([
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-12-31',
+            'sort_order' => 1,
+        ]);
+
+        $this->put(route('admin.terms.update', $set['term']), [
+            'name' => 'Term I Updated',
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-12-31',
+            'is_current' => true,
+            'program_id' => $otherProgram->id,
+            'batch_id' => $otherBatch->id,
+            'term_number' => 9,
+            'sort_order' => 99,
+        ])->assertRedirect();
+
+        $set['term']->refresh();
+        $this->assertSame('Term I Updated', $set['term']->name);
+        $this->assertSame($set['program']->id, $set['term']->program_id);
+        $this->assertSame($set['batch']->id, $set['term']->batch_id);
+        $this->assertSame(1, $set['term']->term_number);
+        $this->assertSame(1, $set['term']->sort_order);
+
+        $this->put(route('admin.terms.update', $set['term']), [
+            'name' => 'Term I Rebased',
+            'start_date' => '2026-08-01',
+            'end_date' => '2027-01-31',
+        ])->assertSessionHasErrors('term');
+
+        $set['term']->refresh();
+        $this->assertSame('Term I Updated', $set['term']->name);
+        $this->assertSame('2026-07-01', $set['term']->start_date->toDateString());
+        $this->assertSame('2026-12-31', $set['term']->end_date->toDateString());
+    }
+
+    public function test_term_creation_respects_program_batch_structure_and_duplicate_term_numbers(): void
+    {
+        $this->actingAs($this->admin());
+
+        $program = Program::factory()->create(['is_active' => true, 'total_terms' => 2]);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'status' => 'active']);
+        Term::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term I',
+        ]);
+
+        $this->post(route('admin.terms.store'), [
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Duplicate Term I',
+        ])->assertSessionHasErrors('term_number');
+
+        $this->post(route('admin.terms.store'), [
+            'batch_id' => $batch->id,
+            'term_number' => 3,
+            'name' => 'Term III',
+        ])->assertSessionHasErrors('term_number');
+
+        $inactiveProgram = Program::factory()->create(['is_active' => false, 'total_terms' => 2]);
+        $inactiveProgramBatch = Batch::factory()->create([
+            'program_id' => $inactiveProgram->id,
+            'status' => 'active',
+        ]);
+        $this->post(route('admin.terms.store'), [
+            'batch_id' => $inactiveProgramBatch->id,
+            'term_number' => 1,
+            'name' => 'Inactive Program Term',
+        ])->assertSessionHasErrors('batch_id');
+
+        $completedBatch = Batch::factory()->create(['program_id' => $program->id, 'status' => 'completed']);
+        $this->post(route('admin.terms.store'), [
+            'batch_id' => $completedBatch->id,
+            'term_number' => 1,
+            'name' => 'Completed Batch Term',
+        ])->assertSessionHasErrors('batch_id');
+
+        $this->assertDatabaseMissing('terms', ['batch_id' => $batch->id, 'term_number' => 3]);
+        $this->assertDatabaseMissing('terms', ['batch_id' => $inactiveProgramBatch->id]);
+        $this->assertDatabaseMissing('terms', ['batch_id' => $completedBatch->id]);
+    }
+
+    public function test_current_term_cannot_be_set_for_closed_batch_or_inactive_program(): void
+    {
+        $this->actingAs($this->admin());
+
+        $activeProgram = Program::factory()->create(['is_active' => true]);
+        $completedBatch = Batch::factory()->create(['program_id' => $activeProgram->id, 'status' => 'completed']);
+        $closedTerm = Term::create([
+            'program_id' => $activeProgram->id,
+            'batch_id' => $completedBatch->id,
+            'term_number' => 1,
+            'name' => 'Closed Batch Term',
+            'is_current' => false,
+        ]);
+
+        $this->patch(route('admin.terms.set-current', $closedTerm))
+            ->assertSessionHasErrors('term');
+
+        $this->assertFalse((bool) $closedTerm->fresh()->is_current);
+
+        $inactiveProgram = Program::factory()->create(['is_active' => false]);
+        $activeBatch = Batch::factory()->create(['program_id' => $inactiveProgram->id, 'status' => 'active']);
+        $inactiveProgramTerm = Term::create([
+            'program_id' => $inactiveProgram->id,
+            'batch_id' => $activeBatch->id,
+            'term_number' => 1,
+            'name' => 'Inactive Program Term',
+            'is_current' => false,
+        ]);
+
+        $this->patch(route('admin.terms.set-current', $inactiveProgramTerm))
+            ->assertSessionHasErrors('term');
+
+        $this->assertFalse((bool) $inactiveProgramTerm->fresh()->is_current);
     }
 
     public function test_subject_with_academic_history_cannot_be_deleted_or_structurally_changed(): void
@@ -305,6 +520,92 @@ class AdminAcademicMasterDataIntegrityTest extends TestCase
         $this->assertSame(1, $semester->number);
         $this->assertSame('2026-07-01', $semester->start_date->toDateString());
         $this->assertSame('2026-12-31', $semester->end_date->toDateString());
+    }
+
+    public function test_semester_creation_requires_unique_number_and_dates_inside_academic_year(): void
+    {
+        $this->actingAs($this->admin());
+
+        $year = AcademicYear::factory()->create([
+            'name' => '2026-2027',
+            'start_year' => 2026,
+            'end_year' => 2027,
+            'start_date' => '2026-07-01',
+            'end_date' => '2027-06-30',
+        ]);
+        Semester::factory()->create([
+            'academic_year_id' => $year->id,
+            'number' => 1,
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-12-31',
+        ]);
+
+        $this->post(route('admin.semesters.store'), [
+            'academic_year_id' => $year->id,
+            'name' => 'Duplicate Semester I',
+            'number' => 1,
+            'start_date' => '2027-01-01',
+            'end_date' => '2027-06-30',
+        ])->assertSessionHasErrors('semester');
+
+        $this->post(route('admin.semesters.store'), [
+            'academic_year_id' => $year->id,
+            'name' => 'Out Of Range Semester',
+            'number' => 2,
+            'start_date' => '2027-07-01',
+            'end_date' => '2027-12-31',
+        ])->assertSessionHasErrors('semester');
+
+        $this->assertDatabaseMissing('semesters', ['name' => 'Duplicate Semester I']);
+        $this->assertDatabaseMissing('semesters', ['name' => 'Out Of Range Semester']);
+    }
+
+    public function test_semester_update_requires_unique_number_and_dates_inside_academic_year(): void
+    {
+        $this->actingAs($this->admin());
+
+        $year = AcademicYear::factory()->create([
+            'name' => '2027-2028',
+            'start_year' => 2027,
+            'end_year' => 2028,
+            'start_date' => '2027-07-01',
+            'end_date' => '2028-06-30',
+        ]);
+        Semester::factory()->create([
+            'academic_year_id' => $year->id,
+            'number' => 1,
+            'name' => 'Semester I',
+            'start_date' => '2027-07-01',
+            'end_date' => '2027-12-31',
+        ]);
+        $semester = Semester::factory()->create([
+            'academic_year_id' => $year->id,
+            'number' => 2,
+            'name' => 'Semester II',
+            'start_date' => '2028-01-01',
+            'end_date' => '2028-06-30',
+        ]);
+
+        $this->put(route('admin.semesters.update', $semester), [
+            'academic_year_id' => $year->id,
+            'name' => 'Semester II Duplicate Attempt',
+            'number' => 1,
+            'start_date' => '2028-01-01',
+            'end_date' => '2028-06-30',
+        ])->assertSessionHasErrors('semester');
+
+        $this->put(route('admin.semesters.update', $semester), [
+            'academic_year_id' => $year->id,
+            'name' => 'Semester II Out Of Range Attempt',
+            'number' => 2,
+            'start_date' => '2028-01-01',
+            'end_date' => '2028-07-31',
+        ])->assertSessionHasErrors('semester');
+
+        $semester->refresh();
+        $this->assertSame('Semester II', $semester->name);
+        $this->assertSame(2, $semester->number);
+        $this->assertSame('2028-06-30', $semester->end_date->toDateString());
     }
 
     public function test_semester_with_history_can_still_be_renamed_and_marked_current(): void

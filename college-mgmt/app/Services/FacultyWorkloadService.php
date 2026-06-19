@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\{TimetableEntry, TimetableSlot, Teacher, Term, Program};
+use Illuminate\Database\Eloquent\Builder;
 
 class FacultyWorkloadService
 {
@@ -16,6 +17,7 @@ class FacultyWorkloadService
     {
         $entries = TimetableEntry::where('program_id', $programId)
             ->where('term_id', $termId)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->with(['teacher.user', 'subject', 'slot'])
             ->get();
 
@@ -143,7 +145,18 @@ class FacultyWorkloadService
         $start = \Carbon\Carbon::parse($slot->start_time);
         $end = \Carbon\Carbon::parse($slot->end_time);
 
-        return $end->diffInMinutes($start) / 60;
+        return $start->diffInMinutes($end) / 60;
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
     }
 
     /**

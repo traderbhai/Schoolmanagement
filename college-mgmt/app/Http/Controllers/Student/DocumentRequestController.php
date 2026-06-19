@@ -2,12 +2,15 @@
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentRequest;
+use App\Services\StudentDocumentRequestClearanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentRequestController extends Controller {
     const TYPES = ['bonafide','fee_letter','character','migration','noc','id_card'];
+
+    public function __construct(private StudentDocumentRequestClearanceService $clearance) {}
 
     public function index() {
         $student = Auth::user()->student;
@@ -49,7 +52,7 @@ class DocumentRequestController extends Controller {
 
         $existingOpenRequest = DocumentRequest::where('student_id', $student->id)
             ->where('document_type', $data['document_type'])
-            ->whereIn('status', ['pending', 'approved'])
+            ->whereIn('status', ['pending', 'approved', 'ready'])
             ->exists();
 
         if ($existingOpenRequest) {
@@ -75,6 +78,8 @@ class DocumentRequestController extends Controller {
         abort_unless($student && $documentRequest->student_id === $student->id, 403);
         abort_unless($documentRequest->status === 'ready' && $documentRequest->output_path, 404);
         abort_unless(Storage::disk('local')->exists($documentRequest->output_path), 404);
+        abort_if($this->clearance->activeStudentBlocker($documentRequest), 403);
+        abort_if($this->clearance->nocClearanceBlocker($documentRequest), 403);
 
         return response()->download(
             Storage::disk('local')->path($documentRequest->output_path),
@@ -85,6 +90,25 @@ class DocumentRequestController extends Controller {
 
     private function documentPriority($requests): array
     {
+        $blockedReady = $requests->first(function ($request) {
+            return $request->status === 'ready'
+                && $request->output_path
+                && ($this->clearance->activeStudentBlocker($request) || $this->clearance->nocClearanceBlocker($request));
+        });
+
+        if ($blockedReady) {
+            $blocker = $this->clearance->activeStudentBlocker($blockedReady)
+                ?: $this->clearance->nocClearanceBlocker($blockedReady);
+
+            return [
+                'level' => 'warning',
+                'title' => 'A ready document needs clearance before download',
+                'body' => $blocker,
+                'route' => route('student.documents.index'),
+                'action' => 'Review Status',
+            ];
+        }
+
         $ready = $requests->first(fn ($request) => $request->status === 'ready' && $request->output_path);
         if ($ready) {
             return [

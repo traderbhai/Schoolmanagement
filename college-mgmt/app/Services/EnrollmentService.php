@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Mail\EnrollmentConfirmed;
-use App\Models\{Applicant, Student, User, EnrollmentConfirmation, ActivityLog, RequiredDocument};
+use App\Models\{Applicant, Student, User, EnrollmentConfirmation, ActivityLog, RequiredDocument, Specialization, Term};
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\{DB, Hash};
 
@@ -78,6 +78,28 @@ class EnrollmentService
             $batchId = $applicant->batch_id
                 ?? \App\Models\Batch::where('program_id', $applicant->program_id)->value('id')
                 ?? \App\Models\Batch::first()?->id;
+
+            if (! empty($data['specialization_id'])) {
+                $validSpecialization = Specialization::where('id', $data['specialization_id'])
+                    ->where('program_id', $applicant->program_id)
+                    ->where('is_active', true)
+                    ->exists();
+
+                if (! $validSpecialization) {
+                    throw new \RuntimeException('Selected specialization must be active and belong to the applicant program.');
+                }
+            }
+
+            if (! empty($data['term_id'])) {
+                $validTerm = Term::where('id', $data['term_id'])
+                    ->where('program_id', $applicant->program_id)
+                    ->where('batch_id', $batchId)
+                    ->exists();
+
+                if (! $validTerm) {
+                    throw new \RuntimeException('Selected term must belong to the applicant program and batch.');
+                }
+            }
 
             if (Student::where('batch_id', $batchId)->where('roll_number', $data['roll_number'])->exists()) {
                 throw new \RuntimeException('Roll number is already assigned to another student in this batch.');

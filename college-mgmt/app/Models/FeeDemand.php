@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FeeDemand extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'student_id', 'term_id', 'total_amount', 'scholarship_deduction',
         'final_amount', 'due_date', 'penalty_amount', 'last_reminder_sent', 'status',
+        'cancelled_at', 'cancelled_by', 'cancellation_reason',
     ];
 
     protected $casts = [
@@ -21,6 +23,7 @@ class FeeDemand extends Model
         'due_date' => 'date',
         'penalty_amount' => 'decimal:2',
         'last_reminder_sent' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     public function student() { return $this->belongsTo(Student::class); }

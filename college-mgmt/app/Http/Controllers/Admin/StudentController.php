@@ -1,16 +1,20 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendWelcomeEmail;
 use App\Models\{Student, User, Department, Course, ActivityLog};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
         $students = Student::with(['user','department','course'])
             ->when($request->department_id, fn($q,$v) => $q->where('department_id',$v))
             ->when($request->course_id,     fn($q,$v) => $q->where('course_id',$v))
@@ -28,6 +32,8 @@ class StudentController extends Controller
 
     public function create()
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $departments = Department::where('is_active',true)->get();
         $courses = Course::where('is_active',true)->get();
         return view('admin.students.create', compact('departments','courses'));
@@ -35,12 +41,14 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
         $request->validate([
             'name'              => 'required|string|max:255',
             'email'             => 'required|email|unique:users',
             'password'          => 'required|min:8',
-            'department_id'     => 'required|exists:departments,id',
-            'course_id'         => 'required|exists:courses,id',
+            'department_id'     => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
+            'course_id'         => ['required', Rule::exists('courses', 'id')->where('is_active', true)],
             'enrollment_number' => 'required|unique:students',
             'date_of_birth'     => 'nullable|date',
             'gender'            => 'nullable|in:male,female,other',
@@ -70,12 +78,16 @@ class StudentController extends Controller
 
     public function show(Student $student)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $student->load(['user', 'department', 'course', 'enrollments.subject', 'examResults.exam', 'feePayments.feeStructure']);
         return view('admin.students.show', compact('student'));
     }
 
     public function edit(Student $student)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $departments = Department::where('is_active',true)->get();
         $courses = Course::where('is_active',true)->get();
         return view('admin.students.edit', compact('student','departments','courses'));
@@ -83,13 +95,23 @@ class StudentController extends Controller
 
     public function update(Request $request, Student $student)
     {
+        $this->authorizeAcademicIdentityManagement($request);
+
+        if ($student->status === 'inactive') {
+            return back()->with('error', 'Archived student profiles are locked. Use a dedicated audited reactivation or correction workflow instead of ordinary edit.');
+        }
+
         $request->validate([
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email,'.$student->user_id,
-            'department_id' => 'required|exists:departments,id',
-            'course_id'     => 'required|exists:courses,id',
+            'department_id' => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
+            'course_id'     => ['required', Rule::exists('courses', 'id')->where('is_active', true)],
             'status'        => 'required|in:active,inactive,graduated,dropped',
         ]);
+
+        if ($request->status === 'inactive') {
+            return back()->with('error', 'Use the archive action to deactivate a student so roles and audit history are preserved.');
+        }
 
         $student->user->update(['name' => $request->name, 'email' => $request->email]);
         $student->update($request->only([
@@ -102,6 +124,8 @@ class StudentController extends Controller
 
     public function destroy(Student $student)
     {
+        $this->authorizeAcademicIdentityManagement(request());
+
         $name = $student->user->name;
         $student->update(['status' => 'inactive']);
         $student->user?->syncRoles([]);
@@ -113,6 +137,8 @@ class StudentController extends Controller
 
     public function export(Request $r)
     {
+        abort_unless($r->user() && AccessControl::canExportGlobalStudentData($r->user()), 403);
+
         $students = Student::with('user', 'course', 'department')
             ->when($r->course_id, fn($q) => $q->where('course_id', $r->course_id))
             ->when($r->status, fn($q) => $q->where('status', $r->status))
@@ -146,5 +172,10 @@ class StudentController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function authorizeAcademicIdentityManagement(Request $request): void
+    {
+        abort_unless($request->user() && AccessControl::canManageAcademicIdentities($request->user()), 403);
     }
 }

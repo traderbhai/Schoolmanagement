@@ -32,8 +32,10 @@ class PmcStudentController extends Controller {
 
             // Attendance risk: any subject < 75%
             $attBySubject = Attendance::where('student_id', $student->id)
-                ->selectRaw('subject_id, COUNT(*) as total, SUM(CASE WHEN status="present" THEN 1 ELSE 0 END) as present')
-                ->groupBy('subject_id')
+                ->join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
+                ->tap(fn ($query) => $this->publishedTimetableJoinScope($query))
+                ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present')
+                ->groupBy('timetable_entries.subject_id')
                 ->get();
 
             $lowAtt = $attBySubject->filter(fn($r) => $r->total > 0 && ($r->present / $r->total) < 0.75);
@@ -42,7 +44,10 @@ class PmcStudentController extends Controller {
             }
 
             // Academic risk: CGPA < 5.0 (approx from results)
-            $results = ExamResult::where('student_id', $student->id)->get();
+            $results = ExamResult::where('student_id', $student->id)
+                ->whereHas('exam', fn($q) => $q->whereNotNull('published_at'))
+                ->with('exam')
+                ->get();
             if ($results->isNotEmpty()) {
                 $totalPct = $results->avg(fn($r) => $r->exam ? ($r->marks_obtained / max($r->exam->total_marks ?? 100, 1)) * 100 : null);
                 if ($totalPct !== null && $totalPct < 50) {
@@ -86,6 +91,22 @@ class PmcStudentController extends Controller {
     }
 
     // ── Mentor assignment ─────────────────────────────────────────────────────
+    private function publishedTimetableJoinScope($query)
+    {
+        return $query
+            ->where('timetable_entries.is_active', true)
+            ->where('timetable_entries.status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_entries.timetable_version_id')
+                    ->orWhereExists(function ($exists) {
+                        $exists->selectRaw('1')
+                            ->from('timetable_versions')
+                            ->whereColumn('timetable_versions.id', 'timetable_entries.timetable_version_id')
+                            ->where('timetable_versions.status', 'published');
+                    });
+            });
+    }
+
     public function mentors(Request $request) {
         $programIds = $this->programIds();
 
@@ -164,7 +185,7 @@ class PmcStudentController extends Controller {
         $leave->update([
             'status'         => 'approved',
             'reviewed_by'    => Auth::id(),
-            'review_remarks' => $request->remarks,
+            'admin_remarks'  => $request->remarks,
             'reviewed_at'    => now(),
         ]);
         return back()->with('success', 'Leave approved.');
@@ -182,7 +203,7 @@ class PmcStudentController extends Controller {
         $leave->update([
             'status'         => 'rejected',
             'reviewed_by'    => Auth::id(),
-            'review_remarks' => $request->remarks,
+            'admin_remarks'  => $request->remarks,
             'reviewed_at'    => now(),
         ]);
         return back()->with('success', 'Leave rejected.');

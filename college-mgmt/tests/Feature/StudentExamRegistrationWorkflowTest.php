@@ -14,6 +14,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -171,12 +172,23 @@ class StudentExamRegistrationWorkflowTest extends TestCase
             'name' => 'End Term Analytics',
             'exam_date' => now()->addWeek(),
         ]);
+        Exam::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'name' => 'Published Future Economics',
+            'exam_date' => now()->addWeek(),
+            'published_at' => now(),
+            'published_by' => User::factory()->create()->id,
+        ]);
 
         $this->actingAs($fixture['user'])
             ->get(route('student.dashboard'))
             ->assertOk()
             ->assertSee('End Term Economics')
-            ->assertDontSee('End Term Analytics');
+            ->assertDontSee('End Term Analytics')
+            ->assertDontSee('Published Future Economics');
     }
 
     public function test_student_can_register_when_fee_clear_and_attendance_unknown_or_eligible(): void
@@ -198,6 +210,26 @@ class StudentExamRegistrationWorkflowTest extends TestCase
             'attendance_eligible' => true,
             'fee_cleared' => true,
             'status' => 'pending',
+        ]);
+    }
+
+    public function test_inactive_student_cannot_register_for_exam_through_direct_route(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['student']->update(['status' => 'inactive']);
+        FeeDemand::factory()->create([
+            'student_id' => $fixture['student']->id,
+            'status' => 'fully_paid',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.exam-reg.register', $fixture['exam']))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Exam registration is available only for active students. Contact the Exam Cell for archived records.');
+
+        $this->assertDatabaseMissing('exam_registrations', [
+            'student_id' => $fixture['student']->id,
+            'exam_id' => $fixture['exam']->id,
         ]);
     }
 
@@ -229,6 +261,81 @@ class StudentExamRegistrationWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Attendance is below the 75% eligibility threshold for this subject.');
 
         $this->assertSame(0, ExamRegistration::count());
+    }
+
+    public function test_exam_registration_attendance_eligibility_ignores_draft_timetable_history(): void
+    {
+        $fixture = $this->fixture();
+        FeeDemand::factory()->create([
+            'student_id' => $fixture['student']->id,
+            'status' => 'fully_paid',
+        ]);
+
+        $this->addAttendance($fixture['student'], $fixture['subject'], $fixture['semester'], present: 3, absent: 0);
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'course_id' => $fixture['student']->course_id,
+            'batch_id' => $fixture['student']->batch_id,
+            'term_id' => $fixture['term']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'day_of_week' => 2,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(10)->toDateString(),
+            'status' => 'absent',
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['student']->batch_id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'course_id' => $fixture['student']->course_id,
+            'batch_id' => $fixture['student']->batch_id,
+            'term_id' => $fixture['term']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'day_of_week' => 3,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(11)->toDateString(),
+            'status' => 'absent',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.exam-reg.index'))
+            ->assertOk()
+            ->assertSee('100%')
+            ->assertDontSee('attendance is below the 75% eligibility threshold');
+
+        $this->actingAs($fixture['user'])
+            ->post(route('student.exam-reg.register', $fixture['exam']))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Registered for End Term Economics. Exam Cell will verify eligibility.');
+
+        $this->assertDatabaseHas('exam_registrations', [
+            'student_id' => $fixture['student']->id,
+            'exam_id' => $fixture['exam']->id,
+            'attendance_eligible' => true,
+            'fee_cleared' => true,
+            'status' => 'pending',
+        ]);
     }
 
     public function test_reviewed_exam_registration_cannot_be_reset_to_pending_by_student_post(): void

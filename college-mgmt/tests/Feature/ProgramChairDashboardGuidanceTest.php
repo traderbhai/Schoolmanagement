@@ -5,15 +5,31 @@ namespace Tests\Feature;
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
 use App\Models\Batch;
+use App\Models\Attendance;
+use App\Models\Classroom;
+use App\Models\Course;
+use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Program;
 use App\Models\ProgramSubject;
 use App\Models\RoleProgramAssignment;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\TeacherAvailability;
 use App\Models\Term;
+use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
+use App\Services\ClassroomCapacityService;
+use App\Services\FacultyWorkloadService;
+use App\Services\LoadBalancingService;
+use App\Services\SoftConstraintService;
+use App\Services\TeacherWorkloadWarningService;
+use App\Services\TimetableConflictService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -90,6 +106,269 @@ class ProgramChairDashboardGuidanceTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Assigned Program')
             ->assertDontSee('Other Program');
+    }
+
+    public function test_program_chair_dashboard_and_at_risk_use_only_published_results(): void
+    {
+        $program = Program::factory()->create(['name' => 'Published Program']);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'start_date' => now(),
+        ]);
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Official Subject',
+        ]);
+        $publishedStudent = Student::factory()->create(['program_id' => $program->id]);
+        $draftStudent = Student::factory()->create(['program_id' => $program->id]);
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'published_at' => now(),
+            'name' => 'Published Exam',
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'published_at' => null,
+            'name' => 'Draft Exam',
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $publishedExam->id,
+            'student_id' => $publishedStudent->id,
+            'marks_obtained' => 80,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $draftStudent->id,
+            'marks_obtained' => 10,
+        ]);
+        $chair = $this->chairUser($program);
+
+        $dashboard = $this->actingAs($chair)
+            ->get(route('chair.dashboard'))
+            ->assertOk()
+            ->assertSee('Published Exam')
+            ->assertDontSee('Draft Exam');
+
+        $this->assertSame(1, $dashboard->viewData('subjectsThisTerm'));
+        $this->assertSame(80.0, $dashboard->viewData('avgMarks'));
+        $this->assertCount(1, $dashboard->viewData('recentExams'));
+        $this->assertSame('Published Exam', $dashboard->viewData('recentExams')->first()->name);
+        $this->assertFalse($dashboard->viewData('atRiskStudents')->contains('id', $draftStudent->id));
+
+        $atRisk = $this->actingAs($chair)
+            ->get(route('chair.students.at-risk', ['risk' => 'academic']))
+            ->assertOk()
+            ->assertDontSee($draftStudent->user->name);
+
+        $this->assertFalse($atRisk->viewData('atRisk')->contains('id', $draftStudent->id));
+    }
+
+    public function test_program_chair_attendance_views_ignore_draft_timetable_history(): void
+    {
+        $program = Program::factory()->create(['name' => 'BBA Program Chair Attendance', 'is_active' => true]);
+        $course = Course::factory()->create();
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Term 1', 'is_current' => true]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'start_date' => now(),
+        ]);
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Program Chair Attendance Subject',
+        ]);
+        $teacher = Teacher::factory()->create();
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        $chair = $this->chairUser($program);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $chair->id,
+        ]);
+        $publishedEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $publishedVersion->id,
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $student->id,
+                'timetable_entry_id' => $publishedEntry->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'present',
+                'marked_by' => $teacher->user_id,
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(3)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $teacher->user_id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $chair->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(4)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $teacher->user_id,
+        ]);
+
+        $dashboard = $this->actingAs($chair)
+            ->get(route('chair.dashboard'))
+            ->assertOk();
+
+        $this->assertSame(100.0, $dashboard->viewData('attendancePct'));
+        $this->assertTrue($dashboard->viewData('lowAttSubjects')->isEmpty());
+        $this->assertTrue($dashboard->viewData('atRiskStudents')->isEmpty());
+        $this->assertSame('No urgent program action today', $dashboard->viewData('chairPriority')['title']);
+
+        $atRisk = $this->actingAs($chair)
+            ->get(route('chair.students.at-risk', ['risk' => 'attendance']))
+            ->assertOk();
+
+        $this->assertTrue($atRisk->viewData('atRisk')->isEmpty());
+        $atRisk->assertDontSee($student->user->name);
+    }
+
+    public function test_legacy_timetable_reporting_services_ignore_draft_version_entries(): void
+    {
+        $program = Program::factory()->create(['name' => 'Legacy Timetable Reports', 'is_active' => true]);
+        $course = Course::factory()->create();
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Term 1', 'is_current' => true]);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'name' => 'Official Batch']);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'start_date' => now(),
+            'end_date' => now()->addWeeks(18),
+        ]);
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'term_number' => 1]);
+        $teacher = Teacher::factory()->create();
+        $officialRoom = Classroom::factory()->create(['room_number' => 'OFFICIAL-101']);
+        $draftRoom = Classroom::factory()->create(['room_number' => 'DRAFT-202']);
+        $chair = $this->chairUser($program);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $chair->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $officialRoom->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1])->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $publishedVersion->id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $chair->id,
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $draftRoom->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['start_time' => '09:00:00', 'end_time' => '10:00:00', 'sort_order' => 2])->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+
+        $workload = app(FacultyWorkloadService::class)->getWorkloadReport($program->id, $term->id);
+        $this->assertCount(1, $workload);
+        $this->assertSame(1, $workload[0]['session_count']);
+        $this->assertEquals(1.0, $workload[0]['total_hours']);
+
+        $loadBalance = app(LoadBalancingService::class)->analyzeLoadBalance($term->id, $program->id);
+        $this->assertEquals(1.0, $loadBalance['teachers'][0]['hours']);
+
+        $warning = app(TeacherWorkloadWarningService::class)->getCurrentWorkload($teacher->id, $term->id);
+        $this->assertSame(1, $warning['session_count']);
+        $this->assertEquals(1.0, $warning['total_hours']);
+
+        $rooms = collect(app(ClassroomCapacityService::class)->getUtilizationReport($program->id, $term->id))->pluck('room_number');
+        $this->assertTrue($rooms->contains('OFFICIAL-101'));
+        $this->assertFalse($rooms->contains('DRAFT-202'));
     }
 
     public function test_program_chair_cannot_approve_another_program_approval(): void
@@ -319,5 +598,89 @@ class ProgramChairDashboardGuidanceTest extends TestCase
             'id' => $enrollment->id,
             'subject_id' => $assignedSubject->id,
         ]);
+    }
+
+    public function test_soft_constraint_audit_flags_unavailable_teacher_assignments_from_real_availability_field(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+        ]);
+        $semester = Semester::factory()->create(['number' => 1]);
+        $course = Course::factory()->create();
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'name' => 'Unavailable Faculty Planning Subject',
+        ]);
+        $teacher = Teacher::factory()->create();
+        $slot = TimetableSlot::factory()->create(['name' => 'Unavailable Slot', 'sort_order' => 1]);
+
+        TeacherAvailability::create([
+            'teacher_id' => $teacher->id,
+            'term_id' => $term->id,
+            'day_of_week' => 1,
+            'timetable_slot_id' => $slot->id,
+            'availability' => 'unavailable',
+        ]);
+
+        TimetableEntry::create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => $slot->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+
+        $audit = app(SoftConstraintService::class)->auditTermConstraints($term->id, $program->id, $batch->id);
+
+        $this->assertGreaterThan(0, $audit['total_issues']);
+        $this->assertContains('unavailable_time_assigned', collect($audit['issues'])->pluck('type')->all());
+    }
+
+    public function test_timetable_conflict_capacity_uses_actual_batch_students_with_intake_fallback(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create([
+            'program_id' => $program->id,
+            'intake_capacity' => 30,
+            'name' => 'Capacity Batch',
+        ]);
+        Student::factory()->count(3)->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+        ]);
+        $smallRoom = Classroom::factory()->create([
+            'room_number' => 'CAP-2',
+            'capacity' => 2,
+        ]);
+        $emptyBatch = Batch::factory()->create([
+            'program_id' => $program->id,
+            'intake_capacity' => 5,
+            'name' => 'Fallback Batch',
+        ]);
+        $tinyRoom = Classroom::factory()->create([
+            'room_number' => 'CAP-4',
+            'capacity' => 4,
+        ]);
+
+        $service = app(TimetableConflictService::class);
+
+        $studentBasedConflicts = $service->checkCapacity($smallRoom->id, $batch->id);
+        $fallbackConflicts = $service->checkCapacity($tinyRoom->id, $emptyBatch->id);
+
+        $this->assertNotEmpty($studentBasedConflicts);
+        $this->assertStringContainsString('3 students', $studentBasedConflicts[0]);
+        $this->assertNotEmpty($fallbackConflicts);
+        $this->assertStringContainsString('5 students', $fallbackConflicts[0]);
     }
 }

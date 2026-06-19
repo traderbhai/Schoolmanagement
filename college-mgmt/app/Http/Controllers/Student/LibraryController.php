@@ -74,6 +74,15 @@ class LibraryController extends Controller
             return back()->withErrors(['book_id' => 'This book has an available copy. Please collect it through the library counter.']);
         }
 
+        $hasActiveIssueForTitle = BookIssue::where('student_id', $student->id)
+            ->whereIn('status', ['issued', 'overdue'])
+            ->whereHas('bookCopy', fn ($copy) => $copy->where('book_id', $book->id))
+            ->exists();
+
+        if ($hasActiveIssueForTitle) {
+            return back()->withErrors(['book_id' => 'You already have this title issued. Return the current copy before placing a reservation.']);
+        }
+
         $membership = LibraryMembership::where('user_id', $student->user_id)->where('is_active', true)->first();
         if ($membership && $membership->expiry_date && $membership->expiry_date->isPast()) {
             return back()->withErrors(['book_id' => 'Your library membership has expired.']);
@@ -101,6 +110,9 @@ class LibraryController extends Controller
 
     public function cancelReservation(LibraryReservation $reservation)
     {
+        $this->expireStaleReservations();
+        $reservation->refresh();
+
         $student = Student::where('user_id', auth()->id())->firstOrFail();
 
         if ((int) $reservation->student_id !== (int) $student->id) {

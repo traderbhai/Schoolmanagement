@@ -30,7 +30,9 @@ class AcademicDeanRiskService
                 $subjectIds = $program->subjects()->pluck('id');
                 $attendanceExceptions = Attendance::whereIn('student_id', $studentIds)->whereIn('status', ['absent', 'late'])->count();
                 $failedResults = ExamResult::whereIn('student_id', $studentIds)
-                    ->whereHas('exam', fn ($q) => $q->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
+                    ->whereHas('exam', fn ($q) => $q
+                        ->whereNotNull('published_at')
+                        ->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks'))
                     ->count();
                 $facultyGaps = Subject::whereIn('id', $subjectIds)->whereNotIn('id', $assignedSubjects)->count();
                 $draftTimetable = TimetableEntry::where('program_id', $program->id)->where('is_active', true)->where('status', '!=', 'published')->count();

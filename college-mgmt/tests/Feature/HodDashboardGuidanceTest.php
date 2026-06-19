@@ -4,10 +4,20 @@ namespace Tests\Feature;
 
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
+use App\Models\Attendance;
+use App\Models\Course;
 use App\Models\Department;
+use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Program;
+use App\Models\Semester;
 use App\Models\Student;
+use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\Term;
+use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use App\Models\LeaveApplication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -84,6 +94,171 @@ class HodDashboardGuidanceTest extends TestCase
             ->assertStatus(200)
             ->assertSee('BCA')
             ->assertDontSee('BME');
+    }
+
+    public function test_hod_dashboard_and_department_performance_use_only_published_results(): void
+    {
+        $department = Department::factory()->create(['name' => 'Management Studies']);
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $subject = Subject::factory()->create([
+            'department_id' => $department->id,
+            'program_id' => $program->id,
+            'name' => 'Department Analytics',
+        ]);
+        $publishedStudent = Student::factory()->create(['program_id' => $program->id]);
+        $draftStudent = Student::factory()->create(['program_id' => $program->id]);
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'published_at' => now(),
+            'passing_marks' => 40,
+            'name' => 'Published HOD Exam',
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'published_at' => null,
+            'passing_marks' => 40,
+            'name' => 'Draft HOD Exam',
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $publishedExam->id,
+            'student_id' => $publishedStudent->id,
+            'marks_obtained' => 90,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $draftStudent->id,
+            'marks_obtained' => 20,
+        ]);
+        $hod = $this->hodUser($department);
+
+        $dashboard = $this->actingAs($hod)
+            ->get(route('hod.dashboard'))
+            ->assertOk()
+            ->assertSee('Published HOD Exam')
+            ->assertDontSee('Draft HOD Exam');
+
+        $this->assertCount(1, $dashboard->viewData('recentExams'));
+        $this->assertSame(90.0, $dashboard->viewData('recentExams')->first()->avg_marks);
+
+        $performance = $this->actingAs($hod)
+            ->get(route('hod.department-performance'))
+            ->assertOk();
+
+        $subjectStats = $performance->viewData('subjects')->firstWhere('name', 'Department Analytics');
+        $this->assertSame(1, $subjectStats->exam_count);
+        $this->assertSame(1, $subjectStats->result_count);
+        $this->assertSame(90.0, $subjectStats->avg_marks);
+        $this->assertSame(100.0, $subjectStats->pass_rate);
+    }
+
+    public function test_hod_attendance_kpis_ignore_draft_timetable_history(): void
+    {
+        $department = Department::factory()->create(['name' => 'Attendance Department']);
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $course = Course::factory()->create(['department_id' => $department->id]);
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Term 1', 'is_current' => true]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+        ]);
+        $subject = Subject::factory()->create([
+            'department_id' => $department->id,
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Official Attendance Subject',
+        ]);
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+        ]);
+        $faculty = Teacher::factory()->create(['department_id' => $department->id]);
+        $hod = $this->hodUser($department);
+
+        $publishedEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $faculty->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $student->id,
+                'timetable_entry_id' => $publishedEntry->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'present',
+                'marked_by' => $faculty->user_id,
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $faculty->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(3)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $faculty->user_id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $hod->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $faculty->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(4)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $faculty->user_id,
+        ]);
+
+        $dashboard = $this->actingAs($hod)
+            ->get(route('hod.dashboard'))
+            ->assertOk();
+        $this->assertSame(100.0, $dashboard->viewData('attendancePct'));
+        $this->assertSame('No urgent HOD action today', $dashboard->viewData('hodPriority')['title']);
+
+        $performance = $this->actingAs($hod)
+            ->get(route('hod.department-performance'))
+            ->assertOk();
+        $subjectStats = $performance->viewData('subjects')->firstWhere('name', 'Official Attendance Subject');
+        $this->assertSame(100.0, $subjectStats->attendance_pct);
     }
 
     public function test_hod_cannot_approve_another_department_approval(): void

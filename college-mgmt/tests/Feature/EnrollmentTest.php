@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Batch, Course, Enrollment, Program, Semester, Student, StudentSubjectEnrollment, Subject, Term, User};
+use App\Models\{Batch, Course, Enrollment, Exam, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Term, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -119,6 +119,33 @@ class EnrollmentTest extends TestCase
         ]);
     }
 
+    public function test_admin_manual_enrollment_rejects_inactive_students(): void
+    {
+        $fixture = $this->academicFixture();
+        $fixture['student']->update(['status' => 'inactive']);
+
+        $this->actingAs($fixture['admin'])
+            ->from(route('admin.enrollments.create'))
+            ->post(route('admin.enrollments.store'), [
+                'student_id' => $fixture['student']->id,
+                'semester_id' => $fixture['semester']->id,
+                'subject_ids' => [$fixture['subject']->id],
+            ])
+            ->assertRedirect(route('admin.enrollments.create'))
+            ->assertSessionHasErrors('student_id');
+
+        $this->assertDatabaseMissing('enrollments', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+        ]);
+        $this->assertDatabaseMissing('student_subject_enrollments', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $fixture['term']->id,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_admin_bulk_enrollment_syncs_canonical_rows_for_course_students(): void
     {
         $fixture = $this->academicFixture();
@@ -147,6 +174,33 @@ class EnrollmentTest extends TestCase
                 'status' => 'active',
             ]);
         }
+    }
+
+    public function test_admin_bulk_enrollment_rejects_inactive_courses(): void
+    {
+        $fixture = $this->academicFixture();
+        $fixture['course']->update(['is_active' => false]);
+
+        $this->actingAs($fixture['admin'])
+            ->from(route('admin.enrollments.create'))
+            ->post(route('admin.enrollments.bulk'), [
+                'course_id' => $fixture['course']->id,
+                'semester_id' => $fixture['semester']->id,
+                'subject_ids' => [$fixture['subject']->id],
+            ])
+            ->assertRedirect(route('admin.enrollments.create'))
+            ->assertSessionHasErrors('course_id');
+
+        $this->assertDatabaseMissing('enrollments', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+        ]);
+        $this->assertDatabaseMissing('student_subject_enrollments', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $fixture['term']->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_admin_bulk_enrollment_skips_ineligible_or_completed_history_rows(): void
@@ -267,6 +321,59 @@ class EnrollmentTest extends TestCase
             'subject_id' => $fixture['subject']->id,
             'term_id' => $fixture['term']->id,
             'status' => 'completed',
+        ]);
+    }
+
+    public function test_admin_cannot_delete_enrollment_after_exam_result_history_exists(): void
+    {
+        $fixture = $this->academicFixture();
+        $enrollment = Enrollment::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'status' => 'active',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $fixture['term']->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        $exam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $fixture['subject']->id,
+        ]);
+        ExamResult::create([
+            'exam_id' => $exam->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 71,
+            'grade' => 'B+',
+            'is_absent' => false,
+        ]);
+
+        $this->actingAs($fixture['admin'])
+            ->from(route('admin.enrollments.index'))
+            ->delete(route('admin.enrollments.destroy', $enrollment))
+            ->assertRedirect(route('admin.enrollments.index'))
+            ->assertSessionHas('error', 'Enrollment history with academic activity cannot be deleted. Drop the active canonical enrollment through the audited academic workflow instead.');
+
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('student_subject_enrollments', [
+            'student_id' => $fixture['student']->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $fixture['term']->id,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('exam_results', [
+            'exam_id' => $exam->id,
+            'student_id' => $fixture['student']->id,
         ]);
     }
 

@@ -78,7 +78,7 @@ class FeeDemandTest extends TestCase
             'total_amount' => 150000,
             'scholarship_deduction' => 15000,
             'due_date' => now()->addMonth(),
-            'status' => 'partially_paid',
+            'status' => 'pending',
         ];
 
         $response = $this->put("/academic/fee-demands/{$feeDemand->id}", $data);
@@ -115,6 +115,64 @@ class FeeDemandTest extends TestCase
         $this->assertEquals('pending', $feeDemand->fresh()->status);
     }
 
+    public function test_cannot_create_or_update_fee_demand_as_partially_paid_without_payment_activity(): void
+    {
+        $student = Student::factory()->create(['status' => 'active']);
+        $term = Term::factory()->create();
+
+        $this->post('/academic/fee-demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'total_amount' => 10000,
+            'scholarship_deduction' => 0,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'partially_paid',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertDatabaseMissing('fee_demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+        ]);
+
+        $feeDemand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'status' => 'pending',
+            'total_amount' => 10000,
+            'scholarship_deduction' => 0,
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+        ]);
+
+        $this->put("/academic/fee-demands/{$feeDemand->id}", [
+            'total_amount' => 10000,
+            'scholarship_deduction' => 0,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'partially_paid',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertSame('pending', $feeDemand->fresh()->status);
+    }
+
+    public function test_inactive_student_zero_balance_fee_demand_cannot_be_manually_marked_paid(): void
+    {
+        $student = Student::factory()->create(['status' => 'inactive']);
+        $feeDemand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'status' => 'pending',
+            'total_amount' => 10000,
+            'scholarship_deduction' => 10000,
+            'final_amount' => 0,
+            'penalty_amount' => 0,
+        ]);
+
+        $this->post("/academic/fee-demands/{$feeDemand->id}/mark-paid")
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Fee demands for inactive or archived students cannot be manually marked paid from the standard fee-demand workflow.');
+
+        $this->assertSame('pending', $feeDemand->fresh()->status);
+    }
+
     public function test_cannot_update_non_zero_demand_directly_to_fully_paid()
     {
         $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
@@ -129,13 +187,21 @@ class FeeDemandTest extends TestCase
         $this->assertNotEquals('fully_paid', $feeDemand->fresh()->status);
     }
 
-    public function test_can_delete_untouched_pending_fee_demand()
+    public function test_pending_fee_demand_delete_preserves_cancellation_history()
     {
         $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);
 
-        $response = $this->delete("/academic/fee-demands/{$feeDemand->id}");
+        $this->delete("/academic/fee-demands/{$feeDemand->id}")
+            ->assertRedirect('/academic/fee-demands')
+            ->assertSessionHas('success', 'Fee demand cancelled and retained for audit.');
 
-        $this->assertDatabaseMissing('fee_demands', ['id' => $feeDemand->id]);
+        $this->assertSoftDeleted('fee_demands', ['id' => $feeDemand->id]);
+        $this->assertDatabaseHas('fee_demands', [
+            'id' => $feeDemand->id,
+            'cancelled_by' => auth()->id(),
+            'cancellation_reason' => 'Cancelled before payment activity.',
+        ]);
+        $this->assertNotNull(FeeDemand::withTrashed()->find($feeDemand->id)->cancelled_at);
     }
 
     public function test_cannot_delete_paid_or_linked_fee_demand_history()
@@ -159,6 +225,84 @@ class FeeDemandTest extends TestCase
 
         $this->assertDatabaseHas('fee_demands', ['id' => $paid->id]);
         $this->assertDatabaseHas('fee_demands', ['id' => $linked->id]);
+    }
+
+    public function test_apply_penalties_marks_active_overdue_pending_and_partial_demands_overdue(): void
+    {
+        $activeStudent = Student::factory()->create(['status' => 'active']);
+        $pending = FeeDemand::factory()->create([
+            'student_id' => $activeStudent->id,
+            'status' => 'pending',
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+            'due_date' => now()->subDays(45)->toDateString(),
+        ]);
+        $partial = FeeDemand::factory()->create([
+            'student_id' => $activeStudent->id,
+            'status' => 'partially_paid',
+            'final_amount' => 5000,
+            'penalty_amount' => 0,
+            'due_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        $this->post(route('academic.fee-demands.apply-penalties'))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Penalties applied to 2 overdue demands.');
+
+        $pending->refresh();
+        $partial->refresh();
+
+        $this->assertSame('overdue', $pending->status);
+        $this->assertSame('200.00', $pending->penalty_amount);
+        $this->assertSame('overdue', $partial->status);
+        $this->assertSame('100.00', $partial->penalty_amount);
+    }
+
+    public function test_apply_penalties_skips_inactive_zero_balance_paid_and_already_penalized_demands(): void
+    {
+        $activeStudent = Student::factory()->create(['status' => 'active']);
+        $inactiveStudent = Student::factory()->create(['status' => 'inactive']);
+        $inactive = FeeDemand::factory()->create([
+            'student_id' => $inactiveStudent->id,
+            'status' => 'pending',
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+            'due_date' => now()->subDays(35)->toDateString(),
+        ]);
+        $zeroBalance = FeeDemand::factory()->create([
+            'student_id' => $activeStudent->id,
+            'status' => 'pending',
+            'final_amount' => 0,
+            'penalty_amount' => 0,
+            'due_date' => now()->subDays(35)->toDateString(),
+        ]);
+        $paid = FeeDemand::factory()->create([
+            'student_id' => $activeStudent->id,
+            'status' => 'fully_paid',
+            'final_amount' => 10000,
+            'penalty_amount' => 0,
+            'due_date' => now()->subDays(35)->toDateString(),
+        ]);
+        $alreadyPenalized = FeeDemand::factory()->create([
+            'student_id' => $activeStudent->id,
+            'status' => 'pending',
+            'final_amount' => 10000,
+            'penalty_amount' => 250,
+            'due_date' => now()->subDays(35)->toDateString(),
+        ]);
+
+        $this->post(route('academic.fee-demands.apply-penalties'))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Penalties applied to 0 overdue demands.');
+
+        $this->assertSame('pending', $inactive->fresh()->status);
+        $this->assertSame('0.00', $inactive->fresh()->penalty_amount);
+        $this->assertSame('pending', $zeroBalance->fresh()->status);
+        $this->assertSame('0.00', $zeroBalance->fresh()->penalty_amount);
+        $this->assertSame('fully_paid', $paid->fresh()->status);
+        $this->assertSame('0.00', $paid->fresh()->penalty_amount);
+        $this->assertSame('pending', $alreadyPenalized->fresh()->status);
+        $this->assertSame('250.00', $alreadyPenalized->fresh()->penalty_amount);
     }
 
     public function test_fee_demand_is_overdue()
@@ -230,6 +374,48 @@ class FeeDemandTest extends TestCase
             'student_id' => $student->id,
             'term_id' => $term->id,
         ]);
+    }
+
+    public function test_manual_fee_demand_requires_active_student(): void
+    {
+        $student = Student::factory()->create(['status' => 'inactive']);
+        $term = Term::factory()->create();
+
+        $this->post('/academic/fee-demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'total_amount' => 10000,
+            'scholarship_deduction' => 0,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'pending',
+        ])->assertSessionHasErrors('student_id');
+
+        $this->assertDatabaseMissing('fee_demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+        ]);
+    }
+
+    public function test_manual_fee_demand_cannot_duplicate_student_term(): void
+    {
+        $student = Student::factory()->create(['status' => 'active']);
+        $term = Term::factory()->create();
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'status' => 'pending',
+        ]);
+
+        $this->post('/academic/fee-demands', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'total_amount' => 12000,
+            'scholarship_deduction' => 0,
+            'due_date' => now()->addMonth()->toDateString(),
+            'status' => 'pending',
+        ])->assertSessionHasErrors('term_id');
+
+        $this->assertSame(1, FeeDemand::where('student_id', $student->id)->where('term_id', $term->id)->count());
     }
 
     public function test_fee_demand_with_financial_activity_cannot_have_ledger_fields_rewritten(): void

@@ -90,7 +90,9 @@ class TermPromotionController extends Controller
             return back()->with('error', 'No next term found for this batch. This may be the final term.');
         }
 
-        $students = Student::where('current_term_id', $termId)->get();
+        $students = Student::where('current_term_id', $termId)
+            ->where('status', 'active')
+            ->get();
         $count = 0;
 
         foreach ($students as $student) {
@@ -135,6 +137,10 @@ class TermPromotionController extends Controller
             return back()->with('error', 'Student does not meet promotion criteria');
         }
 
+        if (! $termPromotion->studentIsActive()) {
+            return back()->with('error', 'Inactive or archived students cannot be promoted.');
+        }
+
         if (! $termPromotion->studentIsStillInCurrentTerm()) {
             return back()->with('error', 'Student is no longer in the source term for this promotion.');
         }
@@ -177,7 +183,11 @@ class TermPromotionController extends Controller
             ->whereIn('id', $data['promotion_ids'])
             ->get()
             ->each(function (TermPromotion $tp) use (&$approved) {
-            if ($tp->isReviewable() && $tp->canPromote() && $tp->studentIsStillInCurrentTerm() && $tp->targetTermIsValidProgression()) {
+            if ($tp->isReviewable()
+                && $tp->canPromote()
+                && $tp->studentIsActive()
+                && $tp->studentIsStillInCurrentTerm()
+                && $tp->targetTermIsValidProgression()) {
                 $tp->approve();
                 $approved++;
             }

@@ -126,6 +126,106 @@ class InternshipWorkflowGuidanceTest extends TestCase
         ]);
     }
 
+    public function test_cmc_cannot_register_internship_with_inactive_company_partner(): void
+    {
+        $student = $this->student();
+        $company = $this->company();
+        $company->update(['is_active' => false]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->get(route('cmc.internships.create'))
+            ->assertStatus(200)
+            ->assertDontSee('<option value="' . $company->id . '">Internship Partner</option>', false);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->from(route('cmc.internships.create'))
+            ->post(route('cmc.internships.store'), [
+                'student_id' => $student->id,
+                'company_id' => $company->id,
+                'company_name' => $company->name,
+                'role_title' => 'Inactive Partner Intern',
+                'start_date' => now()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'type' => 'internship',
+                'stipend' => 15000,
+            ])
+            ->assertRedirect(route('cmc.internships.create'))
+            ->assertSessionHasErrors('company_id');
+
+        $this->assertDatabaseMissing('internships', [
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'role_title' => 'Inactive Partner Intern',
+        ]);
+    }
+
+    public function test_cmc_registration_uses_canonical_company_name_when_partner_is_selected(): void
+    {
+        $student = $this->student();
+        $company = $this->company();
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->post(route('cmc.internships.store'), [
+                'student_id' => $student->id,
+                'company_id' => $company->id,
+                'company_name' => 'Forged Partner Name',
+                'role_title' => 'Research Intern',
+                'start_date' => now()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'type' => 'internship',
+                'stipend' => 15000,
+            ])
+            ->assertRedirect(route('cmc.internships.index'))
+            ->assertSessionHas('success', 'Internship registered.');
+
+        $this->assertDatabaseHas('internships', [
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+            'status' => 'ongoing',
+        ]);
+        $this->assertDatabaseMissing('internships', [
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'company_name' => 'Forged Partner Name',
+        ]);
+    }
+
+    public function test_cmc_cannot_register_overlapping_ongoing_internship_for_same_student(): void
+    {
+        $student = $this->student();
+        $company = $this->company();
+
+        $this->internship($student, [
+            'company_id' => $company->id,
+            'company_name' => $company->name,
+            'start_date' => now()->subWeek()->toDateString(),
+            'end_date' => now()->addWeeks(3)->toDateString(),
+            'status' => 'ongoing',
+        ]);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->from(route('cmc.internships.create'))
+            ->post(route('cmc.internships.store'), [
+                'student_id' => $student->id,
+                'company_id' => $company->id,
+                'company_name' => $company->name,
+                'role_title' => 'Duplicate Active Internship',
+                'start_date' => now()->addWeek()->toDateString(),
+                'end_date' => now()->addMonth()->toDateString(),
+                'type' => 'live_project',
+                'stipend' => 12000,
+            ])
+            ->assertRedirect(route('cmc.internships.create'))
+            ->assertSessionHasErrors('start_date');
+
+        $this->assertSame(1, Internship::where('student_id', $student->id)->where('status', 'ongoing')->count());
+        $this->assertDatabaseMissing('internships', [
+            'student_id' => $student->id,
+            'role_title' => 'Duplicate Active Internship',
+        ]);
+    }
+
     public function test_cmc_completion_requires_valid_ongoing_internship_end_date(): void
     {
         $internship = $this->internship($this->student(), [
@@ -146,6 +246,16 @@ class InternshipWorkflowGuidanceTest extends TestCase
         $this->actingAs($this->userWithRole('cmc'))
             ->post(route('cmc.internships.complete', $internship), [
                 'end_date' => now()->addDay()->toDateString(),
+                'feedback' => 'Future completion should not be accepted.',
+                'rating' => 4,
+            ])
+            ->assertSessionHasErrors('end_date');
+
+        $this->assertSame('ongoing', $internship->fresh()->status);
+
+        $this->actingAs($this->userWithRole('cmc'))
+            ->post(route('cmc.internships.complete', $internship), [
+                'end_date' => now()->toDateString(),
                 'feedback' => 'Completed successfully.',
                 'rating' => 5,
             ])
@@ -159,7 +269,7 @@ class InternshipWorkflowGuidanceTest extends TestCase
 
         $this->actingAs($this->userWithRole('cmc'))
             ->post(route('cmc.internships.complete', $internship), [
-                'end_date' => now()->addDays(2)->toDateString(),
+                'end_date' => now()->toDateString(),
             ])
             ->assertSessionHas('error', 'Only ongoing internships can be marked as completed.');
     }

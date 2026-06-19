@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -9,11 +10,14 @@ use App\Models\UserRole;
 use App\Models\Program;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserRoleController extends Controller
 {
     public function index()
     {
+        $this->authorizeRoleAssignmentManagement();
+
         $userRoles = UserRole::with(['user', 'role', 'program', 'assignedBy'])
             ->latest()
             ->paginate(30);
@@ -23,6 +27,8 @@ class UserRoleController extends Controller
 
     public function create()
     {
+        $this->authorizeRoleAssignmentManagement();
+
         $users = User::where('email', '!=', 'admin@college.com')
             ->orderBy('name')
             ->get();
@@ -34,12 +40,20 @@ class UserRoleController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeRoleAssignmentManagement();
+
         $validated = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
             'role_id' => 'required|integer|exists:roles,id',
-            'program_id' => 'nullable|integer|exists:programs,id',
+            'program_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('programs', 'id')->where('is_active', true),
+            ],
             'active_until' => 'nullable|date|after:today',
         ]);
+
+        $this->validateGlobalRoleScope($request);
 
         $user = User::findOrFail($validated['user_id']);
         $role = Role::findOrFail($validated['role_id']);
@@ -80,6 +94,8 @@ class UserRoleController extends Controller
 
     public function destroy(UserRole $userRole)
     {
+        $this->authorizeRoleAssignmentManagement();
+
         $user = $userRole->user;
         $role = $userRole->role;
 
@@ -89,7 +105,7 @@ class UserRoleController extends Controller
 
         AuditLog::logRoleRevoked(auth()->user(), $user, $role);
 
-        $userRole->delete();
+        $userRole->update(['active_until' => today()->subDay()]);
 
         if (! $this->hasOtherActiveAssignmentForRole($user, $role->name)) {
             $user->removeRole($role->name);
@@ -100,6 +116,8 @@ class UserRoleController extends Controller
 
     public function expireAll(User $user)
     {
+        $this->authorizeRoleAssignmentManagement();
+
         $userRoles = UserRole::where('user_id', $user->id)
             ->where(function ($query) {
                 $query->whereNull('active_until')
@@ -153,5 +171,21 @@ class UserRoleController extends Controller
             ->count();
 
         return $otherAdminCount === 0;
+    }
+
+    private function authorizeRoleAssignmentManagement(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageRoleAssignments(auth()->user()), 403);
+    }
+
+    private function validateGlobalRoleScope(Request $request): void
+    {
+        if (! $request->filled('program_id')) {
+            return;
+        }
+
+        back()->withErrors([
+            'program_id' => 'Global user roles cannot be program-scoped from this page. Use Scoped Role Assignments for program-level academic access.',
+        ])->throwResponse();
     }
 }

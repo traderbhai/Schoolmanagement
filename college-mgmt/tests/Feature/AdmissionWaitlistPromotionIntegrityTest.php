@@ -5,10 +5,14 @@ namespace Tests\Feature;
 use App\Models\Applicant;
 use App\Models\Batch;
 use App\Models\MeritListEntry;
+use App\Models\OfferLetter;
 use App\Models\Program;
+use App\Models\ProgramSeatMatrix;
 use App\Models\SeatMatrix;
 use App\Models\User;
+use App\Services\AdmissionWaitlistService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -115,6 +119,45 @@ class AdmissionWaitlistPromotionIntegrityTest extends TestCase
         $this->assertSame('waitlisted', $entry->fresh()->decision);
     }
 
+    public function test_waitlist_promotion_blocks_final_state_applicant(): void
+    {
+        $staff = $this->admissionUser();
+        $matrix = $this->matrix();
+        $entry = $this->waitlistedEntry($matrix, 'general');
+        $entry->applicant->update(['status' => 'enrolled']);
+
+        $this->actingAs($staff)
+            ->post(route('admission.waitlist.promote', $entry))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This applicant is not eligible for waitlist promotion.');
+
+        $this->assertSame('waitlisted', $entry->fresh()->decision);
+        $this->assertSame('enrolled', $entry->applicant->fresh()->status);
+    }
+
+    public function test_waitlist_promotion_blocks_applicant_with_active_offer(): void
+    {
+        $staff = $this->admissionUser();
+        $matrix = $this->matrix();
+        $entry = $this->waitlistedEntry($matrix, 'general');
+
+        OfferLetter::create([
+            'applicant_id' => $entry->applicant_id,
+            'program_id' => $entry->program_id,
+            'batch_id' => $entry->batch_id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(7),
+            'issued_by' => $staff->id,
+        ]);
+
+        $this->actingAs($staff)
+            ->post(route('admission.waitlist.promote', $entry))
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This applicant already has an active offer.');
+
+        $this->assertSame('waitlisted', $entry->fresh()->decision);
+    }
+
     public function test_waitlist_promotion_selects_candidate_when_total_and_category_seats_are_available(): void
     {
         $staff = $this->admissionUser();
@@ -130,5 +173,73 @@ class AdmissionWaitlistPromotionIntegrityTest extends TestCase
         $this->assertSame('selected', $entry->decision);
         $this->assertSame($staff->id, $entry->decided_by);
         $this->assertSame('selected', $entry->applicant->fresh()->status);
+    }
+
+    public function test_offer_seat_waitlist_service_skips_final_state_rows_when_promoting_next(): void
+    {
+        $staff = $this->admissionUser();
+        $program = Program::factory()->create(['is_active' => true]);
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        ProgramSeatMatrix::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'general_seats' => 2,
+            'obc_seats' => 0,
+            'obc_nc_seats' => 0,
+            'sc_seats' => 0,
+            'st_seats' => 0,
+            'ews_seats' => 0,
+            'pwd_seats' => 0,
+            'nri_seats' => 0,
+            'management_quota_seats' => 0,
+            'state_quota_percentage' => 0,
+            'is_active' => true,
+        ]);
+
+        $finalApplicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'withdrawn',
+        ]);
+        $eligibleApplicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'shortlisted',
+        ]);
+
+        $finalEntryId = DB::table('admission_waitlist_entries')->insertGetId([
+            'applicant_id' => $finalApplicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'rank' => 1,
+            'category' => 'general',
+            'status' => 'waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $eligibleEntryId = DB::table('admission_waitlist_entries')->insertGetId([
+            'applicant_id' => $eligibleApplicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'rank' => 2,
+            'category' => 'general',
+            'status' => 'waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $promoted = app(AdmissionWaitlistService::class)->promoteNext($program->id, $batch->id, $staff, 'Feature test release');
+
+        $this->assertNotNull($promoted);
+        $this->assertSame($eligibleEntryId, $promoted->id);
+        $this->assertSame('waiting', DB::table('admission_waitlist_entries')->where('id', $finalEntryId)->value('status'));
+        $this->assertSame('promoted', DB::table('admission_waitlist_entries')->where('id', $eligibleEntryId)->value('status'));
+        $this->assertDatabaseHas('admission_seat_holds', [
+            'applicant_id' => $eligibleApplicant->id,
+            'status' => 'held',
+        ]);
+        $this->assertDatabaseMissing('admission_seat_holds', [
+            'applicant_id' => $finalApplicant->id,
+        ]);
     }
 }

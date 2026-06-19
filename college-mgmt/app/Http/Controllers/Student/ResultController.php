@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, ExamResult};
+use App\Models\{AcademicTranscript, Semester, ExamResult};
 use App\Services\GradeService;
 use Illuminate\Http\Request;
 
@@ -14,6 +14,13 @@ class ResultController extends Controller
         $student = auth()->user()->student;
         if (!$student) return redirect()->route('student.dashboard');
 
+        $issuedTranscript = AcademicTranscript::where('student_id', $student->id)
+            ->where('status', 'issued')
+            ->whereNotNull('semester_data')
+            ->latest('issued_at')
+            ->latest('id')
+            ->first();
+
         $semesters = $this->gradeService->semestersForStudent($student->id)
             ->load('academicYear')
             ->sortByDesc('number')
@@ -24,9 +31,11 @@ class ResultController extends Controller
 
         $report = null;
         $cgpa   = null;
+        $gradeCardAvailable = false;
         if ($semesterId) {
             $report = $this->gradeService->calculateStudentSemesterReport($student->id, $semesterId);
             $cgpa   = $this->gradeService->calculateCGPA($student->id);
+            $gradeCardAvailable = app(\App\Services\ReportService::class)->isCompleteGradeCardReport($report['subjects'] ?? []);
 
             // Eager-load assessment components for every result
             foreach ($report['subjects'] as &$row) {
@@ -49,6 +58,6 @@ class ResultController extends Controller
                 return $pct < 35;
             });
 
-        return view('student.results', compact('semesters', 'semesterId', 'report', 'cgpa', 'student', 'backlogs'));
+        return view('student.results', compact('semesters', 'semesterId', 'report', 'cgpa', 'student', 'backlogs', 'issuedTranscript', 'gradeCardAvailable'));
     }
 }

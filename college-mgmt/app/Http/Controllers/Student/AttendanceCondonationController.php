@@ -93,7 +93,10 @@ class AttendanceCondonationController extends Controller {
 
         return Attendance::with('timetableEntry.subject')
             ->where('student_id', $student->id)
-            ->whereHas('timetableEntry', fn ($query) => $query->whereIn('subject_id', $termBySubject->keys()))
+            ->whereHas('timetableEntry', function ($query) use ($termBySubject) {
+                $this->publishedTimetableScope($query)
+                    ->whereIn('subject_id', $termBySubject->keys());
+            })
             ->get()
             ->groupBy(fn ($attendance) => $attendance->timetableEntry?->subject_id)
             ->map(function ($records, $subjectId) use ($termBySubject) {
@@ -146,5 +149,16 @@ class AttendanceCondonationController extends Controller {
             });
 
         return $terms;
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
     }
 }

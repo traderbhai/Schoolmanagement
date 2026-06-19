@@ -24,12 +24,13 @@ class FeeController extends Controller
         // Payments made by this student
         $payments = FeePayment::with('feeStructure')
             ->where('student_id', $student->id)
+            ->where('status', 'paid')
             ->latest('payment_date')
             ->get();
 
         // Calculate dues
         $totalDue  = $feeStructures->sum('amount');
-        $totalPaid = $payments->where('status', 'paid')->sum('amount_paid');
+        $totalPaid = $payments->sum('amount_paid');
         $balance   = max(0, $totalDue - $totalPaid);
 
         // Group payments by fee_type
@@ -37,7 +38,7 @@ class FeeController extends Controller
 
         // First unpaid fee structure amount
         $unpaidStructures = $feeStructures->filter(function ($fs) use ($payments) {
-            $paid = $payments->where('fee_structure_id', $fs->id)->where('status', 'paid')->sum('amount_paid');
+            $paid = $payments->where('fee_structure_id', $fs->id)->sum('amount_paid');
             return $paid < $fs->amount;
         });
         $nextDueAmount = $unpaidStructures->first()?->amount ?? 0;
@@ -66,12 +67,13 @@ class FeeController extends Controller
             ->get();
 
         $hostelOutstandingTotal = $hostelFeeDemands->where('status', 'pending')->sum('amount');
+        $overallBalanceDue = $balance + $hostelOutstandingTotal;
 
         return view('student.fees', compact(
             'feeStructures', 'payments', 'totalDue', 'totalPaid', 'balance',
             'currentYear', 'paymentsByType', 'nextDueAmount',
             'feeDemands', 'outstandingTotal', 'totalPenalties',
-            'hostelFeeDemands', 'hostelOutstandingTotal'
+            'hostelFeeDemands', 'hostelOutstandingTotal', 'overallBalanceDue'
         ));
     }
 }

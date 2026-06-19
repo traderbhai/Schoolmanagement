@@ -8,6 +8,8 @@ use App\Models\AcademicDeanReviewMeeting;
 use App\Models\Attendance;
 use App\Models\Course;
 use App\Models\Department;
+use App\Models\Exam;
+use App\Models\ExamResult;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
@@ -107,6 +109,54 @@ class AcademicsDeanV007Test extends TestCase
             ->assertOk()
             ->assertSee('Aarav Dean Risk')
             ->assertDontSee('Student #'.$fixture['student']->id);
+    }
+
+    public function test_dean_weak_performance_signals_use_only_published_results(): void
+    {
+        $fixture = $this->seedDeanFixture();
+
+        $publishedStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Published Dean Weak Result'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+        $draftStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Dean Weak Result'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'published_at' => now(),
+            'passing_marks' => 40,
+            'total_marks' => 100,
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['subject']->id,
+            'published_at' => null,
+            'passing_marks' => 40,
+            'total_marks' => 100,
+        ]);
+
+        ExamResult::factory()->create(['exam_id' => $publishedExam->id, 'student_id' => $publishedStudent->id, 'marks_obtained' => 20]);
+        ExamResult::factory()->create(['exam_id' => $draftExam->id, 'student_id' => $draftStudent->id, 'marks_obtained' => 10]);
+
+        $weakQueue = app(AcademicDeanAttentionService::class)->queue('weak_academic_performance');
+        $titles = collect($weakQueue['items'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Published Dean Weak Result'));
+        $this->assertFalse($titles->contains('Draft Dean Weak Result'));
+
+        $risk = app(AcademicDeanRiskService::class)
+            ->programRisks()
+            ->first(fn ($row) => $row['program']->id === $fixture['program']->id);
+
+        $this->assertSame(1, $risk['metrics']['failedResults']);
     }
 
     public function test_dean_can_create_review_action_update_action_and_export(): void

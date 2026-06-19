@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Lead;
+use App\Models\Applicant;
+use App\Models\Batch;
 use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,6 +102,70 @@ class LeadTest extends TestCase
         $this->assertDatabaseMissing('applicants', [
             'notes' => 'Converted from Lead #'.$lead->id.' (web_form)',
         ]);
+    }
+
+    public function test_lead_conversion_route_requires_active_program_and_matching_open_batch(): void
+    {
+        Role::firstOrCreate(['name' => 'applicant', 'guard_name' => 'web']);
+
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $activeProgram = Program::factory()->create(['is_active' => true]);
+        $inactiveProgram = Program::factory()->create(['is_active' => false]);
+        $validBatch = Batch::factory()->create(['program_id' => $activeProgram->id, 'status' => 'active']);
+        $wrongProgramBatch = Batch::factory()->create(['status' => 'active']);
+        $closedBatch = Batch::factory()->create(['program_id' => $activeProgram->id, 'status' => 'completed']);
+
+        $inactiveLead = Lead::factory()->create(['status' => 'interested', 'email' => 'inactive-convert@example.test']);
+        $wrongBatchLead = Lead::factory()->create(['status' => 'interested', 'email' => 'wrong-batch-convert@example.test']);
+        $closedBatchLead = Lead::factory()->create(['status' => 'interested', 'email' => 'closed-batch-convert@example.test']);
+        $validLead = Lead::factory()->create(['status' => 'interested', 'email' => 'valid-convert@example.test']);
+
+        $this->actingAs($officer)
+            ->from(route('admission.leads.show', $inactiveLead))
+            ->post(route('admission.leads.convert', $inactiveLead), [
+                'program_id' => $inactiveProgram->id,
+                'batch_id' => null,
+            ])
+            ->assertRedirect(route('admission.leads.show', $inactiveLead))
+            ->assertSessionHasErrors('program_id');
+
+        $this->actingAs($officer)
+            ->from(route('admission.leads.show', $wrongBatchLead))
+            ->post(route('admission.leads.convert', $wrongBatchLead), [
+                'program_id' => $activeProgram->id,
+                'batch_id' => $wrongProgramBatch->id,
+            ])
+            ->assertRedirect(route('admission.leads.show', $wrongBatchLead))
+            ->assertSessionHasErrors('batch_id');
+
+        $this->actingAs($officer)
+            ->from(route('admission.leads.show', $closedBatchLead))
+            ->post(route('admission.leads.convert', $closedBatchLead), [
+                'program_id' => $activeProgram->id,
+                'batch_id' => $closedBatch->id,
+            ])
+            ->assertRedirect(route('admission.leads.show', $closedBatchLead))
+            ->assertSessionHasErrors('batch_id');
+
+        $this->actingAs($officer)
+            ->post(route('admission.leads.convert', $validLead), [
+                'program_id' => $activeProgram->id,
+                'batch_id' => $validBatch->id,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('applicants', [
+            'program_id' => $activeProgram->id,
+            'batch_id' => $validBatch->id,
+            'status' => 'draft',
+        ]);
+        $this->assertSame(1, Applicant::count());
+        $this->assertTrue($validLead->fresh()->isConverted());
+        $this->assertFalse($inactiveLead->fresh()->isConverted());
+        $this->assertFalse($wrongBatchLead->fresh()->isConverted());
+        $this->assertFalse($closedBatchLead->fresh()->isConverted());
     }
 
     public function test_officer_can_view_leads(): void

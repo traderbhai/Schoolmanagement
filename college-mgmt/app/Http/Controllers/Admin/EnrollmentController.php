@@ -2,14 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
-use App\Models\{Enrollment, Student, Semester, Subject, Course, StudentSubjectEnrollment, Term};
+use App\Models\{
+    AssignmentSubmission,
+    Attendance,
+    Course,
+    CourseFeedback,
+    Enrollment,
+    ExamRegistration,
+    ExamResult,
+    QuizAttempt,
+    Semester,
+    Student,
+    StudentSubjectEnrollment,
+    Subject,
+    Term
+};
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class EnrollmentController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeGlobalEnrollmentManagement();
+
         $enrollments = Enrollment::with(['student.user', 'semester', 'subject'])
             ->when($request->semester_id, fn($q,$v) => $q->where('semester_id', $v))
             ->when($request->course_id, fn($q,$v) => $q->whereHas('student', fn($s) => $s->where('course_id', $v)))
@@ -22,6 +40,8 @@ class EnrollmentController extends Controller
 
     public function create()
     {
+        $this->authorizeGlobalEnrollmentManagement();
+
         $students = Student::with(['user', 'course'])->where('status', 'active')->get();
         $semesters = Semester::with('academicYear')->latest()->get();
         $subjects = Subject::where('is_active', true)->get();
@@ -30,8 +50,10 @@ class EnrollmentController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorizeGlobalEnrollmentManagement();
+
         $data = $request->validate([
-            'student_id'  => 'required|exists:students,id',
+            'student_id'  => ['required', Rule::exists('students', 'id')->where('status', 'active')],
             'semester_id' => 'required|exists:semesters,id',
             'subject_ids' => 'required|array|min:1',
             'subject_ids.*' => 'exists:subjects,id',
@@ -68,8 +90,10 @@ class EnrollmentController extends Controller
 
     public function bulkEnroll(Request $request)
     {
+        $this->authorizeGlobalEnrollmentManagement();
+
         $data = $request->validate([
-            'course_id'   => 'required|exists:courses,id',
+            'course_id'   => ['required', Rule::exists('courses', 'id')->where('is_active', true)],
             'semester_id' => 'required|exists:semesters,id',
             'subject_ids' => 'required|array|min:1',
             'subject_ids.*' => 'exists:subjects,id',
@@ -108,8 +132,10 @@ class EnrollmentController extends Controller
 
     public function destroy(Enrollment $enrollment)
     {
-        if ($enrollment->status === 'completed') {
-            return back()->with('error', 'Completed enrollment history cannot be deleted.');
+        $this->authorizeGlobalEnrollmentManagement();
+
+        if ($enrollment->status === 'completed' || $this->hasOperationalHistory($enrollment)) {
+            return back()->with('error', 'Enrollment history with academic activity cannot be deleted. Drop the active canonical enrollment through the audited academic workflow instead.');
         }
 
         if ($enrollment->term_id) {
@@ -121,6 +147,11 @@ class EnrollmentController extends Controller
 
         $enrollment->delete();
         return back()->with('success', 'Enrollment removed.');
+    }
+
+    private function authorizeGlobalEnrollmentManagement(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageGlobalEnrollments(auth()->user()), 403);
     }
 
     private function syncCanonicalEnrollment(Student $student, Subject $subject, ?int $termId): void
@@ -167,6 +198,69 @@ class EnrollmentController extends Controller
             ->where('subject_id', $subjectId)
             ->where('term_id', $termId)
             ->where('status', 'completed')
+            ->exists();
+    }
+
+    private function hasOperationalHistory(Enrollment $enrollment): bool
+    {
+        $studentId = (int) $enrollment->student_id;
+        $subjectId = (int) $enrollment->subject_id;
+        $termId = $enrollment->term_id ? (int) $enrollment->term_id : null;
+        $semesterId = (int) $enrollment->semester_id;
+
+        $examScope = fn($query) => $query
+            ->where('subject_id', $subjectId)
+            ->where(function ($scope) use ($termId, $semesterId) {
+                if ($termId) {
+                    $scope->where('term_id', $termId)
+                        ->orWhere('semester_id', $semesterId);
+                } else {
+                    $scope->where('semester_id', $semesterId);
+                }
+            });
+
+        if (ExamResult::where('student_id', $studentId)->whereHas('exam', $examScope)->exists()) {
+            return true;
+        }
+
+        if (ExamRegistration::where('student_id', $studentId)->whereHas('exam', $examScope)->exists()) {
+            return true;
+        }
+
+        if (Attendance::where('student_id', $studentId)
+            ->whereHas('timetableEntry', fn($query) => $query
+                ->where('subject_id', $subjectId)
+                ->where(function ($scope) use ($termId, $semesterId) {
+                    if ($termId) {
+                        $scope->where('term_id', $termId)
+                            ->orWhere('semester_id', $semesterId);
+                    } else {
+                        $scope->where('semester_id', $semesterId);
+                    }
+                }))
+            ->exists()) {
+            return true;
+        }
+
+        if (CourseFeedback::where('student_id', $studentId)
+            ->where('subject_id', $subjectId)
+            ->when($termId, fn($query) => $query->where('term_id', $termId))
+            ->exists()) {
+            return true;
+        }
+
+        if (AssignmentSubmission::where('student_id', $studentId)
+            ->whereHas('assignment', fn($query) => $query
+                ->where('subject_id', $subjectId)
+                ->when($termId, fn($scope) => $scope->where('term_id', $termId)))
+            ->exists()) {
+            return true;
+        }
+
+        return QuizAttempt::where('student_id', $studentId)
+            ->whereHas('quiz', fn($query) => $query
+                ->where('subject_id', $subjectId)
+                ->when($termId, fn($scope) => $scope->where('term_id', $termId)))
             ->exists();
     }
 

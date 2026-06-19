@@ -88,6 +88,26 @@ class PaymentController extends Controller
             'payment_proof'         => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
+        if ((float) $validated['amount_paid'] > (float) $installment->amount) {
+            return back()->withErrors([
+                'amount_paid' => 'Payment amount cannot exceed this admission fee installment amount.',
+            ])->withInput();
+        }
+
+        $transactionReference = trim((string) ($validated['transaction_reference'] ?? ''));
+        $normalizedTransactionReference = strtolower($transactionReference);
+        if ($transactionReference !== '' && AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', [$normalizedTransactionReference])->where('status', 'verified')->exists()) {
+            return back()->withErrors([
+                'transaction_reference' => 'This transaction reference is already linked to a verified admission payment.',
+            ])->withInput();
+        }
+
+        if ($transactionReference !== '' && AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', [$normalizedTransactionReference])->where('status', 'pending')->exists()) {
+            return back()->withErrors([
+                'transaction_reference' => 'This transaction reference is already pending admission payment verification.',
+            ])->withInput();
+        }
+
         $proofPath = null;
         if ($r->hasFile('payment_proof')) {
             $proofPath = $r->file('payment_proof')->store('payment_proofs', 'local');
@@ -99,7 +119,7 @@ class PaymentController extends Controller
             'amount_paid'                   => $validated['amount_paid'],
             'payment_date'                  => $validated['payment_date'],
             'payment_mode'                  => $validated['payment_mode'],
-            'transaction_reference'         => $validated['transaction_reference'] ?? null,
+            'transaction_reference'         => $transactionReference !== '' ? $transactionReference : null,
             'bank_name'                     => $validated['bank_name'] ?? null,
             'payment_proof_path'            => $proofPath,
             'status'                        => 'pending',

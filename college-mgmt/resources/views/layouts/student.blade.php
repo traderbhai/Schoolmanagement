@@ -10,6 +10,15 @@
     @stack('styles')
 </head>
 <body>
+@php
+    $studentNavProfile = auth()->user()?->student;
+    $studentNavHasIssuedTranscript = $studentNavProfile
+        ? \App\Models\AcademicTranscript::where('student_id', $studentNavProfile->id)
+            ->where('status', 'issued')
+            ->whereNotNull('semester_data')
+            ->exists()
+        : false;
+@endphp
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
@@ -51,9 +60,11 @@
         <a href="{{ route('student.leave.index') }}" class="nav-link @if(request()->routeIs('student.leave.*')) active @endif">
             <i class="bi bi-person-dash me-2"></i>Leave Applications
         </a>
-        <a href="{{ route('student.transcript.download') }}" class="nav-link">
-            <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
-        </a>
+        @if($studentNavHasIssuedTranscript)
+            <a href="{{ route('student.transcript.download') }}" class="nav-link">
+                <i class="bi bi-file-earmark-text me-2"></i>Official Transcript
+            </a>
+        @endif
         <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif">
             <i class="bi bi-clipboard-check me-2"></i>Exam Registration
         </a>
@@ -185,7 +196,9 @@
         <a href="{{ route('student.subjects.index') }}" class="nav-link @if(request()->routeIs('student.subjects.*')) active @endif"><i class="bi bi-journal-text me-2"></i>Subject Registration</a>
         <a href="{{ route('student.calendar.index') }}" class="nav-link @if(request()->routeIs('student.calendar.*')) active @endif"><i class="bi bi-calendar-event me-2"></i>Academic Calendar</a>
         <a href="{{ route('student.leave.index') }}" class="nav-link @if(request()->routeIs('student.leave.*')) active @endif"><i class="bi bi-person-dash me-2"></i>Leave Applications</a>
-        <a href="{{ route('student.transcript.download') }}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
+        @if($studentNavHasIssuedTranscript)
+            <a href="{{ route('student.transcript.download') }}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>Official Transcript</a>
+        @endif
         <a href="{{ route('student.exam-reg.index') }}" class="nav-link @if(request()->routeIs('student.exam-reg.*')) active @endif"><i class="bi bi-clipboard-check me-2"></i>Exam Registration</a>
         <a href="{{ route('student.appeals.index') }}" class="nav-link @if(request()->routeIs('student.appeals.*')) active @endif"><i class="bi bi-megaphone me-2"></i>Marks Appeals</a>
         <div class="sidebar-divider"></div>

@@ -106,6 +106,7 @@ use App\Models\MentorMessage;
 use App\Models\ObeSurvey;
 use App\Models\ObeSurveyResponse;
 use App\Models\PoAttainment;
+use App\Models\PmcAssessmentComponentConfig;
 use App\Models\Program;
 use App\Models\ProgramOutcome;
 use App\Models\ProgramSpecificOutcome;
@@ -1265,10 +1266,25 @@ class AcademicsOperatingDemoSeeder extends Seeder
         );
 
         foreach ([$subject, $elective, $labSubject] as $mappedSubject) {
-            ProgramSubject::firstOrCreate(
+            $programSubject = ProgramSubject::firstOrCreate(
                 ['program_id' => $program->id, 'subject_id' => $mappedSubject->id],
                 ['term_id' => $term?->id, 'type' => $mappedSubject->id === $elective->id ? 'elective' : 'compulsory', 'credits' => $mappedSubject->credits ?? 3, 'is_active' => true]
             );
+
+            if ($term) {
+                foreach ([['IA1', 20, 20], ['IA2', 20, 20], ['End-Sem', 100, 60]] as [$componentName, $maxMarks, $weightage]) {
+                    PmcAssessmentComponentConfig::updateOrCreate(
+                        ['subject_id' => $mappedSubject->id, 'term_id' => $term->id, 'name' => $componentName],
+                        [
+                            'program_subject_id' => $programSubject->id,
+                            'program_id' => $program->id,
+                            'max_marks' => $maxMarks,
+                            'weightage' => $weightage,
+                            'created_by' => $pmcHead->id,
+                        ]
+                    );
+                }
+            }
         }
         $pmcPo = ProgramOutcome::firstOrCreate(
             ['program_id' => $program->id, 'code' => 'PO-PMC-V041'],

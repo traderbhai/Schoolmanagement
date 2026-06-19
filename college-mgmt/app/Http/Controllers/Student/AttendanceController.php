@@ -24,14 +24,19 @@ class AttendanceController extends Controller
         $report = [];
         if ($semesterId) {
             $termIds = $this->termIdsForSemester($student, (int) $semesterId);
+            $subjectIds = $this->enrolledSubjectIds($student);
             $attendances = Attendance::with(['timetableEntry.subject', 'timetableEntry.slot'])
                 ->where('student_id', $student->id)
-                ->whereHas('timetableEntry', function ($q) use ($semesterId, $termIds) {
-                    $q->where('semester_id', $semesterId);
+                ->whereHas('timetableEntry', function ($q) use ($semesterId, $termIds, $subjectIds) {
+                    $this->publishedTimetableScope($q)
+                        ->whereIn('subject_id', $subjectIds)
+                        ->where(function ($scope) use ($semesterId, $termIds) {
+                            $scope->where('semester_id', $semesterId);
 
-                    if ($termIds !== []) {
-                        $q->orWhereIn('term_id', $termIds);
-                    }
+                            if ($termIds !== []) {
+                                $scope->orWhereIn('term_id', $termIds);
+                            }
+                        });
                 })
                 ->get();
 
@@ -68,15 +73,18 @@ class AttendanceController extends Controller
 
         $query = Attendance::with(['timetableEntry.slot'])
             ->where('student_id', $student->id)
-            ->whereHas('timetableEntry', fn($q) => $q->where('subject_id', $subject->id));
+            ->whereHas('timetableEntry', fn($q) => $this->publishedTimetableScope($q)->where('subject_id', $subject->id));
 
         if ($semesterId) {
             $query->whereHas('timetableEntry', function ($q) use ($semesterId, $termIds) {
-                $q->where('semester_id', $semesterId);
+                $this->publishedTimetableScope($q)
+                    ->where(function ($scope) use ($semesterId, $termIds) {
+                        $scope->where('semester_id', $semesterId);
 
-                if ($termIds !== []) {
-                    $q->orWhereIn('term_id', $termIds);
-                }
+                        if ($termIds !== []) {
+                            $scope->orWhereIn('term_id', $termIds);
+                        }
+                    });
             });
         }
 
@@ -84,7 +92,19 @@ class AttendanceController extends Controller
 
         $total   = $sessions->total();
         $present = Attendance::where('student_id', $student->id)
-            ->whereHas('timetableEntry', fn($q) => $q->where('subject_id', $subject->id))
+            ->whereHas('timetableEntry', fn($q) => $this->publishedTimetableScope($q)->where('subject_id', $subject->id))
+            ->when($semesterId, function ($q) use ($semesterId, $termIds) {
+                $q->whereHas('timetableEntry', function ($scope) use ($semesterId, $termIds) {
+                    $this->publishedTimetableScope($scope)
+                        ->where(function ($period) use ($semesterId, $termIds) {
+                            $period->where('semester_id', $semesterId);
+
+                            if ($termIds !== []) {
+                                $period->orWhereIn('term_id', $termIds);
+                            }
+                        });
+                });
+            })
             ->whereIn('status', ['present', 'late'])->count();
         $pct = $total > 0 ? round(($present / $total) * 100, 1) : 0;
 
@@ -101,6 +121,30 @@ class AttendanceController extends Controller
                 ->where('subject_id', $subject->id)
                 ->whereIn('status', ['active', 'enrolled'])
                 ->exists();
+    }
+
+    private function enrolledSubjectIds(Student $student): array
+    {
+        return StudentSubjectEnrollment::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->pluck('subject_id')
+            ->merge(Enrollment::where('student_id', $student->id)
+                ->whereIn('status', ['active', 'enrolled'])
+                ->pluck('subject_id'))
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($scope) {
+                $scope->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            });
     }
 
     private function termIdsForSemester(Student $student, int $semesterId): array

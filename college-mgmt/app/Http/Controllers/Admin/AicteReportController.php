@@ -1,11 +1,14 @@
 <?php
 namespace App\Http\Controllers\Admin;
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Program, Student, Teacher, Exam, ExamResult, Attendance, Subject, Batch, Term};
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class AicteReportController extends Controller {
     public function index() {
+        abort_unless(request()->user() && AccessControl::canViewRegulatoryReports(request()->user()), 403);
+
         $programs = Program::where('is_active',true)->with(['department','batches'])->get()
             ->map(fn($p) => $this->buildProgramStats($p));
         $totalFaculty = Teacher::where('status','active')->count();
@@ -20,7 +23,9 @@ class AicteReportController extends Controller {
         $program->faculty_count = Teacher::where('department_id',$program->department_id)->where('status','active')->count();
         $program->exam_count = Exam::where('program_id',$program->id)->whereYear('exam_date',now()->year)->count();
 
-        $results = ExamResult::whereHas('exam',fn($q)=>$q->where('program_id',$program->id))->with('exam')->get();
+        $results = ExamResult::whereHas('exam', fn($q) => $q
+            ->whereNotNull('published_at')
+            ->where('program_id', $program->id))->with('exam')->get();
         $total = $results->count();
         $passed = $total > 0 ? $results->filter(fn($r)=>$r->exam && $r->marks_obtained>=($r->exam->passing_marks??40))->count() : 0;
         $program->pass_rate = $total > 0 ? round(($passed/$total)*100,1) : null;
@@ -33,6 +38,8 @@ class AicteReportController extends Controller {
     }
 
     public function exportPdf() {
+        abort_unless(request()->user() && AccessControl::canViewRegulatoryReports(request()->user()), 403);
+
         $programs = Program::where('is_active',true)->with(['department','batches'])->get()
             ->map(fn($p) => $this->buildProgramStats($p));
         $totalFaculty = Teacher::where('status','active')->count();

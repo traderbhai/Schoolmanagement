@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Placement;
@@ -15,6 +16,8 @@ class PlacementDriveController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorizePlacementOperations($request);
+
         $drives = PlacementDrive::with('company')
             ->withCount('placements')
             ->when($request->status, fn($q, $v) => $q->where('status', $v))
@@ -43,12 +46,16 @@ class PlacementDriveController extends Controller
 
     public function create()
     {
+        $this->authorizePlacementOperations(request());
+
         $companies = Company::where('is_active', true)->get();
         return view('admin.placement-drives.create', compact('companies'));
     }
 
     public function store(Request $request)
     {
+        $this->authorizePlacementOperations($request);
+
         $data = $request->validate([
             'company_id'     => 'required|exists:companies,id',
             'title'          => 'required|string|max:191',
@@ -64,8 +71,8 @@ class PlacementDriveController extends Controller
             'description'    => 'nullable|string',
         ]);
 
-        if (($data['last_apply_date'] ?? null) && ($data['drive_date'] ?? null) && $data['last_apply_date'] > $data['drive_date']) {
-            return back()->withErrors(['last_apply_date' => 'Application deadline cannot be after the placement drive date.'])->withInput();
+        if ($message = $this->lifecycle->validateDriveCreate($data)) {
+            return back()->withErrors(['placement_drive' => $message])->withInput();
         }
 
         PlacementDrive::create($data);
@@ -75,6 +82,8 @@ class PlacementDriveController extends Controller
 
     public function show(PlacementDrive $placementDrive)
     {
+        $this->authorizePlacementOperations(request());
+
         $placementDrive->load(['company', 'placements.student.user', 'placements.student.course']);
 
         $appliedStudentIds = $placementDrive->placements->pluck('student_id')->toArray();
@@ -88,12 +97,16 @@ class PlacementDriveController extends Controller
 
     public function edit(PlacementDrive $placementDrive)
     {
+        $this->authorizePlacementOperations(request());
+
         $companies = Company::where('is_active', true)->get();
         return view('admin.placement-drives.edit', compact('placementDrive', 'companies'));
     }
 
     public function update(Request $request, PlacementDrive $placementDrive)
     {
+        $this->authorizePlacementOperations($request);
+
         $data = $request->validate([
             'company_id'     => 'required|exists:companies,id',
             'title'          => 'required|string|max:191',
@@ -120,6 +133,8 @@ class PlacementDriveController extends Controller
 
     public function destroy(PlacementDrive $placementDrive)
     {
+        $this->authorizePlacementOperations(request());
+
         if ($message = $this->lifecycle->validateDriveDelete($placementDrive)) {
             return back()->with('error', $message);
         }
@@ -130,6 +145,8 @@ class PlacementDriveController extends Controller
 
     public function apply(Request $request, PlacementDrive $drive)
     {
+        $this->authorizePlacementOperations($request);
+
         $request->validate([
             'student_id' => 'required|exists:students,id',
         ]);
@@ -147,8 +164,10 @@ class PlacementDriveController extends Controller
         return redirect()->route('admin.placement-drives.show', $drive)->with('success', 'Student added to drive.');
     }
 
-    public function exportPlacements()
+    public function exportPlacements(Request $request)
     {
+        abort_unless($request->user() && AccessControl::canExportPlacementData($request->user()), 403);
+
         $placements = Placement::with('student.user', 'student.course', 'drive.company')
             ->get();
 
@@ -180,6 +199,8 @@ class PlacementDriveController extends Controller
 
     public function updateApplication(Request $request, Placement $placement)
     {
+        $this->authorizePlacementOperations($request);
+
         $request->validate([
             'application_status' => 'required|in:applied,shortlisted,interview,selected,rejected,withdrawn',
             'offered_package'    => 'nullable|numeric|min:0',
@@ -196,5 +217,10 @@ class PlacementDriveController extends Controller
         $placement->update($data);
 
         return redirect()->route('admin.placement-drives.show', $placement->drive_id)->with('success', 'Application updated.');
+    }
+
+    private function authorizePlacementOperations(Request $request): void
+    {
+        abort_unless($request->user() && AccessControl::canManagePlacementOperations($request->user()), 403);
     }
 }

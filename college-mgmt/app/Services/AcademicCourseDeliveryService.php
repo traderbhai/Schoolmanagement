@@ -94,7 +94,7 @@ class AcademicCourseDeliveryService
         $today = now()->dayOfWeekIso;
 
         $entries = $this->applySubjectScope(
-            TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom'])
+            TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom', 'version'])
                 ->where('is_active', true)
                 ->orderBy('day_of_week'),
             $subjectIds
@@ -102,22 +102,23 @@ class AcademicCourseDeliveryService
 
         if ($subjectIds === null) {
             $entries = $this->applyProgramScope(
-                TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom'])
+                TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom', 'version'])
                     ->where('is_active', true)
                     ->orderBy('day_of_week'),
                 $programIds
             )->limit(40)->get();
         }
 
-        $todayEntries = $entries->where('day_of_week', $today);
-        $draftEntries = $entries->where('status', '!=', 'published');
+        $officialEntries = $entries->filter(fn (TimetableEntry $entry) => $this->isPublishedTimetableEntry($entry));
+        $todayEntries = $officialEntries->where('day_of_week', $today);
+        $draftEntries = $entries->reject(fn (TimetableEntry $entry) => $this->isPublishedTimetableEntry($entry));
 
         return [
             'title' => 'Session Delivery',
             'description' => 'Today timetable, unpublished slots, room/faculty readiness, and delivery exceptions.',
             'metrics' => [
                 'today_sessions' => $todayEntries->count(),
-                'published_sessions' => $entries->where('status', 'published')->count(),
+                'published_sessions' => $officialEntries->count(),
                 'draft_sessions' => $draftEntries->count(),
                 'room_pending' => $entries->whereNull('classroom_id')->count(),
             ],
@@ -141,6 +142,7 @@ class AcademicCourseDeliveryService
 
         $risk = Attendance::with('student.user')
             ->selectRaw('student_id, count(*) as exception_count')
+            ->whereHas('timetableEntry', fn (Builder $query) => $this->publishedTimetableScope($query))
             ->whereIn('student_id', $studentIds)
             ->whereIn('status', ['absent', 'late'])
             ->groupBy('student_id')
@@ -149,6 +151,7 @@ class AcademicCourseDeliveryService
             ->get();
 
         $recentExceptions = Attendance::with(['student.user', 'timetableEntry.subject'])
+            ->whereHas('timetableEntry', fn (Builder $query) => $this->publishedTimetableScope($query))
             ->whereIn('student_id', $studentIds)
             ->whereIn('status', ['absent', 'late'])
             ->latest('date')
@@ -385,6 +388,32 @@ class AcademicCourseDeliveryService
             'label' => $teacher ? 'Faculty course scope' : ($scopes->pluck('scope_type')->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Course-delivery scope'),
             'detail' => $teacher ? 'Assigned subjects and active mentees' : ($scopes->take(4)->pluck('scope_name')->join(', ') ?: 'No explicit course scope assigned yet'),
         ];
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function isPublishedTimetableEntry(TimetableEntry $entry): bool
+    {
+        if (! $entry->is_active || $entry->status !== 'published') {
+            return false;
+        }
+
+        if (! $entry->timetable_version_id) {
+            return true;
+        }
+
+        return $entry->relationLoaded('version')
+            ? $entry->version?->status === 'published'
+            : $entry->version()->where('status', 'published')->exists();
     }
 
     private function studentLabel(?Student $student, mixed $fallbackId): string

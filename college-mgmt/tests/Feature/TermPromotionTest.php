@@ -3,10 +3,18 @@
 namespace Tests\Feature;
 
 use App\Models\TermPromotion;
+use App\Models\Attendance;
 use App\Models\Batch;
+use App\Models\Course;
 use App\Models\Program;
+use App\Models\Semester;
 use App\Models\Student;
+use App\Models\StudentSubjectEnrollment;
+use App\Models\Subject;
+use App\Models\Teacher;
 use App\Models\Term;
+use App\Models\TimetableEntry;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -29,9 +37,11 @@ class TermPromotionTest extends TestCase
     private function eligiblePendingPromotion(): TermPromotion
     {
         $program = Program::factory()->create();
+        $course = Course::factory()->create();
         $batch = Batch::factory()->create(['program_id' => $program->id]);
         $student = Student::factory()->create([
             'program_id' => $program->id,
+            'course_id' => $course->id,
             'batch_id' => $batch->id,
         ]);
         $currentTerm = Term::factory()->create([
@@ -232,6 +242,18 @@ class TermPromotionTest extends TestCase
         $this->assertEquals($otherTerm->id, $promotion->student->fresh()->current_term_id);
     }
 
+    public function test_cannot_approve_promotion_for_inactive_student(): void
+    {
+        $promotion = $this->eligiblePendingPromotion();
+        $promotion->student->update(['status' => 'inactive']);
+
+        $this->post("/academic/term-promotions/{$promotion->id}/approve")
+            ->assertSessionHas('error', 'Inactive or archived students cannot be promoted.');
+
+        $this->assertEquals('pending', $promotion->fresh()->status);
+        $this->assertEquals($promotion->current_term_id, $promotion->student->fresh()->current_term_id);
+    }
+
     public function test_bulk_approve_processes_only_reviewable_eligible_current_term_promotions()
     {
         $eligible = $this->eligiblePendingPromotion();
@@ -248,5 +270,174 @@ class TermPromotionTest extends TestCase
         $this->assertEquals('approved', $reviewed->fresh()->status);
         $this->assertEquals('pending', $stale->fresh()->status);
         $this->assertEquals($eligible->promoted_to_term_id, $eligible->student->fresh()->current_term_id);
+    }
+
+    public function test_bulk_approve_skips_inactive_students(): void
+    {
+        $eligible = $this->eligiblePendingPromotion();
+        $inactive = $this->eligiblePendingPromotion();
+        $inactive->student->update(['status' => 'inactive']);
+
+        $this->post(route('academic.term-promotions.bulk-approve'), [
+            'promotion_ids' => [$eligible->id, $inactive->id],
+        ])->assertSessionHas('success');
+
+        $this->assertEquals('approved', $eligible->fresh()->status);
+        $this->assertEquals('pending', $inactive->fresh()->status);
+        $this->assertEquals($inactive->current_term_id, $inactive->student->fresh()->current_term_id);
+    }
+
+    public function test_generate_skips_inactive_students_in_source_term(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $currentTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term One',
+        ]);
+        Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 2,
+            'name' => 'Term Two',
+        ]);
+
+        $activeStudent = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $currentTerm->id,
+            'status' => 'active',
+        ]);
+        $inactiveStudent = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $currentTerm->id,
+            'status' => 'inactive',
+        ]);
+
+        $this->post(route('academic.term-promotions.generate'), [
+            'term_id' => $currentTerm->id,
+            'cgpa_threshold' => 0,
+            'attendance_threshold' => 0,
+        ])->assertRedirect(route('academic.term-promotions.index'));
+
+        $this->assertDatabaseHas('term_promotions', [
+            'student_id' => $activeStudent->id,
+            'current_term_id' => $currentTerm->id,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseMissing('term_promotions', [
+            'student_id' => $inactiveStudent->id,
+            'current_term_id' => $currentTerm->id,
+        ]);
+    }
+
+    public function test_generate_uses_only_published_enrolled_attendance_for_promotion_criteria(): void
+    {
+        $program = Program::factory()->create();
+        $course = Course::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $semester = Semester::factory()->create(['number' => 1]);
+        $currentTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term One',
+        ]);
+        Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 2,
+            'name' => 'Term Two',
+        ]);
+
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $currentTerm->id,
+            'status' => 'active',
+        ]);
+        $enrolledSubject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Promotion Enrolled Attendance']);
+        $draftSubject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Promotion Draft Attendance']);
+        $unenrolledSubject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Promotion Unenrolled Attendance']);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $enrolledSubject->id,
+            'term_id' => $currentTerm->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+
+        $publishedEntry = TimetableEntry::factory()->create([
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $currentTerm->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $enrolledSubject->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+        $draftEntry = TimetableEntry::factory()->create([
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $currentTerm->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $draftSubject->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $currentTerm->id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => $this->userWithRole('admin')->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $currentTerm->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $enrolledSubject->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        $unenrolledEntry = TimetableEntry::factory()->create([
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $currentTerm->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $unenrolledSubject->id,
+            'teacher_id' => Teacher::factory()->create()->id,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        Attendance::create(['student_id' => $student->id, 'timetable_entry_id' => $publishedEntry->id, 'date' => now()->subDays(4), 'status' => 'present']);
+        Attendance::create(['student_id' => $student->id, 'timetable_entry_id' => $publishedEntry->id, 'date' => now()->subDays(3), 'status' => 'absent']);
+        foreach ([$draftEntry, $draftVersionEntry, $unenrolledEntry] as $entry) {
+            Attendance::create(['student_id' => $student->id, 'timetable_entry_id' => $entry->id, 'date' => now()->subDays(2), 'status' => 'present']);
+        }
+
+        $this->post(route('academic.term-promotions.generate'), [
+            'term_id' => $currentTerm->id,
+            'cgpa_threshold' => 0,
+            'attendance_threshold' => 75,
+        ])->assertRedirect(route('academic.term-promotions.index'));
+
+        $promotion = TermPromotion::where('student_id', $student->id)->firstOrFail();
+        $this->assertSame(50.0, (float) $promotion->attendance_percentage);
+        $this->assertFalse((bool) $promotion->meets_attendance_criteria);
     }
 }

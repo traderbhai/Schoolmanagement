@@ -10,6 +10,7 @@ class ScholarshipController extends Controller {
     public function index() {
         $student = Auth::user()->student;
         abort_unless($student, 403);
+        $canApplyForScholarships = $student->status === 'active';
         $cgpa = app(GradeService::class)->calculateCGPA($student->id);
         $familyIncome = $this->familyIncome($student);
 
@@ -24,7 +25,7 @@ class ScholarshipController extends Controller {
         $myApplications = StudentScholarshipApplication::where('student_id',$student->id)
             ->with('scheme')->get()->keyBy('scholarship_scheme_id');
 
-        return view('student.scholarships.index', compact('schemes','myApplications', 'cgpa', 'familyIncome'));
+        return view('student.scholarships.index', compact('schemes','myApplications', 'cgpa', 'familyIncome', 'canApplyForScholarships'));
     }
 
     public function apply(Request $request, ScholarshipScheme $scheme) {

@@ -68,6 +68,13 @@ class ObeController extends Controller
             'bloom_level' => 'required|in:remember,understand,apply,analyze,evaluate,create',
             'is_active'   => 'boolean',
         ]);
+
+        abort_if(
+            $this->courseOutcomeHasHistory($co) && $this->changesCourseOutcomeContract($co, $data),
+            422,
+            'Course outcomes with mapping, attainment, or survey history cannot change code, Bloom level, or active state. Create a revised outcome instead.'
+        );
+
         $co->update($data);
         return back()->with('success', 'Course outcome updated.');
     }
@@ -128,6 +135,13 @@ class ObeController extends Controller
             'category'    => 'required|in:engineering,management,science,commerce,general',
             'is_active'   => 'boolean',
         ]);
+
+        abort_if(
+            $this->programOutcomeHasHistory($po) && $this->changesProgramOutcomeContract($po, $data),
+            422,
+            'Program outcomes with mapping or attainment history cannot change code, category, or active state. Create a revised outcome instead.'
+        );
+
         $po->update($data);
         return back()->with('success', 'Program outcome updated.');
     }
@@ -224,6 +238,14 @@ class ObeController extends Controller
 
         $cos = CourseOutcome::where('subject_id', $request->subject_id)->pluck('id');
         $pos = ProgramOutcome::where('program_id', $request->program_id)->pluck('id');
+
+        abort_if(
+            CoAttainment::whereIn('course_outcome_id', $cos)->exists()
+                || ObeSurveyResponse::whereIn('course_outcome_id', $cos)->exists()
+                || PoAttainment::whereIn('program_outcome_id', $pos)->exists(),
+            422,
+            'CO-PO mappings with attainment or survey history cannot be rewritten. Create revised outcomes or a new mapping cycle instead.'
+        );
 
         // Delete old mappings for these COs
         CoPoMapping::whereIn('course_outcome_id', $cos)->delete();
@@ -330,5 +352,40 @@ class ObeController extends Controller
         $survey->update(['is_published' => !$survey->is_published]);
         $status = $survey->is_published ? 'published' : 'unpublished';
         return back()->with('success', "Survey {$status}.");
+    }
+
+    private function courseOutcomeHasHistory(CourseOutcome $co): bool
+    {
+        return $co->coPoMappings()->exists()
+            || $co->attainments()->exists()
+            || ObeSurveyResponse::where('course_outcome_id', $co->id)->exists();
+    }
+
+    private function programOutcomeHasHistory(ProgramOutcome $po): bool
+    {
+        return $po->coMappings()->exists()
+            || $po->attainments()->exists();
+    }
+
+    private function changesCourseOutcomeContract(CourseOutcome $co, array $data): bool
+    {
+        foreach (['code', 'bloom_level', 'is_active'] as $field) {
+            if ((string) ($co->{$field} ?? '') !== (string) ($data[$field] ?? $co->{$field} ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function changesProgramOutcomeContract(ProgramOutcome $po, array $data): bool
+    {
+        foreach (['code', 'category', 'is_active'] as $field) {
+            if ((string) ($po->{$field} ?? '') !== (string) ($data[$field] ?? $po->{$field} ?? '')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

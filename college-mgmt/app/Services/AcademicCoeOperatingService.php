@@ -83,10 +83,10 @@ class AcademicCoeOperatingService
         )->orderByDesc('exam_date')->limit(50)->get();
 
         $pending = $completed->filter(fn (Exam $exam) => (int) $exam->results_count === 0);
-        $published = ExamResult::where('remarks', 'Published')
-            ->whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query, $programIds))
-            ->distinct('exam_id')
-            ->count('exam_id');
+        $published = $this->applyProgramScope(
+            Exam::whereNotNull('published_at'),
+            $programIds
+        )->count();
 
         return [
             'title' => 'Marks And Results Control',
@@ -158,7 +158,7 @@ class AcademicCoeOperatingService
                 'draft_transcripts' => $drafts->count(),
                 'issued_transcripts' => AcademicTranscript::where('status', 'issued')->whereHas('student', fn (Builder $query) => $this->applyProgramScope($query, $programIds))->count(),
                 'student_records' => $this->applyProgramScope(Student::where('status', 'active'), $programIds)->count(),
-                'result_records' => ExamResult::whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query, $programIds))->count(),
+                'result_records' => $this->publishedResultsQuery($programIds)->count(),
             ],
             'items' => $drafts->map(fn (AcademicTranscript $transcript) => [
                 'title' => $this->studentLabel($transcript->student, $transcript->student_id),
@@ -240,6 +240,12 @@ class AcademicCoeOperatingService
                     ->whereColumn('exams.id', 'exam_results.exam_id')
                     ->whereColumn('exam_results.marks_obtained', '<', 'exams.passing_marks');
             });
+    }
+
+    private function publishedResultsQuery(?Collection $programIds): Builder
+    {
+        return ExamResult::query()
+            ->whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query->whereNotNull('published_at'), $programIds));
     }
 
     private function registrationStatus(ExamRegistration $registration): string

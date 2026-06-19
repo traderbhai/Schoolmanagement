@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use Spatie\Permission\Models\Role;
 use App\Models\RoleFeatureAccess;
@@ -39,6 +40,8 @@ class RoleFeatureAccessController extends Controller
 
     public function index()
     {
+        $this->authorizeRolePermissionManagement();
+
         $roles = Role::orderBy('name')->get();
         $features = self::getFeatures();
 
@@ -58,6 +61,8 @@ class RoleFeatureAccessController extends Controller
 
     public function edit(Role $role)
     {
+        $this->authorizeRolePermissionManagement();
+
         $features = self::getFeatures();
         $currentAccess = RoleFeatureAccess::where('role_id', $role->id)
             ->get()
@@ -69,6 +74,8 @@ class RoleFeatureAccessController extends Controller
 
     public function update(Request $request, Role $role)
     {
+        $this->authorizeRolePermissionManagement();
+
         $validated = $request->validate([
             'access'   => 'array',
             'access.*' => 'in:,view,create,edit,approve,delete',
@@ -95,5 +102,10 @@ class RoleFeatureAccessController extends Controller
 
         return redirect()->route('admin.roles.feature-access.index')
             ->with('success', 'Feature access updated for ' . $role->name);
+    }
+
+    private function authorizeRolePermissionManagement(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageRoleAssignments(auth()->user()), 403);
     }
 }

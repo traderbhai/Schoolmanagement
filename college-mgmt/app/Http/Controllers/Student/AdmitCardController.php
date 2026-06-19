@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, Student};
+use App\Models\{Exam, ExamRegistration, Student};
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdmitCardController extends Controller
@@ -48,7 +48,26 @@ class AdmitCardController extends Controller
 
     private function isEligibleForExam(Student $student, Exam $exam): bool
     {
+        if ($student->status !== 'active') {
+            return false;
+        }
+
+        if ($exam->published_at) {
+            return false;
+        }
+
         if ((int) $student->program_id !== (int) $exam->program_id) {
+            return false;
+        }
+
+        $hasApprovedRegistration = ExamRegistration::where('student_id', $student->id)
+            ->where('exam_id', $exam->id)
+            ->where('status', 'approved')
+            ->where('attendance_eligible', true)
+            ->where('fee_cleared', true)
+            ->exists();
+
+        if (! $hasApprovedRegistration) {
             return false;
         }
 

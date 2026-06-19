@@ -113,6 +113,10 @@ class SelectionProcessController extends Controller
 
     public function storeParameter(Request $request, SelectionProcessStep $step)
     {
+        if ($this->selectionStepHasActivity($step)) {
+            return back()->with('error', 'This selection step already has sessions or scores and cannot receive new scoring parameters. Create a new selection step version instead.');
+        }
+
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
             'max_score'   => 'required|integer|min:1',
@@ -143,6 +147,13 @@ class SelectionProcessController extends Controller
             'description' => 'nullable|string|max:500',
             'sort_order'  => 'required|integer|min:1',
         ]);
+
+        if ($this->scoringParameterHasActivity($parameter) && $this->changesScoringParameterContract($parameter, $validated)) {
+            throw ValidationException::withMessages([
+                'scoring_parameter' => 'This scoring parameter belongs to a selection step with sessions or scores and cannot be renamed, rescored, or reordered.',
+            ]);
+        }
+
         $parameter->update($validated);
         return redirect()->route('admission.selection-process.parameters', $parameter->step)
             ->with('success', 'Parameter updated.');
@@ -151,6 +162,10 @@ class SelectionProcessController extends Controller
     public function destroyParameter(ScoringParameter $parameter)
     {
         $step = $parameter->step;
+        if ($this->scoringParameterHasActivity($parameter)) {
+            return back()->with('error', 'This scoring parameter belongs to a selection step with sessions or scores and cannot be deleted.');
+        }
+
         $parameter->delete();
         return redirect()->route('admission.selection-process.parameters', $step)
             ->with('success', 'Parameter deleted.');
@@ -161,6 +176,13 @@ class SelectionProcessController extends Controller
         return $step->sessions()->exists() || $step->scores()->exists();
     }
 
+    private function scoringParameterHasActivity(ScoringParameter $parameter): bool
+    {
+        $parameter->loadMissing('step');
+
+        return $parameter->step ? $this->selectionStepHasActivity($parameter->step) : false;
+    }
+
     private function changesSelectionStepContract(SelectionProcessStep $step, array $data): bool
     {
         return (string) ($data['type'] ?? $step->type) !== (string) $step->type
@@ -168,5 +190,12 @@ class SelectionProcessController extends Controller
             || (int) ($data['max_score'] ?? $step->max_score) !== (int) $step->max_score
             || number_format((float) ($data['weightage'] ?? $step->weightage), 2, '.', '') !== number_format((float) $step->weightage, 2, '.', '')
             || (array_key_exists('is_active', $data) && (bool) $data['is_active'] !== (bool) $step->is_active);
+    }
+
+    private function changesScoringParameterContract(ScoringParameter $parameter, array $data): bool
+    {
+        return (string) ($data['name'] ?? $parameter->name) !== (string) $parameter->name
+            || (int) ($data['max_score'] ?? $parameter->max_score) !== (int) $parameter->max_score
+            || (int) ($data['sort_order'] ?? $parameter->sort_order) !== (int) $parameter->sort_order;
     }
 }

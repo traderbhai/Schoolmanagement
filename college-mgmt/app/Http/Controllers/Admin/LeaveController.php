@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\AccessControl;
 use App\Models\{LeaveApplication, Teacher, AuditLog};
 use Illuminate\Http\Request;
 
@@ -10,7 +11,9 @@ class LeaveController extends Controller
 {
     public function index(Request $request)
     {
-        $query = LeaveApplication::with('teacher.user')->latest();
+        $this->authorizeGlobalLeaves($request);
+
+        $query = LeaveApplication::with(['teacher.user', 'student.user'])->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -34,12 +37,16 @@ class LeaveController extends Controller
 
     public function show(LeaveApplication $leave)
     {
-        $leave->load('teacher.user', 'approver');
+        $this->authorizeGlobalLeaves(request());
+
+        $leave->load('teacher.user', 'student.user', 'approver');
         return view('admin.leaves.show', compact('leave'));
     }
 
     public function approve(Request $request, LeaveApplication $leave)
     {
+        $this->authorizeGlobalLeaves($request);
+
         $request->validate(['admin_remarks' => 'nullable|string|max:1000']);
 
         if ($leave->status !== 'pending') {
@@ -59,6 +66,8 @@ class LeaveController extends Controller
 
     public function reject(Request $request, LeaveApplication $leave)
     {
+        $this->authorizeGlobalLeaves($request);
+
         $request->validate(['admin_remarks' => 'required|string|max:1000']);
 
         if ($leave->status !== 'pending') {
@@ -78,11 +87,25 @@ class LeaveController extends Controller
 
     public function destroy(LeaveApplication $leave)
     {
+        $this->authorizeGlobalLeaves(request());
+
         if ($leave->status !== 'pending') {
             return back()->with('error', 'Reviewed leave history cannot be deleted.');
         }
 
-        $leave->delete();
-        return redirect()->route('admin.leaves.index')->with('success', 'Leave application deleted.');
+        $leave->update([
+            'status' => 'rejected',
+            'admin_remarks' => 'Cancelled by admin before review.',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        AuditLog::log('leave_cancelled', $leave, ['teacher' => $leave->teacher?->user?->name, 'remarks' => 'Cancelled by admin before review.']);
+        return redirect()->route('admin.leaves.index')->with('success', 'Leave application cancelled and retained for audit.');
+    }
+
+    private function authorizeGlobalLeaves(Request $request): void
+    {
+        abort_unless(AccessControl::canManageGlobalLeaves($request->user()), 403);
     }
 }

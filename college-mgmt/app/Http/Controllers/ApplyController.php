@@ -16,13 +16,7 @@ class ApplyController extends Controller
 {
     public function index()
     {
-        $applicationWindows = ApplicationWindow::where('is_active', true)
-            ->where('opens_at', '<=', now())
-            ->where('closes_at', '>', now())
-            ->where(function ($query) {
-                $query->whereNull('capacity_limit')
-                    ->orWhereColumn('current_applications', '<', 'capacity_limit');
-            })
+        $applicationWindows = $this->availableWindowQuery()
             ->with(['program', 'batch'])
             ->orderBy('opens_at')
             ->get();
@@ -32,14 +26,12 @@ class ApplyController extends Controller
 
     public function show(Program $program)
     {
-        $window = ApplicationWindow::where('program_id', $program->id)
-            ->where('is_active', true)
-            ->where('opens_at', '<=', now())
-            ->where('closes_at', '>', now())
-            ->where(function ($query) {
-                $query->whereNull('capacity_limit')
-                    ->orWhereColumn('current_applications', '<', 'capacity_limit');
-            })
+        if (! $program->is_active) {
+            return redirect()->route('apply')->with('error', 'Applications for this program are not currently open.');
+        }
+
+        $window = $this->availableWindowQuery($program)
+            ->orderBy('opens_at')
             ->first();
 
         if (!$window) {
@@ -51,18 +43,20 @@ class ApplyController extends Controller
 
     public function register(Request $request, Program $program)
     {
-        $window = ApplicationWindow::where('program_id', $program->id)
-            ->where('is_active', true)
-            ->where('opens_at', '<=', now())
-            ->where('closes_at', '>', now())
-            ->first();
-
-        if (!$window) {
+        if (! $program->is_active) {
             return redirect()->route('apply')->with('error', 'Applications for this program are not currently open.');
         }
 
-        if ($window->isAtCapacity()) {
-            return redirect()->route('apply')->with('error', 'This program has reached its application capacity.');
+        $window = $this->availableWindowQuery($program)
+            ->orderBy('opens_at')
+            ->first();
+
+        if (!$window) {
+            $message = $this->hasOpenFullWindow($program)
+                ? 'This program has reached its application capacity.'
+                : 'Applications for this program are not currently open.';
+
+            return redirect()->route('apply')->with('error', $message);
         }
 
         $validated = $request->validate([
@@ -102,5 +96,38 @@ class ApplyController extends Controller
 
         return redirect()->route('applicant.dashboard')
             ->with('success', 'Welcome! Your application has been created. Please complete all sections.');
+    }
+
+    private function availableWindowQuery(?Program $program = null)
+    {
+        return ApplicationWindow::query()
+            ->when($program, fn ($query) => $query->where('program_id', $program->id))
+            ->where('is_active', true)
+            ->whereHas('program', fn ($query) => $query->where('is_active', true))
+            ->where(function ($query) {
+                $query->whereNull('batch_id')
+                    ->orWhereHas('batch', fn ($batchQuery) => $batchQuery->whereColumn('batches.program_id', 'application_windows.program_id'));
+            })
+            ->where('opens_at', '<=', now())
+            ->where('closes_at', '>', now())
+            ->where(function ($query) {
+                $query->whereNull('capacity_limit')
+                    ->orWhereColumn('current_applications', '<', 'capacity_limit');
+            });
+    }
+
+    private function hasOpenFullWindow(Program $program): bool
+    {
+        return ApplicationWindow::where('program_id', $program->id)
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('batch_id')
+                    ->orWhereHas('batch', fn ($batchQuery) => $batchQuery->whereColumn('batches.program_id', 'application_windows.program_id'));
+            })
+            ->where('opens_at', '<=', now())
+            ->where('closes_at', '>', now())
+            ->whereNotNull('capacity_limit')
+            ->whereColumn('current_applications', '>=', 'capacity_limit')
+            ->exists();
     }
 }

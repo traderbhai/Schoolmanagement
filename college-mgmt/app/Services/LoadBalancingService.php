@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\{TimetableEntry, Teacher, Term};
+use Illuminate\Database\Eloquent\Builder;
 
 class LoadBalancingService
 {
@@ -13,6 +14,7 @@ class LoadBalancingService
     {
         $entries = TimetableEntry::where('term_id', $termId)
             ->where('program_id', $programId)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->with(['teacher.user', 'slot'])
             ->get();
 
@@ -114,6 +116,17 @@ class LoadBalancingService
         $start = \Carbon\Carbon::parse($slot->start_time);
         $end = \Carbon\Carbon::parse($slot->end_time);
 
-        return $end->diffInMinutes($start) / 60;
+        return $start->diffInMinutes($end) / 60;
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
     }
 }

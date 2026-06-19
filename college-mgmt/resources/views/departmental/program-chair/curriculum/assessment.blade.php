@@ -103,7 +103,7 @@
     @else
         @foreach($programSubjects as $ps)
             @php
-                $components    = $ps->subject->assessmentComponents ?? collect();
+                $components    = $ps->subject->assessmentComponentConfigs ?? collect();
                 $totalWeightage = $components->sum('weightage');
                 $weightageOk   = abs($totalWeightage - 100) < 0.01;
             @endphp

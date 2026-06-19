@@ -14,8 +14,24 @@ class ExamController extends Controller
         $teaches = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('subject_id', $exam->subject_id)
             ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            })
+            ->when($exam->program_id, fn ($query) => $query->where('program_id', $exam->program_id))
+            ->when($exam->semester_id || $exam->term_id, function ($query) use ($exam) {
+                $query->where(function ($scope) use ($exam) {
+                    if ($exam->term_id) {
+                        $scope->orWhere('term_id', $exam->term_id);
+                    }
+                    if ($exam->semester_id) {
+                        $scope->orWhere('semester_id', $exam->semester_id);
+                    }
+                });
+            })
             ->exists();
-        abort_unless($teaches, 403, 'You do not teach this subject.');
+        abort_unless($teaches, 403, 'You do not teach this exam subject for the selected program and term.');
     }
 
     private function ensureActiveTeacher(): void
@@ -25,11 +41,29 @@ class ExamController extends Controller
 
     private function enrolledStudentIdsForExam(Exam $exam)
     {
-        return Student::whereHas('enrollments', fn($q) =>
-            $q->where('semester_id', $exam->semester_id)
-              ->where('subject_id', $exam->subject_id)
-              ->where('status', 'active')
-        )->pluck('id');
+        return $this->studentRosterQueryForExam($exam)->pluck('id');
+    }
+
+    private function studentRosterQueryForExam(Exam $exam)
+    {
+        return Student::query()
+            ->when($exam->program_id, fn ($query) => $query->where('program_id', $exam->program_id))
+            ->where(function ($query) use ($exam) {
+                $query->whereHas('subjectEnrollments', function ($enrollmentQuery) use ($exam) {
+                    $enrollmentQuery->where('subject_id', $exam->subject_id)
+                        ->where('status', 'active')
+                        ->when($exam->term_id, fn ($termQuery) => $termQuery->where('term_id', $exam->term_id));
+                })
+                ->orWhereHas('enrollments', function ($enrollmentQuery) use ($exam) {
+                    $enrollmentQuery->where('subject_id', $exam->subject_id)
+                        ->whereIn('status', ['enrolled', 'active'])
+                        ->when(
+                            $exam->semester_id,
+                            fn ($semesterQuery) => $semesterQuery->where('semester_id', $exam->semester_id),
+                            fn ($termQuery) => $termQuery->when($exam->term_id, fn ($query) => $query->where('term_id', $exam->term_id))
+                        );
+                });
+            });
     }
 
     public function index()
@@ -52,11 +86,7 @@ class ExamController extends Controller
     {
         $this->ensureTeacherForExam($exam);
 
-        $students = Student::whereHas('enrollments', fn($q) =>
-            $q->where('semester_id', $exam->semester_id)
-              ->where('subject_id', $exam->subject_id)
-              ->where('status', 'active')
-        )->with(['user',
+        $students = $this->studentRosterQueryForExam($exam)->with(['user',
             'examResults' => fn($q) => $q->where('exam_id', $exam->id)
         ])->orderBy('roll_number')->get();
         $canSaveResults = auth()->user()->teacher?->status === 'active';
@@ -71,6 +101,10 @@ class ExamController extends Controller
 
         if ($exam->published_at) {
             return back()->with('error', 'Published results are locked. Contact Exam Cell for appeal or correction workflow.');
+        }
+
+        if ($exam->exam_date && $exam->exam_date->isFuture()) {
+            return back()->with('error', 'Exam results cannot be entered before the exam date.');
         }
 
         $request->validate([

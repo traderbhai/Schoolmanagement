@@ -20,8 +20,10 @@ use App\Models\StudyMaterial;
 use App\Models\Subject;
 use App\Models\SubjectAnnouncement;
 use App\Models\Teacher;
+use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -52,8 +54,9 @@ class TeacherScopeWorkflowTest extends TestCase
             'teacher_id' => $teacher->id,
             'classroom_id' => $classroom->id,
             'timetable_slot_id' => $slot->id,
-            'day_of_week' => 1,
+            'day_of_week' => now()->dayOfWeekIso,
             'is_active' => true,
+            'status' => 'published',
         ]);
 
         $enrolled = Student::factory()->create(['program_id' => $program->id, 'course_id' => $course->id]);
@@ -103,6 +106,37 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('subject_announcements', ['title' => 'Wrong Subject Announcement']);
     }
 
+    public function test_teacher_cannot_save_results_for_same_subject_outside_timetable_program_scope(): void
+    {
+        $fixture = $this->fixture();
+
+        $otherProgram = Program::factory()->create();
+        $wrongExam = Exam::factory()->create([
+            'program_id' => $otherProgram->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->subDay(),
+            'total_marks' => 100,
+            'passing_marks' => 40,
+            'published_at' => null,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $wrongExam), [
+                'results' => [
+                    $fixture['enrolled']->id => [
+                        'marks_obtained' => 82,
+                    ],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('exam_results', [
+            'exam_id' => $wrongExam->id,
+            'student_id' => $fixture['enrolled']->id,
+        ]);
+    }
+
     public function test_teacher_material_upload_accepts_database_backed_material_types(): void
     {
         $fixture = $this->fixture();
@@ -121,6 +155,87 @@ class TeacherScopeWorkflowTest extends TestCase
             'uploaded_by' => $fixture['teacher']->user_id,
             'title' => 'Valid Lecture Notes',
             'type' => 'notes',
+        ]);
+    }
+
+    public function test_teacher_cannot_publish_empty_title_only_study_material(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.materials.create'))
+            ->post(route('teacher.materials.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Empty Visible Resource',
+                'type' => 'notes',
+            ])
+            ->assertRedirect(route('teacher.materials.create'))
+            ->assertSessionHasErrors('file');
+
+        $this->assertDatabaseMissing('study_materials', [
+            'subject_id' => $fixture['assignedSubject']->id,
+            'uploaded_by' => $fixture['teacher']->user_id,
+            'title' => 'Empty Visible Resource',
+        ]);
+    }
+
+    public function test_teacher_cannot_create_assignment_with_blank_title_or_past_due_date(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.assignments.create'))
+            ->post(route('teacher.assignments.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => '   ',
+                'description' => 'Blank title should not become student-visible.',
+                'max_marks' => 20,
+                'due_at' => now()->addWeek()->toDateTimeString(),
+            ])
+            ->assertRedirect(route('teacher.assignments.create'))
+            ->assertSessionHasErrors('title');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.assignments.create'))
+            ->post(route('teacher.assignments.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Already Expired Assignment',
+                'description' => 'Past due assignments should not be published as new work.',
+                'max_marks' => 20,
+                'due_at' => now()->subDay()->toDateTimeString(),
+            ])
+            ->assertRedirect(route('teacher.assignments.create'))
+            ->assertSessionHasErrors('due_at');
+
+        $this->assertDatabaseMissing('assignments', [
+            'subject_id' => $fixture['assignedSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => '',
+        ]);
+        $this->assertDatabaseMissing('assignments', [
+            'subject_id' => $fixture['assignedSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Already Expired Assignment',
+        ]);
+    }
+
+    public function test_teacher_cannot_publish_blank_subject_announcement(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.announcements.index'))
+            ->post(route('teacher.announcements.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => '   ',
+                'body' => " \n\t ",
+            ])
+            ->assertRedirect(route('teacher.announcements.index'))
+            ->assertSessionHasErrors(['title', 'body']);
+
+        $this->assertDatabaseMissing('subject_announcements', [
+            'subject_id' => $fixture['assignedSubject']->id,
+            'posted_by' => $fixture['teacher']->user_id,
         ]);
     }
 
@@ -362,6 +477,59 @@ class TeacherScopeWorkflowTest extends TestCase
             ->assertDontSee($fixture['outsider']->user->name);
     }
 
+    public function test_teacher_assignment_index_submission_count_uses_roster_and_subject_filter(): void
+    {
+        $fixture = $this->fixture();
+        $assignment = Assignment::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Roster Count Assignment',
+            'description' => 'Index count should match submission source list.',
+            'max_marks' => 10,
+            'due_at' => now()->addDays(3),
+            'is_published' => true,
+        ]);
+        $filteredOutAssignment = Assignment::create([
+            'subject_id' => $fixture['otherSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Filtered Out Assignment',
+            'description' => 'Teacher created but is not currently teaching this subject.',
+            'max_marks' => 10,
+            'due_at' => now()->addDays(3),
+            'is_published' => true,
+        ]);
+
+        AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $fixture['enrolled']->id,
+            'answer_text' => 'Valid enrolled submission.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $fixture['outsider']->id,
+            'answer_text' => 'Rogue submission outside roster.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+        ]);
+        AssignmentSubmission::create([
+            'assignment_id' => $filteredOutAssignment->id,
+            'student_id' => $fixture['enrolled']->id,
+            'answer_text' => 'Filtered subject submission.',
+            'submitted_at' => now(),
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.index', ['subject_id' => $fixture['assignedSubject']->id]))
+            ->assertOk()
+            ->assertSee('Roster Count Assignment')
+            ->assertSee('1 submitted')
+            ->assertDontSee('2 submitted')
+            ->assertDontSee('Filtered Out Assignment');
+    }
+
     public function test_teacher_cannot_grade_assignment_submission_for_student_outside_roster_or_above_max_marks(): void
     {
         $fixture = $this->fixture();
@@ -397,6 +565,13 @@ class TeacherScopeWorkflowTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.submissions', $assignment))
+            ->assertOk()
+            ->assertSee($fixture['enrolled']->user->name)
+            ->assertDontSee('Rogue submission.')
+            ->assertDontSee($fixture['outsider']->user->name);
+
+        $this->actingAs($fixture['teacher']->user)
             ->post(route('teacher.assignments.grade', $validSubmission), [
                 'marks_obtained' => 11,
                 'feedback' => 'Too high.',
@@ -413,6 +588,48 @@ class TeacherScopeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_teacher_cannot_regrade_already_graded_assignment_submission(): void
+    {
+        $fixture = $this->fixture();
+        $assignment = Assignment::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Final Graded Assignment',
+            'description' => 'Already graded submissions are locked.',
+            'max_marks' => 10,
+            'due_at' => now()->addWeek(),
+            'is_published' => true,
+        ]);
+        $gradedAt = now()->subDay();
+        $submission = AssignmentSubmission::create([
+            'assignment_id' => $assignment->id,
+            'student_id' => $fixture['enrolled']->id,
+            'answer_text' => 'Original answer.',
+            'submitted_at' => now()->subDays(2),
+            'marks_obtained' => 8,
+            'feedback' => 'Original feedback.',
+            'graded_by' => $fixture['teacher']->user_id,
+            'graded_at' => $gradedAt,
+            'status' => 'graded',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.assignments.submissions', $assignment))
+            ->post(route('teacher.assignments.grade', $submission), [
+                'marks_obtained' => 4,
+                'feedback' => 'Silent downgrade.',
+            ])
+            ->assertRedirect(route('teacher.assignments.submissions', $assignment))
+            ->assertSessionHas('error', 'This submission is already graded and cannot be changed through the standard grading route.');
+
+        $submission->refresh();
+        $this->assertSame('graded', $submission->status);
+        $this->assertEquals(8.0, (float) $submission->marks_obtained);
+        $this->assertSame('Original feedback.', $submission->feedback);
+        $this->assertSame($fixture['teacher']->user_id, $submission->graded_by);
+        $this->assertSame($gradedAt->toDateTimeString(), $submission->graded_at->toDateTimeString());
+    }
+
     public function test_teacher_cannot_mark_attendance_or_results_for_students_outside_class_roster(): void
     {
         $fixture = $this->fixture();
@@ -420,6 +637,7 @@ class TeacherScopeWorkflowTest extends TestCase
             'program_id' => $fixture['program']->id,
             'semester_id' => $fixture['semester']->id,
             'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->subDay()->toDateString(),
         ]);
 
         $this->actingAs($fixture['teacher']->user)
@@ -454,6 +672,7 @@ class TeacherScopeWorkflowTest extends TestCase
             'program_id' => $fixture['program']->id,
             'semester_id' => $fixture['semester']->id,
             'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->subDay()->toDateString(),
         ]);
 
         $this->actingAs($fixture['teacher']->user)
@@ -557,6 +776,7 @@ class TeacherScopeWorkflowTest extends TestCase
             'program_id' => $fixture['program']->id,
             'semester_id' => $fixture['semester']->id,
             'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->subDay()->toDateString(),
         ]);
 
         $this->actingAs($fixture['teacher']->user)
@@ -585,6 +805,326 @@ class TeacherScopeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_teacher_can_save_results_for_canonical_term_subject_roster_only(): void
+    {
+        $fixture = $this->fixture();
+        $term = Term::factory()->create();
+        $otherTerm = Term::factory()->create();
+        $fixture['entry']->update(['term_id' => $term->id]);
+        $canonicalStudent = Student::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'course_id' => $fixture['enrolled']->course_id,
+            'roll_number' => 'TERM-ROSTER-001',
+        ]);
+        $wrongTermStudent = Student::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'course_id' => $fixture['enrolled']->course_id,
+            'roll_number' => 'TERM-ROSTER-OUT',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $canonicalStudent->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $wrongTermStudent->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'term_id' => $otherTerm->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        $exam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->subDay()->toDateString(),
+            'total_marks' => 100,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.exams.results', $exam))
+            ->assertOk()
+            ->assertSee('TERM-ROSTER-001')
+            ->assertDontSee('TERM-ROSTER-OUT');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $exam), [
+                'results' => [$canonicalStudent->id => ['marks_obtained' => 84]],
+            ])
+            ->assertRedirect(route('teacher.exams.index'));
+
+        $this->assertDatabaseHas('exam_results', [
+            'student_id' => $canonicalStudent->id,
+            'exam_id' => $exam->id,
+            'marks_obtained' => 84,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $exam), [
+                'results' => [$wrongTermStudent->id => ['marks_obtained' => 75]],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('exam_results', [
+            'student_id' => $wrongTermStudent->id,
+            'exam_id' => $exam->id,
+        ]);
+    }
+
+    public function test_teacher_cannot_mark_future_attendance(): void
+    {
+        $fixture = $this->fixture();
+        $futureDate = now()->addDay()->toDateString();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.attendance.mark'))
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => $futureDate,
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertRedirect(route('teacher.attendance.mark'))
+            ->assertSessionHasErrors('date');
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+            'date' => $futureDate,
+        ]);
+    }
+
+    public function test_teacher_attendance_requires_active_entry_and_matching_schedule_day(): void
+    {
+        $fixture = $this->fixture();
+        $mismatchedDate = now()->subDay();
+
+        if ((int) $mismatchedDate->dayOfWeekIso === (int) $fixture['entry']->day_of_week) {
+            $mismatchedDate = now()->subDays(2);
+        }
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.attendance.mark'))
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => $mismatchedDate->toDateString(),
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertRedirect(route('teacher.attendance.mark'))
+            ->assertSessionHasErrors('date');
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+            'date' => $mismatchedDate->toDateString(),
+        ]);
+
+        $fixture['entry']->update(['is_active' => false]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+            'date' => now()->toDateString(),
+        ]);
+    }
+
+    public function test_teacher_attendance_requires_published_timetable_entry_and_version(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['entry']->update(['status' => 'draft']);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+        ]);
+
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => $fixture['teacher']->user_id,
+        ]);
+        $fixture['entry']->update([
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['enrolled']->id => 'present'],
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+        ]);
+    }
+
+    public function test_mentor_detail_shows_only_published_exam_results(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['enrolled']->update(['mentor_id' => $fixture['teacher']->user_id]);
+        $publishedExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'published_at' => now(),
+            'name' => 'Published Mentor Exam',
+        ]);
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'published_at' => null,
+            'name' => 'Draft Mentor Exam',
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $publishedExam->id,
+            'student_id' => $fixture['enrolled']->id,
+            'marks_obtained' => 88,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $fixture['enrolled']->id,
+            'marks_obtained' => 18,
+        ]);
+
+        $response = $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.mentor.mentee', $fixture['enrolled']))
+            ->assertOk()
+            ->assertSee('Published Mentor Exam')
+            ->assertDontSee('Draft Mentor Exam');
+
+        $this->assertCount(1, $response->viewData('results'));
+        $this->assertSame('Published Mentor Exam', $response->viewData('results')->first()->exam->name);
+    }
+
+    public function test_mentor_attendance_summaries_ignore_draft_timetable_history(): void
+    {
+        $fixture = $this->fixture();
+        $fixture['enrolled']->update(['mentor_id' => $fixture['teacher']->user_id]);
+
+        foreach (range(1, 2) as $day) {
+            Attendance::create([
+                'student_id' => $fixture['enrolled']->id,
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->subDays($day)->toDateString(),
+                'status' => 'present',
+                'marked_by' => $fixture['teacher']->user_id,
+            ]);
+        }
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $fixture['entry']->course_id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(10)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $fixture['teacher']->user_id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $fixture['entry']->course_id,
+            'program_id' => $fixture['program']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $fixture['enrolled']->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(11)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $indexResponse = $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.mentor.index'))
+            ->assertOk()
+            ->assertSee('100%');
+
+        $this->assertSame(100.0, (float) $indexResponse->viewData('mentees')->first()->att_pct);
+
+        $detailResponse = $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.mentor.mentee', $fixture['enrolled']))
+            ->assertOk();
+
+        $subjectAttendance = $detailResponse->viewData('attBySubject')->first();
+        $this->assertSame(2, $subjectAttendance->total);
+        $this->assertSame(2, $subjectAttendance->present);
+    }
+
+    public function test_teacher_cannot_enter_results_before_exam_date(): void
+    {
+        $fixture = $this->fixture();
+        $exam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'exam_date' => now()->addDays(3)->toDateString(),
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->from(route('teacher.exams.results', $exam))
+            ->post(route('teacher.exams.results.save', $exam), [
+                'results' => [$fixture['enrolled']->id => ['marks_obtained' => 80]],
+            ])
+            ->assertRedirect(route('teacher.exams.results', $exam))
+            ->assertSessionHas('error', 'Exam results cannot be entered before the exam date.');
+
+        $this->assertDatabaseMissing('exam_results', [
+            'exam_id' => $exam->id,
+            'student_id' => $fixture['enrolled']->id,
+        ]);
+    }
+
     public function test_teacher_result_entry_validates_marks_and_absent_state(): void
     {
         $fixture = $this->fixture();
@@ -593,6 +1133,7 @@ class TeacherScopeWorkflowTest extends TestCase
             'semester_id' => $fixture['semester']->id,
             'subject_id' => $fixture['assignedSubject']->id,
             'total_marks' => 50,
+            'exam_date' => now()->subDay()->toDateString(),
         ]);
 
         $this->actingAs($fixture['teacher']->user)

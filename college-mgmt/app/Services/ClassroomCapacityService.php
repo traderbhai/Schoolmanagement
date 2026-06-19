@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\{Classroom, Batch, TimetableEntry};
+use Illuminate\Database\Eloquent\Builder;
 
 class ClassroomCapacityService
 {
@@ -25,14 +26,15 @@ class ClassroomCapacityService
             ];
         }
 
-        $sufficient = $classroom->capacity >= $batch->student_count;
+        $batchSize = $this->batchSize($batch);
+        $sufficient = $classroom->capacity >= $batchSize;
         $message = '';
 
         if (!$sufficient) {
-            $shortage = $batch->student_count - $classroom->capacity;
-            $message = "Room {$classroom->room_number} has capacity {$classroom->capacity}, but batch {$batch->name} has {$batch->student_count} students (shortage: {$shortage})";
+            $shortage = $batchSize - $classroom->capacity;
+            $message = "Room {$classroom->room_number} has capacity {$classroom->capacity}, but batch {$batch->name} has {$batchSize} students (shortage: {$shortage})";
         } else {
-            $utilization = round(($batch->student_count / $classroom->capacity) * 100, 1);
+            $utilization = round(($batchSize / $classroom->capacity) * 100, 1);
             $message = "Room {$classroom->room_number} capacity: {$classroom->capacity}, utilization: {$utilization}%";
         }
 
@@ -43,8 +45,8 @@ class ClassroomCapacityService
             'classroom_type' => $classroom->type,
             'batch_name' => $batch->name,
             'capacity' => $classroom->capacity,
-            'batch_size' => $batch->student_count,
-            'utilization_percent' => round(($batch->student_count / $classroom->capacity) * 100, 1),
+            'batch_size' => $batchSize,
+            'utilization_percent' => round(($batchSize / $classroom->capacity) * 100, 1),
         ];
     }
 
@@ -55,6 +57,7 @@ class ClassroomCapacityService
     {
         $entries = TimetableEntry::where('program_id', $programId)
             ->where('term_id', $termId)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->distinct()
             ->get(['classroom_id', 'batch_id'])
             ->groupBy('classroom_id');
@@ -68,8 +71,9 @@ class ClassroomCapacityService
             $batches = $batchEntries->pluck('batch_id')->unique();
             $batchData = Batch::whereIn('id', $batches)->get();
 
-            $maxBatchSize = $batchData->max('student_count');
-            $totalStudents = $batchData->sum('student_count');
+            $batchSizes = $batchData->map(fn (Batch $batch) => $this->batchSize($batch));
+            $maxBatchSize = (int) $batchSizes->max();
+            $totalStudents = (int) $batchSizes->sum();
             $avgBatchSize = $batchData->count() > 0 ? round($totalStudents / $batchData->count(), 1) : 0;
 
             $utilization[] = [
@@ -101,9 +105,10 @@ class ClassroomCapacityService
     {
         $batch = Batch::find($batchId);
         if (!$batch) return [];
+        $batchSize = $this->batchSize($batch);
 
         $classrooms = Classroom::where('is_active', true)
-            ->where('capacity', '>=', $batch->student_count)
+            ->where('capacity', '>=', $batchSize)
             ->orderBy('capacity')
             ->get();
 
@@ -112,8 +117,8 @@ class ClassroomCapacityService
             'room_number' => $room->room_number,
             'type' => $room->type,
             'capacity' => $room->capacity,
-            'utilization' => round(($batch->student_count / $room->capacity) * 100, 1),
-            'available_seats' => $room->capacity - $batch->student_count,
+            'utilization' => round(($batchSize / $room->capacity) * 100, 1),
+            'available_seats' => $room->capacity - $batchSize,
         ])->toArray();
     }
 
@@ -124,22 +129,24 @@ class ClassroomCapacityService
     {
         $entries = TimetableEntry::where('program_id', $programId)
             ->where('term_id', $termId)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->with(['classroom', 'batch'])
             ->get();
 
         $violations = [];
 
         foreach ($entries as $entry) {
-            if ($entry->classroom->capacity < $entry->batch->student_count) {
+            $batchSize = $this->batchSize($entry->batch);
+            if ($entry->classroom->capacity < $batchSize) {
                 $violations[] = [
                     'day_of_week' => $entry->day_of_week,
                     'slot' => $entry->slot->name ?? 'N/A',
                     'subject' => $entry->subject->name ?? 'N/A',
                     'batch_name' => $entry->batch->name,
-                    'batch_size' => $entry->batch->student_count,
+                    'batch_size' => $batchSize,
                     'room_number' => $entry->classroom->room_number,
                     'room_capacity' => $entry->classroom->capacity,
-                    'shortage' => $entry->batch->student_count - $entry->classroom->capacity,
+                    'shortage' => $batchSize - $entry->classroom->capacity,
                     'suggested_rooms' => $this->getSuitableClassrooms($entry->batch_id),
                 ];
             }
@@ -170,6 +177,32 @@ class ClassroomCapacityService
         } else {
             return 'under-utilized';
         }
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function batchSize(Batch $batch): int
+    {
+        if (array_key_exists('student_count', $batch->getAttributes()) && $batch->student_count !== null) {
+            return (int) $batch->student_count;
+        }
+
+        if ($batch->relationLoaded('students')) {
+            $count = $batch->students->count();
+            return $count > 0 ? $count : (int) ($batch->intake_capacity ?? 0);
+        }
+
+        $count = $batch->students()->count();
+        return $count > 0 ? $count : (int) ($batch->intake_capacity ?? 0);
     }
 
     /**

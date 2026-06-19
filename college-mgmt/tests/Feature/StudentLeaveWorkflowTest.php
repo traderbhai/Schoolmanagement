@@ -244,6 +244,38 @@ class StudentLeaveWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_active_teacher_cancel_preserves_leave_history(): void
+    {
+        $teacherUser = $this->userWithRole('teacher');
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'status' => 'active',
+        ]);
+        $leave = LeaveApplication::create([
+            'teacher_id' => $teacher->id,
+            'leave_type' => 'casual',
+            'from_date' => now()->addDays(5)->toDateString(),
+            'to_date' => now()->addDays(5)->toDateString(),
+            'days' => 1,
+            'reason' => 'Teacher cancelled pending leave',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($teacherUser)
+            ->delete(route('teacher.leaves.destroy', $leave))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Leave application cancelled.');
+
+        $this->assertDatabaseHas('leave_applications', [
+            'id' => $leave->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'rejected',
+            'reviewed_by' => $teacherUser->id,
+            'admin_remarks' => 'Cancelled by teacher before review.',
+        ]);
+        $this->assertNotNull($leave->fresh()->reviewed_at);
+    }
+
     public function test_admin_cannot_reapprove_reject_or_delete_reviewed_leave_history(): void
     {
         $admin = $this->userWithRole('admin');
@@ -284,6 +316,110 @@ class StudentLeaveWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_pending_leave_delete_preserves_history(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = Teacher::factory()->create();
+        $leave = LeaveApplication::create([
+            'teacher_id' => $teacher->id,
+            'leave_type' => 'casual',
+            'from_date' => now()->addDays(3)->toDateString(),
+            'to_date' => now()->addDays(3)->toDateString(),
+            'days' => 1,
+            'reason' => 'Pending leave to cancel',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.leaves.destroy', $leave))
+            ->assertRedirect(route('admin.leaves.index'))
+            ->assertSessionHas('success', 'Leave application cancelled and retained for audit.');
+
+        $this->assertDatabaseHas('leave_applications', [
+            'id' => $leave->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'rejected',
+            'approved_by' => $admin->id,
+            'admin_remarks' => 'Cancelled by admin before review.',
+        ]);
+        $this->assertNotNull($leave->fresh()->approved_at);
+    }
+
+    public function test_admin_leave_pages_render_student_leave_requester(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $studentUser = User::factory()->create(['name' => 'Student Leave Requester']);
+        $student = Student::factory()->create(['user_id' => $studentUser->id]);
+        $leave = LeaveApplication::create([
+            'student_id' => $student->id,
+            'leave_type' => 'medical',
+            'from_date' => now()->addDays(3)->toDateString(),
+            'to_date' => now()->addDays(4)->toDateString(),
+            'days' => 2,
+            'reason' => 'Student leave visible to admin',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.leaves.index'))
+            ->assertOk()
+            ->assertSee('Student Leave Requester')
+            ->assertSee('Student')
+            ->assertSee('Student leave visible to admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.leaves.show', $leave))
+            ->assertOk()
+            ->assertSee('Requester')
+            ->assertSee('Student Leave Requester')
+            ->assertSee('Requester Type')
+            ->assertSee('Student');
+    }
+
+    public function test_program_chair_cannot_use_global_admin_leave_queue(): void
+    {
+        $chair = $this->userWithRole('program_chair');
+        $student = Student::factory()->create();
+        $pendingLeave = LeaveApplication::create([
+            'student_id' => $student->id,
+            'leave_type' => 'medical',
+            'from_date' => now()->addDays(3)->toDateString(),
+            'to_date' => now()->addDays(3)->toDateString(),
+            'days' => 1,
+            'reason' => 'Global admin queue should be protected',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($chair)
+            ->get(route('admin.leaves.index'))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get(route('admin.leaves.show', $pendingLeave))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->patch(route('admin.leaves.approve', $pendingLeave), [
+                'admin_remarks' => 'Unauthorized approval.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->patch(route('admin.leaves.reject', $pendingLeave), [
+                'admin_remarks' => 'Unauthorized rejection.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->delete(route('admin.leaves.destroy', $pendingLeave))
+            ->assertForbidden();
+
+        $pendingLeave->refresh();
+        $this->assertSame('pending', $pendingLeave->status);
+        $this->assertNull($pendingLeave->approved_by);
+        $this->assertNull($pendingLeave->approved_at);
+    }
+
     public function test_hod_cannot_review_non_pending_leave_history(): void
     {
         $department = Department::factory()->create();
@@ -322,6 +458,47 @@ class StudentLeaveWorkflowTest extends TestCase
             'id' => $leave->id,
             'status' => 'approved',
         ]);
+    }
+
+    public function test_hod_can_review_pending_leave_with_schema_backed_remarks(): void
+    {
+        $department = Department::factory()->create();
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'department_id' => $department->id,
+        ]);
+        $hod = $this->userWithRole('hod');
+        Teacher::factory()->create([
+            'user_id' => $hod->id,
+            'department_id' => $department->id,
+        ]);
+        $leave = LeaveApplication::create([
+            'student_id' => $student->id,
+            'leave_type' => 'medical',
+            'from_date' => now()->addDays(4)->toDateString(),
+            'to_date' => now()->addDays(4)->toDateString(),
+            'days' => 1,
+            'reason' => 'Pending HOD review',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($hod)
+            ->from(route('hod.leaves'))
+            ->post(route('hod.leaves.review', $leave), [
+                'action' => 'approved',
+                'remarks' => 'HOD verified attendance impact.',
+            ])
+            ->assertRedirect(route('hod.leaves'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('leave_applications', [
+            'id' => $leave->id,
+            'status' => 'approved',
+            'reviewed_by' => $hod->id,
+            'admin_remarks' => 'HOD verified attendance impact.',
+        ]);
+        $this->assertNotNull($leave->fresh()->reviewed_at);
     }
 
     public function test_program_chair_leave_review_is_scoped_and_pending_only(): void
@@ -379,5 +556,45 @@ class StudentLeaveWorkflowTest extends TestCase
             'id' => $lockedLeave->id,
             'status' => 'approved',
         ]);
+    }
+
+    public function test_program_chair_can_review_pending_leave_with_schema_backed_remarks(): void
+    {
+        $program = Program::factory()->create();
+        $chair = $this->userWithRole('program_chair');
+        RoleProgramAssignment::create([
+            'user_id' => $chair->id,
+            'role_name' => 'program_chair',
+            'program_id' => $program->id,
+            'is_active' => true,
+            'assigned_by' => $chair->id,
+            'assigned_at' => now(),
+        ]);
+        $student = Student::factory()->create(['program_id' => $program->id]);
+        $leave = LeaveApplication::create([
+            'student_id' => $student->id,
+            'leave_type' => 'medical',
+            'from_date' => now()->addDays(4)->toDateString(),
+            'to_date' => now()->addDays(4)->toDateString(),
+            'days' => 1,
+            'reason' => 'Pending PMC review',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($chair)
+            ->from(route('chair.students.leaves'))
+            ->post(route('chair.students.leaves.reject', $leave), [
+                'remarks' => 'Program office needs revised documents.',
+            ])
+            ->assertRedirect(route('chair.students.leaves'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('leave_applications', [
+            'id' => $leave->id,
+            'status' => 'rejected',
+            'reviewed_by' => $chair->id,
+            'admin_remarks' => 'Program office needs revised documents.',
+        ]);
+        $this->assertNotNull($leave->fresh()->reviewed_at);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FeeDemand;
 use App\Models\Scholarship;
 use App\Models\Student;
 use App\Models\User;
@@ -84,6 +85,52 @@ class ScholarshipTest extends TestCase
         ]);
     }
 
+    public function test_active_legacy_scholarships_require_active_student_profiles(): void
+    {
+        $activeStudent = Student::factory()->create(['enrollment_number' => 'ACTIVE-SCH-001', 'status' => 'active']);
+        $inactiveStudent = Student::factory()->create(['enrollment_number' => 'ARCHIVED-SCH-001', 'status' => 'inactive']);
+
+        $this->get('/academic/scholarships/create')
+            ->assertOk()
+            ->assertSee('ACTIVE-SCH-001')
+            ->assertDontSee('ARCHIVED-SCH-001');
+
+        $this->post('/academic/scholarships', [
+            'student_id' => $inactiveStudent->id,
+            'name' => 'Archived Active Scholarship',
+            'percentage' => 25,
+            'type' => 'merit',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('scholarships', [
+            'student_id' => $inactiveStudent->id,
+            'name' => 'Archived Active Scholarship',
+            'status' => 'active',
+        ]);
+
+        $inactiveScholarship = Scholarship::factory()->create([
+            'student_id' => $inactiveStudent->id,
+            'name' => 'Inactive Historical Scholarship',
+            'percentage' => 10,
+            'status' => 'inactive',
+            'type' => 'need_based',
+        ]);
+
+        $this->put("/academic/scholarships/{$inactiveScholarship->id}", [
+            'name' => 'Inactive Historical Scholarship',
+            'percentage' => 10,
+            'type' => 'need_based',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ])->assertStatus(422);
+
+        $this->assertSame('inactive', $inactiveScholarship->fresh()->status);
+    }
+
     public function test_can_view_scholarship_details()
     {
         $scholarship = Scholarship::factory()->create();
@@ -158,6 +205,28 @@ class ScholarshipTest extends TestCase
         $this->assertSame('active', $scholarship->fresh()->status);
     }
 
+    public function test_program_chair_cannot_directly_view_financial_scholarship_records_or_forms(): void
+    {
+        $chair = $this->userWithRole('program_chair');
+        $scholarship = Scholarship::factory()->create();
+
+        $this->actingAs($chair)
+            ->get('/academic/scholarships')
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get('/academic/scholarships/create')
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get("/academic/scholarships/{$scholarship->id}")
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->get("/academic/scholarships/{$scholarship->id}/edit")
+            ->assertForbidden();
+    }
+
     public function test_scholarship_must_have_positive_discount_value(): void
     {
         $student = Student::factory()->create();
@@ -197,6 +266,48 @@ class ScholarshipTest extends TestCase
         ])->assertStatus(422);
 
         $this->assertSame(1, Scholarship::where('student_id', $student->id)->where('name', 'Merit Scholarship')->count());
+    }
+
+    public function test_applied_legacy_scholarship_financial_terms_and_archive_are_locked(): void
+    {
+        $student = Student::factory()->create();
+        $scholarship = Scholarship::factory()->create([
+            'student_id' => $student->id,
+            'name' => 'Applied Legacy Scholarship',
+            'percentage' => 20,
+            'fixed_amount' => null,
+            'type' => 'merit',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'total_amount' => 50000,
+            'scholarship_deduction' => 10000,
+            'final_amount' => 40000,
+            'status' => 'pending',
+        ]);
+
+        $this->put("/academic/scholarships/{$scholarship->id}", [
+            'name' => 'Applied Legacy Scholarship',
+            'percentage' => 30,
+            'fixed_amount' => null,
+            'type' => 'merit',
+            'status' => 'active',
+            'valid_from' => now()->startOfYear()->toDateString(),
+            'valid_to' => now()->endOfYear()->toDateString(),
+        ])->assertStatus(422);
+
+        $scholarship->refresh();
+        $this->assertSame('20.00', $scholarship->percentage);
+        $this->assertSame('active', $scholarship->status);
+
+        $this->delete("/academic/scholarships/{$scholarship->id}")
+            ->assertRedirect(route('academic.scholarships.show', $scholarship))
+            ->assertSessionHas('error', 'This scholarship is linked to fee demand discount history and cannot be archived. Use an audited fee adjustment workflow instead.');
+
+        $this->assertSame('active', $scholarship->fresh()->status);
     }
 
     public function test_active_scholarship_discount()

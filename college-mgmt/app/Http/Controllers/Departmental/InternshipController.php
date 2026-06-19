@@ -34,7 +34,7 @@ class InternshipController extends Controller
     public function create()
     {
         $students  = Student::with('user')->where('status', 'active')->get();
-        $companies = Company::orderBy('name')->get();
+        $companies = Company::where('is_active', true)->orderBy('name')->get();
         return view('departmental.internships.create', compact('students', 'companies'));
     }
 
@@ -61,6 +61,37 @@ class InternshipController extends Controller
                 ->withInput();
         }
 
+        if (! empty($v['company_id'])) {
+            $company = Company::findOrFail($v['company_id']);
+            if (! $company->is_active) {
+                return back()
+                    ->withErrors(['company_id' => 'Internships can be registered only with active company partners.'])
+                    ->withInput();
+            }
+
+            $v['company_name'] = $company->name;
+        }
+
+        $overlappingInternship = Internship::where('student_id', $student->id)
+            ->where('status', 'ongoing')
+            ->where(function ($query) use ($v) {
+                if (! empty($v['end_date'])) {
+                    $query->where('start_date', '<=', $v['end_date']);
+                }
+
+                $query->where(function ($dateQuery) use ($v) {
+                    $dateQuery->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $v['start_date']);
+                });
+            })
+            ->exists();
+
+        if ($overlappingInternship) {
+            return back()
+                ->withErrors(['start_date' => 'This student already has an overlapping ongoing internship, industrial training, or live project. Complete or close the existing record before adding another.'])
+                ->withInput();
+        }
+
         Internship::create(array_merge($v, ['status' => 'ongoing', 'approved_by' => auth()->id()]));
         return redirect()->route('cmc.internships.index')->with('success', 'Internship registered.');
     }
@@ -76,7 +107,7 @@ class InternshipController extends Controller
         $request->validate([
             'feedback' => 'nullable|string',
             'rating'   => 'nullable|integer|min:1|max:5',
-            'end_date' => 'required|date',
+            'end_date' => 'required|date|before_or_equal:today',
         ]);
 
         if ($internship->status !== 'ongoing') {

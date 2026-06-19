@@ -77,6 +77,31 @@ class PaymentVerificationController extends Controller
             'verification_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $payment->loadMissing(['applicant', 'installment']);
+        if (! $payment->applicant) {
+            abort(404);
+        }
+
+        if ($blocker = $this->verificationEligibilityBlocker($payment)) {
+            return back()->with('error', $blocker);
+        }
+
+        if ($payment->installment && (float) $payment->amount_paid > (float) $payment->installment->amount) {
+            return back()->withErrors([
+                'amount_paid' => 'Admission payment amount exceeds the linked fee installment amount.',
+            ]);
+        }
+
+        $transactionReference = trim((string) $payment->transaction_reference);
+        if ($transactionReference !== '' && AdmissionPayment::whereRaw('LOWER(transaction_reference) = ?', [strtolower($transactionReference)])
+            ->where('status', 'verified')
+            ->whereKeyNot($payment->id)
+            ->exists()) {
+            return back()->withErrors([
+                'transaction_reference' => 'This transaction reference is already linked to a verified admission payment.',
+            ]);
+        }
+
         $payment->update([
             'status'             => 'verified',
             'verified_by'        => auth()->id(),
@@ -215,5 +240,29 @@ class PaymentVerificationController extends Controller
         if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $payment->applicant?->assigned_to, false)) {
             abort(403);
         }
+    }
+
+    private function verificationEligibilityBlocker(AdmissionPayment $payment): ?string
+    {
+        $applicant = $payment->applicant;
+        $installment = $payment->installment;
+
+        if (in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true)) {
+            return 'Admission payment verification is closed for the applicant current status. Use the audited correction or refund workflow instead.';
+        }
+
+        if (! $installment || ! $installment->is_active) {
+            return 'Admission payment verification is closed because the linked fee installment is no longer active.';
+        }
+
+        if ((int) $installment->program_id !== (int) $applicant->program_id) {
+            return 'Admission payment verification is closed because the linked fee installment is not available for the applicant program.';
+        }
+
+        if ($installment->batch_id !== null && (int) $installment->batch_id !== (int) $applicant->batch_id) {
+            return 'Admission payment verification is closed because the linked fee installment is not available for the applicant batch.';
+        }
+
+        return null;
     }
 }

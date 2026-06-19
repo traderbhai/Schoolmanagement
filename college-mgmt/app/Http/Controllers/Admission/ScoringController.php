@@ -19,16 +19,25 @@ class ScoringController extends Controller
 
         $presentApplicants = $session->sessionApplicants()
             ->where('attendance_status', 'present')
+            ->whereHas('applicant', function ($query) {
+                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+            })
             ->with('applicant.user')
             ->get();
 
         $absentApplicants = $session->sessionApplicants()
             ->whereIn('attendance_status', ['absent', 'excused'])
+            ->whereHas('applicant', function ($query) {
+                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+            })
             ->with('applicant.user')
             ->get();
 
         // Load existing scores keyed by applicant_id
         $existingScores = ApplicantScore::where('selection_session_id', $session->id)
+            ->whereHas('applicant', function ($query) {
+                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+            })
             ->get()
             ->keyBy('applicant_id');
 
@@ -45,6 +54,41 @@ class ScoringController extends Controller
         $isFinal = $request->boolean('mark_final') && $this->hierarchy->canApproveAdmission($request->user());
 
         $scores = $request->input('scores', []);
+        $visibleApplicantIds = Applicant::query()
+            ->whereIn('id', array_keys($scores))
+            ->tap(fn ($query) => $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM'))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $presentApplicantIds = $session->sessionApplicants()
+            ->where('attendance_status', 'present')
+            ->pluck('applicant_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $existingScores = ApplicantScore::where('selection_session_id', $session->id)
+            ->whereIn('applicant_id', array_keys($scores))
+            ->get()
+            ->keyBy(fn (ApplicantScore $score) => (int) $score->applicant_id);
+
+        foreach (array_keys($scores) as $applicantId) {
+            if (! in_array((int) $applicantId, $visibleApplicantIds, true)) {
+                abort(403);
+            }
+
+            if (! in_array((int) $applicantId, $presentApplicantIds, true)) {
+                return back()->withErrors([
+                    'scores' => 'Scores can be saved only for applicants marked present in this session.',
+                ]);
+            }
+
+            $existing = $existingScores->get((int) $applicantId);
+            if ($existing && ($existing->is_final || in_array($existing->score_status, ['finalized', 'overridden'], true) || $existing->locked_at)) {
+                return back()->withErrors([
+                    'scores' => 'Finalized or overridden assessment scores are locked. Use the audited override workflow for corrections.',
+                ]);
+            }
+        }
 
         foreach ($scores as $applicantId => $applicantScores) {
             $parameterScores = [];
@@ -81,6 +125,9 @@ class ScoringController extends Controller
                     'percentage'               => $percentage,
                     'remarks'                   => $applicantScores['remarks'] ?? null,
                     'is_final'                  => $isFinal,
+                    'score_status'              => $isFinal ? 'finalized' : 'draft',
+                    'locked_at'                 => $isFinal ? now() : null,
+                    'locked_by'                 => $isFinal ? $request->user()->id : null,
                 ]
             );
         }
@@ -90,6 +137,11 @@ class ScoringController extends Controller
 
     public function applicantScorecard(Applicant $applicant)
     {
+        abort_unless(
+            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, false),
+            403
+        );
+
         $applicant->load(['program', 'batch', 'user']);
 
         $scores = ApplicantScore::where('applicant_id', $applicant->id)

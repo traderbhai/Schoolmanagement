@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\AssetAssignment;
 use App\Models\AssetCategory;
@@ -11,11 +12,14 @@ use App\Models\InventoryMovement;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorizeAssetManagement($request);
+
         $query = InstituteAsset::with(['category', 'currentAssignment.assignedTo'])->latest();
 
         if ($request->filled('status')) {
@@ -71,6 +75,8 @@ class AssetController extends Controller
 
     public function categoryStore(Request $request)
     {
+        $this->authorizeAssetManagement($request);
+
         $data = $request->validate([
             'name' => 'required|string|max:120|unique:asset_categories,name',
             'code' => 'required|string|max:30|unique:asset_categories,code',
@@ -83,8 +89,10 @@ class AssetController extends Controller
 
     public function assetStore(Request $request)
     {
+        $this->authorizeAssetManagement($request);
+
         $data = $request->validate([
-            'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'asset_category_id' => ['nullable', Rule::exists('asset_categories', 'id')->where('is_active', true)],
             'asset_tag' => 'required|string|max:60|unique:institute_assets,asset_tag',
             'name' => 'required|string|max:160',
             'serial_number' => 'nullable|string|max:120',
@@ -98,7 +106,7 @@ class AssetController extends Controller
 
         InstituteAsset::create($data + [
             'purchase_cost' => $data['purchase_cost'] ?? 0,
-            'status' => 'available',
+            'status' => in_array($data['condition'], ['needs_repair', 'damaged'], true) ? 'maintenance' : 'available',
         ]);
 
         return back()->with('success', 'Asset added to register.');
@@ -106,8 +114,10 @@ class AssetController extends Controller
 
     public function stockItemStore(Request $request)
     {
+        $this->authorizeAssetManagement($request);
+
         $data = $request->validate([
-            'asset_category_id' => 'nullable|exists:asset_categories,id',
+            'asset_category_id' => ['nullable', Rule::exists('asset_categories', 'id')->where('is_active', true)],
             'name' => 'required|string|max:160',
             'sku' => 'required|string|max:60|unique:inventory_items,sku',
             'unit' => 'required|string|max:30',
@@ -123,6 +133,8 @@ class AssetController extends Controller
 
     public function stockReceive(Request $request, InventoryItem $item)
     {
+        $this->authorizeAssetManagement($request);
+
         if ($item->status !== 'active') {
             return back()->with('error', 'Only active inventory items can receive stock.');
         }
@@ -134,6 +146,14 @@ class AssetController extends Controller
             'movement_date' => 'required|date|before_or_equal:today',
             'remarks' => 'nullable|string|max:1000',
         ]);
+
+        $reference = trim((string) ($data['reference_number'] ?? ''));
+        if ($reference !== '' && InventoryMovement::where('inventory_item_id', $item->id)
+            ->where('movement_type', 'receive')
+            ->where('reference_number', $reference)
+            ->exists()) {
+            return back()->withErrors(['reference_number' => 'This receive reference has already been recorded for this inventory item.']);
+        }
 
         DB::transaction(function () use ($item, $data) {
             $item->increment('current_stock', $data['quantity']);
@@ -154,6 +174,8 @@ class AssetController extends Controller
 
     public function stockIssue(Request $request, InventoryItem $item)
     {
+        $this->authorizeAssetManagement($request);
+
         if ($item->status !== 'active') {
             return back()->with('error', 'Only active inventory items can be issued.');
         }
@@ -189,14 +211,24 @@ class AssetController extends Controller
 
     public function assign(Request $request, InstituteAsset $asset)
     {
+        $this->authorizeAssetManagement($request);
+
         $data = $request->validate([
             'assigned_to_user_id' => 'required|exists:users,id',
-            'assigned_on' => 'required|date',
+            'assigned_on' => 'required|date|before_or_equal:today',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
         if ($asset->status !== 'available') {
             return back()->with('error', 'Only available assets can be assigned.');
+        }
+
+        if (in_array($asset->condition, ['needs_repair', 'damaged'], true)) {
+            return back()->with('error', 'Assets marked damaged or needing repair cannot be assigned until repaired.');
+        }
+
+        if ($asset->assignments()->where('status', 'active')->exists()) {
+            return back()->with('error', 'This asset already has an active assignment. Return the current assignment before reassigning.');
         }
 
         AssetAssignment::create([
@@ -215,6 +247,8 @@ class AssetController extends Controller
 
     public function returnAssignment(Request $request, AssetAssignment $assignment)
     {
+        $this->authorizeAssetManagement($request);
+
         $data = $request->validate([
             'returned_on' => 'required|date|after_or_equal:'.$assignment->assigned_on->toDateString().'|before_or_equal:today',
             'condition' => 'required|in:new,good,needs_repair,damaged',
@@ -232,10 +266,18 @@ class AssetController extends Controller
         ]);
 
         $assignment->asset->update([
-            'status' => $data['condition'] === 'needs_repair' ? 'maintenance' : 'available',
+            'status' => in_array($data['condition'], ['needs_repair', 'damaged'], true) ? 'maintenance' : 'available',
             'condition' => $data['condition'],
         ]);
 
         return back()->with('success', 'Asset returned successfully.');
+    }
+
+    private function authorizeAssetManagement(Request $request): void
+    {
+        abort_unless(
+            $request->user() && AccessControl::canManageInstitutionAssets($request->user()),
+            403
+        );
     }
 }

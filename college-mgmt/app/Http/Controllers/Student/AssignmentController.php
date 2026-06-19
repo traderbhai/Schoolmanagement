@@ -18,6 +18,11 @@ class AssignmentController extends Controller
         return $student;
     }
 
+    private function ensureActiveStudent($student): void
+    {
+        abort_unless($student?->status === 'active', 403, 'Only active students can submit coursework.');
+    }
+
     private function isEnrolledForAssignment($student, Assignment $assignment): bool
     {
         $canonical = $student->subjectEnrollments()
@@ -94,6 +99,7 @@ class AssignmentController extends Controller
     public function submit(Request $request, Assignment $assignment)
     {
         $student = $this->getStudent();
+        $this->ensureActiveStudent($student);
         abort_unless($assignment->is_published, 403);
         $this->ensureEnrolled($student, $assignment);
 
@@ -113,6 +119,12 @@ class AssignmentController extends Controller
             'answer_text' => 'nullable|string',
             'file'        => 'nullable|file|max:10240',
         ]);
+
+        $hasAnswerText = trim((string) $request->input('answer_text', '')) !== '';
+        $hasExistingFile = (bool) ($existingSubmission?->file_path);
+        if (! $hasAnswerText && ! $request->hasFile('file') && ! $hasExistingFile) {
+            return back()->withErrors(['answer_text' => 'Enter an answer or attach a file before submitting.']);
+        }
 
         $filePath = null;
         if ($request->hasFile('file')) {

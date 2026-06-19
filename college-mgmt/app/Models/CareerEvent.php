@@ -18,10 +18,11 @@ class CareerEvent extends Model {
     protected $casts = ['event_date'=>'date','registration_deadline'=>'date','is_published'=>'boolean'];
     public function organizer() { return $this->belongsTo(User::class,'organizer_id'); }
     public function registrations() { return $this->hasMany(CareerEventRegistration::class); }
+    public function activeRegistrations() { return $this->hasMany(CareerEventRegistration::class)->where('status', 'registered'); }
     public function isOpen(): bool {
         return $this->is_published
             && (!$this->event_date || $this->event_date->isToday() || $this->event_date->isFuture())
             && (!$this->registration_deadline || $this->registration_deadline->isToday() || $this->registration_deadline->isFuture())
-            && (!$this->seats || $this->registrations()->count() < $this->seats);
+            && (!$this->seats || $this->activeRegistrations()->count() < $this->seats);
     }
 }

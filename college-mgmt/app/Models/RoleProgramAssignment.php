@@ -9,10 +9,12 @@ class RoleProgramAssignment extends Model
     protected $fillable = [
         'user_id', 'role_name', 'program_id', 'batch_id',
         'is_active', 'assigned_by', 'assigned_at',
+        'revoked_by', 'revoked_at',
     ];
 
     protected $casts = [
         'assigned_at' => 'datetime',
+        'revoked_at' => 'datetime',
         'is_active'   => 'boolean',
     ];
 
@@ -34,6 +36,11 @@ class RoleProgramAssignment extends Model
     public function assignedBy()
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function revokedBy()
+    {
+        return $this->belongsTo(User::class, 'revoked_by');
     }
 
     public static function getAssignmentsForUser(User $user)

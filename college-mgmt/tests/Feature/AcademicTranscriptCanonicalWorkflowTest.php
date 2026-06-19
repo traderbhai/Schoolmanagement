@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Batch, Department, DepartmentFeatureSetting, Exam, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Term, User};
+use App\Models\{AcademicTranscript, Batch, Department, DepartmentFeatureSetting, Exam, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Term, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -139,5 +139,30 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             ->assertSee('88')
             ->assertDontSee('Draft Transcript Exam')
             ->assertDontSee('99.00/100', false);
+    }
+
+    public function test_issued_academic_transcript_reuses_snapshot_instead_of_silently_regenerating(): void
+    {
+        $fixture = $this->fixture();
+        $student = $fixture['student'];
+
+        $this->actingAs($fixture['dean'])
+            ->get(route('academic.transcripts.pdf', $student))
+            ->assertOk();
+
+        $issued = AcademicTranscript::where('student_id', $student->id)->firstOrFail();
+        $this->assertSame('issued', $issued->status);
+        $this->assertEquals(9.0, (float) $issued->cgpa);
+        $this->assertEquals(88, data_get($issued->semester_data, 'semester_reports.0.subjects.0.obtained'));
+
+        ExamResult::where('student_id', $student->id)->update(['marks_obtained' => 40]);
+
+        $this->actingAs($fixture['dean'])
+            ->get(route('academic.transcripts.pdf', $student))
+            ->assertOk();
+
+        $issued->refresh();
+        $this->assertEquals(9.0, (float) $issued->cgpa);
+        $this->assertEquals(88, data_get($issued->semester_data, 'semester_reports.0.subjects.0.obtained'));
     }
 }

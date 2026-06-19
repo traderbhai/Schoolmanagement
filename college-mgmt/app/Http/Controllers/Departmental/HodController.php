@@ -42,7 +42,8 @@ class HodController extends Controller
         $studentCount = Student::when($departmentId !== null, fn($q) => $q->whereHas('program', fn($p) => $p->where('department_id', $departmentId)))
             ->where('status', 'active')->count();
 
-        $attQuery = Attendance::where('date', '>=', now()->subDays(30));
+        $attQuery = $this->officialAttendanceQuery()
+            ->where('date', '>=', now()->subDays(30));
         if ($departmentId !== null) {
             $attQuery->whereHas('timetableEntry.subject', fn($q) => $q->where('department_id', $departmentId));
         }
@@ -51,6 +52,7 @@ class HodController extends Controller
         $attendancePct = $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0;
 
         $recentExams = Exam::when($departmentId !== null, fn($q) => $q->whereHas('subject', fn($sq) => $sq->where('department_id', $departmentId)))
+            ->whereNotNull('published_at')
             ->with(['subject', 'program', 'results'])->latest('exam_date')->take(5)->get()
             ->map(function ($exam) {
                 $results = $exam->results;
@@ -269,7 +271,7 @@ class HodController extends Controller
         $leave->update([
             'status'         => $request->action,
             'reviewed_by'    => auth()->id(),
-            'review_remarks' => $request->remarks,
+            'admin_remarks'  => $request->remarks,
             'reviewed_at'    => now(),
         ]);
 
@@ -286,6 +288,7 @@ class HodController extends Controller
 
         // All exam IDs grouped by subject
         $examsBySubject = Exam::whereIn('subject_id', $subjectIds)
+            ->whereNotNull('published_at')
             ->get(['id', 'subject_id', 'passing_marks'])
             ->groupBy('subject_id');
 
@@ -300,6 +303,7 @@ class HodController extends Controller
         $attBySubject = Attendance::join('timetable_entries', 'attendances.timetable_entry_id', '=', 'timetable_entries.id')
             ->whereIn('timetable_entries.subject_id', $subjectIds)
             ->where('date', '>=', now()->subDays(30))
+            ->where(fn ($query) => $this->publishedTimetableJoinScope($query))
             ->selectRaw('timetable_entries.subject_id, COUNT(*) as total, SUM(CASE WHEN attendances.status="present" THEN 1 ELSE 0 END) as present_count')
             ->groupBy('timetable_entries.subject_id')
             ->get()
@@ -328,5 +332,38 @@ class HodController extends Controller
             ->where('status', 'active')->count();
 
         return view('departmental.hod.department-performance', compact('subjects', 'department', 'totalStudents'));
+    }
+
+    private function officialAttendanceQuery()
+    {
+        return Attendance::query()
+            ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function publishedTimetableJoinScope($query)
+    {
+        return $query
+            ->where('timetable_entries.is_active', true)
+            ->where('timetable_entries.status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_entries.timetable_version_id')
+                    ->orWhereExists(function ($exists) {
+                        $exists->selectRaw('1')
+                            ->from('timetable_versions')
+                            ->whereColumn('timetable_versions.id', 'timetable_entries.timetable_version_id')
+                            ->where('timetable_versions.status', 'published');
+                    });
+            });
     }
 }

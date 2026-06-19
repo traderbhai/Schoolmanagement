@@ -93,10 +93,13 @@ class StudentCareerEventWorkflowTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success', 'Registration cancelled for "Career Readiness Workshop".');
 
-        $this->assertDatabaseMissing('career_event_registrations', [
+        $this->assertDatabaseHas('career_event_registrations', [
             'career_event_id' => $event->id,
             'student_id' => $student->id,
+            'status' => 'cancelled',
+            'attended' => false,
         ]);
+        $this->assertNotNull(CareerEventRegistration::where('career_event_id', $event->id)->where('student_id', $student->id)->firstOrFail()->cancelled_at);
     }
 
     public function test_student_cannot_cancel_attended_or_closed_career_event_registration(): void
@@ -191,6 +194,61 @@ class StudentCareerEventWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_cancelled_career_event_registration_does_not_consume_capacity_and_can_be_reactivated(): void
+    {
+        $student = $this->student();
+        $event = $this->event([
+            'title' => 'Capacity Reopened Workshop',
+            'seats' => 1,
+        ]);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => $student->user_id,
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.career-events.register', $event))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Registered for "Capacity Reopened Workshop".');
+
+        $this->assertSame(1, CareerEventRegistration::where('career_event_id', $event->id)->where('student_id', $student->id)->count());
+        $this->assertDatabaseHas('career_event_registrations', [
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'status' => 'registered',
+            'attended' => false,
+            'cancelled_at' => null,
+            'cancelled_by' => null,
+        ]);
+    }
+
+    public function test_student_cannot_reregister_and_reset_attended_career_event_registration(): void
+    {
+        $student = $this->student();
+        $event = $this->event(['title' => 'Attendance Locked Workshop']);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => true,
+            'status' => 'registered',
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.career-events.register', $event))
+            ->assertStatus(422);
+
+        $registration = CareerEventRegistration::where('career_event_id', $event->id)
+            ->where('student_id', $student->id)
+            ->firstOrFail();
+
+        $this->assertTrue($registration->attended);
+        $this->assertSame('registered', $registration->status);
+    }
+
     public function test_inactive_student_can_view_events_but_cannot_register_or_cancel(): void
     {
         $student = $this->student();
@@ -271,7 +329,7 @@ class StudentCareerEventWorkflowTest extends TestCase
     public function test_cmc_can_mark_career_event_attendance_from_registration_list(): void
     {
         $student = $this->student();
-        $event = $this->event();
+        $event = $this->event(['event_date' => today()->toDateString()]);
         $registration = CareerEventRegistration::create([
             'career_event_id' => $event->id,
             'student_id' => $student->id,
@@ -308,6 +366,51 @@ class StudentCareerEventWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Attended event records are locked. Use an audited correction workflow for attendance reversals.');
 
         $this->assertTrue($registration->fresh()->attended);
+    }
+
+    public function test_cmc_cannot_mark_cancelled_career_event_registration_attended(): void
+    {
+        $student = $this->student();
+        $event = $this->event(['event_date' => today()->toDateString()]);
+        $registration = CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => $student->user_id,
+        ]);
+
+        $this->actingAs($this->cmcUser())
+            ->patch(route('cmc.events.registrations.attendance', [$event, $registration]), [
+                'attended' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Cancelled career event registrations cannot be marked attended.');
+
+        $registration->refresh();
+        $this->assertFalse($registration->attended);
+        $this->assertSame('cancelled', $registration->status);
+    }
+
+    public function test_cmc_cannot_mark_attendance_before_career_event_date(): void
+    {
+        $student = $this->student();
+        $event = $this->event(['event_date' => today()->addDays(3)->toDateString()]);
+        $registration = CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'attended' => false,
+        ]);
+
+        $this->actingAs($this->cmcUser())
+            ->patch(route('cmc.events.registrations.attendance', [$event, $registration]), [
+                'attended' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('attended');
+
+        $this->assertFalse($registration->fresh()->attended);
     }
 
     public function test_cmc_cannot_update_attendance_through_wrong_event_url(): void

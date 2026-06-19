@@ -28,6 +28,11 @@ class PmcTimetableController extends Controller {
         abort_unless(in_array($programId, $this->programIds(), true), 403);
     }
 
+    private function hasAcademicOversight(): bool
+    {
+        return Auth::user()?->hasRole(['admin', 'dean_academics', 'director', 'academic_department_owner']) ?? false;
+    }
+
     private function validateAcademicScope(Request $request): ?string
     {
         $programId = (int) $request->program_id;
@@ -67,10 +72,15 @@ class PmcTimetableController extends Controller {
     private function blockIfPublished(int $programId, int $termId, ?int $batchId = null)
     {
         if ($this->hasPublishedVersion($programId, $termId, $batchId)) {
-            return back()->with('error', 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.');
+            return back()->with('error', $this->publishedLockMessage());
         }
 
         return null;
+    }
+
+    private function publishedLockMessage(): string
+    {
+        return 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.';
     }
 
     private function validateProgramTermBatchScope(int $programId, int $termId, ?int $batchId = null): ?string
@@ -212,7 +222,7 @@ class PmcTimetableController extends Controller {
         }
 
         if ($this->hasPublishedVersion((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
-            return response()->json(['message' => 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.'], 423);
+            return response()->json(['message' => $this->publishedLockMessage()], 423);
         }
 
         $program = Program::findOrFail($request->program_id);
@@ -464,7 +474,7 @@ class PmcTimetableController extends Controller {
             'file'       => 'required|mimes:csv,txt|max:5120',
         ]);
 
-        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return response()->json(['success' => false, 'errors' => [$message]], 422);
         }
 
@@ -487,7 +497,7 @@ class PmcTimetableController extends Controller {
             'file'       => 'required|mimes:csv,txt|max:5120',
         ]);
 
-        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return back()->with('error', $message);
         }
 
@@ -495,12 +505,21 @@ class PmcTimetableController extends Controller {
             return $response;
         }
 
+        $program = Program::findOrFail($request->program_id);
+        $term = Term::findOrFail($request->term_id);
+        $semester = $this->legacySemesterForTerm($term);
+        $course = $this->legacyCourseForProgram($program);
+
         $service = app(TimetableImportService::class);
         $result = $service->importCSV(
             $request->file('file'),
             $request->program_id,
             $request->term_id,
-            $request->batch_id
+            $request->batch_id,
+            [
+                'semester_id' => $semester->id,
+                'course_id' => $course->id,
+            ]
         );
 
         if ($result['success']) {
@@ -572,7 +591,11 @@ class PmcTimetableController extends Controller {
             'batch_id'         => 'nullable|exists:batches,id',
         ]);
 
-        if ($message = $this->validateAcademicScope($request)) {
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->source_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return response()->json(['success' => false, 'errors' => [$message]], 422);
+        }
+
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return response()->json(['success' => false, 'errors' => [$message]], 422);
         }
 
@@ -598,13 +621,22 @@ class PmcTimetableController extends Controller {
             'reassign_classrooms' => 'sometimes|boolean',
         ]);
 
-        if ($message = $this->validateAcademicScope($request)) {
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->source_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
+            return back()->with('error', $message);
+        }
+
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return back()->with('error', $message);
         }
 
         if ($response = $this->blockIfPublished((int) $request->program_id, (int) $request->target_term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return $response;
         }
+
+        $program = Program::findOrFail($request->program_id);
+        $targetTerm = Term::findOrFail($request->target_term_id);
+        $semester = $this->legacySemesterForTerm($targetTerm);
+        $course = $this->legacyCourseForProgram($program);
 
         $service = app(TimetableCopyService::class);
         $result = $service->executeCopy(
@@ -616,6 +648,8 @@ class PmcTimetableController extends Controller {
                 'replace_existing'  => $request->boolean('replace_existing'),
                 'reassign_teachers' => $request->boolean('reassign_teachers'),
                 'reassign_classrooms' => $request->boolean('reassign_classrooms'),
+                'semester_id' => $semester->id,
+                'course_id' => $course->id,
             ]
         );
 
@@ -634,7 +668,11 @@ class PmcTimetableController extends Controller {
             'batch_id'   => 'required|exists:batches,id',
         ]);
 
-        $batch = Batch::find($request->batch_id);
+        if ($message = $this->validateProgramTermBatchScope((int) $request->program_id, (int) $request->term_id, (int) $request->batch_id)) {
+            return back()->with('error', $message);
+        }
+
+        $batch = Batch::findOrFail($request->batch_id);
         $service = app(TimetablePdfService::class);
         $pdf = $service->generateBatchPdf($request->program_id, $request->term_id, $request->batch_id);
 
@@ -647,9 +685,20 @@ class PmcTimetableController extends Controller {
             'teacher_id' => 'required|exists:teachers,id',
         ]);
 
-        $teacher = Teacher::with('user')->find($request->teacher_id);
+        $teacher = Teacher::with('user')->findOrFail($request->teacher_id);
+        $visibleProgramIds = $this->hasAcademicOversight() ? null : $this->programIds();
+        abort_if($visibleProgramIds !== null && empty($visibleProgramIds), 403);
+
+        if ($visibleProgramIds !== null) {
+            abort_unless(TimetableEntry::where('teacher_id', $teacher->id)
+                ->where('term_id', $request->term_id)
+                ->whereIn('program_id', $visibleProgramIds)
+                ->where('is_active', true)
+                ->exists(), 403);
+        }
+
         $service = app(TimetablePdfService::class);
-        $pdf = $service->generateTeacherPdf($request->term_id, $request->teacher_id);
+        $pdf = $service->generateTeacherPdf($request->term_id, $request->teacher_id, $visibleProgramIds);
 
         return $pdf->download('timetable_' . \Illuminate\Support\Str::slug($teacher->user->name) . '.pdf');
     }
@@ -837,6 +886,10 @@ class PmcTimetableController extends Controller {
 
             if (! $subject || ($subject->program_id !== null && (int) $subject->program_id !== (int) $request->program_id)) {
                 return back()->with('error', 'Suggested subject does not belong to the selected program.');
+            }
+
+            if ($this->hasPublishedVersion((int) $request->program_id, (int) $request->term_id, (int) $suggestion['batch_id'])) {
+                return back()->with('error', $this->publishedLockMessage());
             }
         }
 

@@ -100,6 +100,79 @@ class AssetWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_asset_and_stock_item_creation_require_active_category(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $inactiveCategory = AssetCategory::create([
+            'name' => 'Archived Equipment',
+            'code' => 'ARCH',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.assets.index'))
+            ->post(route('admin.assets.store'), [
+                'asset_category_id' => $inactiveCategory->id,
+                'asset_tag' => 'ARCH-ASSET-001',
+                'name' => 'Archived Category Asset',
+                'serial_number' => 'ARCH-SN-001',
+                'purchase_date' => '2026-06-10',
+                'purchase_cost' => 1000,
+                'location' => 'Store',
+                'condition' => 'good',
+            ])
+            ->assertRedirect(route('admin.assets.index'))
+            ->assertSessionHasErrors('asset_category_id');
+
+        $this->assertDatabaseMissing('institute_assets', [
+            'asset_tag' => 'ARCH-ASSET-001',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.assets.index'))
+            ->post(route('admin.assets.stock-items.store'), [
+                'asset_category_id' => $inactiveCategory->id,
+                'name' => 'Archived Category Stock',
+                'sku' => 'ARCH-STOCK',
+                'unit' => 'box',
+                'current_stock' => 5,
+                'reorder_level' => 2,
+                'location' => 'Store',
+            ])
+            ->assertRedirect(route('admin.assets.index'))
+            ->assertSessionHasErrors('asset_category_id');
+
+        $this->assertDatabaseMissing('inventory_items', [
+            'sku' => 'ARCH-STOCK',
+        ]);
+    }
+
+    public function test_damaged_or_repair_assets_are_not_added_to_available_pool(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $category = $this->category();
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.store'), [
+                'asset_category_id' => $category->id,
+                'asset_tag' => 'DMG-ASSET-001',
+                'name' => 'Damaged Projector',
+                'serial_number' => 'DMG-SN-001',
+                'purchase_date' => '2026-06-10',
+                'purchase_cost' => 30000,
+                'location' => 'AV Store',
+                'condition' => 'damaged',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Asset added to register.');
+
+        $this->assertDatabaseHas('institute_assets', [
+            'asset_tag' => 'DMG-ASSET-001',
+            'condition' => 'damaged',
+            'status' => 'maintenance',
+        ]);
+    }
+
     public function test_admin_can_assign_and_return_asset(): void
     {
         $admin = $this->userWithRole('admin');
@@ -150,6 +223,75 @@ class AssetWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Only available assets can be assigned.');
 
         $this->assertSame(0, AssetAssignment::count());
+    }
+
+    public function test_admin_cannot_assign_stale_available_asset_marked_damaged_or_needing_repair(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'available', 'condition' => 'damaged']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assign', $asset), [
+                'assigned_to_user_id' => $teacher->id,
+                'assigned_on' => now()->toDateString(),
+                'remarks' => 'Direct assignment attempt',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Assets marked damaged or needing repair cannot be assigned until repaired.');
+
+        $this->assertSame(0, AssetAssignment::where('institute_asset_id', $asset->id)->count());
+        $this->assertSame('available', $asset->fresh()->status);
+    }
+
+    public function test_admin_cannot_assign_asset_with_stale_active_assignment_even_if_status_is_available(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $nextUser = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'available']);
+
+        AssetAssignment::create([
+            'institute_asset_id' => $asset->id,
+            'assigned_to_user_id' => $teacher->id,
+            'assigned_by' => $admin->id,
+            'assigned_on' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assign', $asset), [
+                'assigned_to_user_id' => $nextUser->id,
+                'assigned_on' => now()->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This asset already has an active assignment. Return the current assignment before reassigning.');
+
+        $this->assertSame(1, AssetAssignment::where('institute_asset_id', $asset->id)->where('status', 'active')->count());
+        $this->assertDatabaseMissing('asset_assignments', [
+            'institute_asset_id' => $asset->id,
+            'assigned_to_user_id' => $nextUser->id,
+            'status' => 'active',
+        ]);
+        $this->assertSame('available', $asset->fresh()->status);
+    }
+
+    public function test_admin_cannot_future_date_active_asset_assignment(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'available']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assign', $asset), [
+                'assigned_to_user_id' => $teacher->id,
+                'assigned_on' => now()->addWeek()->toDateString(),
+                'remarks' => 'Schedule next week custody.',
+            ])
+            ->assertSessionHasErrors('assigned_on');
+
+        $this->assertSame('available', $asset->fresh()->status);
+        $this->assertSame(0, AssetAssignment::where('institute_asset_id', $asset->id)->count());
     }
 
     public function test_admin_cannot_return_asset_before_assignment_date(): void
@@ -203,6 +345,37 @@ class AssetWorkflowTest extends TestCase
         $this->assertSame('active', $assignment->status);
         $this->assertNull($assignment->returned_on);
         $this->assertSame('assigned', $asset->status);
+    }
+
+    public function test_returned_damaged_asset_goes_to_maintenance_not_available_pool(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $asset = $this->asset(['status' => 'assigned', 'condition' => 'good']);
+
+        $assignment = AssetAssignment::create([
+            'institute_asset_id' => $asset->id,
+            'assigned_to_user_id' => $teacher->id,
+            'assigned_by' => $admin->id,
+            'assigned_on' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.assets.assignments.return', $assignment), [
+                'returned_on' => now()->toDateString(),
+                'condition' => 'damaged',
+                'remarks' => 'Screen cracked during use.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Asset returned successfully.');
+
+        $assignment->refresh();
+        $asset->refresh();
+
+        $this->assertSame('returned', $assignment->status);
+        $this->assertSame('maintenance', $asset->status);
+        $this->assertSame('damaged', $asset->condition);
     }
 
     public function test_asset_register_page_shows_assets_and_assignment_context(): void
@@ -270,6 +443,41 @@ class AssetWorkflowTest extends TestCase
             'vendor_name' => 'Lab Supplier',
             'reference_number' => 'PO-1001',
         ]);
+    }
+
+    public function test_admin_cannot_record_duplicate_stock_receive_reference_for_same_item(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $item = $this->inventoryItem(['current_stock' => 5]);
+
+        InventoryMovement::create([
+            'inventory_item_id' => $item->id,
+            'movement_type' => 'receive',
+            'quantity' => 10,
+            'performed_by' => $admin->id,
+            'vendor_name' => 'Lab Supplier',
+            'reference_number' => 'PO-DUP-001',
+            'movement_date' => now()->subDay()->toDateString(),
+        ]);
+        $item->update(['current_stock' => 15]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.assets.index'))
+            ->post(route('admin.assets.stock-items.receive', $item), [
+                'quantity' => 10,
+                'vendor_name' => 'Lab Supplier',
+                'reference_number' => 'PO-DUP-001',
+                'movement_date' => now()->toDateString(),
+                'remarks' => 'Duplicate receipt attempt.',
+            ])
+            ->assertRedirect(route('admin.assets.index'))
+            ->assertSessionHasErrors('reference_number');
+
+        $this->assertSame(15, $item->fresh()->current_stock);
+        $this->assertSame(1, InventoryMovement::where('inventory_item_id', $item->id)
+            ->where('movement_type', 'receive')
+            ->where('reference_number', 'PO-DUP-001')
+            ->count());
     }
 
     public function test_admin_can_issue_stock_and_cannot_issue_more_than_available(): void

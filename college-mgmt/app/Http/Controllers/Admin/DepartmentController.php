@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Services\AcademicMasterDataIntegrityService;
@@ -12,17 +13,23 @@ class DepartmentController extends Controller
 
     public function index()
     {
+        $this->authorizeAcademicStructure();
+
         $departments = Department::withCount(['courses','teachers','students'])->paginate(15);
         return view('admin.departments.index', compact('departments'));
     }
 
     public function create()
     {
+        $this->authorizeAcademicStructure();
+
         return view('admin.departments.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'name'        => 'required|string|max:255',
             'code'        => 'required|string|max:20|unique:departments',
@@ -35,17 +42,23 @@ class DepartmentController extends Controller
 
     public function show(Department $department)
     {
+        $this->authorizeAcademicStructure();
+
         $department->loadCount(['courses','teachers','students']);
         return view('admin.departments.show', compact('department'));
     }
 
     public function edit(Department $department)
     {
+        $this->authorizeAcademicStructure();
+
         return view('admin.departments.edit', compact('department'));
     }
 
     public function update(Request $request, Department $department)
     {
+        $this->authorizeAcademicStructure();
+
         $data = $request->validate([
             'name'        => 'required|string|max:255',
             'code'        => 'required|string|max:20|unique:departments,code,'.$department->id,
@@ -59,6 +72,8 @@ class DepartmentController extends Controller
 
     public function destroy(Department $department)
     {
+        $this->authorizeAcademicStructure();
+
         $dependencies = $this->integrity->dependencyLabels('department', $department->id);
 
         if ($dependencies !== []) {
@@ -67,5 +82,10 @@ class DepartmentController extends Controller
 
         $department->delete();
         return redirect()->route('admin.departments.index')->with('success', 'Department deleted.');
+    }
+
+    private function authorizeAcademicStructure(): void
+    {
+        abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
     }
 }

@@ -23,6 +23,16 @@ class AdminBulkMailWorkflowTest extends TestCase
         return $admin;
     }
 
+    private function userWithRole(string $role): User
+    {
+        Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        return $user;
+    }
+
     private function studentUser(Program $program, Batch $batch, string $status = 'active'): User
     {
         Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
@@ -92,5 +102,34 @@ class AdminBulkMailWorkflowTest extends TestCase
             'status' => 'queued',
         ]);
         $this->assertSame(1, EmailLog::count());
+    }
+
+    public function test_program_chair_cannot_directly_preview_or_send_global_bulk_mail(): void
+    {
+        Mail::fake();
+
+        $chair = $this->userWithRole('program_chair');
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $this->studentUser($program, $batch, 'active');
+
+        $this->actingAs($chair)
+            ->get(route('admin.bulk-mail.index'))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->getJson(route('admin.bulk-mail.count', ['audience' => 'all_students']))
+            ->assertForbidden();
+
+        $this->actingAs($chair)
+            ->post(route('admin.bulk-mail.send'), [
+                'audience' => 'all_students',
+                'subject' => 'Unauthorized bulk message',
+                'body' => 'This should not be queued.',
+            ])
+            ->assertForbidden();
+
+        Mail::assertNothingQueued();
+        $this->assertSame(0, EmailLog::count());
     }
 }

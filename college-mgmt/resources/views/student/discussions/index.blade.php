@@ -10,10 +10,19 @@
             <span class="fw-semibold">{{ $subject->name }}</span>
             <span class="text-muted small ms-2">{{ $subject->code ?? '' }}</span>
         </div>
+        @if($canParticipate)
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newThreadModal">
             <i class="bi bi-plus-lg me-1"></i>Ask a Question
         </button>
+        @else
+            <span class="badge bg-secondary">Active students only</span>
+        @endif
     </div>
+    @unless($canParticipate)
+        <div class="alert alert-secondary">
+            <i class="bi bi-lock me-1"></i>Discussion posting is locked because your student profile is not active. Existing discussions remain visible for history.
+        </div>
+    @endunless
 
     @if($discussions->isEmpty())
     <div class="card border-0 shadow-sm">
@@ -54,6 +63,7 @@
 </div>
 
 {{-- New Thread Modal --}}
+@if($canParticipate)
 <div class="modal fade" id="newThreadModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -85,8 +95,9 @@
         </div>
     </div>
 </div>
+@endif
 
-@if($errors->any())
+@if($canParticipate && $errors->any())
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -57,6 +57,15 @@
           </select>
         </div>
         <div class="col-md-6">
+          <label class="form-label small fw-semibold">Semester <span class="text-danger">*</span></label>
+          <select name="semester_id" class="form-select" required>
+            <option value="">Select Semester</option>
+            @foreach($semesters as $semester)
+            <option value="{{ $semester->id }}" {{ old('semester_id',$exam->semester_id)==$semester->id?'selected':'' }}>{{ $semester->name }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="col-md-6">
           <label class="form-label small fw-semibold">Classroom</label>
           <select name="classroom_id" class="form-select">
             <option value="">— None —</option>

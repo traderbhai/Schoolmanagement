@@ -23,9 +23,18 @@ class ApprovalWorkflowService {
             $nextRole = self::ESCALATION_CHAIN[$approval->approver_role] ?? null;
             if ($nextRole) {
                 $approval->update(['escalated_to_role'=>$nextRole,'escalated_at'=>now()]);
-                ApprovalWorkflow::create([
-                    'approvable_type'=>$approval->approvable_type,'approvable_id'=>$approval->approvable_id,
-                    'approver_role'=>$nextRole,'status'=>'pending',
+                ApprovalWorkflow::firstOrCreate([
+                    'approvable_type'=>$approval->approvable_type,
+                    'approvable_id'=>$approval->approvable_id,
+                    'approver_role'=>$nextRole,
+                    'status'=>'pending',
+                    'parent_approval_id'=>$approval->id,
+                ], [
+                    'approvable_type'=>$approval->approvable_type,
+                    'approvable_id'=>$approval->approvable_id,
+                    'approver_role'=>$nextRole,
+                    'status'=>'pending',
+                    'parent_approval_id'=>$approval->id,
                     'sla_days'=>self::DEFAULT_SLA[$nextRole] ?? 5,
                     'due_at'=>now()->addDays(self::DEFAULT_SLA[$nextRole] ?? 5),
                     'remarks'=>"Escalated from {$approval->approver_role} (overdue)",

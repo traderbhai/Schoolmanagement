@@ -181,6 +181,70 @@ class LibraryCirculationWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_library_issue_selector_and_book_level_issue_ignore_damaged_or_lost_copies(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $book = Book::create([
+            'title' => 'Clean Copy Selection',
+            'author' => 'Library Team',
+            'isbn' => 'ISBN-' . uniqid(),
+            'category' => 'Operations',
+            'total_copies' => 2,
+            'available_copies' => 2,
+            'is_active' => true,
+        ]);
+        $damagedCopy = BookCopy::create([
+            'book_id' => $book->id,
+            'accession_number' => 'ACC-DAMAGED-FIRST',
+            'condition_status' => 'damaged',
+            'is_available' => true,
+        ]);
+        $cleanCopy = BookCopy::create([
+            'book_id' => $book->id,
+            'accession_number' => 'ACC-CLEAN-SECOND',
+            'condition_status' => 'good',
+            'is_available' => true,
+        ]);
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 2,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.issues'))
+            ->assertOk()
+            ->assertSee('ACC-CLEAN-SECOND')
+            ->assertDontSee('ACC-DAMAGED-FIRST');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.issue'), [
+                'book_id' => $book->id,
+                'borrower_type' => 'student',
+                'borrower_id' => $student->id,
+                'due_date' => now()->addDays(7)->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Book issued successfully.');
+
+        $this->assertDatabaseHas('book_issues', [
+            'book_copy_id' => $cleanCopy->id,
+            'student_id' => $student->id,
+            'status' => 'issued',
+        ]);
+        $this->assertDatabaseMissing('book_issues', [
+            'book_copy_id' => $damagedCopy->id,
+            'student_id' => $student->id,
+        ]);
+        $this->assertTrue($damagedCopy->fresh()->is_available);
+        $this->assertFalse($cleanCopy->fresh()->is_available);
+    }
+
     public function test_membership_limit_blocks_extra_active_issue(): void
     {
         $admin = $this->userWithRole('admin');
@@ -311,6 +375,143 @@ class LibraryCirculationWorkflowTest extends TestCase
         $this->assertSame(2, BookIssue::where('student_id', $student->id)->whereIn('status', ['issued', 'overdue'])->count());
     }
 
+    public function test_membership_limit_cannot_be_bypassed_by_changing_member_type(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$firstBook, $firstCopy] = $this->bookWithCopy(['title' => 'Membership Type Bypass One']);
+        [$secondBook, $secondCopy] = $this->bookWithCopy(['title' => 'Membership Type Bypass Two']);
+
+        $membership = LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+
+        foreach ([[$firstBook, $firstCopy], [$secondBook, $secondCopy]] as [$book, $copy]) {
+            BookIssue::create([
+                'book_copy_id' => $copy->id,
+                'student_id' => $student->id,
+                'issued_by' => $admin->id,
+                'issued_at' => now(),
+                'due_date' => now()->addDays(7)->toDateString(),
+                'status' => 'issued',
+            ]);
+            $copy->update(['is_available' => false]);
+            $book->update(['available_copies' => 0]);
+        }
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $student->user_id,
+                'member_type' => 'staff',
+                'max_books_allowed' => 1,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertSessionHasErrors('member_type');
+
+        $membership->refresh();
+        $this->assertSame('student', $membership->member_type);
+        $this->assertSame(2, $membership->max_books_allowed);
+    }
+
+    public function test_library_membership_type_must_match_linked_user_profile(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        $teacher = $this->teacher();
+        $staff = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $student->user_id,
+                'member_type' => 'staff',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertSessionHasErrors('member_type');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $teacher->user_id,
+                'member_type' => 'student',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertSessionHasErrors('member_type');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $staff->id,
+                'member_type' => 'teacher',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertSessionHasErrors('member_type');
+
+        $this->assertDatabaseMissing('library_memberships', [
+            'user_id' => $student->user_id,
+            'member_type' => 'staff',
+        ]);
+        $this->assertDatabaseMissing('library_memberships', [
+            'user_id' => $teacher->user_id,
+            'member_type' => 'student',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $student->user_id,
+                'member_type' => 'student',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 14,
+                'fine_per_day' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Membership saved.');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $teacher->user_id,
+                'member_type' => 'teacher',
+                'max_books_allowed' => 3,
+                'max_days_allowed' => 21,
+                'fine_per_day' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Membership saved.');
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.memberships.store'), [
+                'user_id' => $staff->id,
+                'member_type' => 'staff',
+                'max_books_allowed' => 1,
+                'max_days_allowed' => 7,
+                'fine_per_day' => 2,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Membership saved.');
+
+        $this->assertDatabaseHas('library_memberships', [
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+        ]);
+        $this->assertDatabaseHas('library_memberships', [
+            'user_id' => $teacher->user_id,
+            'member_type' => 'teacher',
+        ]);
+        $this->assertDatabaseHas('library_memberships', [
+            'user_id' => $staff->id,
+            'member_type' => 'staff',
+        ]);
+    }
+
     public function test_student_can_reserve_unavailable_book_and_cancel_own_reservation(): void
     {
         $student = $this->student();
@@ -373,6 +574,59 @@ class LibraryCirculationWorkflowTest extends TestCase
             ->assertSessionHasErrors('book_id');
 
         $this->assertSame(0, LibraryReservation::count());
+    }
+
+    public function test_student_cannot_reserve_title_already_issued_to_them(): void
+    {
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy(['title' => 'Already Issued Reservation Guard']);
+        $book->update(['available_copies' => 0]);
+        $copy->update(['is_available' => false]);
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+        BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $this->userWithRole('admin')->id,
+            'issued_at' => now(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'issued',
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.library.reservations.store'), ['book_id' => $book->id])
+            ->assertRedirect()
+            ->assertSessionHasErrors('book_id');
+
+        $this->assertSame(0, LibraryReservation::count());
+    }
+
+    public function test_student_cannot_cancel_expired_pending_reservation_as_cancelled_history(): void
+    {
+        $student = $this->student();
+        [$book] = $this->bookWithCopy();
+
+        $reservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $student->id,
+            'reserved_at' => now()->subDays(10),
+            'expires_at' => now()->subDay()->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($student->user)
+            ->post(route('student.library.reservations.cancel', $reservation))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reservation');
+
+        $this->assertSame('expired', $reservation->fresh()->status);
     }
 
     public function test_reserved_book_cannot_be_issued_to_another_borrower_before_queue_is_served(): void
@@ -460,6 +714,151 @@ class LibraryCirculationWorkflowTest extends TestCase
             'student_id' => $student->id,
             'status' => 'issued',
         ]);
+    }
+
+    public function test_admin_cannot_cancel_expired_pending_reservation_as_cancelled_history(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book] = $this->bookWithCopy();
+
+        $reservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $student->id,
+            'reserved_at' => now()->subDays(10),
+            'expires_at' => now()->subDay()->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.reservations.cancel', $reservation))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reservation');
+
+        $this->assertSame('expired', $reservation->fresh()->status);
+    }
+
+    public function test_admin_cannot_fulfill_reservation_for_inactive_borrower(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 10,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+
+        $reservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $student->id,
+            'reserved_at' => now()->subHour(),
+            'expires_at' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $student->update(['status' => 'inactive']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.reservations.fulfill', $reservation))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reservation');
+
+        $this->assertSame('pending', $reservation->fresh()->status);
+        $this->assertTrue($copy->fresh()->is_available);
+        $this->assertSame(1, $book->fresh()->available_copies);
+        $this->assertDatabaseMissing('book_issues', [
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+    public function test_admin_cannot_fulfill_reservation_for_inactive_book_title(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 10,
+            'fine_per_day' => 1,
+            'is_active' => true,
+        ]);
+
+        $reservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $student->id,
+            'reserved_at' => now()->subHour(),
+            'expires_at' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $book->update(['is_active' => false]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.reservations.fulfill', $reservation))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reservation');
+
+        $this->assertSame('pending', $reservation->fresh()->status);
+        $this->assertTrue($copy->fresh()->is_available);
+        $this->assertSame(1, $book->fresh()->available_copies);
+        $this->assertDatabaseMissing('book_issues', [
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+    public function test_admin_cannot_fulfill_later_reservation_before_earlier_queue_entry(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $firstStudent = $this->student();
+        $secondStudent = $this->student();
+        [$book, $copy] = $this->bookWithCopy();
+
+        foreach ([$firstStudent, $secondStudent] as $student) {
+            LibraryMembership::create([
+                'user_id' => $student->user_id,
+                'member_type' => 'student',
+                'max_books_allowed' => 2,
+                'max_days_allowed' => 10,
+                'fine_per_day' => 1,
+                'is_active' => true,
+            ]);
+        }
+
+        $earlierReservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $firstStudent->id,
+            'reserved_at' => now()->subHours(2),
+            'expires_at' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $laterReservation = LibraryReservation::create([
+            'book_id' => $book->id,
+            'student_id' => $secondStudent->id,
+            'reserved_at' => now()->subHour(),
+            'expires_at' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.library.reservations.fulfill', $laterReservation))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reservation');
+
+        $this->assertSame('pending', $earlierReservation->fresh()->status);
+        $this->assertSame('pending', $laterReservation->fresh()->status);
+        $this->assertTrue($copy->fresh()->is_available);
+        $this->assertSame(0, BookIssue::count());
     }
 
     public function test_issue_due_date_cannot_exceed_membership_allowed_days(): void
@@ -638,6 +1037,8 @@ class LibraryCirculationWorkflowTest extends TestCase
             ->assertSessionHas('success', 'Fine of Rs. 25.00 marked as paid.');
 
         $this->assertTrue($issue->fresh()->fine_paid);
+        $this->assertNotNull($issue->fresh()->fine_paid_at);
+        $this->assertSame($admin->id, $issue->fresh()->fine_collected_by);
 
         $this->actingAs($admin)
             ->post(route('admin.library.fines.pay', $issue))

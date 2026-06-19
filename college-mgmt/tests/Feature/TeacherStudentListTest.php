@@ -14,6 +14,8 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -22,6 +24,124 @@ use Tests\TestCase;
 class TeacherStudentListTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_teacher_student_list_scopes_canonical_enrollments_to_entry_term(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+
+        $teacherUser = User::factory()->create();
+        $teacherUser->assignRole('teacher');
+
+        $department = Department::factory()->create();
+        $course = Course::factory()->create(['department_id' => $department->id]);
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $semester = Semester::factory()->create([
+            'number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $termOne = Term::create([
+            'batch_id' => $batch->id,
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+            'start_date' => now()->startOfMonth(),
+            'end_date' => now()->addMonths(4),
+            'is_current' => true,
+            'sort_order' => 1,
+        ]);
+        $termTwo = Term::create([
+            'batch_id' => $batch->id,
+            'program_id' => $program->id,
+            'term_number' => 2,
+            'name' => 'Term 2',
+            'start_date' => now()->addMonths(5),
+            'end_date' => now()->addMonths(9),
+            'is_current' => false,
+            'sort_order' => 2,
+        ]);
+
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'department_id' => $department->id,
+        ]);
+        $subject = Subject::factory()->create([
+            'department_id' => $department->id,
+            'program_id' => $program->id,
+            'name' => 'Shared Subject Across Terms',
+        ]);
+
+        $visibleStudent = Student::factory()->create([
+            'department_id' => $department->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $termOne->id,
+            'roll_number' => 'TERM001',
+        ]);
+        $visibleStudent->user->forceFill(['name' => 'Correct Term Student'])->save();
+
+        $wrongTermStudent = Student::factory()->create([
+            'department_id' => $department->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $termTwo->id,
+            'roll_number' => 'TERM002',
+        ]);
+        $wrongTermStudent->user->forceFill(['name' => 'Wrong Term Student'])->save();
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $visibleStudent->id,
+            'subject_id' => $subject->id,
+            'term_id' => $termOne->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $wrongTermStudent->id,
+            'subject_id' => $subject->id,
+            'term_id' => $termTwo->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+
+        TimetableEntry::factory()->create([
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'semester_id' => $semester->id,
+            'term_id' => null,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.students.index'))
+            ->assertOk()
+            ->assertSee('Correct Term Student')
+            ->assertDontSee('Wrong Term Student');
+    }
+
+    public function test_teacher_student_list_is_empty_without_published_entries(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+
+        $teacherUser = User::factory()->create();
+        $teacherUser->assignRole('teacher');
+        Teacher::factory()->create(['user_id' => $teacherUser->id]);
+        Student::factory()->create()->user->forceFill(['name' => 'Unrelated Visible Risk'])->save();
+
+        $response = $this->actingAs($teacherUser)
+            ->get(route('teacher.students.index'))
+            ->assertOk()
+            ->assertDontSee('Unrelated Visible Risk');
+
+        $this->assertCount(0, $response->viewData('students'));
+    }
 
     public function test_teacher_student_list_shows_database_backed_attendance(): void
     {
@@ -115,6 +235,57 @@ class TeacherStudentListTest extends TestCase
             'student_id' => $student->id,
             'timetable_entry_id' => $entry->id,
             'date' => now()->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $teacherUser->id,
+        ]);
+
+        $draftEntry = TimetableEntry::factory()->create([
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftEntry->id,
+            'date' => now()->subDays(3)->toDateString(),
+            'status' => 'absent',
+            'marked_by' => $teacherUser->id,
+        ]);
+
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $teacherUser->id,
+        ]);
+        $draftVersionEntry = TimetableEntry::factory()->create([
+            'teacher_id' => $teacher->id,
+            'subject_id' => $subject->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        Attendance::create([
+            'student_id' => $student->id,
+            'timetable_entry_id' => $draftVersionEntry->id,
+            'date' => now()->subDays(4)->toDateString(),
             'status' => 'absent',
             'marked_by' => $teacherUser->id,
         ]);

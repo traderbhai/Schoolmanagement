@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
 use App\Models\User;
+use App\Services\ApprovalChainService;
+use App\Services\ApprovalWorkflowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -102,6 +104,66 @@ class SharedApprovalWorkflowIntegrityTest extends TestCase
                 ->where('approvable_id', $approval->approvable_id)
                 ->where('approver_role', 'dean_academics')
                 ->where('status', 'pending')
+                ->count()
+        );
+    }
+
+    public function test_shared_approval_chain_advance_is_idempotent_for_retries(): void
+    {
+        $approval = $this->approval([
+            'status' => 'approved',
+            'approver_id' => $this->userWithRole('hod')->id,
+            'approved_at' => now(),
+        ]);
+
+        $firstNext = ApprovalChainService::advance($approval);
+        $secondNext = ApprovalChainService::advance($approval->fresh());
+
+        $this->assertNotNull($firstNext);
+        $this->assertNotNull($secondNext);
+        $this->assertSame($firstNext->id, $secondNext->id);
+        $this->assertSame(
+            1,
+            ApprovalWorkflow::where('approvable_type', Applicant::class)
+                ->where('approvable_id', $approval->approvable_id)
+                ->where('workflow_type', 'offer_letter')
+                ->where('step_order', 2)
+                ->where('parent_approval_id', $approval->id)
+                ->count()
+        );
+    }
+
+    public function test_legacy_approval_escalation_reuses_existing_pending_escalation_step(): void
+    {
+        $approval = $this->approval([
+            'approver_role' => 'hod',
+            'due_at' => now()->subDay(),
+        ]);
+
+        ApprovalWorkflow::create([
+            'approvable_type' => $approval->approvable_type,
+            'approvable_id' => $approval->approvable_id,
+            'approver_role' => 'dean_academics',
+            'workflow_type' => $approval->workflow_type,
+            'step_order' => 2,
+            'status' => 'pending',
+            'parent_approval_id' => $approval->id,
+            'sla_days' => 5,
+            'due_at' => now()->addDays(5),
+        ]);
+
+        $count = app(ApprovalWorkflowService::class)->escalateOverdue();
+
+        $this->assertSame(1, $count);
+        $this->assertNotNull($approval->fresh()->escalated_at);
+        $this->assertSame('dean_academics', $approval->fresh()->escalated_to_role);
+        $this->assertSame(
+            1,
+            ApprovalWorkflow::where('approvable_type', $approval->approvable_type)
+                ->where('approvable_id', $approval->approvable_id)
+                ->where('approver_role', 'dean_academics')
+                ->where('status', 'pending')
+                ->where('parent_approval_id', $approval->id)
                 ->count()
         );
     }

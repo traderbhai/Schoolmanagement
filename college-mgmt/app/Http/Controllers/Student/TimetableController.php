@@ -34,6 +34,11 @@ class TimetableController extends Controller
 
         $entries = TimetableEntry::whereIn('subject_id', $enrolledSubjectIds)
             ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            })
             ->when($student->program_id, fn($q) => $q->where(function ($query) use ($student) {
                 $query->whereNull('program_id')->orWhere('program_id', $student->program_id);
             }))

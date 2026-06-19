@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\Teacher;
 use App\Models\LeaveApplication;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class FacultyReportController extends Controller
 {
-    public function workload()
+    public function workload(Request $request)
     {
+        abort_unless($request->user() && AccessControl::canViewGlobalFacultyReports($request->user()), 403);
+
         $teachers = Teacher::with(['user', 'department', 'timetableEntries.subject', 'timetableEntries.course'])
             ->get()
             ->map(function ($teacher) {

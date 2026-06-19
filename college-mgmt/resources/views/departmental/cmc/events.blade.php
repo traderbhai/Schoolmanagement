@@ -35,7 +35,7 @@
             <a href="{{ route('cmc.events.edit', $e) }}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" title="Edit">
               <i class="bi bi-pencil"></i>
             </a>
-            @if(($e->registrations_count ?? 0) > 0)
+            @if(($e->total_registrations_count ?? $e->registrations_count ?? 0) > 0)
             <button class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" disabled title="Registered events cannot be deleted">
               <i class="bi bi-shield-lock"></i>
             </button>

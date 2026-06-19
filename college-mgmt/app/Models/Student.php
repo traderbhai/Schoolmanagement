@@ -24,6 +24,7 @@ class Student extends Model
     public function attendances() { return $this->hasMany(Attendance::class); }
     public function feePayments() { return $this->hasMany(FeePayment::class); }
     public function examResults() { return $this->hasMany(ExamResult::class); }
+    public function examRegistrations() { return $this->hasMany(ExamRegistration::class); }
     public function parents() { return $this->belongsToMany(ParentProfile::class, 'parent_student', 'student_id', 'parent_id'); }
     public function currentTerm() { return $this->belongsTo(Term::class, 'current_term_id'); }
     public function scholarships() { return $this->hasMany(Scholarship::class); }
@@ -50,9 +51,49 @@ class Student extends Model
 
     public function calculateAttendancePercentage(): float
     {
-        $total = $this->attendances()->count();
+        $subjectIds = $this->publishedAttendanceSubjectIds();
+        if ($subjectIds === []) return 0.0;
+
+        $query = $this->attendances()
+            ->whereHas('timetableEntry', function ($query) use ($subjectIds) {
+                $query->whereIn('subject_id', $subjectIds)
+                    ->where('is_active', true)
+                    ->where('status', 'published')
+                    ->where(function ($versionQuery) {
+                        $versionQuery->whereNull('timetable_version_id')
+                            ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+                    })
+                    ->when($this->program_id, fn ($scope) => $scope->where(function ($programScope) {
+                        $programScope->whereNull('program_id')->orWhere('program_id', $this->program_id);
+                    }))
+                    ->when($this->batch_id, fn ($scope) => $scope->where(function ($batchScope) {
+                        $batchScope->whereNull('batch_id')->orWhere('batch_id', $this->batch_id);
+                    }))
+                    ->when($this->current_term_id, fn ($scope) => $scope->where(function ($termScope) {
+                        $termScope->whereNull('term_id')->orWhere('term_id', $this->current_term_id);
+                    }));
+            });
+
+        $total = (clone $query)->count();
         if ($total === 0) return 0.0;
-        $present = $this->attendances()->where('status', 'present')->count();
+        $present = (clone $query)->whereIn('status', ['present', 'late'])->count();
         return round(($present / $total) * 100, 2);
+    }
+
+    private function publishedAttendanceSubjectIds(): array
+    {
+        return StudentSubjectEnrollment::where('student_id', $this->id)
+            ->where('status', 'active')
+            ->when($this->current_term_id, fn ($query) => $query->where('term_id', $this->current_term_id))
+            ->pluck('subject_id')
+            ->merge(Enrollment::where('student_id', $this->id)
+                ->whereIn('status', ['active', 'enrolled'])
+                ->when($this->current_term_id, fn ($query) => $query->where('term_id', $this->current_term_id))
+                ->pluck('subject_id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

@@ -19,6 +19,11 @@ class TimetableController extends Controller
         $entries = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('term_id', $currentTerm?->id)
             ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            })
             ->with(['subject', 'classroom', 'slot', 'batch'])
             ->get()
             ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);

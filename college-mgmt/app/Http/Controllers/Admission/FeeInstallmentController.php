@@ -44,6 +44,8 @@ class FeeInstallmentController extends Controller
             'is_active'           => 'boolean',
         ]);
 
+        $this->validateBatchAndInstallmentNumber($program, $validated);
+
         AdmissionFeeInstallment::create(array_merge($validated, [
             'program_id' => $program->id,
             'is_active'  => $request->boolean('is_active', true),
@@ -74,6 +76,8 @@ class FeeInstallmentController extends Controller
         $data = array_merge($validated, [
             'is_active' => $request->boolean('is_active', true),
         ]);
+
+        $this->validateBatchAndInstallmentNumber($feeInstallment->program, $data, $feeInstallment);
 
         if ($feeInstallment->payments()->exists() && $this->changesAdmissionInstallmentContract($feeInstallment, $data)) {
             throw ValidationException::withMessages([
@@ -111,6 +115,9 @@ class FeeInstallmentController extends Controller
             'to_batch_id'   => 'required|exists:batches,id|different:from_batch_id',
             'days_offset'   => 'nullable|integer',
         ]);
+
+        $this->validateBatchBelongsToProgram($program, (int) $request->from_batch_id, 'from_batch_id');
+        $this->validateBatchBelongsToProgram($program, (int) $request->to_batch_id, 'to_batch_id');
 
         $source = AdmissionFeeInstallment::where('program_id', $program->id)
             ->where('batch_id', $request->from_batch_id)
@@ -153,5 +160,35 @@ class FeeInstallmentController extends Controller
             || (int) ($data['installment_number'] ?? $installment->installment_number) !== (int) $installment->installment_number
             || (int) ($data['batch_id'] ?? $installment->batch_id ?? 0) !== (int) ($installment->batch_id ?? 0)
             || (array_key_exists('is_active', $data) && (bool) $data['is_active'] !== (bool) $installment->is_active);
+    }
+
+    private function validateBatchAndInstallmentNumber(Program $program, array $data, ?AdmissionFeeInstallment $existing = null): void
+    {
+        $batchId = $data['batch_id'] ?? null;
+        if ($batchId !== null) {
+            $this->validateBatchBelongsToProgram($program, (int) $batchId, 'batch_id');
+        }
+
+        $duplicate = AdmissionFeeInstallment::where('program_id', $program->id)
+            ->where('installment_number', $data['installment_number'])
+            ->when($batchId === null, fn ($query) => $query->whereNull('batch_id'), fn ($query) => $query->where('batch_id', $batchId))
+            ->when($existing, fn ($query) => $query->whereKeyNot($existing->id))
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'installment_number' => 'This installment number already exists for the selected program and batch scope.',
+            ]);
+        }
+    }
+
+    private function validateBatchBelongsToProgram(Program $program, int $batchId, string $field): void
+    {
+        $belongs = Batch::whereKey($batchId)->where('program_id', $program->id)->exists();
+        if (! $belongs) {
+            throw ValidationException::withMessages([
+                $field => 'Select a batch that belongs to the selected program.',
+            ]);
+        }
     }
 }
