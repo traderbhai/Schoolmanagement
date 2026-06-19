@@ -698,7 +698,7 @@ class AcademicPmcTimetableV041Service
 
     private function repairGeneratedOperationalSync(User $actor): array
     {
-        $runs = AcademicPmcTimetableGenerationRun::whereNotNull('timetable_version_id')
+        $runs = AcademicPmcTimetableGenerationRun::whereIn('timetable_version_id', $this->officialPublishedVersionIds())
             ->with('items')
             ->get();
         $repaired = 0;
@@ -788,6 +788,7 @@ class AcademicPmcTimetableV041Service
     private function repairScheduledGroupDeliveryTrackers(User $actor): array
     {
         $groupIds = AcademicPmcTimetableGenerationItem::where('status', 'scheduled')
+            ->whereIn('generation_run_id', $this->officialPublishedGenerationRunIds())
             ->whereNotNull('course_group_id')
             ->distinct()
             ->pluck('course_group_id');
@@ -807,7 +808,7 @@ class AcademicPmcTimetableV041Service
                     'subject_id' => $group->subject_id,
                     'teacher_id' => $primaryAssignment?->teacher_id,
                     'owner_user_id' => $primaryAssignment?->teacher?->user_id ?: $actor->id,
-                    'planned_sessions' => AcademicPmcTimetableGenerationItem::where('course_group_id', $group->id)->where('status', 'scheduled')->count(),
+                    'planned_sessions' => AcademicPmcTimetableGenerationItem::where('course_group_id', $group->id)->where('status', 'scheduled')->whereIn('generation_run_id', $this->officialPublishedGenerationRunIds())->count(),
                     'status' => 'monitoring',
                     'risk_band' => 'low',
                     'risk_reasons' => ['Created by PMC data reconciliation repair.'],
@@ -858,8 +859,7 @@ class AcademicPmcTimetableV041Service
 
     private function reconcileGeneratedOperationalSync(User $actor): array
     {
-        $publishedRuns = AcademicPmcTimetableGenerationRun::whereNotNull('timetable_version_id')
-            ->pluck('id');
+        $publishedRuns = $this->officialPublishedGenerationRunIds();
         $scheduled = AcademicPmcTimetableGenerationItem::whereIn('generation_run_id', $publishedRuns)->whereIn('status', ['scheduled', 'published', 'locked'])->count();
         $synced = AcademicPmcTimetableGenerationItem::whereIn('generation_run_id', $publishedRuns)->whereIn('status', ['scheduled', 'published', 'locked'])->whereNotNull('operational_timetable_entry_id')->count();
         $samples = AcademicPmcTimetableGenerationItem::with(['generationRun', 'courseGroup.subject', 'teacher.user', 'classroom', 'slot'])
@@ -966,10 +966,12 @@ class AcademicPmcTimetableV041Service
 
     private function reconcileDeliveryTrackers(User $actor): array
     {
-        $scheduledGroups = AcademicPmcTimetableGenerationItem::where('status', 'scheduled')->whereNotNull('course_group_id')->distinct('course_group_id')->count('course_group_id');
+        $publishedRuns = $this->officialPublishedGenerationRunIds();
+        $scheduledGroups = AcademicPmcTimetableGenerationItem::whereIn('generation_run_id', $publishedRuns)->where('status', 'scheduled')->whereNotNull('course_group_id')->distinct('course_group_id')->count('course_group_id');
         $trackedGroups = \App\Models\AcademicPmcGroupDeliveryTracker::whereIn('course_group_id', function ($query) {
             $query->select('course_group_id')
                 ->from('academic_pmc_timetable_generation_items')
+                ->whereIn('generation_run_id', $this->officialPublishedGenerationRunIds())
                 ->where('status', 'scheduled')
                 ->whereNotNull('course_group_id');
         })->distinct('course_group_id')->count('course_group_id');
@@ -978,6 +980,7 @@ class AcademicPmcTimetableV041Service
             ->whereIn('id', function ($query) {
                 $query->select('course_group_id')
                     ->from('academic_pmc_timetable_generation_items')
+                    ->whereIn('generation_run_id', $this->officialPublishedGenerationRunIds())
                     ->where('status', 'scheduled')
                     ->whereNotNull('course_group_id');
             })
@@ -2617,7 +2620,8 @@ class AcademicPmcTimetableV041Service
             ->where('term_id', $run->term_id)
             ->when($run->batch_id, fn ($q) => $q->where('batch_id', $run->batch_id))
             ->where('status', 'published')
-            ->update(['status' => 'archived']);
+            ->get()
+            ->each(fn (TimetableVersion $publishedVersion) => $this->archiveOperationalVersion($publishedVersion));
 
         $version = TimetableVersion::create([
             'program_id' => $run->program_id,
@@ -2796,6 +2800,7 @@ class AcademicPmcTimetableV041Service
     public function rollbackVersion(User $actor, TimetableVersion $version, array $data): TimetableVersion
     {
         $this->authorizeDeanLifecycle($actor, 'rollback');
+        abort_unless(in_array($version->status, ['published', 'archived'], true), 422, 'Only a previously published timetable version can be rolled back.');
         if (empty($data['decision_reason'])) {
             abort(422, 'Rollback reason is required.');
         }
@@ -2804,7 +2809,12 @@ class AcademicPmcTimetableV041Service
             ->where('term_id', $version->term_id)
             ->when($version->batch_id, fn ($q) => $q->where('batch_id', $version->batch_id))
             ->where('status', 'published')
-            ->update(['status' => 'archived']);
+            ->where('id', '!=', $version->id)
+            ->get()
+            ->each(fn (TimetableVersion $publishedVersion) => $this->archiveOperationalVersion($publishedVersion));
+        if ($version->status === 'published') {
+            $version->update(['status' => 'archived']);
+        }
 
         $rollback = TimetableVersion::create([
             'program_id' => $version->program_id,
@@ -2860,6 +2870,29 @@ class AcademicPmcTimetableV041Service
         }
 
         return $this->syncRunToOperationalTimetable($run, $rollback, $actor);
+    }
+
+    private function archiveOperationalVersion(TimetableVersion $version): void
+    {
+        TimetableEntry::where('timetable_version_id', $version->id)->update([
+            'status' => 'archived',
+            'is_active' => false,
+            'updated_at' => now(),
+        ]);
+
+        if ($version->status !== 'archived') {
+            $version->update(['status' => 'archived']);
+        }
+    }
+
+    private function officialPublishedVersionIds(): array
+    {
+        return TimetableVersion::where('status', 'published')->pluck('id')->all();
+    }
+
+    private function officialPublishedGenerationRunIds(): array
+    {
+        return AcademicPmcTimetableGenerationRun::whereIn('timetable_version_id', $this->officialPublishedVersionIds())->pluck('id')->all();
     }
 
     private function syncRunToOperationalTimetable(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): int

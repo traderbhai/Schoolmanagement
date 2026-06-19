@@ -18,7 +18,7 @@ class FeeController extends Controller
         // Fee structures applicable to this student's course
         $feeStructures = FeeStructure::with('course')
             ->where('course_id', $student->course_id)
-            ->where('academic_year_id', optional($currentYear)->id)
+            ->when($currentYear, fn ($query) => $query->where('academic_year_id', $currentYear->id))
             ->get();
 
         // Payments made by this student

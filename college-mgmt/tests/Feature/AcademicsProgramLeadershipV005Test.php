@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\AcademicScopeAssignment;
 use App\Models\Attendance;
 use App\Models\Course;
 use App\Models\Exam;
@@ -108,6 +109,49 @@ class AcademicsProgramLeadershipV005Test extends TestCase
         $titles = collect($data['items'])->pluck('title');
 
         $this->assertFalse($titles->contains('Hidden Program Leadership Subject'));
+    }
+
+    public function test_course_coordinator_subject_scope_derives_program_leadership_visibility(): void
+    {
+        $this->seedProgramFixture();
+        $scopedProgram = Program::factory()->create(['code' => 'SCOPED-PG', 'name' => 'Scoped Leadership Program', 'is_active' => true]);
+        $scopedSubject = Subject::factory()->create([
+            'program_id' => $scopedProgram->id,
+            'name' => 'Scoped Leadership Subject',
+            'is_active' => true,
+        ]);
+        $hiddenProgram = Program::factory()->create(['code' => 'BBA-HIDDEN', 'name' => 'Hidden BBA', 'is_active' => true]);
+        Subject::factory()->create(['program_id' => $hiddenProgram->id, 'name' => 'Hidden Program Leadership Subject', 'is_active' => true]);
+
+        Role::firstOrCreate(['name' => 'course_coordinator', 'guard_name' => 'web']);
+        $coordinator = User::factory()->create(['name' => 'Scoped Course Coordinator']);
+        $coordinator->assignRole('course_coordinator');
+
+        AcademicScopeAssignment::create([
+            'user_id' => $coordinator->id,
+            'scope_type' => 'subject',
+            'scope_id' => $scopedSubject->id,
+            'scope_code' => $scopedSubject->code,
+            'scope_name' => $scopedSubject->name,
+            'context' => 'course_coordination',
+            'can_manage' => true,
+            'is_active' => true,
+            'assigned_by' => $coordinator->id,
+            'assigned_at' => now(),
+        ]);
+
+        $this->assertSame([$scopedSubject->id], app(\App\Services\AcademicScopeService::class)->scopeIdsFor($coordinator, 'subject')->all());
+        $this->assertSame($scopedProgram->id, Subject::whereKey($scopedSubject->id)->value('program_id'));
+        $this->assertSame(1, Program::whereKey($scopedProgram->id)->where('is_active', true)->count());
+
+        $data = app(AcademicProgramLeadershipService::class)->programPortfolio($coordinator);
+        $titles = collect($data['items'])->pluck('title');
+
+        $this->assertTrue(
+            $titles->contains('Scoped Leadership Program'),
+            'Program leadership titles: ' . $titles->join(', ')
+        );
+        $this->assertFalse($titles->contains('Hidden BBA'));
     }
 
     public function test_program_leadership_student_success_ignores_draft_timetable_attendance(): void

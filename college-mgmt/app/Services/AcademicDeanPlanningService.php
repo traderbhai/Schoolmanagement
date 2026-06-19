@@ -10,6 +10,19 @@ use Illuminate\Support\Collection;
 
 class AcademicDeanPlanningService
 {
+    private const FINAL_STATUSES = ['published', 'closed', 'cancelled'];
+    private const ALLOWED_STATUS_TRANSITIONS = [
+        'draft' => ['branch_review', 'dean_review', 'approved', 'published', 'cancelled'],
+        'branch_review' => ['dean_review', 'approved', 'returned', 'cancelled'],
+        'dean_review' => ['approved', 'returned', 'cancelled'],
+        'returned' => ['draft', 'branch_review', 'dean_review', 'cancelled'],
+        'approved' => ['published', 'revised', 'closed'],
+        'revised' => ['dean_review', 'approved', 'cancelled'],
+        'published' => ['closed'],
+        'closed' => [],
+        'cancelled' => [],
+    ];
+
     public const SECTIONS = [
         'curriculum_readiness', 'faculty_allocation', 'timetable_readiness',
         'classroom_lab_readiness', 'lms_material_readiness', 'assessment_plan_readiness',
@@ -55,6 +68,10 @@ class AcademicDeanPlanningService
 
     public function approve(AcademicDeanPlanningCycle $cycle, string $status = 'approved'): AcademicDeanPlanningCycle
     {
+        $current = $cycle->status ?: 'draft';
+        abort_if(in_array($current, self::FINAL_STATUSES, true) && $status !== 'closed', 422, 'Finalized Dean planning cycles cannot be downgraded or revised in place.');
+        abort_unless(in_array($status, self::ALLOWED_STATUS_TRANSITIONS[$current] ?? [], true), 422, "Dean planning cycle cannot move from {$current} to {$status}.");
+
         $cycle->update(['status' => $status]);
         return $cycle->fresh();
     }

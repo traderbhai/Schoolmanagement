@@ -499,6 +499,29 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
         $this->assertNull($secondApplication->fresh()->disbursement_ref);
     }
 
+    public function test_admin_cannot_disburse_student_scholarship_with_blank_reference_after_trimming(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $application = StudentScholarshipApplication::create([
+            'student_id' => $this->student()->id,
+            'scholarship_scheme_id' => $this->scheme()->id,
+            'reason' => str_repeat('Approved scholarship reason. ', 2),
+            'status' => 'approved',
+            'disbursed_amount' => 12000,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.student-scholarships.disburse', $application), [
+                'disbursement_ref' => '   ',
+            ])
+            ->assertSessionHasErrors('disbursement_ref');
+
+        $application->refresh();
+        $this->assertSame('approved', $application->status);
+        $this->assertNull($application->disbursement_ref);
+        $this->assertNull($application->disbursed_at);
+    }
+
     public function test_admin_cannot_reject_approved_or_disbursed_student_scholarship_commitments(): void
     {
         $admin = $this->userWithRole('admin');

@@ -84,6 +84,11 @@ class CourseHubController extends Controller
         $facultyBySubject = TimetableEntry::with('teacher.user')
             ->whereIn('subject_id', $subjectIds)
             ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            })
             ->get()
             ->groupBy('subject_id')
             ->map(fn ($entries) => $entries

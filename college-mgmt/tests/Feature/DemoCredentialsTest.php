@@ -51,4 +51,33 @@ class DemoCredentialsTest extends TestCase
         $this->assertNotNull($user, "Expected demo user {$email} to be seeded.");
         $this->assertTrue(Hash::check('password', $user->password), "Expected {$email} to use the standard demo password.");
     }
+
+    public function test_seeded_demo_users_can_open_primary_portal_pages(): void
+    {
+        $primaryPages = [
+            'admin@college.com' => 'admin.dashboard',
+            'admin@demo.edu' => 'admin.dashboard',
+            'head@college.com' => 'admission.dashboard',
+            'officer@college.com' => 'admission.dashboard',
+            'dean@college.com' => 'dean.dashboard',
+            'chair@college.com' => 'chair.dashboard',
+            'exam@college.com' => 'exam-cell.dashboard',
+            'accounts@college.com' => 'accounts.dashboard',
+            'cmc@college.com' => 'cmc.dashboard',
+            'parent@demo.edu' => 'parent.dashboard',
+            'priya.sharma@applicant.demo' => 'applicant.dashboard',
+        ];
+
+        foreach ($primaryPages as $email => $routeName) {
+            $user = User::where('email', $email)->first();
+
+            $this->assertNotNull($user, "Expected demo user {$email} to be seeded.");
+
+            $this->actingAs($user)
+                ->get(route($routeName))
+                ->assertOk()
+                ->assertDontSee('Laravel')
+                ->assertDontSee('Whoops');
+        }
+    }
 }

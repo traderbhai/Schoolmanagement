@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\Batch;
 use App\Models\CourseFeedback;
 use App\Models\CourseOutcome;
 use App\Models\CurriculumChange;
@@ -14,6 +15,7 @@ use App\Models\ProgramOutcome;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
+use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,7 +54,7 @@ class AcademicProgramLeadershipService
     public function programPortfolio(User $user): array
     {
         $programIds = $this->visibleProgramIds($user);
-        $programs = $this->applyProgramScope(Program::withCount(['students', 'subjects'])->where('is_active', true), $programIds)
+        $programs = $this->applyProgramScope(Program::withCount(['students', 'subjects'])->where('is_active', true), $programIds, 'id')
             ->orderBy('name')
             ->limit(25)
             ->get();
@@ -186,7 +188,8 @@ class AcademicProgramLeadershipService
         $programIds = $this->visibleProgramIds($user);
         $programsWithoutPo = $this->applyProgramScope(
             Program::where('is_active', true)->whereNotIn('id', ProgramOutcome::query()->pluck('program_id')),
-            $programIds
+            $programIds,
+            'id'
         )->limit(25)->get();
 
         $subjectsWithoutCo = $this->applyProgramScope(
@@ -260,7 +263,23 @@ class AcademicProgramLeadershipService
         $ids = $this->scopes->scopeIdsFor($user, 'program');
         if ($ids->isEmpty()) {
             $ids = $this->scopes->scopeIdsFor($user, 'batch')
-                ->map(fn ($batchId) => \App\Models\Batch::whereKey($batchId)->value('program_id'))
+                ->map(fn ($batchId) => Batch::whereKey($batchId)->value('program_id'))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        if ($ids->isEmpty()) {
+            $ids = $this->scopes->scopeIdsFor($user, 'term')
+                ->map(fn ($termId) => Term::whereKey($termId)->value('program_id'))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        if ($ids->isEmpty()) {
+            $ids = $this->scopes->scopeIdsFor($user, 'subject')
+                ->map(fn ($subjectId) => Subject::whereKey($subjectId)->value('program_id'))
                 ->filter()
                 ->unique()
                 ->values();

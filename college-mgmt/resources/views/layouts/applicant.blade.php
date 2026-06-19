@@ -81,7 +81,7 @@
 </div>
 
 {{-- ===== MOBILE OFFCANVAS SIDEBAR ===== --}}
-<div class="offcanvas offcanvas-start sidebar" tabindex="-1" id="mobileSidebar">
+<div class="offcanvas offcanvas-start sidebar-mobile" tabindex="-1" id="mobileSidebar">
     <div class="offcanvas-header border-bottom">
         <div class="sidebar-brand w-100">
             <span class="brand-icon"><i class="bi bi-mortarboard-fill"></i></span>

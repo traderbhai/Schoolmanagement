@@ -515,6 +515,42 @@ class AssetWorkflowTest extends TestCase
         $this->assertSame(5, $item->fresh()->current_stock);
     }
 
+    public function test_admin_cannot_record_duplicate_stock_issue_reference_for_same_item(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $item = $this->inventoryItem(['current_stock' => 10]);
+
+        InventoryMovement::create([
+            'inventory_item_id' => $item->id,
+            'movement_type' => 'issue',
+            'quantity' => 4,
+            'performed_by' => $admin->id,
+            'issued_to_user_id' => $teacher->id,
+            'reference_number' => 'REQ-DUP-001',
+            'movement_date' => now()->subDay()->toDateString(),
+        ]);
+        $item->update(['current_stock' => 6]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.assets.index'))
+            ->post(route('admin.assets.stock-items.issue', $item), [
+                'quantity' => 4,
+                'issued_to_user_id' => $teacher->id,
+                'reference_number' => 'REQ-DUP-001',
+                'movement_date' => now()->toDateString(),
+                'remarks' => 'Duplicate issue attempt.',
+            ])
+            ->assertRedirect(route('admin.assets.index'))
+            ->assertSessionHasErrors('reference_number');
+
+        $this->assertSame(6, $item->fresh()->current_stock);
+        $this->assertSame(1, InventoryMovement::where('inventory_item_id', $item->id)
+            ->where('movement_type', 'issue')
+            ->where('reference_number', 'REQ-DUP-001')
+            ->count());
+    }
+
     public function test_inactive_inventory_item_cannot_receive_or_issue_stock(): void
     {
         $admin = $this->userWithRole('admin');

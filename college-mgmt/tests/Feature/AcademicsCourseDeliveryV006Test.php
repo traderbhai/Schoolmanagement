@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
+use App\Models\StudentSubjectEnrollment;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
 use App\Models\Teacher;
@@ -101,6 +102,81 @@ class AcademicsCourseDeliveryV006Test extends TestCase
         $titles = collect($items)->pluck('title');
 
         $this->assertFalse($titles->contains('Hidden Delivery Subject'));
+    }
+
+    public function test_teacher_attendance_interventions_are_limited_to_assigned_subject_roster(): void
+    {
+        $fixture = $this->seedCourseFixture();
+        $teacherUser = User::factory()->create(['name' => 'Scoped Delivery Teacher']);
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+        $teacherUser->assignRole('teacher');
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'department_id' => $fixture['department']->id,
+        ]);
+        $term = \App\Models\Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+
+        SubjectFacultyAssignment::create([
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'term_id' => $term->id,
+            'program_id' => $fixture['program']->id,
+            'assigned_by' => $teacherUser->id,
+            'is_primary' => true,
+        ]);
+
+        $enrolledStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Assigned Subject Attendance Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+        $sameProgramUnenrolledStudent = Student::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Same Program Unassigned Attendance Risk'])->id,
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'status' => 'active',
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $enrolledStudent->id,
+            'subject_id' => $fixture['subject']->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+
+        $publishedEntry = TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        foreach ([$enrolledStudent, $sameProgramUnenrolledStudent] as $student) {
+            foreach (range(1, 2) as $day) {
+                Attendance::create([
+                    'student_id' => $student->id,
+                    'timetable_entry_id' => $publishedEntry->id,
+                    'date' => now()->subDays($day)->toDateString(),
+                    'status' => 'absent',
+                ]);
+            }
+        }
+
+        $data = app(AcademicCourseDeliveryService::class)->attendanceInterventions($teacherUser);
+        $titles = collect($data['items'])->pluck('title');
+
+        $this->assertTrue($titles->contains('Assigned Subject Attendance Risk'));
+        $this->assertFalse($titles->contains('Same Program Unassigned Attendance Risk'));
     }
 
     public function test_course_delivery_attendance_interventions_ignore_draft_timetable_history(): void

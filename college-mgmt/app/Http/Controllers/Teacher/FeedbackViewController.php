@@ -13,6 +13,11 @@ class FeedbackViewController extends Controller
 
         $subjectIds = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $query->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
+            })
             ->pluck('subject_id')->unique()->toArray();
 
         $currentTerm = Term::latest('start_date')->first();

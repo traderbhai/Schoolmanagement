@@ -166,4 +166,60 @@ class AcademicsDeanV008Test extends TestCase
         $this->assertGreaterThan(0, $count);
         $this->assertSame(0, AcademicDeanPolicyAudit::where('has_policy', false)->count());
     }
+
+    public function test_finalized_dean_approval_cannot_be_rewritten(): void
+    {
+        $dean = $this->seedDeanFixture();
+        $approval = AcademicDeanApprovalItem::where('status', 'pending')->firstOrFail();
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.approval-cockpit.decide', $approval), [
+            'status' => 'approved',
+            'decision_reason' => 'Initial approved decision.',
+        ])->assertRedirect();
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.approval-cockpit.decide', $approval->fresh()), [
+            'status' => 'rejected',
+            'decision_reason' => 'Try to rewrite final decision.',
+        ])->assertStatus(422);
+
+        $this->assertSame('approved', $approval->fresh()->status);
+        $this->assertSame('Initial approved decision.', $approval->fresh()->decision_reason);
+    }
+
+    public function test_published_dean_planning_cycle_cannot_be_downgraded(): void
+    {
+        $dean = $this->seedDeanFixture();
+
+        $this->actingAs($dean)->post(route('academics.dean-os.planning.store'), [
+            'title' => 'Dean Finality Test Plan',
+            'cycle_type' => 'academic_calendar',
+            'academic_year' => '2026-27',
+            'status' => 'draft',
+        ])->assertRedirect();
+
+        $cycle = AcademicDeanPlanningCycle::where('title', 'Dean Finality Test Plan')->firstOrFail();
+        $this->actingAs($dean)->patch(route('academics.dean-os.planning.approve', $cycle), ['status' => 'published'])->assertRedirect();
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.planning.approve', $cycle->fresh()), ['status' => 'draft'])->assertStatus(422);
+
+        $this->assertSame('published', $cycle->fresh()->status);
+    }
+
+    public function test_approved_meeting_minutes_cannot_create_duplicate_follow_up_actions(): void
+    {
+        $dean = $this->seedDeanFixture();
+        $meeting = AcademicDeanReviewMeeting::firstOrFail();
+
+        $this->actingAs($dean)->post(route('academics.dean-os.meeting-minutes.store', $meeting), [
+            'minutes' => 'Dean approved one follow-up only.',
+            'status' => 'submitted',
+        ])->assertRedirect();
+
+        $minute = AcademicDeanMeetingMinute::where('meeting_id', $meeting->id)->firstOrFail();
+        $this->actingAs($dean)->patch(route('academics.dean-os.meeting-minutes.approve', $minute))->assertRedirect();
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.meeting-minutes.approve', $minute->fresh()))->assertStatus(422);
+
+        $this->assertSame(1, AcademicDeanActionItem::where('source_type', 'meeting_minutes')->where('source_key', (string) $minute->id)->count());
+    }
 }

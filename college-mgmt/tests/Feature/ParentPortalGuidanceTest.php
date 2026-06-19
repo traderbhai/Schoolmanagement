@@ -259,6 +259,22 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertDontSee('99.00');
     }
 
+    public function test_parent_cannot_open_unlinked_child_detail_routes_by_direct_url(): void
+    {
+        [$user] = $this->parentWithStudent();
+        $unlinkedStudent = Student::factory()->create();
+
+        foreach ([
+            route('parent.children.attendance', $unlinkedStudent),
+            route('parent.children.results', $unlinkedStudent),
+            route('parent.children.fees', $unlinkedStudent),
+        ] as $url) {
+            $this->actingAs($user)
+                ->get($url)
+                ->assertForbidden();
+        }
+    }
+
     public function test_parent_attendance_excludes_draft_timetable_rows_and_draft_versions(): void
     {
         [$user, $student, $semester, $enrolledSubject] = $this->parentAcademicFixture();

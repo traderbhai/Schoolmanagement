@@ -372,6 +372,30 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
         $this->assertStringContainsString('Paid through bank transfer.', $award->notes);
     }
 
+    public function test_applicant_scholarship_disbursement_rejects_blank_reference_after_trimming(): void
+    {
+        $officer = $this->admissionOfficer();
+        $award = ApplicantScholarship::create([
+            'applicant_id' => $this->applicant()->id,
+            'scheme_id' => $this->scheme()->id,
+            'awarded_amount' => 4000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->post(route('admission.scholarships.disburse', $award), [
+                'disbursement_ref' => '   ',
+            ])
+            ->assertSessionHasErrors('disbursement_ref');
+
+        $award->refresh();
+        $this->assertSame('awarded', $award->status);
+        $this->assertNull($award->disbursement_ref);
+        $this->assertNull($award->disbursed_at);
+    }
+
     public function test_applicant_scholarship_disbursement_rechecks_scheme_proof_and_final_applicant_state(): void
     {
         $officer = $this->admissionOfficer();

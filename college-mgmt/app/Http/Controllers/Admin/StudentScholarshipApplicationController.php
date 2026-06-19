@@ -161,6 +161,10 @@ class StudentScholarshipApplicationController extends Controller
         ]);
         $data['disbursement_ref'] = trim($data['disbursement_ref']);
 
+        if ($data['disbursement_ref'] === '') {
+            return back()->withErrors(['disbursement_ref' => 'Disbursement reference is required.'])->withInput();
+        }
+
         if ($this->disbursementReferenceExists($data['disbursement_ref'], $application)) {
             return back()->withErrors(['disbursement_ref' => 'This disbursement reference is already linked to another scholarship.'])->withInput();
         }

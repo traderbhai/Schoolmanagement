@@ -141,6 +141,46 @@ class FeePaymentTest extends TestCase
             ->assertDontSee('STUDENT-PENDING-001');
     }
 
+    public function test_student_fee_page_falls_back_to_course_structures_when_no_current_academic_year_exists(): void
+    {
+        [$user, $student] = $this->makeStudent();
+        $academicYear = AcademicYear::create([
+            'name' => 'Historical Fee Year',
+            'start_year' => 2025,
+            'end_year' => 2026,
+            'start_date' => now()->subYear()->startOfYear(),
+            'end_date' => now()->subYear()->endOfYear(),
+            'is_current' => false,
+        ]);
+        $structure = FeeStructure::create([
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'academic_year_id' => $academicYear->id,
+            'fee_type' => 'Tuition',
+            'amount' => 10000,
+        ]);
+
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $structure->id,
+            'amount_paid' => 4000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'STUDENT-NO-CURRENT-YEAR-PAID',
+            'payment_method' => 'online',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.fees'))
+            ->assertOk()
+            ->assertSee('Total Fee Due')
+            ->assertSee('Rs. 10,000')
+            ->assertSee('Balance Due')
+            ->assertSee('Rs. 6,000')
+            ->assertSee('STUDENT-NO-CURRENT-YEAR-PAID')
+            ->assertDontSee('No fee structures defined for your course yet.');
+    }
+
     public function test_student_can_view_fee_payment_page(): void
     {
         [$user] = $this->makeStudent();
@@ -360,6 +400,50 @@ class FeePaymentTest extends TestCase
         $this->assertDatabaseMissing('fee_payment_requests', [
             'student_id' => $student->id,
             'transaction_ref' => 'UTR-OVER-TOTAL',
+        ]);
+    }
+
+    public function test_student_non_cash_payment_proof_requires_transaction_reference(): void
+    {
+        [$user, $student] = $this->makeStudent();
+        $demand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 5000,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('student.fee-payment.create'))
+            ->post(route('student.fee-payment.store'), [
+                'fee_demand_id' => $demand->id,
+                'amount' => 1000,
+                'payment_method' => 'neft',
+                'transaction_ref' => '   ',
+            ])
+            ->assertRedirect(route('student.fee-payment.create'))
+            ->assertSessionHasErrors('transaction_ref');
+
+        $this->assertSame(0, FeePaymentRequest::where('student_id', $student->id)->count());
+
+        $this->actingAs($user)
+            ->from(route('student.fee-payment.create'))
+            ->post(route('student.fee-payment.store'), [
+                'fee_demand_id' => $demand->id,
+                'amount' => 1000,
+                'payment_method' => 'cash',
+                'transaction_ref' => '',
+            ])
+            ->assertRedirect(route('student.fee-payment.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('fee_payment_requests', [
+            'student_id' => $student->id,
+            'fee_demand_id' => $demand->id,
+            'amount' => 1000,
+            'payment_method' => 'cash',
+            'transaction_ref' => null,
+            'status' => 'pending',
         ]);
     }
 
@@ -890,6 +974,39 @@ class FeePaymentTest extends TestCase
         $this->assertSame(0, FeePayment::where('transaction_id', 'OVER-VERIFY')->count());
     }
 
+    public function test_admin_cannot_verify_stale_non_cash_payment_proof_without_transaction_reference(): void
+    {
+        [, $student] = $this->makeStudent();
+        $admin = $this->admin();
+        $this->currentFeeStructureFor($student);
+        $demand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 5000,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+        $request = FeePaymentRequest::create([
+            'student_id' => $student->id,
+            'fee_demand_id' => $demand->id,
+            'amount' => 2000,
+            'payment_method' => 'online',
+            'transaction_ref' => '   ',
+            'submitted_at' => now(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.fees.payment-requests.verify', $request))
+            ->assertSessionHasErrors('transaction_ref');
+
+        $request->refresh();
+        $demand->refresh();
+        $this->assertSame('pending', $request->status);
+        $this->assertSame('pending', $demand->status);
+        $this->assertSame('5000.00', $demand->final_amount);
+        $this->assertSame(0, FeePayment::where('student_id', $student->id)->where('amount_paid', 2000)->count());
+    }
+
     public function test_admin_cannot_verify_payment_proof_with_already_used_transaction_reference(): void
     {
         [, $student] = $this->makeStudent();
@@ -1306,6 +1423,65 @@ class FeePaymentTest extends TestCase
         $this->assertSame('pending', $demand->fresh()->status);
         $this->assertSame('2000.00', $demand->fresh()->final_amount);
         $this->assertSame(0, FeePayment::where('transaction_id', 'MANUAL-OVERPAY')->count());
+    }
+
+    public function test_manual_admin_payment_respects_pending_student_payment_proof_reservations(): void
+    {
+        $admin = $this->admin();
+        [, $student] = $this->makeStudent();
+        $feeStructure = $this->currentFeeStructureFor($student);
+        $demand = FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'final_amount' => 5000,
+            'penalty_amount' => 0,
+            'status' => 'pending',
+        ]);
+
+        FeePaymentRequest::create([
+            'student_id' => $student->id,
+            'fee_demand_id' => $demand->id,
+            'amount' => 4000,
+            'payment_method' => 'online',
+            'transaction_ref' => 'PENDING-PROOF-RESERVES-MANUAL-BALANCE',
+            'submitted_at' => now(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.fees.collect', ['student_id' => $student->id]))
+            ->post(route('admin.fees.payment'), [
+                'student_id' => $student->id,
+                'fee_structure_id' => $feeStructure->id,
+                'amount_paid' => 1001,
+                'payment_date' => now()->toDateString(),
+                'payment_method' => 'cash',
+                'transaction_id' => 'MANUAL-PENDING-PROOF-OVERPAY',
+            ])
+            ->assertRedirect(route('admin.fees.collect', ['student_id' => $student->id]))
+            ->assertSessionHasErrors('amount_paid');
+
+        $this->assertSame('pending', $demand->fresh()->status);
+        $this->assertSame('5000.00', $demand->fresh()->final_amount);
+        $this->assertSame(0, FeePayment::where('transaction_id', 'MANUAL-PENDING-PROOF-OVERPAY')->count());
+
+        $this->actingAs($admin)
+            ->from(route('admin.fees.collect', ['student_id' => $student->id]))
+            ->post(route('admin.fees.payment'), [
+                'student_id' => $student->id,
+                'fee_structure_id' => $feeStructure->id,
+                'amount_paid' => 1000,
+                'payment_date' => now()->toDateString(),
+                'payment_method' => 'cash',
+                'transaction_id' => 'MANUAL-PENDING-PROOF-AVAILABLE-BALANCE',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('fee_payments', [
+            'student_id' => $student->id,
+            'transaction_id' => 'MANUAL-PENDING-PROOF-AVAILABLE-BALANCE',
+            'amount_paid' => 1000,
+            'status' => 'paid',
+        ]);
     }
 
     public function test_manual_admin_payment_without_demands_cannot_exceed_remaining_fee_structure_balance(): void

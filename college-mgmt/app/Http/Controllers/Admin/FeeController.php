@@ -223,10 +223,13 @@ class FeeController extends Controller
             ->get();
         if ($activeDemands->isNotEmpty()) {
             $openBalance = $activeDemands->sum(fn (FeeDemand $demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
-            if ((float) $data['amount_paid'] > $openBalance) {
+            $pendingProofAmount = $this->pendingFeeProofAmountForStudent($student->id);
+            $availableBalance = max(0, $openBalance - $pendingProofAmount);
+
+            if ((float) $data['amount_paid'] > $availableBalance) {
                 return back()
                     ->withInput()
-                ->withErrors(['amount_paid' => 'Payment amount exceeds the student active fee demand balance.']);
+                    ->withErrors(['amount_paid' => 'Payment amount exceeds the student active fee demand balance after pending student payment proofs. Review or reject pending proofs before manual collection.']);
             }
         } else {
             $paidAgainstStructure = (float) FeePayment::where('student_id', $student->id)
@@ -382,6 +385,12 @@ class FeeController extends Controller
         }
 
         $transactionRef = trim((string) $feePaymentRequest->transaction_ref);
+        if ($this->requiresTransactionReference($feePaymentRequest->payment_method) && $transactionRef === '') {
+            return back()->withErrors([
+                'transaction_ref' => 'Transaction reference is required before verifying this non-cash payment proof.',
+            ]);
+        }
+
         if ($transactionRef !== '' && FeePayment::where('status', 'paid')->whereRaw('LOWER(transaction_id) = ?', [strtolower($transactionRef)])->exists()) {
             return back()->withErrors([
                 'transaction_ref' => 'This transaction reference is already linked to a paid fee receipt. Reject this proof or use an audited correction workflow.',
@@ -510,6 +519,11 @@ class FeeController extends Controller
         return in_array($method, ['cash', 'cheque', 'online', 'dd'], true) ? $method : 'online';
     }
 
+    private function requiresTransactionReference(string $method): bool
+    {
+        return in_array($method, ['online', 'neft', 'rtgs', 'upi', 'dd', 'cheque'], true);
+    }
+
     private function applyPaymentToDemand(FeeDemand $demand, float $amount): void
     {
         $openAmount = (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0);
@@ -534,6 +548,13 @@ class FeeController extends Controller
             $this->applyPaymentToDemand($demand, $applied);
             $amount -= $applied;
         }
+    }
+
+    private function pendingFeeProofAmountForStudent(int $studentId): float
+    {
+        return (float) FeePaymentRequest::where('student_id', $studentId)
+            ->where('status', 'pending')
+            ->sum('amount');
     }
 
     private function changesFinancialStructure(FeeStructure $fee, array $data): bool

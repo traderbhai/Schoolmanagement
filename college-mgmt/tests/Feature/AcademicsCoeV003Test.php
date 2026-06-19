@@ -153,6 +153,38 @@ class AcademicsCoeV003Test extends TestCase
         $this->assertSame($beforeTranscripts['result_records'] + 1, $afterPublishedTranscripts['result_records']);
     }
 
+    public function test_coe_failed_result_queue_excludes_unpublished_draft_failures(): void
+    {
+        $fixture = $this->seedCoeFixture();
+        $examUser = User::where('email', 'exam@college.com')->firstOrFail();
+
+        $draftExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['subject']->id,
+            'name' => 'Draft Failure Exam',
+            'passing_marks' => 40,
+            'exam_date' => now()->subDay(),
+            'published_at' => null,
+        ]);
+        ExamResult::factory()->create([
+            'exam_id' => $draftExam->id,
+            'student_id' => $fixture['student']->id,
+            'marks_obtained' => 10,
+            'is_absent' => false,
+        ]);
+
+        $draftMetrics = app(AcademicCoeOperatingService::class)->marksResults($examUser);
+        $this->assertSame(0, $draftMetrics['metrics']['failed_results']);
+        $this->assertFalse(collect($draftMetrics['items'])->contains(fn ($item) => str_contains($item['status'], 'Below pass mark')));
+
+        $draftExam->update(['published_at' => now(), 'published_by' => $examUser->id]);
+
+        $publishedMetrics = app(AcademicCoeOperatingService::class)->marksResults($examUser);
+        $this->assertSame(1, $publishedMetrics['metrics']['failed_results']);
+        $this->assertTrue(collect($publishedMetrics['items'])->contains(fn ($item) => $item['status'] === 'Below pass mark'));
+    }
+
     public function test_non_academic_user_cannot_access_coe_operating_system(): void
     {
         $this->seedCoeFixture();

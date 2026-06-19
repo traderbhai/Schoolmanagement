@@ -192,6 +192,14 @@ class AssetController extends Controller
             return back()->withErrors(['quantity' => 'Issue quantity cannot exceed current stock.']);
         }
 
+        $reference = trim((string) ($data['reference_number'] ?? ''));
+        if ($reference !== '' && InventoryMovement::where('inventory_item_id', $item->id)
+            ->where('movement_type', 'issue')
+            ->where('reference_number', $reference)
+            ->exists()) {
+            return back()->withErrors(['reference_number' => 'This issue reference has already been recorded for this inventory item.']);
+        }
+
         DB::transaction(function () use ($item, $data) {
             $item->decrement('current_stock', $data['quantity']);
             InventoryMovement::create([

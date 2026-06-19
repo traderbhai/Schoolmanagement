@@ -74,6 +74,12 @@ class FeePaymentRequestController extends Controller {
         $totalOpenAmount = $outstandingDemands->sum(fn (FeeDemand $demand) => $this->openAmount($demand));
         $availableOpenAmount = max(0, (float) $totalOpenAmount - $pendingProofAmount);
 
+        if ($this->requiresTransactionReference($data['payment_method']) && $transactionRef === '') {
+            return back()
+                ->withErrors(['transaction_ref' => 'Transaction reference is required for non-cash payment proofs.'])
+                ->withInput();
+        }
+
         if ($transactionRef !== '' && FeePayment::where('status', 'paid')->whereRaw('LOWER(transaction_id) = ?', [$normalizedTransactionRef])->exists()) {
             return back()
                 ->withErrors(['transaction_ref' => 'This transaction reference is already linked to a verified fee receipt. Contact accounts if this is a correction.'])
@@ -147,5 +153,10 @@ class FeePaymentRequestController extends Controller {
     private function openAmount(FeeDemand $demand): float
     {
         return (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0);
+    }
+
+    private function requiresTransactionReference(string $method): bool
+    {
+        return in_array($method, ['online', 'neft', 'rtgs', 'dd'], true);
     }
 }

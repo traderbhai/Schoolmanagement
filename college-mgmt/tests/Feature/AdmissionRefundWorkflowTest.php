@@ -270,6 +270,53 @@ class AdmissionRefundWorkflowTest extends TestCase
         $this->assertNull($refund->processed_at);
     }
 
+    public function test_refund_processing_rejects_duplicate_utr_case_insensitively(): void
+    {
+        $staff = $this->admissionUser();
+        $firstApplicant = $this->applicant();
+        $firstPayment = $this->payment($firstApplicant, 'verified', 9000);
+        $firstRefund = RefundRequest::create(array_merge($this->refundPayload([
+            'admission_payment_id' => $firstPayment->id,
+            'requested_amount' => 3000,
+        ]), [
+            'applicant_id' => $firstApplicant->id,
+            'status' => 'processed',
+            'approved_amount' => 3000,
+            'utr_number' => 'Refund-UTR-Case-1',
+            'processed_at' => now(),
+            'reviewed_by' => $staff->id,
+            'reviewed_at' => now(),
+        ]));
+
+        $secondApplicant = $this->applicant();
+        $secondPayment = $this->payment($secondApplicant, 'verified', 9000);
+        $secondRefund = RefundRequest::create(array_merge($this->refundPayload([
+            'admission_payment_id' => $secondPayment->id,
+            'requested_amount' => 2500,
+        ]), [
+            'applicant_id' => $secondApplicant->id,
+            'status' => 'approved',
+            'approved_amount' => 2500,
+            'reviewed_by' => $staff->id,
+            'reviewed_at' => now(),
+        ]));
+
+        $this->actingAs($staff)
+            ->from(route('admission.refunds.show', $secondRefund))
+            ->patch(route('admission.refunds.process', $secondRefund), [
+                'utr_number' => ' refund-utr-case-1 ',
+            ])
+            ->assertRedirect(route('admission.refunds.show', $secondRefund))
+            ->assertSessionHasErrors('utr_number');
+
+        $secondRefund->refresh();
+        $this->assertSame('approved', $secondRefund->status);
+        $this->assertNull($secondRefund->utr_number);
+        $this->assertNull($secondRefund->processed_at);
+        $this->assertSame(1, RefundRequest::whereRaw('LOWER(utr_number) = ?', ['refund-utr-case-1'])->count());
+        $this->assertSame('Refund-UTR-Case-1', $firstRefund->fresh()->utr_number);
+    }
+
     public function test_refund_routes_respect_admission_hierarchy_scope(): void
     {
         $department = Department::where('code', 'ADM')->firstOrFail();

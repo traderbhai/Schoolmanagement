@@ -233,7 +233,7 @@ class AcademicCoeOperatingService
     private function failedResultsQuery(?Collection $programIds): Builder
     {
         return ExamResult::query()
-            ->whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query, $programIds))
+            ->whereHas('exam', fn (Builder $query) => $this->applyProgramScope($query->whereNotNull('published_at'), $programIds))
             ->whereExists(function ($query) {
                 $query->selectRaw('1')
                     ->from('exams')

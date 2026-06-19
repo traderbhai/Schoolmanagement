@@ -94,4 +94,23 @@ class ProductionReadinessTest extends TestCase
         $this->assertStringContainsString("env('APP_NAME', 'EduManage')", $mailConfig);
         $this->assertStringNotContainsString("env('APP_NAME', 'Laravel')", $mailConfig);
     }
+
+    public function test_shared_sidebar_css_keeps_long_navigation_scrollable(): void
+    {
+        $css = file_get_contents(public_path('css/app.css'));
+
+        $this->assertStringContainsString('.sidebar > .flex-grow-1', $css);
+        $this->assertStringContainsString('min-height: 0;', $css);
+        $this->assertStringContainsString('overflow-y: auto;', $css);
+        $this->assertStringContainsString('.offcanvas[id="mobileSidebar"] .offcanvas-body', $css);
+        $this->assertStringContainsString('max-height: calc(100vh - var(--topbar-height));', $css);
+    }
+
+    public function test_applicant_mobile_sidebar_uses_mobile_sidebar_class(): void
+    {
+        $layout = file_get_contents(resource_path('views/layouts/applicant.blade.php'));
+
+        $this->assertStringContainsString('offcanvas offcanvas-start sidebar-mobile', $layout);
+        $this->assertStringNotContainsString('offcanvas offcanvas-start sidebar" tabindex="-1" id="mobileSidebar"', $layout);
+    }
 }

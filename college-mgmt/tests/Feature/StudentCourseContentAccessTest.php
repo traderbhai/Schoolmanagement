@@ -22,6 +22,8 @@ use App\Models\SubjectDiscussionReply;
 use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -178,6 +180,72 @@ class StudentCourseContentAccessTest extends TestCase
         $this->actingAs($student->user)
             ->get(route('student.courses.show', $unenrolledSubject))
             ->assertForbidden();
+    }
+
+    public function test_student_course_index_hides_faculty_from_draft_timetable_entries(): void
+    {
+        $student = $this->student();
+        $term = Term::factory()->create(['term_number' => 1, 'name' => 'Term 1']);
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Term 1']);
+        $subject = Subject::factory()->create(['name' => 'Published Faculty Course']);
+        $publishedTeacher = Teacher::factory()->create();
+        $publishedTeacher->user->update(['name' => 'Published Course Faculty']);
+        $draftTeacher = Teacher::factory()->create();
+        $draftTeacher->user->update(['name' => 'Draft Staffing Faculty']);
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $subject->program_id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $publishedTeacher->user_id,
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $subject->program_id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $draftTeacher->user_id,
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        TimetableEntry::factory()->create([
+            'teacher_id' => $publishedTeacher->id,
+            'course_id' => Course::factory()->create()->id,
+            'batch_id' => Batch::factory()->create()->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 1])->id,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $publishedVersion->id,
+        ]);
+
+        TimetableEntry::factory()->create([
+            'teacher_id' => $draftTeacher->id,
+            'course_id' => Course::factory()->create()->id,
+            'batch_id' => Batch::factory()->create()->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 2])->id,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('Published Faculty Course')
+            ->assertSee('Published Course Faculty')
+            ->assertDontSee('Draft Staffing Faculty');
     }
 
     public function test_student_course_hub_supports_legacy_active_enrollments(): void

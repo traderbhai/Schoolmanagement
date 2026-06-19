@@ -25,7 +25,7 @@ class AdmissionOperationsController extends Controller
                 ->select('admission_assessment_slot_assignments.*', 'admission_assessment_slots.slot_code', 'admission_assessment_slots.starts_at', 'admission_assessment_slots.venue', 'admission_assessment_slots.online_link')
                 ->latest('admission_assessment_slot_assignments.created_at')
                 ->get(),
-            'availableSlots' => DB::table('admission_assessment_slots')->where('status', 'open')->orderBy('starts_at')->limit(30)->get(),
+            'availableSlots' => $this->availableSlotsFor($applicant),
             'reschedules' => DB::table('admission_assessment_reschedule_requests')->where('applicant_id', $applicant->id)->latest()->get(),
             'submissions' => DB::table('admission_assessment_submissions')->where('applicant_id', $applicant->id)->latest()->get(),
             'consents' => DB::table('admission_consent_records')->where('subject_type', Applicant::class)->where('subject_id', $applicant->id)->get()->keyBy('channel'),
@@ -78,6 +78,27 @@ class AdmissionOperationsController extends Controller
     private function applicant(Request $request): Applicant
     {
         return Applicant::where('user_id', $request->user()->id)->with(['user', 'program', 'batch'])->firstOrFail();
+    }
+
+    private function availableSlotsFor(Applicant $applicant)
+    {
+        return DB::table('admission_assessment_slots')
+            ->leftJoin('selection_sessions', 'selection_sessions.id', '=', 'admission_assessment_slots.selection_session_id')
+            ->where('admission_assessment_slots.status', 'open')
+            ->where(function ($query) use ($applicant) {
+                $query->whereNull('selection_sessions.id')
+                    ->orWhere(function ($scoped) use ($applicant) {
+                        $scoped->where('selection_sessions.program_id', $applicant->program_id)
+                            ->where(function ($batch) use ($applicant) {
+                                $batch->whereNull('selection_sessions.batch_id')
+                                    ->orWhere('selection_sessions.batch_id', $applicant->batch_id);
+                            });
+                    });
+            })
+            ->select('admission_assessment_slots.*')
+            ->orderBy('admission_assessment_slots.starts_at')
+            ->limit(30)
+            ->get();
     }
 
     private function isFinalAdmissionState(Applicant $applicant): bool

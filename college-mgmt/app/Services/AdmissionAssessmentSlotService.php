@@ -69,6 +69,10 @@ class AdmissionAssessmentSlotService
 
     public function requestReschedule(int $assignmentId, Applicant $applicant, string $reason, ?int $requestedSlotId = null): int
     {
+        if ($requestedSlotId !== null) {
+            $this->assertSlotMatchesApplicantScope($requestedSlotId, $applicant);
+        }
+
         return DB::table('admission_assessment_reschedule_requests')->insertGetId([
             'slot_assignment_id' => $assignmentId,
             'applicant_id' => $applicant->id,
@@ -78,6 +82,32 @@ class AdmissionAssessmentSlotService
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function assertSlotMatchesApplicantScope(int $slotId, Applicant $applicant): void
+    {
+        $slot = DB::table('admission_assessment_slots')
+            ->leftJoin('selection_sessions', 'selection_sessions.id', '=', 'admission_assessment_slots.selection_session_id')
+            ->where('admission_assessment_slots.id', $slotId)
+            ->select(
+                'admission_assessment_slots.id',
+                'admission_assessment_slots.status',
+                'selection_sessions.program_id',
+                'selection_sessions.batch_id'
+            )
+            ->first();
+
+        if (! $slot || $slot->status !== 'open') {
+            throw ValidationException::withMessages(['requested_slot_id' => 'Requested assessment slot is not available.']);
+        }
+
+        if ($slot->program_id !== null && (int) $slot->program_id !== (int) $applicant->program_id) {
+            throw ValidationException::withMessages(['requested_slot_id' => 'Requested assessment slot is not available for this application program.']);
+        }
+
+        if ($slot->batch_id !== null && (int) $slot->batch_id !== (int) $applicant->batch_id) {
+            throw ValidationException::withMessages(['requested_slot_id' => 'Requested assessment slot is not available for this application batch.']);
+        }
     }
 
     public function reviewReschedule(int $requestId, string $status, User $actor): void

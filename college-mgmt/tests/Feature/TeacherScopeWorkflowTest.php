@@ -7,6 +7,7 @@ use App\Models\AssignmentSubmission;
 use App\Models\Attendance;
 use App\Models\Classroom;
 use App\Models\Course;
+use App\Models\CourseFeedback;
 use App\Models\Enrollment;
 use App\Models\Exam;
 use App\Models\ExamResult;
@@ -104,6 +105,92 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('assignments', ['title' => 'Wrong Subject Assignment']);
         $this->assertDatabaseMissing('study_materials', ['title' => 'Wrong Subject Notes']);
         $this->assertDatabaseMissing('subject_announcements', ['title' => 'Wrong Subject Announcement']);
+    }
+
+    public function test_teacher_cannot_publish_learning_content_for_draft_timetable_subjects(): void
+    {
+        $fixture = $this->fixture();
+        $draftSubject = Subject::factory()->create(['program_id' => $fixture['program']->id, 'name' => 'Draft Teacher Subject']);
+        $draftVersionSubject = Subject::factory()->create(['program_id' => $fixture['program']->id, 'name' => 'Draft Version Teacher Subject']);
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id]);
+        $course = Course::factory()->create();
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $fixture['teacher']->user_id,
+        ]);
+
+        TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $course->id,
+            'term_id' => $term->id,
+            'subject_id' => $draftSubject->id,
+            'teacher_id' => $fixture['teacher']->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $course->id,
+            'term_id' => $term->id,
+            'subject_id' => $draftVersionSubject->id,
+            'teacher_id' => $fixture['teacher']->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+            'timetable_version_id' => $draftVersion->id,
+        ]);
+        CourseFeedback::create([
+            'student_id' => $fixture['enrolled']->id,
+            'subject_id' => $draftSubject->id,
+            'term_id' => null,
+            'teaching_rating' => 1,
+            'content_rating' => 1,
+            'overall_rating' => 1,
+            'comments' => 'Draft subject feedback should not show.',
+        ]);
+
+        foreach ([$draftSubject, $draftVersionSubject] as $subject) {
+            $this->actingAs($fixture['teacher']->user)
+                ->post(route('teacher.assignments.store'), [
+                    'subject_id' => $subject->id,
+                    'title' => 'Draft Subject Assignment',
+                    'description' => 'Should not publish before timetable is official.',
+                    'max_marks' => 10,
+                    'due_at' => now()->addWeek()->toDateTimeString(),
+                ])
+                ->assertForbidden();
+
+            $this->actingAs($fixture['teacher']->user)
+                ->post(route('teacher.materials.store'), [
+                    'subject_id' => $subject->id,
+                    'title' => 'Draft Subject Material',
+                    'type' => 'notes',
+                    'description' => 'Should not publish before timetable is official.',
+                ])
+                ->assertForbidden();
+
+            $this->actingAs($fixture['teacher']->user)
+                ->post(route('teacher.announcements.store'), [
+                    'subject_id' => $subject->id,
+                    'title' => 'Draft Subject Announcement',
+                    'body' => 'Should not publish before timetable is official.',
+                ])
+                ->assertForbidden();
+        }
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.feedback.index'))
+            ->assertOk()
+            ->assertDontSee('Draft Teacher Subject')
+            ->assertDontSee('Draft subject feedback should not show.');
+
+        $this->assertDatabaseMissing('assignments', ['title' => 'Draft Subject Assignment']);
+        $this->assertDatabaseMissing('study_materials', ['title' => 'Draft Subject Material']);
+        $this->assertDatabaseMissing('subject_announcements', ['title' => 'Draft Subject Announcement']);
     }
 
     public function test_teacher_cannot_save_results_for_same_subject_outside_timetable_program_scope(): void

@@ -332,21 +332,33 @@ class AcademicCourseDeliveryService
 
     private function visibleStudentIds(User $user): array
     {
+        if ($this->hierarchy->canSeeAll($user)) {
+            return Student::pluck('id')->all();
+        }
+
         $programIds = $this->visibleProgramIds($user);
         $subjectIds = $this->visibleSubjectIds($user);
+        $studentIds = collect();
+        $hasBroadStudentScope = $this->scopes->scopeIdsFor($user, 'program')->isNotEmpty()
+            || $this->scopes->scopeIdsFor($user, 'batch')->isNotEmpty()
+            || $this->scopes->scopeIdsFor($user, 'term')->isNotEmpty();
 
-        $query = Student::query();
-        if ($programIds !== null && $programIds->isNotEmpty()) {
-            $query->whereIn('program_id', $programIds);
-        } elseif ($programIds !== null) {
-            $query->whereRaw('1 = 0');
+        if ($hasBroadStudentScope && $programIds !== null && $programIds->isNotEmpty()) {
+            $studentIds = $studentIds->merge(Student::whereIn('program_id', $programIds)->pluck('id'));
         }
 
         if ($subjectIds !== null && $subjectIds->isNotEmpty()) {
-            $query->orWhereHas('subjectEnrollments', fn (Builder $enrollment) => $enrollment->whereIn('subject_id', $subjectIds)->where('status', 'active'));
+            $studentIds = $studentIds->merge(
+                Student::whereHas('subjectEnrollments', fn (Builder $enrollment) => $enrollment
+                    ->whereIn('subject_id', $subjectIds)
+                    ->where('status', 'active'))
+                    ->pluck('id')
+            );
         }
 
-        return $query->pluck('id')->unique()->values()->all();
+        $studentIds = $studentIds->merge(Student::where('mentor_id', $user->id)->pluck('id'));
+
+        return $studentIds->unique()->values()->all();
     }
 
     private function applyProgramScope(Builder $query, ?Collection $programIds, string $column = 'program_id'): Builder

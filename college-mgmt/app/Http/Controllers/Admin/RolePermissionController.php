@@ -10,6 +10,7 @@ use App\Models\RolePermissionMatrix;
 use App\Models\Program;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RolePermissionController extends Controller
 {
@@ -55,7 +56,11 @@ class RolePermissionController extends Controller
         $validated = $request->validate([
             'permissions'   => 'array',
             'permissions.*' => 'integer|exists:permissions,id',
-            'program_id'    => 'nullable|integer|exists:programs,id',
+            'program_id'    => [
+                'nullable',
+                'integer',
+                Rule::exists('programs', 'id')->where('is_active', true),
+            ],
         ]);
 
         $programId = $validated['program_id'] ?? null;

@@ -141,6 +141,46 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             ->assertDontSee('99.00/100', false);
     }
 
+    public function test_academic_transcript_pdf_cannot_be_issued_with_pending_published_exam_result(): void
+    {
+        $fixture = $this->fixture();
+        $student = $fixture['student'];
+        $term = $student->currentTerm;
+        $semester = Semester::where('number', $term->term_number)->first();
+        $pendingSubject = Subject::factory()->create([
+            'program_id' => $student->program_id,
+            'term_number' => 1,
+            'name' => 'Transcript Pending Result Subject',
+            'credits' => 3,
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $pendingSubject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        Exam::factory()->create([
+            'program_id' => $student->program_id,
+            'term_id' => $term->id,
+            'semester_id' => $semester->id,
+            'subject_id' => $pendingSubject->id,
+            'name' => 'Transcript Pending Result Exam',
+            'total_marks' => 100,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($fixture['dean'])
+            ->get(route('academic.transcripts.pdf', $student))
+            ->assertRedirect(route('academic.transcripts.show', $student))
+            ->assertSessionHas('error', 'Official transcript cannot be issued until every enrolled published-exam subject has a recorded result.');
+
+        $this->assertDatabaseMissing('academic_transcripts', [
+            'student_id' => $student->id,
+            'status' => 'issued',
+        ]);
+    }
+
     public function test_issued_academic_transcript_reuses_snapshot_instead_of_silently_regenerating(): void
     {
         $fixture = $this->fixture();

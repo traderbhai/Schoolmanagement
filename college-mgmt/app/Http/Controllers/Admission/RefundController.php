@@ -160,17 +160,28 @@ class RefundController extends Controller
             return back()->withErrors(['refund' => $blocker]);
         }
 
-        $request->validate([
-            'utr_number' => 'required|string|max:100|unique:refund_requests,utr_number,' . $refund->id,
+        $data = $request->validate([
+            'utr_number' => 'required|string|max:100',
         ]);
+        $utrNumber = trim($data['utr_number']);
+
+        if ($utrNumber === '') {
+            return back()->withErrors(['utr_number' => 'UTR number is required.'])->withInput();
+        }
+
+        if ($this->refundUtrExists($utrNumber, $refund)) {
+            return back()
+                ->withErrors(['utr_number' => 'This refund UTR is already linked to another processed refund. Use an audited correction workflow instead of recording it again.'])
+                ->withInput();
+        }
 
         $refund->update([
             'status'       => 'processed',
-            'utr_number'   => $request->utr_number,
+            'utr_number'   => $utrNumber,
             'processed_at' => now(),
         ]);
 
-        return back()->with('success', 'Refund marked as processed. UTR: ' . $request->utr_number);
+        return back()->with('success', 'Refund marked as processed. UTR: ' . $utrNumber);
     }
 
     private function hasActiveRefund(Applicant $applicant): bool
@@ -244,6 +255,15 @@ class RefundController extends Controller
             })
             ->where('is_active', true)
             ->sum('amount');
+    }
+
+    private function refundUtrExists(string $utrNumber, RefundRequest $currentRefund): bool
+    {
+        return RefundRequest::query()
+            ->whereNotNull('utr_number')
+            ->whereRaw('LOWER(utr_number) = ?', [strtolower(trim($utrNumber))])
+            ->whereKeyNot($currentRefund->id)
+            ->exists();
     }
 
     private function guardApplicantScope(Applicant $applicant): void

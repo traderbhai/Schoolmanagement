@@ -4,7 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\AdmissionCommunicationTemplate;
 use App\Models\Applicant;
+use App\Models\Batch;
 use App\Models\Lead;
+use App\Models\Program;
+use App\Models\SelectionProcessStep;
+use App\Models\SelectionSession;
 use App\Models\User;
 use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionApplicantReadinessService;
@@ -109,6 +113,71 @@ class AdmissionOsV039Test extends TestCase
             'applicant_id' => $applicant->id,
             'slot_assignment_id' => $assignment->id,
             'reason' => 'Trying to reschedule after enrollment.',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_applicant_self_service_cannot_request_reschedule_to_foreign_program_slot(): void
+    {
+        $this->seed(\Database\Seeders\MasterDemoSeeder::class);
+        $applicant = Applicant::whereNotNull('user_id')->firstOrFail();
+        $assignment = DB::table('admission_assessment_slot_assignments')
+            ->where('applicant_id', $applicant->id)
+            ->firstOrFail();
+        $foreignProgram = Program::factory()->create(['is_active' => true]);
+        $foreignBatch = Batch::factory()->create(['program_id' => $foreignProgram->id]);
+        $foreignStep = SelectionProcessStep::create([
+            'program_id' => $foreignProgram->id,
+            'name' => 'Foreign PI Step',
+            'type' => 'pi',
+            'step_order' => 1,
+            'max_score' => 100,
+            'weightage' => 100,
+            'is_active' => true,
+        ]);
+        $foreignSession = SelectionSession::create([
+            'selection_process_step_id' => $foreignStep->id,
+            'program_id' => $foreignProgram->id,
+            'batch_id' => $foreignBatch->id,
+            'session_name' => 'Foreign Program PI',
+            'scheduled_date' => now()->addDays(4)->toDateString(),
+            'start_time' => '10:00:00',
+            'end_time' => '11:00:00',
+            'venue' => 'Foreign Assessment Room',
+            'max_candidates' => 10,
+            'status' => 'scheduled',
+            'created_by' => $applicant->user_id,
+        ]);
+        $foreignSlotId = DB::table('admission_assessment_slots')->insertGetId([
+            'selection_session_id' => $foreignSession->id,
+            'slot_code' => 'FOREIGN-PROGRAM-SLOT',
+            'starts_at' => now()->addDays(4)->setTime(10, 0),
+            'ends_at' => now()->addDays(4)->setTime(11, 0),
+            'capacity' => 10,
+            'venue' => 'Foreign Assessment Room',
+            'status' => 'open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $applicant->update(['status' => 'submitted']);
+
+        $this->actingAs($applicant->user)
+            ->get(route('applicant.admission-operations.index'))
+            ->assertOk()
+            ->assertDontSee('FOREIGN-PROGRAM-SLOT');
+
+        $this->actingAs($applicant->user)
+            ->post(route('applicant.admission-operations.reschedule'), [
+                'slot_assignment_id' => $assignment->id,
+                'requested_slot_id' => $foreignSlotId,
+                'reason' => 'Trying to select a foreign program slot.',
+            ])
+            ->assertSessionHasErrors('requested_slot_id');
+
+        $this->assertDatabaseMissing('admission_assessment_reschedule_requests', [
+            'applicant_id' => $applicant->id,
+            'slot_assignment_id' => $assignment->id,
+            'requested_slot_id' => $foreignSlotId,
             'status' => 'pending',
         ]);
     }

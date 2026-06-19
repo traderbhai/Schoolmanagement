@@ -97,6 +97,10 @@ class ApplicantScholarshipController extends Controller
         ]);
         $validated['disbursement_ref'] = trim($validated['disbursement_ref']);
 
+        if ($validated['disbursement_ref'] === '') {
+            return back()->withErrors(['disbursement_ref' => 'Disbursement reference is required.'])->withInput();
+        }
+
         if ($this->disbursementReferenceExists($validated['disbursement_ref'], $scholarship)) {
             return back()->withErrors(['disbursement_ref' => 'This disbursement reference is already linked to another applicant scholarship.'])->withInput();
         }

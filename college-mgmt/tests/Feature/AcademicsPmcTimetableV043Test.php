@@ -103,4 +103,52 @@ class AcademicsPmcTimetableV043Test extends TestCase
             'status' => 'published',
         ]);
     }
+
+    public function test_publishing_new_version_retires_superseded_operational_entries(): void
+    {
+        $fixture = $this->seedFixture();
+        $dean = $fixture['dean'];
+        $run = $fixture['run'];
+        $oldVersion = $fixture['version'];
+
+        $oldEntry = TimetableEntry::factory()->create([
+            'semester_id' => Semester::factory()->create()->id,
+            'course_id' => Course::factory()->create()->id,
+            'timetable_version_id' => $oldVersion->id,
+            'status' => 'published',
+            'is_active' => true,
+            'day_of_week' => 1,
+        ]);
+
+        $this->actingAs($dean)->post(route('academics.pmc.timetable-generator.publish', $run), [
+            'decision_reason' => 'Publish revised official timetable.',
+            'override_reason' => 'Leadership approved conflicts for this readiness check.',
+            'effective_from' => now()->addDay()->toDateString(),
+        ])->assertRedirect();
+
+        $oldEntry->refresh();
+        $this->assertSame('archived', $oldEntry->status);
+        $this->assertFalse((bool) $oldEntry->is_active);
+        $this->assertSame('archived', $oldVersion->fresh()->status);
+    }
+
+    public function test_draft_timetable_version_cannot_be_rollback_source(): void
+    {
+        $fixture = $this->seedFixture();
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['version']->program_id,
+            'term_id' => $fixture['version']->term_id,
+            'batch_id' => $fixture['version']->batch_id,
+            'version_number' => 999,
+            'status' => 'draft',
+            'created_by' => $fixture['dean']->id,
+            'notes' => 'Draft-only version must not become official rollback source.',
+        ]);
+
+        $this->actingAs($fixture['dean'])->post(route('academics.pmc.timetable-versions-v041.rollback', $draftVersion), [
+            'decision_reason' => 'Attempt rollback from draft.',
+        ])->assertStatus(422);
+
+        $this->assertSame('draft', $draftVersion->fresh()->status);
+    }
 }

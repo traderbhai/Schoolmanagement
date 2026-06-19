@@ -82,6 +82,7 @@ class RoleFeatureAccessController extends Controller
         ]);
 
         $matrix = $validated['access'] ?? [];
+        $this->validateFeatureCodes($matrix);
 
         RoleFeatureAccess::where('role_id', $role->id)->delete();
 
@@ -107,5 +108,17 @@ class RoleFeatureAccessController extends Controller
     private function authorizeRolePermissionManagement(): void
     {
         abort_unless(auth()->user() && AccessControl::canManageRoleAssignments(auth()->user()), 403);
+    }
+
+    private function validateFeatureCodes(array $matrix): void
+    {
+        $allowedCodes = collect(self::getFeatures())->pluck('code')->all();
+        $unknownCodes = array_diff(array_keys($matrix), $allowedCodes);
+
+        if (! empty($unknownCodes)) {
+            back()->withErrors([
+                'access' => 'Feature access contains unknown feature keys: ' . implode(', ', $unknownCodes),
+            ])->throwResponse();
+        }
     }
 }

@@ -53,6 +53,7 @@ class ObeController extends Controller
             'description' => 'required|string|max:500',
             'bloom_level' => 'required|in:remember,understand,apply,analyze,evaluate,create',
         ]);
+        $this->authorizeSubjectScope($request, (int) $data['subject_id']);
 
         CourseOutcome::create($data + ['is_active' => true]);
         return back()->with('success', "CO {$data['code']} created.");
@@ -61,6 +62,7 @@ class ObeController extends Controller
     public function coUpdate(Request $request, CourseOutcome $co)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeSubjectScope($request, (int) $co->subject_id);
 
         $data = $request->validate([
             'code'        => 'required|string|max:20',
@@ -82,6 +84,7 @@ class ObeController extends Controller
     public function coDestroy(Request $request, CourseOutcome $co)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeSubjectScope($request, (int) $co->subject_id);
         abort_if(
             $co->coPoMappings()->exists() || $co->attainments()->exists() || ObeSurveyResponse::where('course_outcome_id', $co->id)->exists(),
             422,
@@ -121,6 +124,7 @@ class ObeController extends Controller
             'description' => 'required|string|max:500',
             'category'    => 'required|in:engineering,management,science,commerce,general',
         ]);
+        $this->authorizeProgramScope($request, (int) $data['program_id']);
         ProgramOutcome::create($data + ['is_active' => true]);
         return back()->with('success', "PO {$data['code']} created.");
     }
@@ -128,6 +132,7 @@ class ObeController extends Controller
     public function poUpdate(Request $request, ProgramOutcome $po)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeProgramScope($request, (int) $po->program_id);
 
         $data = $request->validate([
             'code'        => 'required|string|max:20',
@@ -149,6 +154,7 @@ class ObeController extends Controller
     public function poDestroy(Request $request, ProgramOutcome $po)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeProgramScope($request, (int) $po->program_id);
         abort_if(
             $po->coMappings()->exists() || $po->attainments()->exists(),
             422,
@@ -168,6 +174,7 @@ class ObeController extends Controller
             'code'        => 'required|string|max:20',
             'description' => 'required|string|max:500',
         ]);
+        $this->authorizeProgramScope($request, (int) $data['program_id']);
         ProgramSpecificOutcome::create($data + ['is_active' => true]);
         return back()->with('success', "PSO {$data['code']} created.");
     }
@@ -175,6 +182,7 @@ class ObeController extends Controller
     public function psoDestroy(Request $request, ProgramSpecificOutcome $pso)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeProgramScope($request, (int) $pso->program_id);
         abort_if(
             CoPoMapping::where('program_specific_outcome_id', $pso->id)->exists(),
             422,
@@ -235,9 +243,13 @@ class ObeController extends Controller
             'mappings.*'  => 'nullable|array',
             'mappings.*.*' => 'nullable|integer|min:0|max:3',
         ]);
+        $subject = $this->authorizeSubjectScope($request, (int) $request->subject_id);
+        $this->authorizeProgramScope($request, (int) $request->program_id);
+        abort_unless((int) $subject->program_id === (int) $request->program_id, 422, 'Subject must belong to the selected program.');
 
         $cos = CourseOutcome::where('subject_id', $request->subject_id)->pluck('id');
         $pos = ProgramOutcome::where('program_id', $request->program_id)->pluck('id');
+        $psos = ProgramSpecificOutcome::where('program_id', $request->program_id)->pluck('id');
 
         abort_if(
             CoAttainment::whereIn('course_outcome_id', $cos)->exists()
@@ -259,6 +271,12 @@ class ObeController extends Controller
 
                 // Key format: "po_123" or "pso_456"
                 [$type, $id] = explode('_', $key, 2);
+                $id = (int) $id;
+                abort_unless(
+                    ($type === 'po' && $pos->contains($id)) || ($type === 'pso' && $psos->contains($id)),
+                    422,
+                    'Mapping targets must belong to the selected program.'
+                );
                 CoPoMapping::create([
                     'course_outcome_id'           => $coId,
                     'program_outcome_id'           => $type === 'po' ? $id : null,
@@ -315,6 +333,8 @@ class ObeController extends Controller
             'program_id' => 'required|exists:programs,id',
             'term_id'    => 'required|exists:terms,id',
         ]);
+        $this->authorizeProgramScope($request, (int) $request->program_id);
+        $this->authorizeTermProgram($request, (int) $request->term_id, (int) $request->program_id);
 
         $result = $this->obe->recalculateForTerm($request->program_id, $request->term_id);
         return back()->with('success', "Recalculated: {$result['co_records']} CO records, {$result['po_records']} PO records updated.");
@@ -341,6 +361,8 @@ class ObeController extends Controller
             'title'      => 'required|string|max:200',
             'closes_at'  => 'nullable|date|after:today',
         ]);
+        $subject = $this->authorizeSubjectScope($request, (int) $data['subject_id']);
+        $this->authorizeTermProgram($request, (int) $data['term_id'], (int) $subject->program_id);
         ObeSurvey::create($data);
         return back()->with('success', 'Survey created.');
     }
@@ -348,6 +370,7 @@ class ObeController extends Controller
     public function surveyToggle(Request $request, ObeSurvey $survey)
     {
         $this->policy->authorizeObe($request->user());
+        $this->authorizeSubjectScope($request, (int) $survey->subject_id);
 
         $survey->update(['is_published' => !$survey->is_published]);
         $status = $survey->is_published ? 'published' : 'unpublished';
@@ -376,6 +399,33 @@ class ObeController extends Controller
         }
 
         return false;
+    }
+
+    private function authorizeSubjectScope(Request $request, int $subjectId): Subject
+    {
+        $subject = Subject::findOrFail($subjectId);
+        abort_unless($subject->program_id, 422, 'OBE records must be linked to a program subject.');
+        $this->authorizeProgramScope($request, (int) $subject->program_id);
+
+        return $subject;
+    }
+
+    private function authorizeProgramScope(Request $request, int $programId): void
+    {
+        abort_unless(
+            $this->policy->canManageScope($request->user(), 'program', $programId),
+            403
+        );
+    }
+
+    private function authorizeTermProgram(Request $request, int $termId, int $programId): void
+    {
+        $term = Term::findOrFail($termId);
+        abort_if($term->program_id && (int) $term->program_id !== $programId, 422, 'Term must belong to the selected program.');
+
+        if ($term->program_id) {
+            $this->authorizeProgramScope($request, (int) $term->program_id);
+        }
     }
 
     private function changesProgramOutcomeContract(ProgramOutcome $po, array $data): bool

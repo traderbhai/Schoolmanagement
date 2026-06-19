@@ -42,6 +42,13 @@ class TranscriptController extends Controller {
             ['semesterReports' => $semesterReports, 'cgpa' => $cgpa, 'totalCredits' => $totalCredits] = $this->reportFromSnapshot($transcript);
         } else {
             ['semesterReports' => $semesterReports, 'cgpa' => $cgpa, 'totalCredits' => $totalCredits] = $this->buildTranscriptReport($student);
+
+            if ($this->hasPendingTranscriptRows($semesterReports)) {
+                return redirect()
+                    ->route('academic.transcripts.show', $student)
+                    ->with('error', 'Official transcript cannot be issued until every enrolled published-exam subject has a recorded result.');
+            }
+
             $snapshot = $this->snapshotReport($semesterReports, $cgpa, $totalCredits);
 
             if ($transcript) {
@@ -190,6 +197,19 @@ class TranscriptController extends Controller {
             && array_key_exists('semester_reports', $transcript->semester_data)
             && array_key_exists('cgpa', $transcript->semester_data)
             && array_key_exists('total_credits', $transcript->semester_data);
+    }
+
+    private function hasPendingTranscriptRows(array $semesterReports): bool
+    {
+        foreach ($semesterReports as $report) {
+            foreach ($report['subjects'] ?? [] as $subject) {
+                if (($subject['status'] ?? null) === 'pending') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function snapshotReport(array $semesterReports, float $cgpa, int $totalCredits): array
