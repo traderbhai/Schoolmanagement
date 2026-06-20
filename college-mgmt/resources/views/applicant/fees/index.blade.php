@@ -130,7 +130,7 @@
 
             @elseif(!$payment && !$canPay)
                 <div class="text-muted small">
-                    <i class="bi bi-info-circle me-1"></i>Payment can be submitted after being shortlisted or selected.
+                    <i class="bi bi-info-circle me-1"></i>{{ $paymentUnavailableReason }}
                 </div>
             @endif
 

@@ -8,6 +8,13 @@
 
 @section('content')
 
+@if(!empty($profileMissing))
+    <div class="alert alert-warning">
+        <strong>Teacher profile not linked.</strong>
+        Your login has the Teacher role, but no teacher profile is attached yet. Contact administration to link your profile before applying for leave.
+    </div>
+@endif
+
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div></div>
     @if($canApplyForLeave)

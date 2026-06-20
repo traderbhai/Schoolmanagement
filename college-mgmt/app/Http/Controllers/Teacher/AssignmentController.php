@@ -84,15 +84,17 @@ class AssignmentController extends Controller
 
     public function create()
     {
-        if ($this->activeTeacher()?->status !== 'active') {
-            return redirect()
-                ->route('teacher.assignments.index')
-                ->with('error', 'Only active teachers can create assignments.');
-        }
-
         $subjects    = Subject::whereIn('id', $this->teacherSubjectIds())->get();
         $currentTerm = Term::latest('start_date')->first();
-        return view('teacher.assignments.create', compact('subjects', 'currentTerm'));
+        $teacher = $this->activeTeacher();
+        $actionBlockedReason = match (true) {
+            ! $teacher => 'Your login has the Teacher role, but no teacher profile is attached yet. Ask Admin/Academics to link your teacher profile before creating assignments.',
+            $teacher->status !== 'active' => 'Only active teachers can create assignments.',
+            $subjects->isEmpty() => 'No published teaching assignment is linked to your teacher profile yet. Assignments can be created after your subject allocation appears in a published timetable.',
+            default => null,
+        };
+
+        return view('teacher.assignments.create', compact('subjects', 'currentTerm', 'actionBlockedReason'));
     }
 
     public function store(Request $request)

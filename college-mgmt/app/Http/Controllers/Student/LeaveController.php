@@ -30,13 +30,11 @@ class LeaveController extends Controller
     public function create()
     {
         $student = $this->getStudent();
-        if ($student->status !== 'active') {
-            return redirect()
-                ->route('student.leave.index')
-                ->with('error', 'Leave applications can be submitted only by active students.');
-        }
+        $actionBlockedReason = $student->status !== 'active'
+            ? 'Leave applications can be submitted only by active students.'
+            : null;
 
-        return view('student.leave.create');
+        return view('student.leave.create', compact('actionBlockedReason'));
     }
 
     public function store(Request $request)

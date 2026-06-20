@@ -36,6 +36,36 @@
             </form>
         </div>
     </div>
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-lg-7">
+                    <div class="small text-muted mb-1">Saved views</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @forelse($savedViews as $view)
+                            <a class="btn btn-sm {{ $view->is_default ? 'btn-primary' : 'btn-outline-secondary' }}" href="{{ route(request()->route()->getName(), $view->filters ?? []) }}">{{ $view->name }}</a>
+                        @empty
+                            <span class="small text-muted">No saved views for this Dean surface yet.</span>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <form method="POST" action="{{ route('academics.dean-os.saved-views.store') }}" class="row g-2 align-items-end">
+                        @csrf
+                        <input type="hidden" name="surface" value="{{ $surface }}">
+                        @foreach($filters as $key => $value)
+                            @if($value !== null && $value !== '')
+                                <input type="hidden" name="filters[{{ $key }}]" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <div class="col-7"><label class="form-label small mb-1">Save current filters</label><input name="name" class="form-control form-control-sm" placeholder="View name" required></div>
+                        <div class="col-3"><label class="form-label small mb-1">Default</label><select name="is_default" class="form-select form-select-sm"><option value="0">No</option><option value="1">Yes</option></select></div>
+                        <div class="col-2"><button class="btn btn-sm btn-outline-primary w-100" onclick="return confirm('Save this Dean filtered view?')">Save</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="card shadow-sm"><div class="card-header py-2 d-flex flex-wrap gap-2 justify-content-between"><span class="small text-muted">Visible filter summary: {{ str_replace('_',' ', $config['record_type']) }}{{ $activeSummary ? ' | '.$activeSummary : ' | all records' }}</span><a href="{{ route('academics.dean-os.export', ['report' => $config['record_type']] + request()->query()) }}" class="btn btn-sm btn-outline-secondary">Export Current View</a></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'title','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Record</a></th><th>Program</th><th>Owner</th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'severity','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Severity</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'status','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Status</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'due_at','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Due</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'score','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Score</a></th></tr></thead><tbody>
         @foreach($data['records'] as $record)<tr><td><div class="fw-semibold">{{ $record->title }}</div><div class="small text-muted">{{ $record->source_type }} {{ $record->source_key }}</div></td><td>{{ $record->program?->code ?? '-' }}</td><td>{{ $record->owner?->name ?? 'Unassigned' }}</td><td>{{ $record->severity }}</td><td>{{ $record->status }}</td><td>{{ optional($record->due_at)->format('d M Y') }}</td><td>{{ $record->score }}</td></tr>@endforeach
         @if($data['records']->isEmpty())<tr><td colspan="7" class="text-center text-muted py-4">No records match the current filters.</td></tr>@endif

@@ -69,7 +69,8 @@ class AcademicCoeOperatingService
                 'title' => $exam->name,
                 'subtitle' => ($exam->program?->code ?? 'Program') . ' - ' . ($exam->subject?->code ?? 'Subject') . ' - ' . $exam->exam_date?->toDateString(),
                 'status' => $exam->classroom_id ? 'Ready' : 'Room pending',
-                'action' => route('exam-cell.exams'),
+                'metric_keys' => array_values(array_filter(['upcoming_exams', $exam->classroom_id ? null : 'missing_room'])),
+                'action' => route('academics.coe.exam-readiness', ['metric' => $exam->classroom_id ? 'upcoming_exams' : 'missing_room', 'exam_id' => $exam->id]),
             ])->values(),
         ];
     }
@@ -101,12 +102,14 @@ class AcademicCoeOperatingService
                 'title' => $exam->name,
                 'subtitle' => ($exam->program?->code ?? 'Program') . ' - ' . ($exam->subject?->name ?? 'Subject'),
                 'status' => 'Marks pending',
-                'action' => route('exam-cell.grade-sheet', $exam),
+                'metric_keys' => ['marks_pending', 'completed_exams'],
+                'action' => route('academics.coe.marks-results', ['metric' => 'marks_pending', 'exam_id' => $exam->id]),
             ])->merge($this->failedResultsQuery($programIds)->with(['student.user', 'exam.subject'])->limit(15)->get()->map(fn (ExamResult $result) => [
                 'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Below pass mark',
-                'action' => route('exam-cell.results'),
+                'metric_keys' => ['failed_results'],
+                'action' => route('academics.coe.marks-results', ['metric' => 'failed_results', 'result_id' => $result->id]),
             ]))->values(),
         ];
     }
@@ -137,7 +140,8 @@ class AcademicCoeOperatingService
                 'title' => $this->studentLabel($registration->student, $registration->student_id),
                 'subtitle' => ($registration->exam?->name ?? 'Exam') . ' - ' . ($registration->exam?->program?->code ?? 'Program'),
                 'status' => $this->registrationStatus($registration),
-                'action' => route('exam-cell.hall-tickets', ['exam_id' => $registration->exam_id]),
+                'metric_keys' => ['blocked_registrations', 'attendance_blocks', 'fee_blocks'],
+                'action' => route('academics.coe.hall-ticket-readiness', ['metric' => 'blocked_registrations', 'exam_id' => $registration->exam_id]),
             ])->values(),
         ];
     }
@@ -164,7 +168,8 @@ class AcademicCoeOperatingService
                 'title' => $this->studentLabel($transcript->student, $transcript->student_id),
                 'subtitle' => $transcript->academic_year . ' - CGPA ' . ($transcript->cgpa ?? 'pending'),
                 'status' => ucfirst($transcript->status),
-                'action' => route('academic.transcripts.index'),
+                'metric_keys' => ['draft_transcripts'],
+                'action' => route('academics.coe.transcripts', ['metric' => 'draft_transcripts', 'transcript_id' => $transcript->id]),
             ])->values(),
         ];
     }
@@ -197,12 +202,14 @@ class AcademicCoeOperatingService
                 'title' => $this->studentLabel($appeal->student, $appeal->student_id),
                 'subtitle' => ($appeal->examResult?->exam?->subject?->code ?? 'Result') . ' - ' . $appeal->reason,
                 'status' => ucfirst(str_replace('_', ' ', $appeal->status)),
-                'action' => route('exam-cell.marks-appeals'),
+                'metric_keys' => ['appeals_anomalies', 'open_appeals', 'under_review_appeals'],
+                'action' => route('academics.coe.appeals-anomalies', ['metric' => 'open_appeals', 'appeal_id' => $appeal->id]),
             ])->merge($anomalies->map(fn (ExamAnomalyLog $anomaly) => [
                 'title' => $anomaly->exam?->name ?? 'Exam anomaly',
                 'subtitle' => ($anomaly->student?->user?->name ?? 'Student') . ' - ' . $anomaly->anomaly_type,
                 'status' => ucfirst($anomaly->severity),
-                'action' => route('exam-cell.anomalies.index'),
+                'metric_keys' => array_values(array_filter(['appeals_anomalies', 'open_anomalies', $anomaly->severity === 'critical' ? 'critical_anomalies' : null])),
+                'action' => route('academics.coe.appeals-anomalies', ['metric' => 'open_anomalies', 'anomaly_id' => $anomaly->id]),
             ]))->values(),
         ];
     }
@@ -239,6 +246,11 @@ class AcademicCoeOperatingService
     private function filterItems(Collection $items, array $filters): Collection
     {
         return $items
+            ->when(! empty($filters['metric']), function (Collection $collection) use ($filters) {
+                $metric = (string) $filters['metric'];
+
+                return $collection->filter(fn (array $item) => in_array($metric, $item['metric_keys'] ?? [], true));
+            })
             ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
                 $search = mb_strtolower((string) $filters['search']);
 
@@ -256,7 +268,7 @@ class AcademicCoeOperatingService
     private function filterSummary(array $filters): string
     {
         $active = collect($filters)
-            ->only(['search', 'status'])
+            ->only(['metric', 'search', 'status'])
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
 

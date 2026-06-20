@@ -141,8 +141,9 @@ class StudentLeaveWorkflowTest extends TestCase
 
         $this->actingAs($fixture['user'])
             ->get(route('student.leave.create'))
-            ->assertRedirect(route('student.leave.index'))
-            ->assertSessionHas('error', 'Leave applications can be submitted only by active students.');
+            ->assertOk()
+            ->assertSee('Leave applications can be submitted only by active students.')
+            ->assertSee('disabled');
 
         $this->actingAs($fixture['user'])
             ->post(route('student.leave.store'), [

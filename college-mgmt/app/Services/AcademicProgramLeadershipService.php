@@ -77,11 +77,13 @@ class AcademicProgramLeadershipService
                 'title' => $program->name,
                 'subtitle' => $program->code . ' - ' . $program->students_count . ' students, ' . $program->subjects_count . ' subjects',
                 'status' => 'Active',
+                'metric_keys' => ['active_programs', 'programs'],
                 'action' => route('dean.programs'),
             ])->values())->concat($pendingChanges->map(fn (CurriculumChange $change) => [
                 'title' => $change->title,
                 'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
                 'status' => ucfirst(str_replace('_', ' ', $change->status)),
+                'metric_keys' => ['pending_curriculum_changes'],
                 'action' => route('academic.curriculum-changes.index'),
             ])->values())->values(),
         ];
@@ -116,11 +118,13 @@ class AcademicProgramLeadershipService
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty assignment pending',
                 'status' => 'Faculty gap',
+                'metric_keys' => ['faculty_gaps', 'delivery_gaps'],
                 'action' => route('chair.curriculum.assignments'),
             ])->values())->concat($draftTimetable->map(fn (TimetableEntry $entry) => [
                 'title' => $entry->subject?->name ?? 'Timetable entry',
                 'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name,
                 'status' => ucfirst($entry->status ?? 'draft'),
+                'metric_keys' => ['draft_timetable', 'delivery_gaps'],
                 'action' => route('chair.timetable.builder'),
             ])->values())->values(),
         ];
@@ -168,16 +172,19 @@ class AcademicProgramLeadershipService
                 'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
+                'metric_keys' => ['attendance_risk', 'student_risk'],
                 'action' => route('chair.students.at-risk'),
             ])->values())->concat($weakPerformance->map(fn (ExamResult $result) => [
                 'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
+                'metric_keys' => ['weak_performance', 'student_risk'],
                 'action' => route('chair.reports.subject-performance'),
             ])->values())->concat($pendingLeaves->map(fn (LeaveApplication $leave) => [
                 'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
+                'metric_keys' => ['pending_leaves'],
                 'action' => route('chair.students.leaves'),
             ])->values())->values(),
         ];
@@ -218,16 +225,19 @@ class AcademicProgramLeadershipService
                 'title' => $program->name,
                 'subtitle' => $program->code . ' - PO setup missing',
                 'status' => 'Quality gap',
+                'metric_keys' => ['program_outcome_gaps'],
                 'action' => route('academic.obe.po.index', ['program_id' => $program->id]),
             ])->values())->concat($subjectsWithoutCo->map(fn (Subject $subject) => [
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - CO setup missing',
                 'status' => 'OBE gap',
+                'metric_keys' => ['course_outcome_gaps'],
                 'action' => route('academic.obe.co.index', ['program_id' => $subject->program_id, 'subject_id' => $subject->id]),
             ])->values())->concat($lowFeedback->map(fn ($row) => [
                 'title' => $row->subject?->name ?? 'Subject',
                 'subtitle' => ($row->subject?->program?->code ?? 'Program') . ' - average rating ' . round($row->avg_rating, 1),
                 'status' => 'Feedback action due',
+                'metric_keys' => ['low_feedback_subjects'],
                 'action' => route('chair.faculty.feedback'),
             ])->values())->values(),
         ];
@@ -263,6 +273,11 @@ class AcademicProgramLeadershipService
     private function filterItems(Collection $items, array $filters): Collection
     {
         return $items
+            ->when(! empty($filters['metric']), function (Collection $collection) use ($filters) {
+                $metric = (string) $filters['metric'];
+
+                return $collection->filter(fn (array $item) => in_array($metric, $item['metric_keys'] ?? [], true));
+            })
             ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
                 $search = mb_strtolower((string) $filters['search']);
 
@@ -280,7 +295,7 @@ class AcademicProgramLeadershipService
     private function filterSummary(array $filters): string
     {
         $active = collect($filters)
-            ->only(['search', 'status'])
+            ->only(['metric', 'search', 'status'])
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
 

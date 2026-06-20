@@ -18,6 +18,12 @@
     $nextDirection = fn (string $field) => ($sort === $field && $direction === 'asc') ? 'desc' : 'asc';
     $sortIcon = fn (string $field) => $sort === $field ? ($direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
     $sortUrl = fn (string $field) => request()->fullUrlWithQuery(['sort' => $field, 'direction' => $nextDirection($field)]);
+    $filterSummary = collect([
+        $status ? 'Status: ' . ucfirst(str_replace('_', ' ', $status)) : null,
+        $source ? 'Source: ' . ucfirst(str_replace('_', ' ', $source)) : null,
+        $programId ? 'Program filtered' : null,
+        $search ? 'Search: ' . $search : null,
+    ])->filter()->implode(' | ') ?: 'All visible leads';
 @endphp
 
 <div class="admission-compact">
@@ -25,6 +31,7 @@
         <div>
             <h3 class="fw-bold mb-1">Leads & Enquiries</h3>
             <div class="text-muted small">{{ $leads->total() }} records after filters</div>
+            <div class="small text-muted">Filter: {{ $filterSummary }}</div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('admission.leads.export-csv', request()->query()) }}" class="btn btn-outline-success btn-sm">

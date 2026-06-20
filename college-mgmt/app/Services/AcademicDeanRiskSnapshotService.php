@@ -11,20 +11,29 @@ class AcademicDeanRiskSnapshotService
     public function capture(): int
     {
         $count = 0;
+        $snapshotDate = now()->toDateString();
+
         foreach ($this->risk->programRisks() as $risk) {
             $previous = AcademicDeanRiskSnapshot::where('program_id', $risk['program']->id)->latest('snapshot_date')->first();
             $trend = ! $previous ? 'insufficient_data' : ($risk['score'] > $previous->score ? 'worsening' : ($risk['score'] < $previous->score ? 'improving' : 'stable'));
-            AcademicDeanRiskSnapshot::create([
+            $snapshot = AcademicDeanRiskSnapshot::where('program_id', $risk['program']->id)
+                ->whereDate('snapshot_date', $snapshotDate)
+                ->first();
+
+            $payload = [
                 'program_id' => $risk['program']->id,
                 'score' => $risk['score'],
                 'band' => $this->config->band($risk['score']),
                 'trend' => $trend,
                 'metrics' => $risk['metrics'],
                 'reasons' => $risk['reasons']->values()->all(),
-                'snapshot_date' => now()->toDateString(),
-            ]);
+                'snapshot_date' => $snapshotDate,
+            ];
+
+            $snapshot ? $snapshot->update($payload) : AcademicDeanRiskSnapshot::create($payload);
             $count++;
         }
+
         return $count;
     }
 

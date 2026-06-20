@@ -2,7 +2,7 @@
 @section('title', 'Exam Cell — Results')
 
 @section('content')
-<h4 class="mb-4"><i class="bi bi-clipboard-data me-2 text-primary"></i>Result Entry Status</h4>
+<h1 class="h4 mb-4"><i class="bi bi-clipboard-data me-2 text-primary"></i>Result Entry Status</h1>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">

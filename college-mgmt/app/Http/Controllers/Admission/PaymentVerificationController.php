@@ -8,6 +8,7 @@ use App\Models\Applicant;
 use App\Models\Program;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\ActivityLog;
+use App\Services\AdmissionKpiDrilldownService;
 use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,31 +17,9 @@ class PaymentVerificationController extends Controller
 {
     public function __construct(private DepartmentHierarchyService $hierarchy) {}
 
-    public function pendingQueue(Request $r)
+    public function pendingQueue(Request $r, AdmissionKpiDrilldownService $drilldowns)
     {
-        $query = AdmissionPayment::with(['applicant.program', 'applicant.user', 'installment'])
-            ->where('admission_payments.status', 'pending')
-            ->orderBy('admission_payments.created_at');
-
-        $query->whereHas('applicant', function ($q) use ($r) {
-            $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM');
-        });
-
-        if ($r->filled('program_id')) {
-            $query->whereHas('applicant', fn($q) => $q->where('program_id', $r->program_id));
-        }
-        if ($r->filled('installment_id')) {
-            $query->where('admission_payments.admission_fee_installment_id', $r->installment_id);
-        }
-        if ($r->filled('payment_mode')) {
-            $query->where('admission_payments.payment_mode', $r->payment_mode);
-        }
-        if ($r->filled('date_from')) {
-            $query->whereDate('admission_payments.payment_date', '>=', $r->date_from);
-        }
-        if ($r->filled('date_to')) {
-            $query->whereDate('admission_payments.payment_date', '<=', $r->date_to);
-        }
+        $query = $this->pendingPaymentQueueQuery($r);
 
         $scopedPending = clone $query;
         $payments = $query->paginate(20)->withQueryString();
@@ -58,11 +37,58 @@ class PaymentVerificationController extends Controller
 
         $stats = [
             'total_pending'   => (clone $scopedPending)->count(),
-            'verified_today'  => AdmissionPayment::where('status', 'verified')->whereDate('verified_at', today())->count(),
+            'all_pending'     => $drilldowns->pendingPaymentQuery($r->user())->count(),
+            'verified_today'  => AdmissionPayment::where('status', 'verified')
+                ->whereDate('verified_at', today())
+                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM'))
+                ->count(),
             'amount_pending'  => (clone $scopedPending)->sum('amount_paid'),
         ];
 
         return view('admission.payments.queue', compact('payments', 'programs', 'installments', 'stats'));
+    }
+
+    public function exportPendingQueue(Request $r)
+    {
+        $payments = $this->pendingPaymentQueueQuery($r)->get();
+
+        ActivityLog::record(
+            'admission_payment_queue_export',
+            'Admission payment verification queue exported: ' . $payments->count() . ' rows; filters=' . json_encode($r->only(['program_id', 'installment_id', 'payment_mode', 'date_from', 'date_to'])),
+        );
+
+        $filename = 'admission-payment-verification-queue-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($payments) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Application Number',
+                'Applicant',
+                'Program',
+                'Installment',
+                'Amount Paid',
+                'Payment Mode',
+                'Transaction Reference',
+                'Payment Date',
+                'Submitted At',
+            ]);
+
+            foreach ($payments as $payment) {
+                fputcsv($handle, [
+                    $payment->applicant?->application_number,
+                    $payment->applicant?->user?->name,
+                    $payment->applicant?->program?->name,
+                    $payment->installment?->name,
+                    $payment->amount_paid,
+                    $payment->payment_mode,
+                    $payment->transaction_reference,
+                    optional($payment->payment_date)->format('Y-m-d'),
+                    optional($payment->created_at)->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     public function verify(Request $r, AdmissionPayment $payment)
@@ -240,6 +266,35 @@ class PaymentVerificationController extends Controller
         if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $payment->applicant?->assigned_to, false)) {
             abort(403);
         }
+    }
+
+    private function pendingPaymentQueueQuery(Request $r)
+    {
+        $query = AdmissionPayment::with(['applicant.program', 'applicant.user', 'installment'])
+            ->where('admission_payments.status', 'pending')
+            ->orderBy('admission_payments.created_at');
+
+        $query->whereHas('applicant', function ($q) use ($r) {
+            $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM');
+        });
+
+        if ($r->filled('program_id')) {
+            $query->whereHas('applicant', fn($q) => $q->where('program_id', $r->program_id));
+        }
+        if ($r->filled('installment_id')) {
+            $query->where('admission_payments.admission_fee_installment_id', $r->installment_id);
+        }
+        if ($r->filled('payment_mode')) {
+            $query->where('admission_payments.payment_mode', $r->payment_mode);
+        }
+        if ($r->filled('date_from')) {
+            $query->whereDate('admission_payments.payment_date', '>=', $r->date_from);
+        }
+        if ($r->filled('date_to')) {
+            $query->whereDate('admission_payments.payment_date', '<=', $r->date_to);
+        }
+
+        return $query;
     }
 
     private function verificationEligibilityBlocker(AdmissionPayment $payment): ?string

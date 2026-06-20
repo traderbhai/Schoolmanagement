@@ -109,6 +109,113 @@ class HostelWorkflowGuidanceTest extends TestCase
         ]);
     }
 
+    public function test_admin_hostel_allocations_outpasses_and_complaints_export_current_filtered_view(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Export Hostel Student');
+        $otherStudent = $this->student('Other Hostel Student');
+        $room = $this->room(['room_number' => '501']);
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+            'allocated_by' => $admin->id,
+        ]);
+        HostelAllocation::create([
+            'hostel_room_id' => $this->room(['room_number' => '502'])->id,
+            'student_id' => $otherStudent->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+            'allocated_by' => $admin->id,
+        ]);
+        $outpass = OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Placement interview',
+            'out_datetime' => now()->addDay(),
+            'expected_return' => now()->addDay()->addHours(4),
+            'status' => 'pending',
+        ]);
+        OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Returned visit',
+            'out_datetime' => now()->subWeek(),
+            'expected_return' => now()->subWeek()->addHours(4),
+            'actual_return' => now()->subWeek()->addHours(3),
+            'status' => 'returned',
+        ]);
+        $complaint = HostelComplaint::create([
+            'student_id' => $student->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'Export maintenance complaint',
+            'description' => 'Maintenance issue for export testing.',
+            'category' => 'maintenance',
+            'priority' => 'high',
+            'status' => 'open',
+        ]);
+        HostelComplaint::create([
+            'student_id' => $otherStudent->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'Low priority closed complaint',
+            'description' => 'Closed issue.',
+            'category' => 'food',
+            'priority' => 'low',
+            'status' => 'closed',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.allocations', ['search' => 'Export Hostel']))
+            ->assertOk()
+            ->assertSee(route('admin.hostel.allocations.export', ['search' => 'Export Hostel']))
+            ->assertSee('Showing 1 active allocation record(s)')
+            ->assertSee($student->user->name);
+
+        $allocationCsv = $this->actingAs($admin)
+            ->get(route('admin.hostel.allocations.export', ['search' => 'Export Hostel']))
+            ->streamedContent();
+        $this->assertStringContainsString('Export Hostel Student', $allocationCsv);
+        $this->assertStringNotContainsString('Other Hostel Student', $allocationCsv);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.outpasses', ['status' => 'pending']))
+            ->assertOk()
+            ->assertSee(route('admin.hostel.outpasses.export', ['status' => 'pending']))
+            ->assertSee('Showing 1 outpass record(s)')
+            ->assertSee($outpass->reason)
+            ->assertDontSee('Returned visit');
+
+        $outpassCsv = $this->actingAs($admin)
+            ->get(route('admin.hostel.outpasses.export', ['status' => 'pending']))
+            ->streamedContent();
+        $this->assertStringContainsString('Placement interview', $outpassCsv);
+        $this->assertStringContainsString('pending', $outpassCsv);
+        $this->assertStringNotContainsString('Returned visit', $outpassCsv);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.complaints', ['status' => 'open', 'priority' => 'high']))
+            ->assertOk()
+            ->assertSee(route('admin.hostel.complaints.export', ['status' => 'open', 'priority' => 'high']))
+            ->assertSee('Showing 1 complaint record(s)')
+            ->assertSee($complaint->title)
+            ->assertDontSee('Low priority closed complaint');
+
+        $complaintCsv = $this->actingAs($admin)
+            ->get(route('admin.hostel.complaints.export', ['status' => 'open', 'priority' => 'high']))
+            ->streamedContent();
+        $this->assertStringContainsString('Export maintenance complaint', $complaintCsv);
+        $this->assertStringContainsString('high', $complaintCsv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Hostel complaints exported: 1 rows; filters={"status":"open","priority":"high"}',
+        ]);
+    }
+
     public function test_admin_cannot_allocate_invalid_or_maintenance_room_bed(): void
     {
         $admin = $this->userWithRole('admin');

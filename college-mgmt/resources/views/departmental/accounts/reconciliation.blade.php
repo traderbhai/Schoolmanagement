@@ -3,9 +3,14 @@
 @section('title', 'Admission Fee Reconciliation')
 
 @section('content')
-<div class="mb-4">
-    <h2 class="fw-bold mb-0">Admission Fee Reconciliation</h2>
-    <p class="text-muted mb-0">Verified admission payments grouped by program</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <h2 class="fw-bold mb-0">Admission Fee Reconciliation</h2>
+        <p class="text-muted mb-0">Verified admission payments grouped by program</p>
+    </div>
+    <a href="{{ route('accounts.export-admission-payments', request()->only('program_id')) }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download me-1"></i>Export Current View
+    </a>
 </div>
 
 {{-- Program Summary Cards --}}

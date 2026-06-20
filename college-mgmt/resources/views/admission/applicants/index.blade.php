@@ -16,6 +16,15 @@
     $nextDirection = fn (string $field) => ($sort === $field && $direction === 'asc') ? 'desc' : 'asc';
     $sortIcon = fn (string $field) => $sort === $field ? ($direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
     $sortUrl = fn (string $field) => request()->fullUrlWithQuery(['sort' => $field, 'direction' => $nextDirection($field)]);
+    $filterSummary = collect([
+        request('status') ? 'Status: ' . ucfirst(str_replace('_', ' ', request('status'))) : null,
+        request('program_id') ? 'Program filtered' : null,
+        request('batch_id') ? 'Batch filtered' : null,
+        request('counsellor_id') ? 'Counsellor filtered' : null,
+        request('search') ? 'Search: ' . request('search') : null,
+        request('date_from') ? 'From: ' . request('date_from') : null,
+        request('date_to') ? 'To: ' . request('date_to') : null,
+    ])->filter()->implode(' | ') ?: 'All visible applicants';
 @endphp
 
 <div class="admission-compact">
@@ -23,6 +32,7 @@
         <div>
             <h3 class="fw-bold mb-1">All Applicants</h3>
             <div class="text-muted small">{{ $applicants->total() }} records after filters</div>
+            <div class="small text-muted">Filter: {{ $filterSummary }}</div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('admission.dashboard') }}" class="btn btn-outline-secondary btn-sm">

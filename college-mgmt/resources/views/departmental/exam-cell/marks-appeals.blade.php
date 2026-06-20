@@ -3,7 +3,7 @@
 @section('page-title','Marks Appeals')
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h5 class="mb-0">Marks Appeals Inbox</h5>
+  <h1 class="h4 mb-0">Marks Appeals Inbox</h1>
 </div>
 
 @if(method_exists($appeals,'total') ? $appeals->total() === 0 : $appeals->isEmpty())

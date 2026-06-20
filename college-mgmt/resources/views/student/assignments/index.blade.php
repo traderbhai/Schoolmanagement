@@ -3,7 +3,15 @@
 
 @section('content')
 <div class="container py-4">
-    <h4 class="fw-semibold mb-4">Assignments</h4>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <h4 class="fw-semibold mb-1">Assignments</h4>
+            <div class="small text-muted">Visible filter summary: {{ $filterSummary ?? 'All published assignments in your enrolled subjects' }}</div>
+        </div>
+        @if(request('filter') === 'pending_next_7')
+            <span class="badge bg-warning text-dark">Filtered Source List ({{ $upcoming->count() }})</span>
+        @endif
+    </div>
 
     @if($upcoming->isNotEmpty())
     <h6 class="text-success mb-3"><i class="bi bi-clock me-1"></i>Upcoming / Open</h6>

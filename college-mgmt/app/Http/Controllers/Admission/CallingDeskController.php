@@ -36,6 +36,8 @@ class CallingDeskController extends Controller
             ? Lead::findOrFail($data['subject_id'])
             : Applicant::findOrFail($data['subject_id']);
 
+        abort_unless(app(AdmissionCallQueueSelectorService::class)->canAccess($subject, $request->user()), 403);
+
         $service->record($subject, $request->user(), $data);
 
         return back()->with('success', 'Call outcome saved and next action updated.');
@@ -52,6 +54,8 @@ class CallingDeskController extends Controller
         $subject = $data['subject_type'] === 'lead'
             ? Lead::findOrFail($data['subject_id'])
             : Applicant::findOrFail($data['subject_id']);
+
+        abort_unless($service->canAccess($subject, $request->user()), 403);
 
         $service->skip($subject, $request->user(), $data['reason']);
 

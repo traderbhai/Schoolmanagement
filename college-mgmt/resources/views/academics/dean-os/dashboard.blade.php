@@ -25,18 +25,28 @@
     <div class="row g-2 mb-3">
         @foreach([
             ['label' => 'Overdue Approvals', 'value' => $kpis['overdue_approvals'], 'route' => route('academics.dean-os.attention', 'overdue_dean_approvals')],
-            ['label' => 'Open Actions', 'value' => $kpis['open_actions'], 'route' => route('academics.dean-os.reviews')],
-            ['label' => 'Critical Program Risks', 'value' => $kpis['critical_program_risks'], 'route' => route('academics.dean-os.program-risk')],
-            ['label' => 'Handoff Blockers', 'value' => $kpis['handoff_blockers'], 'route' => route('academics.dean-os.handoff')],
-            ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => route('academics.dean-os.attention', 'action_items_overdue')],
+            ['label' => 'Open Actions', 'value' => $kpis['open_actions'], 'route' => route('academics.dean-os.reviews', ['status' => 'open'])],
+            ['label' => 'Critical Program Risks', 'value' => $kpis['critical_program_risks'], 'route' => route('academics.dean-os.program-risk', ['band' => 'critical_high'])],
+            ['label' => 'Handoff Blockers', 'value' => $kpis['handoff_blockers'], 'route' => route('academics.dean-os.handoff', ['status' => 'blocking'])],
+            ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => null],
         ] as $metric)
             <div class="col-6 col-xl">
-                <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100">
-                    <div class="card-body py-2">
-                        <div class="small text-muted">{{ $metric['label'] }}</div>
-                        <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                @if($metric['route'])
+                    <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100">
+                        <div class="card-body py-2">
+                            <div class="small text-muted">{{ $metric['label'] }}</div>
+                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                        </div>
+                    </a>
+                @else
+                    <div class="card shadow-sm h-100" aria-label="{{ $metric['label'] }} summary">
+                        <div class="card-body py-2">
+                            <div class="small text-muted">{{ $metric['label'] }}</div>
+                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                            <div class="small text-muted">Summary only</div>
+                        </div>
                     </div>
-                </a>
+                @endif
             </div>
         @endforeach
     </div>

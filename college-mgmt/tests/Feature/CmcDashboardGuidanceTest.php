@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\CareerEvent;
+use App\Models\CareerEventRegistration;
 use App\Models\Placement;
 use App\Models\PlacementDrive;
 use App\Models\Student;
@@ -145,5 +147,197 @@ class CmcDashboardGuidanceTest extends TestCase
             ->assertSee('8.3 LPA')
             ->assertSee('FutureSoft')
             ->assertSee('1 placed');
+    }
+
+    public function test_cmc_drives_export_matches_filtered_current_view(): void
+    {
+        $company = $this->company(['name' => 'Filtered Recruiter']);
+        $matching = $this->drive($company, ['title' => 'Filtered Drive', 'status' => 'ongoing']);
+        $this->drive($this->company(['name' => 'Archived Recruiter']), ['title' => 'Completed Drive', 'status' => 'completed']);
+
+        $this->actingAs($this->cmcUser())
+            ->get(route('cmc.drives', ['status' => 'ongoing', 'company_id' => $company->id]))
+            ->assertStatus(200)
+            ->assertSee('Export Current View')
+            ->assertSee(route('cmc.drives.export', ['status' => 'ongoing', 'company_id' => $company->id]))
+            ->assertSee('Showing 1 drive(s)')
+            ->assertSee($matching->title)
+            ->assertDontSee('Completed Drive');
+
+        $response = $this->actingAs($this->cmcUser())
+            ->get(route('cmc.drives.export', ['status' => 'ongoing', 'company_id' => $company->id]));
+
+        $response->assertOk();
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('Filtered Drive', $csv);
+        $this->assertStringNotContainsString('Completed Drive', $csv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'CMC placement drives exported: 1 rows; filters={"status":"ongoing","company_id":"' . $company->id . '"}',
+        ]);
+    }
+
+    public function test_cmc_companies_and_events_expose_filtered_exports(): void
+    {
+        $company = $this->company(['name' => 'Searchable Recruiter']);
+        $this->company(['name' => 'Other Recruiter']);
+        $cmc = $this->cmcUser();
+        $event = CareerEvent::create([
+            'title' => 'Mock Interview Clinic',
+            'event_type' => 'mock_interview',
+            'organizer_id' => $cmc->id,
+            'event_date' => now()->addWeek()->toDateString(),
+            'is_published' => true,
+        ]);
+        CareerEvent::create([
+            'title' => 'Resume Workshop',
+            'event_type' => 'workshop',
+            'organizer_id' => $cmc->id,
+            'event_date' => now()->addWeek()->toDateString(),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.companies', ['search' => 'Searchable']))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.companies.export', ['search' => 'Searchable']))
+            ->assertSee('Showing 1 company record(s)')
+            ->assertSee($company->name)
+            ->assertDontSee('Other Recruiter');
+
+        $companyCsv = $this->actingAs($cmc)
+            ->get(route('cmc.companies.export', ['search' => 'Searchable']))
+            ->streamedContent();
+        $this->assertStringContainsString('Searchable Recruiter', $companyCsv);
+        $this->assertStringNotContainsString('Other Recruiter', $companyCsv);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.events', ['type' => 'mock_interview']))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.events.export', ['type' => 'mock_interview']))
+            ->assertSee('Showing 1 career event(s)')
+            ->assertSee($event->title)
+            ->assertDontSee('Resume Workshop');
+
+        $eventCsv = $this->actingAs($cmc)
+            ->get(route('cmc.events.export', ['type' => 'mock_interview']))
+            ->streamedContent();
+        $this->assertStringContainsString('Mock Interview Clinic', $eventCsv);
+        $this->assertStringNotContainsString('Resume Workshop', $eventCsv);
+    }
+
+    public function test_cmc_detail_lists_and_selected_placements_export_current_rows(): void
+    {
+        $drive = $this->drive($this->company(['name' => 'Detail Recruiter']), ['title' => 'Detail Drive', 'vacancies' => 2]);
+        $student = Student::factory()->create();
+        $selected = Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'selected',
+            'offered_package' => 8.5,
+        ]);
+        Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => Student::factory()->create()->id,
+            'application_status' => 'applied',
+        ]);
+        $event = CareerEvent::create([
+            'title' => 'Career Fair',
+            'event_type' => 'career_fair',
+            'organizer_id' => $this->cmcUser()->id,
+            'event_date' => now()->subDay()->toDateString(),
+            'is_published' => true,
+        ]);
+        CareerEventRegistration::create([
+            'career_event_id' => $event->id,
+            'student_id' => $student->id,
+            'status' => 'registered',
+            'attended' => true,
+        ]);
+
+        $this->actingAs($this->cmcUser())
+            ->get(route('cmc.drives.applications', $drive))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.drives.applications.export', $drive), false)
+            ->assertSee('Showing 2 application record(s) for this drive.');
+
+        $applicationsCsv = $this->actingAs($this->cmcUser())
+            ->get(route('cmc.drives.applications.export', $drive))
+            ->streamedContent();
+        $this->assertStringContainsString($student->user->name, $applicationsCsv);
+        $this->assertStringContainsString('selected', $applicationsCsv);
+
+        $this->actingAs($this->cmcUser())
+            ->get(route('cmc.placements'))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.placements.export'), false);
+
+        $placementsCsv = $this->actingAs($this->cmcUser())
+            ->get(route('cmc.placements.export'))
+            ->streamedContent();
+        $this->assertStringContainsString((string) $selected->offered_package, $placementsCsv);
+        $this->assertStringContainsString('Detail Drive', $placementsCsv);
+        $this->assertStringNotContainsString('applied', $placementsCsv);
+
+        $this->actingAs($this->cmcUser())
+            ->get(route('cmc.events.registrations', $event))
+            ->assertStatus(200)
+            ->assertSee(route('cmc.events.registrations.export', $event), false);
+
+        $registrationsCsv = $this->actingAs($this->cmcUser())
+            ->get(route('cmc.events.registrations.export', $event))
+            ->streamedContent();
+        $this->assertStringContainsString($student->user->name, $registrationsCsv);
+        $this->assertStringContainsString('registered', $registrationsCsv);
+    }
+
+    public function test_cmc_create_and_edit_forms_explain_public_workflow_impact(): void
+    {
+        $cmc = $this->cmcUser();
+        $company = $this->company(['name' => 'Guidance Recruiter']);
+        $drive = $this->drive($company, ['title' => 'Guidance Drive', 'status' => 'ongoing']);
+        $event = CareerEvent::create([
+            'title' => 'Guidance Event',
+            'event_type' => 'workshop',
+            'organizer_id' => $cmc->id,
+            'event_date' => now()->addWeek()->toDateString(),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.drives.create'))
+            ->assertOk()
+            ->assertSee('Published drive details become student-facing')
+            ->assertSee("confirm('Create this placement drive with the selected status and dates?')", false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.drives.edit', $drive))
+            ->assertOk()
+            ->assertSee('Changing an active drive can affect student applications')
+            ->assertSee("confirm('Save placement drive changes?')", false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.companies.create'))
+            ->assertOk()
+            ->assertSee('verified recruiter contact details')
+            ->assertSee("confirm('Add this company to the recruiter database?')", false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.companies.edit', $company))
+            ->assertOk()
+            ->assertSee('Deactivating a recruiter is blocked while active drives exist')
+            ->assertSee("confirm('Save company changes?')", false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.events.create'))
+            ->assertOk()
+            ->assertSee('Published events are visible to students')
+            ->assertSee("confirm('Create this career event with the selected publication setting?')", false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.events.edit', $event))
+            ->assertOk()
+            ->assertSee('If students have registered, date/type/venue/registration deadline changes are restricted')
+            ->assertSee("confirm('Save career event changes?')", false);
     }
 }

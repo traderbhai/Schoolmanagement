@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{PlacementDrive, Placement, Student, Program, Company, CareerEvent, CareerEventRegistration};
+use App\Models\{ActivityLog, PlacementDrive, Placement, Student, Program, Company, CareerEvent, CareerEventRegistration};
 use App\Services\PlacementLifecycleService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -108,15 +108,29 @@ class CmcController extends Controller
 
     public function drives(Request $request)
     {
-        $query = PlacementDrive::with(['placements', 'company'])->latest();
-
-        if ($request->filled('status'))     $query->where('status', $request->status);
-        if ($request->filled('company_id')) $query->where('company_id', $request->company_id);
-
-        $drives    = $query->paginate(20)->withQueryString();
+        $drives    = $this->driveQuery($request)->paginate(20)->withQueryString();
         $companies = Company::where('is_active', true)->orderBy('name')->get();
 
         return view('departmental.cmc.drives', compact('drives', 'companies'));
+    }
+
+    public function exportDrives(Request $request)
+    {
+        $drives = $this->driveQuery($request)->get();
+        $this->recordExportActivity('placement drives', $drives->count(), $request);
+
+        return $this->csvDownload('cmc-placement-drives-' . now()->format('Ymd') . '.csv', [
+            ['Drive', 'Company', 'Role', 'Status', 'Applications', 'Drive Date', 'Last Apply Date'],
+            ...$drives->map(fn(PlacementDrive $drive) => [
+                $drive->title,
+                $drive->company?->name,
+                $drive->job_role,
+                $drive->status,
+                $drive->placements_count,
+                $drive->drive_date?->toDateString(),
+                $drive->last_apply_date?->toDateString(),
+            ])->all(),
+        ]);
     }
 
     public function createDrive()
@@ -196,10 +210,27 @@ class CmcController extends Controller
     public function driveApplications(PlacementDrive $drive)
     {
         $drive->load(['company']);
-        $applications = Placement::where('drive_id', $drive->id)
-            ->with(['student.user'])->latest()->get();
+        $applications = $this->driveApplicationQuery($drive)->get();
 
         return view('departmental.cmc.drive-applications', compact('drive', 'applications'));
+    }
+
+    public function exportDriveApplications(PlacementDrive $drive)
+    {
+        $applications = $this->driveApplicationQuery($drive)->get();
+        $this->recordExportActivity("drive {$drive->id} applications", $applications->count(), request());
+
+        return $this->csvDownload('cmc-drive-applications-' . $drive->id . '-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Status', 'Offered Package', 'Remarks', 'Applied On'],
+            ...$applications->map(fn(Placement $placement) => [
+                $placement->student?->user?->name,
+                $placement->student?->enrollment_number,
+                $placement->application_status,
+                $placement->offered_package,
+                $placement->remarks,
+                $placement->created_at?->toDateTimeString(),
+            ])->all(),
+        ]);
     }
 
     public function updateApplicationStatus(Request $request, Placement $placement)
@@ -222,9 +253,26 @@ class CmcController extends Controller
 
     public function placements()
     {
-        $placements = Placement::with(['student.user', 'drive.company'])
-            ->where('application_status', 'selected')->latest()->paginate(30);
+        $placements = $this->selectedPlacementQuery()->paginate(30);
         return view('departmental.cmc.placements', compact('placements'));
+    }
+
+    public function exportPlacements()
+    {
+        $placements = $this->selectedPlacementQuery()->get();
+        $this->recordExportActivity('selected placements', $placements->count(), request());
+
+        return $this->csvDownload('cmc-selected-placements-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Drive', 'Company', 'Package', 'Selected On'],
+            ...$placements->map(fn(Placement $placement) => [
+                $placement->student?->user?->name,
+                $placement->student?->enrollment_number,
+                $placement->drive?->title,
+                $placement->drive?->company?->name,
+                $placement->offered_package,
+                $placement->created_at?->toDateString(),
+            ])->all(),
+        ]);
     }
 
     public function analytics()
@@ -244,10 +292,26 @@ class CmcController extends Controller
 
     public function companies(Request $request)
     {
-        $query = Company::withCount('drives');
-        if ($request->filled('search')) $query->where('name', 'like', '%' . $request->search . '%');
-        $companies = $query->orderBy('name')->paginate(25)->withQueryString();
+        $companies = $this->companyQuery($request)->paginate(25)->withQueryString();
         return view('departmental.cmc.companies', compact('companies'));
+    }
+
+    public function exportCompanies(Request $request)
+    {
+        $companies = $this->companyQuery($request)->get();
+        $this->recordExportActivity('companies', $companies->count(), $request);
+
+        return $this->csvDownload('cmc-companies-' . now()->format('Ymd') . '.csv', [
+            ['Name', 'Industry', 'Contact Person', 'Contact Email', 'Active', 'Drives'],
+            ...$companies->map(fn(Company $company) => [
+                $company->name,
+                $company->industry,
+                $company->contact_person,
+                $company->contact_email,
+                $company->is_active ? 'Yes' : 'No',
+                $company->drives_count,
+            ])->all(),
+        ]);
     }
 
     public function createCompany()
@@ -308,12 +372,28 @@ class CmcController extends Controller
 
     public function events(Request $request)
     {
-        $query = CareerEvent::with('organizer')
-            ->withCount(['activeRegistrations as registrations_count', 'registrations as total_registrations_count'])
-            ->latest('event_date');
-        if ($request->filled('type') && array_key_exists($request->type, CareerEvent::TYPE_LABELS)) $query->where('event_type', $request->type);
-        $events = $query->paginate(25)->withQueryString();
+        $events = $this->eventQuery($request)->paginate(25)->withQueryString();
         return view('departmental.cmc.events', compact('events'));
+    }
+
+    public function exportEvents(Request $request)
+    {
+        $events = $this->eventQuery($request)->get();
+        $this->recordExportActivity('career events', $events->count(), $request);
+
+        return $this->csvDownload('cmc-career-events-' . now()->format('Ymd') . '.csv', [
+            ['Title', 'Type', 'Date', 'Venue', 'Seats', 'Published', 'Active Registrations', 'Total Registrations'],
+            ...$events->map(fn(CareerEvent $event) => [
+                $event->title,
+                CareerEvent::TYPE_LABELS[$event->event_type] ?? $event->event_type,
+                $event->event_date?->toDateString(),
+                $event->venue,
+                $event->seats,
+                $event->is_published ? 'Yes' : 'Draft',
+                $event->registrations_count,
+                $event->total_registrations_count,
+            ])->all(),
+        ]);
     }
 
     public function createEvent()
@@ -391,9 +471,25 @@ class CmcController extends Controller
     public function eventRegistrations(CareerEvent $event)
     {
         $event->load('organizer');
-        $registrations = CareerEventRegistration::where('career_event_id', $event->id)
-            ->with(['student.user'])->latest()->get();
+        $registrations = $this->eventRegistrationQuery($event)->get();
         return view('departmental.cmc.event-registrations', compact('event', 'registrations'));
+    }
+
+    public function exportEventRegistrations(CareerEvent $event)
+    {
+        $registrations = $this->eventRegistrationQuery($event)->get();
+        $this->recordExportActivity("event {$event->id} registrations", $registrations->count(), request());
+
+        return $this->csvDownload('cmc-event-registrations-' . $event->id . '-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Status', 'Attended', 'Registered On'],
+            ...$registrations->map(fn(CareerEventRegistration $registration) => [
+                $registration->student?->user?->name,
+                $registration->student?->enrollment_number,
+                $registration->status,
+                $registration->attended ? 'Yes' : 'No',
+                $registration->created_at?->toDateTimeString(),
+            ])->all(),
+        ]);
     }
 
     public function updateEventAttendance(Request $request, CareerEvent $event, CareerEventRegistration $registration)
@@ -444,5 +540,81 @@ class CmcController extends Controller
         }
 
         return null;
+    }
+
+    private function driveQuery(Request $request)
+    {
+        $query = PlacementDrive::with(['company'])->withCount('placements')->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
+        return $query;
+    }
+
+    private function driveApplicationQuery(PlacementDrive $drive)
+    {
+        return Placement::where('drive_id', $drive->id)
+            ->with(['student.user'])
+            ->latest();
+    }
+
+    private function selectedPlacementQuery()
+    {
+        return Placement::with(['student.user', 'drive.company'])
+            ->where('application_status', 'selected')
+            ->latest();
+    }
+
+    private function companyQuery(Request $request)
+    {
+        $query = Company::withCount('drives');
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        return $query->orderBy('name');
+    }
+
+    private function eventQuery(Request $request)
+    {
+        $query = CareerEvent::with('organizer')
+            ->withCount(['activeRegistrations as registrations_count', 'registrations as total_registrations_count'])
+            ->latest('event_date');
+        if ($request->filled('type') && array_key_exists($request->type, CareerEvent::TYPE_LABELS)) {
+            $query->where('event_type', $request->type);
+        }
+
+        return $query;
+    }
+
+    private function eventRegistrationQuery(CareerEvent $event)
+    {
+        return CareerEventRegistration::where('career_event_id', $event->id)
+            ->with(['student.user'])
+            ->latest();
+    }
+
+    private function csvDownload(string $filename, array $rows)
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "CMC {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

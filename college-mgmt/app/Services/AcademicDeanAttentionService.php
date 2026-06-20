@@ -217,7 +217,7 @@ class AcademicDeanAttentionService
             ->latest('admission_handoff_records.updated_at')
             ->limit(25)
             ->get()
-            ->map(fn ($row) => $this->item($this->applicantLabel($row), ($row->application_number ?? 'Application') . ' - ' . str_replace('_', ' ', $row->status), $row->status === 'blocked' ? 'critical' : 'high', 'handoff', 'Admission/Academics', null, route('academics.dean-os.handoff'), 'Clear handoff blocker'));
+            ->map(fn ($row) => $this->item($this->applicantLabel($row), ($row->application_number ?? 'Application') . ' - ' . str_replace('_', ' ', $row->status), $row->status === 'blocked' ? 'critical' : 'high', 'handoff', 'Admission/Academics', null, route('academics.dean-os.handoff', ['status' => 'blocking']), 'Clear handoff blocker'));
     }
 
     private function overdueActions(): Collection

@@ -33,13 +33,15 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-auto">
+            <div class="col-auto d-flex gap-2">
                 <button class="btn btn-sm btn-primary">Filter</button>
-                <a href="{{ route('admin.hostel.complaints') }}" class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
+                <a href="{{ route('admin.hostel.complaints') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                <a href="{{ route('admin.hostel.complaints.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
             </div>
         </form>
     </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $complaints->total() }} complaint record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}{{ request('priority') ? ' and priority: '.request('priority') : '' }}.</div>
 
 <div class="card">
     <div class="card-body p-0">

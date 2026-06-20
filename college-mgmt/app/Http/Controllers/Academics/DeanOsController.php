@@ -77,16 +77,44 @@ class DeanOsController extends Controller
     {
         $this->authorizeDeanOs($request);
 
-        return view('academics.dean-os.program-risk', ['risks' => $this->risk->programRisks()]);
+        $filters = $request->only(['band', 'program_id']);
+        $risks = $this->risk->programRisks()
+            ->when($request->filled('band'), function ($collection) use ($request) {
+                $bands = $request->band === 'critical_high'
+                    ? ['critical', 'high']
+                    : [(string) $request->band];
+
+                return $collection->whereIn('band', $bands);
+            })
+            ->when($request->filled('program_id'), fn ($collection) => $collection->filter(fn ($risk) => (int) $risk['program']->id === (int) $request->program_id))
+            ->values();
+
+        return view('academics.dean-os.program-risk', compact('risks', 'filters'));
     }
 
     public function reviews(Request $request)
     {
         $this->authorizeDeanOs($request);
 
+        $filters = $request->only(['status']);
+        $actions = AcademicDeanActionItem::with(['owner', 'meeting'])
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $status = (string) $request->status;
+
+                if ($status === 'open') {
+                    $query->whereNotIn('status', ['done', 'cancelled']);
+                } else {
+                    $query->where('status', $status);
+                }
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
         return view('academics.dean-os.reviews', [
             'meetings' => AcademicDeanReviewMeeting::with(['chair', 'actions.owner'])->latest('scheduled_for')->paginate(10),
-            'actions' => AcademicDeanActionItem::with(['owner', 'meeting'])->latest()->paginate(15),
+            'actions' => $actions,
+            'filters' => $filters,
             'members' => DepartmentMember::with('user')->whereHas('department', fn ($q) => $q->where('code', 'ACAD'))->where('is_active', true)->get()->pluck('user')->filter()->unique('id')->values(),
         ]);
     }
@@ -151,16 +179,25 @@ class DeanOsController extends Controller
                 ->leftJoin('applicants', 'applicants.id', '=', 'admission_handoff_records.applicant_id')
                 ->leftJoin('users', 'users.id', '=', 'applicants.user_id')
                 ->select('admission_handoff_records.*', 'applicants.application_number', 'users.name as applicant_name')
-                ->when($request->filled('status'), fn ($q) => $q->where('admission_handoff_records.status', $request->status))
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    if ($request->status === 'blocking') {
+                        $query->whereIn('admission_handoff_records.status', ['blocked', 'pending_admission_completion', 'returned_for_correction']);
+                    } else {
+                        $query->where('admission_handoff_records.status', $request->status);
+                    }
+                })
                 ->latest('admission_handoff_records.updated_at')
                 ->paginate(20)
+                ->withQueryString()
             : collect();
 
         $counts = DB::getSchemaBuilder()->hasTable('admission_handoff_records')
             ? DB::table('admission_handoff_records')->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status')
             : collect();
 
-        return view('academics.dean-os.handoff', compact('records', 'counts'));
+        $filters = $request->only(['status']);
+
+        return view('academics.dean-os.handoff', compact('records', 'counts', 'filters'));
     }
 
     public function calendar(Request $request)
@@ -355,6 +392,7 @@ class DeanOsController extends Controller
             'surface' => $surface,
             'config' => $map[$surface],
             'data' => app(AcademicDeanOperatingRecordService::class)->dashboard($map[$surface]['record_type'], $request->query()),
+            'savedViews' => app(AcademicDeanSavedViewService::class)->list($request->user(), $surface),
         ]);
     }
 

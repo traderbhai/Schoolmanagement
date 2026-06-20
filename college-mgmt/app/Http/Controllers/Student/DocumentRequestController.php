@@ -26,13 +26,12 @@ class DocumentRequestController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
 
-        if ($student->status !== 'active') {
-            return redirect()->route('student.documents.index')
-                ->with('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
-        }
+        $actionBlockedReason = $student->status !== 'active'
+            ? 'New document requests are available only for active students. Contact the administration office if you need archived records.'
+            : null;
 
         $types = self::TYPES;
-        return view('student.documents.create', compact('types'));
+        return view('student.documents.create', compact('types', 'actionBlockedReason'));
     }
 
     public function store(Request $request) {

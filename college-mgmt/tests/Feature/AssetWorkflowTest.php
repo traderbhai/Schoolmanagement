@@ -641,4 +641,105 @@ class AssetWorkflowTest extends TestCase
             ->assertSee('REQ-3001')
             ->assertSee('Stock Receiver');
     }
+
+    public function test_admin_assets_exports_register_assignments_stock_and_movements(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $teacher = $this->userWithRole('teacher');
+        $teacher->update(['name' => 'Export Asset Custodian']);
+        $category = AssetCategory::create([
+            'name' => 'Export Equipment',
+            'code' => 'EXP-ASSET',
+            'is_active' => true,
+        ]);
+
+        $matchingAsset = InstituteAsset::create([
+            'asset_category_id' => $category->id,
+            'asset_tag' => 'EXP-LAP-001',
+            'name' => 'Export Laptop',
+            'serial_number' => 'EXP-SN-001',
+            'purchase_cost' => 45000,
+            'location' => 'Export Store',
+            'condition' => 'good',
+            'status' => 'assigned',
+        ]);
+        InstituteAsset::create([
+            'asset_category_id' => $category->id,
+            'asset_tag' => 'OTHER-LAP-001',
+            'name' => 'Other Laptop',
+            'purchase_cost' => 30000,
+            'location' => 'Other Store',
+            'condition' => 'good',
+            'status' => 'available',
+        ]);
+        AssetAssignment::create([
+            'institute_asset_id' => $matchingAsset->id,
+            'assigned_to_user_id' => $teacher->id,
+            'assigned_by' => $admin->id,
+            'assigned_on' => now()->subDay()->toDateString(),
+            'status' => 'active',
+            'remarks' => 'Export custody note',
+        ]);
+        $item = InventoryItem::create([
+            'asset_category_id' => $category->id,
+            'name' => 'Export Marker',
+            'sku' => 'EXP-MARKER',
+            'unit' => 'box',
+            'current_stock' => 2,
+            'reorder_level' => 5,
+            'location' => 'Export Store',
+            'status' => 'active',
+        ]);
+        InventoryMovement::create([
+            'inventory_item_id' => $item->id,
+            'movement_type' => 'issue',
+            'quantity' => 3,
+            'performed_by' => $admin->id,
+            'issued_to_user_id' => $teacher->id,
+            'reference_number' => 'EXP-REQ-001',
+            'movement_date' => now()->toDateString(),
+            'remarks' => 'Export movement note',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.assets.index', ['search' => 'Export', 'status' => 'assigned']))
+            ->assertOk()
+            ->assertSee(route('admin.assets.export', ['search' => 'Export', 'status' => 'assigned']))
+            ->assertSee(route('admin.assets.assignments.export'))
+            ->assertSee(route('admin.assets.stock-items.export'))
+            ->assertSee(route('admin.assets.stock-movements.export'))
+            ->assertSee('Showing 1 records. Filter: search: Export; status: assigned.')
+            ->assertSee('Export Laptop')
+            ->assertDontSee('Other Laptop');
+
+        $assetCsv = $this->actingAs($admin)
+            ->get(route('admin.assets.export', ['search' => 'Export', 'status' => 'assigned']))
+            ->streamedContent();
+        $this->assertStringContainsString('EXP-LAP-001', $assetCsv);
+        $this->assertStringContainsString('Export Asset Custodian', $assetCsv);
+        $this->assertStringNotContainsString('OTHER-LAP-001', $assetCsv);
+
+        $assignmentCsv = $this->actingAs($admin)
+            ->get(route('admin.assets.assignments.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('Export custody note', $assignmentCsv);
+        $this->assertStringContainsString('Export Asset Custodian', $assignmentCsv);
+
+        $stockCsv = $this->actingAs($admin)
+            ->get(route('admin.assets.stock-items.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('EXP-MARKER', $stockCsv);
+        $this->assertStringContainsString('low_stock', $stockCsv);
+
+        $movementCsv = $this->actingAs($admin)
+            ->get(route('admin.assets.stock-movements.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('EXP-REQ-001', $movementCsv);
+        $this->assertStringContainsString('Export movement note', $movementCsv);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Assets asset register exported: 1 rows; filters={"search":"Export","status":"assigned"}',
+        ]);
+    }
 }

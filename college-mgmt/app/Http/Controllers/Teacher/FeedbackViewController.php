@@ -9,7 +9,14 @@ class FeedbackViewController extends Controller
     public function index()
     {
         $teacher = auth()->user()->teacher;
-        if (!$teacher) abort(403);
+        $currentTerm = Term::latest('start_date')->first();
+
+        if (! $teacher) {
+            $feedbackBySubject = collect();
+            $profileMissing = true;
+
+            return view('teacher.feedback.index', compact('feedbackBySubject', 'currentTerm', 'profileMissing'));
+        }
 
         $subjectIds = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('is_active', true)
@@ -19,8 +26,6 @@ class FeedbackViewController extends Controller
                     ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
             })
             ->pluck('subject_id')->unique()->toArray();
-
-        $currentTerm = Term::latest('start_date')->first();
 
         $feedbackBySubject = Subject::whereIn('id', $subjectIds)
             ->get()
@@ -42,8 +47,9 @@ class FeedbackViewController extends Controller
                 ];
                 return $subject;
             });
+        $profileMissing = false;
 
-        return view('teacher.feedback.index', compact('feedbackBySubject', 'currentTerm'));
+        return view('teacher.feedback.index', compact('feedbackBySubject', 'currentTerm', 'profileMissing'));
     }
 
     private function enrolledFeedbackQuery(int $subjectId, ?Term $currentTerm)

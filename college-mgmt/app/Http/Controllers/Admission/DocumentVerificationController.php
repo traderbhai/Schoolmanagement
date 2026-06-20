@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Mail\DocumentRejected;
+use App\Models\ActivityLog;
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
 use App\Models\Batch;
 use App\Models\DocumentVerificationRequest;
 use App\Models\Program;
+use App\Services\AdmissionKpiDrilldownService;
 use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -19,44 +21,71 @@ class DocumentVerificationController extends Controller
 {
     public function __construct(private DepartmentHierarchyService $hierarchy) {}
 
-    public function pendingQueue(Request $request)
+    public function pendingQueue(Request $request, AdmissionKpiDrilldownService $drilldowns)
     {
-        $query = ApplicantDocument::with(['applicant.user', 'applicant.program', 'applicant.batch', 'requiredDocument'])
-            ->where('status', 'pending')
-            ->orderByDesc('uploaded_at');
+        $query = $this->pendingDocumentQueueQuery($request);
 
-        $query->whereHas('applicant', function ($q) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM');
-        });
-
-        if ($request->filled('program_id')) {
-            $query->whereHas('applicant', fn($q) => $q->where('program_id', $request->program_id));
-        }
-        if ($request->filled('batch_id')) {
-            $query->whereHas('applicant', fn($q) => $q->where('batch_id', $request->batch_id));
-        }
-        if ($request->filled('document_name')) {
-            $query->whereHas('requiredDocument', fn($q) => $q->where('name', 'like', '%' . $request->document_name . '%'));
-        }
-        if ($request->filled('uploaded_from')) {
-            $query->where('uploaded_at', '>=', $request->uploaded_from);
-        }
-        if ($request->filled('uploaded_to')) {
-            $query->where('uploaded_at', '<=', $request->uploaded_to . ' 23:59:59');
-        }
-
+        $filteredQuery = clone $query;
         $documents = $query->paginate(20)->withQueryString();
 
         $stats = [
-            'pending'         => ApplicantDocument::where('status', 'pending')->count(),
-            'verified_today'  => ApplicantDocument::where('status', 'verified')->whereDate('verified_at', today())->count(),
-            'rejected_today'  => ApplicantDocument::where('status', 'rejected')->whereDate('verified_at', today())->count(),
+            'pending'         => (clone $filteredQuery)->count(),
+            'all_pending'     => $drilldowns->pendingDocumentQuery($request->user())->count(),
+            'verified_today'  => ApplicantDocument::where('status', 'verified')
+                ->whereDate('verified_at', today())
+                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM'))
+                ->count(),
+            'rejected_today'  => ApplicantDocument::where('status', 'rejected')
+                ->whereDate('verified_at', today())
+                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM'))
+                ->count(),
         ];
 
         $programs = Program::where('is_active', true)->orderBy('name')->get();
         $batches  = Batch::where('is_active', true)->orderBy('name')->get();
 
         return view('admission.documents.queue', compact('documents', 'stats', 'programs', 'batches'));
+    }
+
+    public function exportPendingQueue(Request $request)
+    {
+        $documents = $this->pendingDocumentQueueQuery($request)->get();
+
+        ActivityLog::record(
+            'admission_document_queue_export',
+            'Admission document verification queue exported: ' . $documents->count() . ' rows; filters=' . json_encode($request->only(['program_id', 'batch_id', 'document_name', 'uploaded_from', 'uploaded_to'])),
+        );
+
+        $filename = 'admission-document-verification-queue-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($documents) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'Application Number',
+                'Applicant',
+                'Program',
+                'Batch',
+                'Document',
+                'Original File',
+                'Uploaded At',
+                'Version',
+            ]);
+
+            foreach ($documents as $document) {
+                fputcsv($handle, [
+                    $document->applicant?->application_number,
+                    $document->applicant?->user?->name,
+                    $document->applicant?->program?->name,
+                    $document->applicant?->batch?->name,
+                    $document->requiredDocument?->name ?? $document->original_name,
+                    $document->original_name,
+                    optional($document->uploaded_at)->format('Y-m-d H:i:s'),
+                    $document->version,
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     public function verify(Request $request, ApplicantDocument $document)
@@ -213,6 +242,38 @@ class DocumentVerificationController extends Controller
             || !$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $document->applicant?->assigned_to, false)) {
             abort(403);
         }
+    }
+
+    private function pendingDocumentQueueQuery(Request $request)
+    {
+        $query = ApplicantDocument::with(['applicant.user', 'applicant.program', 'applicant.batch', 'requiredDocument'])
+            ->where('status', 'pending')
+            ->orderByDesc('uploaded_at');
+
+        $query->whereHas('applicant', function ($q) use ($request) {
+            $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM');
+        });
+
+        if ($request->filled('program_id')) {
+            $query->whereHas('applicant', fn($q) => $q->where('program_id', $request->program_id));
+        }
+        if ($request->filled('batch_id')) {
+            $query->whereHas('applicant', fn($q) => $q->where('batch_id', $request->batch_id));
+        }
+        if ($request->filled('document_name')) {
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('requiredDocument', fn($doc) => $doc->where('name', 'like', '%' . $request->document_name . '%'))
+                    ->orWhere('original_name', 'like', '%' . $request->document_name . '%');
+            });
+        }
+        if ($request->filled('uploaded_from')) {
+            $query->where('uploaded_at', '>=', $request->uploaded_from);
+        }
+        if ($request->filled('uploaded_to')) {
+            $query->where('uploaded_at', '<=', $request->uploaded_to . ' 23:59:59');
+        }
+
+        return $query;
     }
 
     private function checkAndAdvanceApplicant(int $applicantId): void

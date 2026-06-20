@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>All Exams</h4>
+    <h1 class="h4 mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>All Exams</h1>
     <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Exam</a>
 </div>
 @if(session('error'))

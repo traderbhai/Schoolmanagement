@@ -3,10 +3,17 @@
 @section('title', 'Enrollment Confirmations')
 
 @section('content')
+@php
+    $filterSummary = collect([
+        request('program_id') ? 'Program filtered' : null,
+        request('batch_id') ? 'Batch filtered' : null,
+    ])->filter()->implode(' | ') ?: 'All visible completed enrollments';
+@endphp
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold mb-0">Enrollment Confirmations</h2>
         <div class="text-muted small">Applicants converted to students</div>
+        <div class="small text-muted">Filter: {{ $filterSummary }}</div>
     </div>
 </div>
 
@@ -91,4 +98,5 @@
 </div>
 
 <div class="mt-3">{{ $confirmations->links() }}</div>
+<div class="small text-muted mt-1">Showing {{ $confirmations->firstItem() ?? 0 }}-{{ $confirmations->lastItem() ?? 0 }} of {{ $confirmations->total() }}</div>
 @endsection

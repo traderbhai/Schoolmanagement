@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Create Placement Drive</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.drives.store') }}">
+    <div class="alert alert-info small py-2">
+      Use draft/upcoming status until company, eligibility, application deadline, and drive date are confirmed. Published drive details become student-facing.
+    </div>
+    <form method="POST" action="{{ route('cmc.drives.store') }}" onsubmit="return confirm('Create this placement drive with the selected status and dates?')">
       @csrf
       <div class="row g-3">
         <div class="col-md-8">
@@ -24,7 +27,7 @@
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Company <span class="text-danger">*</span></label>
           <select name="company_id" class="form-select" required>
-            <option value="">— Select Company —</option>
+            <option value="">Select Company</option>
             @foreach($companies as $c)
             <option value="{{ $c->id }}" {{ old('company_id')==$c->id?'selected':'' }}>{{ $c->name }}</option>
             @endforeach

@@ -2,6 +2,10 @@
 @section('title', 'Library Fines')
 @section('page-title', 'Fine Collection')
 @section('content')
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted small">Showing {{ $issues->total() }} unpaid fine record(s).</div>
+    <a href="{{ route('admin.library.fines.export') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+</div>
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom fw-semibold">Unpaid Library Fines</div>
     <div class="card-body p-0">
@@ -16,7 +20,7 @@
                     <td><small class="text-danger">{{ $issue->due_date?->format('d M Y') }}</small></td>
                     <td>{{ $issue->days_overdue }} days</td>
                     <td><strong>₹{{ number_format($issue->fine_amount, 2) }}</strong></td>
-                    <td><form method="POST" action="{{ route('admin.library.fines.pay', $issue) }}">@csrf<button class="btn btn-xs btn-success">Mark Paid</button></form></td>
+                    <td><form method="POST" action="{{ route('admin.library.fines.pay', $issue) }}" onsubmit="return confirm('Mark this library fine as paid?')">@csrf<button class="btn btn-xs btn-success">Mark Paid</button></form></td>
                 </tr>
                 @empty
                 <tr><td colspan="7" class="text-center text-muted py-4">No unpaid fines.</td></tr>

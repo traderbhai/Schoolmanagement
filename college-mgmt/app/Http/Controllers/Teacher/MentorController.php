@@ -31,7 +31,14 @@ class MentorController extends Controller
     public function index()
     {
         $teacher = $this->teacher();
-        if (!$teacher) abort(403);
+        if (! $teacher) {
+            $mentees = collect();
+            $upcomingMeetings = collect();
+            $canManageMentoring = false;
+            $profileMissing = true;
+
+            return view('teacher.mentor.index', compact('mentees', 'upcomingMeetings', 'canManageMentoring', 'profileMissing'));
+        }
 
         $mentees = Student::where('mentor_id', $teacher->user_id)
             ->where('status', 'active')
@@ -62,8 +69,9 @@ class MentorController extends Controller
             ->get();
 
         $canManageMentoring = $teacher->status === 'active';
+        $profileMissing = false;
 
-        return view('teacher.mentor.index', compact('mentees', 'upcomingMeetings', 'canManageMentoring'));
+        return view('teacher.mentor.index', compact('mentees', 'upcomingMeetings', 'canManageMentoring', 'profileMissing'));
     }
 
     public function mentee(Student $student)

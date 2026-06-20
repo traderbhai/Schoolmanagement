@@ -12,6 +12,12 @@
         <div class="card-body">
             <p class="text-muted small mb-4">Your feedback is anonymous and helps improve teaching quality.</p>
 
+            @if($actionBlockedReason)
+                <div class="alert alert-warning">
+                    <i class="bi bi-lock me-1"></i>{{ $actionBlockedReason }}
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('student.feedback.store', $subject) }}">
                 @csrf
 
@@ -30,7 +36,7 @@
                         @for($i=1;$i<=5;$i++)
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="{{ $field }}" id="{{ $field }}_{{ $i }}" value="{{ $i }}"
-                                   {{ old($field)==$i?'checked':'' }} required>
+                                   {{ old($field)==$i?'checked':'' }} required @disabled($actionBlockedReason)>
                             <label class="form-check-label" for="{{ $field }}_{{ $i }}">{{ $i }}★</label>
                         </div>
                         @endfor
@@ -42,11 +48,11 @@
                 <div class="mb-4">
                     <label class="form-label fw-semibold">Comments (optional)</label>
                     <textarea name="comments" rows="4" class="form-control"
-                              placeholder="Any suggestions or observations...">{{ old('comments') }}</textarea>
+                              placeholder="Any suggestions or observations..." @disabled($actionBlockedReason)>{{ old('comments') }}</textarea>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                    <button type="submit" class="btn btn-primary" @disabled($actionBlockedReason)>Submit Feedback</button>
                     <a href="{{ route('student.feedback.index') }}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
             </form>

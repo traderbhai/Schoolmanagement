@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
-use App\Models\{HostelBlock, HostelRoom, HostelAllocation, HostelFeeDemand, OutpassRequest, HostelComplaint, Student, User};
+use App\Models\{ActivityLog, HostelBlock, HostelRoom, HostelAllocation, HostelFeeDemand, OutpassRequest, HostelComplaint, Student, User};
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -157,21 +157,33 @@ class HostelController extends Controller
     {
         $this->authorizeHostelOperations($r);
 
-        $query = HostelAllocation::with(['room.block', 'student.user'])
-            ->where('status', 'active');
-
-        if ($r->filled('search')) {
-            $search = $r->search;
-            $query->whereHas('student.user', fn($q) => $q->where('name', 'like', "%$search%"))
-                  ->orWhereHas('student', fn($q) => $q->where('enrollment_number', 'like', "%$search%"));
-        }
-
-        $allocations = $query->latest()->paginate(20)->withQueryString();
+        $allocations = $this->allocationQuery($r)->paginate(20)->withQueryString();
 
         $blocks   = HostelBlock::where('is_active', true)->with('rooms')->get();
         $students = Student::with('user')->where('status', 'active')->get();
 
         return view('admin.hostel.allocations', compact('allocations', 'blocks', 'students'));
+    }
+
+    public function exportAllocations(Request $r)
+    {
+        $this->authorizeHostelOperations($r);
+
+        $allocations = $this->allocationQuery($r)->get();
+        $this->recordExportActivity('allocations', $allocations->count(), $r);
+
+        return $this->csvDownload('hostel-allocations-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Block', 'Room', 'Bed', 'Allocated From', 'Status'],
+            ...$allocations->map(fn(HostelAllocation $allocation) => [
+                $allocation->student?->user?->name,
+                $allocation->student?->enrollment_number,
+                $allocation->room?->block?->name,
+                $allocation->room?->room_number,
+                $allocation->bed_number,
+                $allocation->allocated_from?->toDateString(),
+                $allocation->status,
+            ])->all(),
+        ]);
     }
 
     public function allocationStore(Request $r)
@@ -354,17 +366,7 @@ class HostelController extends Controller
     {
         $this->authorizeHostelOperations($r);
 
-        $query = HostelFeeDemand::with(['student.user', 'allocation.room.block'])->latest('due_date');
-
-        if ($r->filled('status')) {
-            $query->where('status', $r->status);
-        }
-
-        if ($r->filled('month')) {
-            $query->where('month', $r->month);
-        }
-
-        $demands = $query->paginate(20)->withQueryString();
+        $demands = $this->feeDemandQuery($r)->paginate(20)->withQueryString();
         $stats = [
             'pending' => HostelFeeDemand::where('status', 'pending')->count(),
             'paid' => HostelFeeDemand::where('status', 'paid')->count(),
@@ -373,6 +375,28 @@ class HostelController extends Controller
         ];
 
         return view('admin.hostel.fees', compact('demands', 'stats'));
+    }
+
+    public function exportFees(Request $r)
+    {
+        $this->authorizeHostelOperations($r);
+
+        $demands = $this->feeDemandQuery($r)->get();
+        $this->recordExportActivity('fee demands', $demands->count(), $r);
+
+        return $this->csvDownload('hostel-fee-demands-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Block', 'Room', 'Month', 'Amount', 'Due Date', 'Status'],
+            ...$demands->map(fn(HostelFeeDemand $demand) => [
+                $demand->student?->user?->name,
+                $demand->student?->enrollment_number,
+                $demand->allocation?->room?->block?->name,
+                $demand->allocation?->room?->room_number,
+                $demand->month,
+                $demand->amount,
+                $demand->due_date?->toDateString(),
+                $demand->status,
+            ])->all(),
+        ]);
     }
 
     public function feeGenerate(Request $r)
@@ -486,15 +510,32 @@ class HostelController extends Controller
     {
         $this->authorizeHostelOperations($r);
 
-        $query = OutpassRequest::with(['student.user', 'allocation.room.block'])->latest();
-
-        if ($r->filled('status')) {
-            $query->where('status', $r->status);
-        }
-
-        $outpasses = $query->paginate(20)->withQueryString();
+        $outpasses = $this->outpassQuery($r)->paginate(20)->withQueryString();
 
         return view('admin.hostel.outpasses', compact('outpasses'));
+    }
+
+    public function exportOutpasses(Request $r)
+    {
+        $this->authorizeHostelOperations($r);
+
+        $outpasses = $this->outpassQuery($r)->get();
+        $this->recordExportActivity('outpasses', $outpasses->count(), $r);
+
+        return $this->csvDownload('hostel-outpasses-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Block', 'Room', 'Reason', 'Out Time', 'Expected Return', 'Actual Return', 'Status'],
+            ...$outpasses->map(fn(OutpassRequest $outpass) => [
+                $outpass->student?->user?->name,
+                $outpass->student?->enrollment_number,
+                $outpass->allocation?->room?->block?->name,
+                $outpass->allocation?->room?->room_number,
+                $outpass->reason,
+                $outpass->out_datetime?->toDateTimeString(),
+                $outpass->expected_return?->toDateTimeString(),
+                $outpass->actual_return?->toDateTimeString(),
+                $outpass->status,
+            ])->all(),
+        ]);
     }
 
     public function outpassApprove(Request $r, OutpassRequest $op)
@@ -574,19 +615,32 @@ class HostelController extends Controller
     {
         $this->authorizeHostelOperations($r);
 
-        $query = HostelComplaint::with(['student.user', 'block', 'room', 'assignedTo'])->latest();
-
-        if ($r->filled('status')) {
-            $query->where('status', $r->status);
-        }
-        if ($r->filled('priority')) {
-            $query->where('priority', $r->priority);
-        }
-
-        $complaints = $query->paginate(20)->withQueryString();
+        $complaints = $this->complaintQuery($r)->paginate(20)->withQueryString();
         $users      = User::orderBy('name')->get();
 
         return view('admin.hostel.complaints', compact('complaints', 'users'));
+    }
+
+    public function exportComplaints(Request $r)
+    {
+        $this->authorizeHostelOperations($r);
+
+        $complaints = $this->complaintQuery($r)->get();
+        $this->recordExportActivity('complaints', $complaints->count(), $r);
+
+        return $this->csvDownload('hostel-complaints-' . now()->format('Ymd') . '.csv', [
+            ['Priority', 'Category', 'Title', 'Student', 'Block', 'Room', 'Status', 'Assigned To'],
+            ...$complaints->map(fn(HostelComplaint $complaint) => [
+                $complaint->priority,
+                $complaint->category,
+                $complaint->title,
+                $complaint->student?->user?->name,
+                $complaint->block?->name,
+                $complaint->room?->room_number,
+                $complaint->status,
+                $complaint->assignedTo?->name,
+            ])->all(),
+        ]);
     }
 
     public function complaintUpdate(Request $r, HostelComplaint $complaint)
@@ -628,5 +682,79 @@ class HostelController extends Controller
             $request->user() && AccessControl::canManageHostelOperations($request->user()),
             403
         );
+    }
+
+    private function allocationQuery(Request $request)
+    {
+        $query = HostelAllocation::with(['room.block', 'student.user'])
+            ->where('status', 'active');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('student.user', fn($studentUser) => $studentUser->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('student', fn($student) => $student->where('enrollment_number', 'like', "%{$search}%"));
+            });
+        }
+
+        return $query->latest();
+    }
+
+    private function feeDemandQuery(Request $request)
+    {
+        $query = HostelFeeDemand::with(['student.user', 'allocation.room.block'])->latest('due_date');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('month')) {
+            $query->where('month', $request->month);
+        }
+
+        return $query;
+    }
+
+    private function outpassQuery(Request $request)
+    {
+        $query = OutpassRequest::with(['student.user', 'allocation.room.block'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return $query;
+    }
+
+    private function complaintQuery(Request $request)
+    {
+        $query = HostelComplaint::with(['student.user', 'block', 'room', 'assignedTo'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->priority);
+        }
+
+        return $query;
+    }
+
+    private function csvDownload(string $filename, array $rows)
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "Hostel {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

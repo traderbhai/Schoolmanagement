@@ -32,19 +32,14 @@ class FeePaymentRequestController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
 
-        if ($student->status !== 'active') {
-            return redirect()->route('student.fee-payment.index')
-                ->with('error', 'New fee payment proofs are available only for active students. Contact accounts for archived records.');
-        }
-
         $demands = $this->outstandingDemandsFor($student->id);
+        $actionBlockedReason = match (true) {
+            $student->status !== 'active' => 'New fee payment proofs are available only for active students. Contact accounts for archived records.',
+            $demands->isEmpty() => 'There are no outstanding academic fee demands available for payment proof submission.',
+            default => null,
+        };
 
-        if ($demands->isEmpty()) {
-            return redirect()->route('student.fee-payment.index')
-                ->with('error', 'There are no outstanding academic fee demands available for payment proof submission.');
-        }
-
-        return view('student.fee-payment-request.create', compact('demands'));
+        return view('student.fee-payment-request.create', compact('demands', 'actionBlockedReason'));
     }
 
     public function store(Request $request) {

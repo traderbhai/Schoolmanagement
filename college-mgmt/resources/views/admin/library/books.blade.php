@@ -21,8 +21,12 @@
         <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
         @if(request('search'))<a href="{{ route('admin.library.books') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></a>@endif
     </form>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBookModal"><i class="bi bi-plus-circle me-1"></i>Add Book</button>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.library.books.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBookModal"><i class="bi bi-plus-circle me-1"></i>Add Book</button>
+    </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $books->total() }} book record(s){{ request('search') ? ' for search: '.request('search') : '' }}.</div>
 
 <div class="card">
     <div class="card-body p-0">

@@ -66,7 +66,8 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ->assertDontSee($other->code)
             ->assertSee('Visible filter summary: Search: ' . $target->code . ' | Status: CO target missed')
             ->assertSee('Export current view')
-            ->assertSee(e(route('academic.obe.attainment', [
+            ->assertSee(e(route('academics.iqac.attainment-monitoring', [
+                'metric' => 'co_target_missed',
                 'program_id' => $target->subject->program_id,
                 'term_id' => $target->attainment_term_id,
             ])), false)
@@ -105,6 +106,8 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ->assertSee('OBE Framework')
             ->assertSee('Attainment')
             ->assertSee('Feedback Quality')
+            ->assertSee(route('academics.iqac.obe-readiness'), false)
+            ->assertDontSee(route('academic.obe.co.index'), false)
             ->assertSee(route('academics.workspaces.show', 'iqac'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);

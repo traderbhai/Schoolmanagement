@@ -90,6 +90,12 @@ Route::get('/dashboard', function () {
     return DashboardRedirect::forUser(auth()->user());
 })->middleware(['auth'])->name('dashboard');
 
+Route::middleware(['auth'])->prefix('admission/partners')->name('admission.partner-portal.')->group(function () {
+    Route::get('dashboard', [Admission\PartnerController::class, 'portalDashboard'])->name('dashboard');
+    Route::get('leads', [Admission\PartnerController::class, 'portalLeads'])->name('leads');
+    Route::post('leads', [Admission\PartnerController::class, 'portalSubmitLead'])->name('leads.store');
+});
+
 Route::middleware(['auth'])->prefix('department-governance')->name('department-governance.')->group(function () {
     Route::get('/', [\App\Http\Controllers\DepartmentGovernanceController::class, 'index'])->name('index');
     Route::post('departments/{department}/features', [\App\Http\Controllers\DepartmentGovernanceController::class, 'updateFeature'])->name('features.update');
@@ -249,6 +255,7 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         Route::get('data-reconciliation/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v095ExportDataReconciliation'])->name('data-reconciliation.export');
         Route::get('data-reconciliation/runs/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v102ExportDataReconciliationRuns'])->name('data-reconciliation.runs.export');
         Route::get('data-reconciliation/audit/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v107ExportDataReconciliationAudit'])->name('data-reconciliation.audit.export');
+        Route::get('v041/{surface}/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041ExportSurface'])->name('v041.surface.export');
         Route::patch('data-reconciliation/runs/{run}/mark-failed', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v104MarkReconciliationRunFailed'])->name('data-reconciliation.runs.mark-failed');
         Route::post('data-reconciliation/refresh', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v092RefreshDataReconciliation'])->name('data-reconciliation.refresh');
         Route::post('data-reconciliation/{check}/repair', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v093RepairDataReconciliation'])->name('data-reconciliation.repair');
@@ -633,33 +640,41 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
         Route::post('hostel/blocks/{block}/rooms', [Admin\HostelController::class, 'roomStore'])->name('hostel.rooms.store');
         Route::put('hostel/blocks/{block}/rooms/{room}', [Admin\HostelController::class, 'roomUpdate'])->name('hostel.rooms.update');
         Route::get('hostel/allocations', [Admin\HostelController::class, 'allocations'])->name('hostel.allocations');
+        Route::get('hostel/allocations/export', [Admin\HostelController::class, 'exportAllocations'])->name('hostel.allocations.export');
         Route::post('hostel/allocations', [Admin\HostelController::class, 'allocationStore'])->name('hostel.allocations.store');
         Route::post('hostel/allocations/{allocation}/vacate', [Admin\HostelController::class, 'allocationVacate'])->name('hostel.allocations.vacate');
         Route::post('hostel/allocations/{allocation}/transfer', [Admin\HostelController::class, 'allocationTransfer'])->name('hostel.allocations.transfer');
     });
     Route::middleware('department.feature:HOSTEL,hostel.fees')->group(function () {
         Route::get('hostel/fees', [Admin\HostelController::class, 'fees'])->name('hostel.fees');
+        Route::get('hostel/fees/export', [Admin\HostelController::class, 'exportFees'])->name('hostel.fees.export');
         Route::post('hostel/fees/generate', [Admin\HostelController::class, 'feeGenerate'])->name('hostel.fees.generate');
         Route::post('hostel/fees/{demand}/paid', [Admin\HostelController::class, 'feeMarkPaid'])->name('hostel.fees.paid');
         Route::post('hostel/fees/{demand}/waive', [Admin\HostelController::class, 'feeWaive'])->name('hostel.fees.waive');
     });
     Route::middleware('department.feature:HOSTEL,hostel.outpasses')->group(function () {
         Route::get('hostel/outpasses', [Admin\HostelController::class, 'outpasses'])->name('hostel.outpasses');
+        Route::get('hostel/outpasses/export', [Admin\HostelController::class, 'exportOutpasses'])->name('hostel.outpasses.export');
         Route::post('hostel/outpasses/{op}/approve', [Admin\HostelController::class, 'outpassApprove'])->name('hostel.outpasses.approve');
         Route::post('hostel/outpasses/{op}/reject', [Admin\HostelController::class, 'outpassReject'])->name('hostel.outpasses.reject');
         Route::post('hostel/outpasses/{op}/return', [Admin\HostelController::class, 'outpassReturn'])->name('hostel.outpasses.return');
     });
     Route::middleware('department.feature:HOSTEL,hostel.complaints')->group(function () {
         Route::get('hostel/complaints', [Admin\HostelController::class, 'complaints'])->name('hostel.complaints');
+        Route::get('hostel/complaints/export', [Admin\HostelController::class, 'exportComplaints'])->name('hostel.complaints.export');
         Route::put('hostel/complaints/{complaint}', [Admin\HostelController::class, 'complaintUpdate'])->name('hostel.complaints.update');
     });
 
     // Transport Management
     Route::middleware('department.feature:TRANSPORT,transport.routes_stops')->group(function () {
         Route::get('transport', [Admin\TransportController::class, 'index'])->name('transport.index');
+        Route::get('transport/routes/export', [Admin\TransportController::class, 'exportRoutes'])->name('transport.routes.export');
         Route::post('transport/routes', [Admin\TransportController::class, 'routeStore'])->name('transport.routes.store');
         Route::post('transport/stops', [Admin\TransportController::class, 'stopStore'])->name('transport.stops.store');
     });
+    Route::get('transport/vehicles/export', [Admin\TransportController::class, 'exportVehicles'])
+        ->middleware('department.feature:TRANSPORT,transport.vehicles')
+        ->name('transport.vehicles.export');
     Route::post('transport/vehicles', [Admin\TransportController::class, 'vehicleStore'])
         ->middleware('department.feature:TRANSPORT,transport.vehicles')
         ->name('transport.vehicles.store');
@@ -667,12 +682,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
         ->middleware('department.feature:TRANSPORT,transport.vehicles')
         ->name('transport.vehicles.update');
     Route::middleware('department.feature:TRANSPORT,transport.student_assignments')->group(function () {
+        Route::get('transport/assignments/export', [Admin\TransportController::class, 'exportAssignments'])->name('transport.assignments.export');
         Route::post('transport/assignments', [Admin\TransportController::class, 'assignmentStore'])->name('transport.assignments.store');
         Route::post('transport/assignments/{assignment}/end', [Admin\TransportController::class, 'assignmentEnd'])->name('transport.assignments.end');
     });
 
     // Asset Management
     Route::get('assets', [Admin\AssetController::class, 'index'])->name('assets.index');
+    Route::get('assets/export', [Admin\AssetController::class, 'exportAssets'])->name('assets.export');
+    Route::get('assets/assignments/export', [Admin\AssetController::class, 'exportAssignments'])->name('assets.assignments.export');
+    Route::get('assets/stock-items/export', [Admin\AssetController::class, 'exportStockItems'])->name('assets.stock-items.export');
+    Route::get('assets/stock-movements/export', [Admin\AssetController::class, 'exportMovements'])->name('assets.stock-movements.export');
     Route::post('assets/categories', [Admin\AssetController::class, 'categoryStore'])->name('assets.categories.store');
     Route::post('assets', [Admin\AssetController::class, 'assetStore'])->name('assets.store');
     Route::post('assets/stock-items', [Admin\AssetController::class, 'stockItemStore'])->name('assets.stock-items.store');
@@ -685,6 +705,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
     Route::middleware('department.feature:LIB,library.catalog')->group(function () {
         Route::get('library', [Admin\LibraryController::class, 'index'])->name('library.index');
         Route::get('library/books', [Admin\LibraryController::class, 'books'])->name('library.books');
+        Route::get('library/books/export', [Admin\LibraryController::class, 'exportBooks'])->name('library.books.export');
         Route::post('library/books', [Admin\LibraryController::class, 'bookStore'])->name('library.books.store');
         Route::get('library/books/{book}', [Admin\LibraryController::class, 'bookShow'])->name('library.books.show');
         Route::put('library/books/{book}', [Admin\LibraryController::class, 'bookUpdate'])->name('library.books.update');
@@ -693,14 +714,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|dean_aca
         Route::post('library/issue', [Admin\LibraryController::class, 'issueBook'])->name('library.issue');
         Route::post('library/issues/{issue}/return', [Admin\LibraryController::class, 'returnBook'])->name('library.issues.return');
         Route::get('library/issues', [Admin\LibraryController::class, 'issues'])->name('library.issues');
+        Route::get('library/issues/export', [Admin\LibraryController::class, 'exportIssues'])->name('library.issues.export');
         Route::get('library/reservations', [Admin\LibraryController::class, 'reservations'])->name('library.reservations');
+        Route::get('library/reservations/export', [Admin\LibraryController::class, 'exportReservations'])->name('library.reservations.export');
         Route::post('library/reservations/{reservation}/fulfill', [Admin\LibraryController::class, 'fulfillReservation'])->name('library.reservations.fulfill');
         Route::post('library/reservations/{reservation}/cancel', [Admin\LibraryController::class, 'cancelReservation'])->name('library.reservations.cancel');
         Route::get('library/fines', [Admin\LibraryController::class, 'fineCollection'])->name('library.fines');
+        Route::get('library/fines/export', [Admin\LibraryController::class, 'exportFines'])->name('library.fines.export');
         Route::post('library/fines/{issue}/pay', [Admin\LibraryController::class, 'finePay'])->name('library.fines.pay');
     });
     Route::middleware('department.feature:LIB,library.memberships')->group(function () {
         Route::get('library/memberships', [Admin\LibraryController::class, 'memberships'])->name('library.memberships');
+        Route::get('library/memberships/export', [Admin\LibraryController::class, 'exportMemberships'])->name('library.memberships.export');
         Route::post('library/memberships', [Admin\LibraryController::class, 'membershipStore'])->name('library.memberships.store');
     });
 });
@@ -999,6 +1024,9 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('documents/queue', [Admission\DocumentVerificationController::class, 'pendingQueue'])
         ->middleware('department.feature:ADM,admission.document_verification')
         ->name('documents.queue');
+    Route::get('documents/queue/export', [Admission\DocumentVerificationController::class, 'exportPendingQueue'])
+        ->middleware('department.feature:ADM,admission.document_verification')
+        ->name('documents.queue.export');
     Route::post('documents/bulk-verify', [Admission\DocumentVerificationController::class, 'bulkVerify'])
         ->middleware('department.feature:ADM,admission.document_verification')
         ->name('documents.bulk-verify');
@@ -1055,6 +1083,9 @@ Route::middleware(['auth', 'role:admission_director|admission_head|admission_man
     Route::get('payments/queue', [Admission\PaymentVerificationController::class, 'pendingQueue'])
         ->middleware('department.feature:ADM,admission.payment_verification')
         ->name('payments.queue');
+    Route::get('payments/queue/export', [Admission\PaymentVerificationController::class, 'exportPendingQueue'])
+        ->middleware('department.feature:ADM,admission.payment_verification')
+        ->name('payments.queue.export');
     Route::get('payments/{program}', [Admission\PaymentVerificationController::class, 'index'])
         ->middleware('department.feature:ADM,admission.payment_verification')
         ->name('payments.index');
@@ -1645,26 +1676,32 @@ Route::middleware(['auth', 'role:admin|cmc|dean_academics|program_chair'])->pref
     // Placement Drives
     Route::middleware('department.feature:CMC,cmc.companies_drives')->group(function () {
         Route::get('drives', [Departmental\CmcController::class, 'drives'])->name('drives');
+        Route::get('drives/export', [Departmental\CmcController::class, 'exportDrives'])->name('drives.export');
         Route::get('drives/create', [Departmental\CmcController::class, 'createDrive'])->name('drives.create');
         Route::post('drives', [Departmental\CmcController::class, 'storeDrive'])->name('drives.store');
         Route::get('drives/{drive}/edit', [Departmental\CmcController::class, 'editDrive'])->name('drives.edit');
         Route::put('drives/{drive}', [Departmental\CmcController::class, 'updateDrive'])->name('drives.update');
         Route::delete('drives/{drive}', [Departmental\CmcController::class, 'destroyDrive'])->name('drives.destroy');
         Route::get('drives/{drive}/applications', [Departmental\CmcController::class, 'driveApplications'])->name('drives.applications');
+        Route::get('drives/{drive}/applications/export', [Departmental\CmcController::class, 'exportDriveApplications'])->name('drives.applications.export');
         Route::patch('placements/{placement}/status', [Departmental\CmcController::class, 'updateApplicationStatus'])->name('placements.update-status');
         Route::get('placements', [Departmental\CmcController::class, 'placements'])->name('placements');
+        Route::get('placements/export', [Departmental\CmcController::class, 'exportPlacements'])->name('placements.export');
         Route::get('companies', [Departmental\CmcController::class, 'companies'])->name('companies');
+        Route::get('companies/export', [Departmental\CmcController::class, 'exportCompanies'])->name('companies.export');
         Route::get('companies/create', [Departmental\CmcController::class, 'createCompany'])->name('companies.create');
         Route::post('companies', [Departmental\CmcController::class, 'storeCompany'])->name('companies.store');
         Route::get('companies/{company}/edit', [Departmental\CmcController::class, 'editCompany'])->name('companies.edit');
         Route::put('companies/{company}', [Departmental\CmcController::class, 'updateCompany'])->name('companies.update');
         Route::get('events', [Departmental\CmcController::class, 'events'])->name('events');
+        Route::get('events/export', [Departmental\CmcController::class, 'exportEvents'])->name('events.export');
         Route::get('events/create', [Departmental\CmcController::class, 'createEvent'])->name('events.create');
         Route::post('events', [Departmental\CmcController::class, 'storeEvent'])->name('events.store');
         Route::get('events/{event}/edit', [Departmental\CmcController::class, 'editEvent'])->name('events.edit');
         Route::put('events/{event}', [Departmental\CmcController::class, 'updateEvent'])->name('events.update');
         Route::delete('events/{event}', [Departmental\CmcController::class, 'destroyEvent'])->name('events.destroy');
         Route::get('events/{event}/registrations', [Departmental\CmcController::class, 'eventRegistrations'])->name('events.registrations');
+        Route::get('events/{event}/registrations/export', [Departmental\CmcController::class, 'exportEventRegistrations'])->name('events.registrations.export');
         Route::patch('events/{event}/registrations/{registration}/attendance', [Departmental\CmcController::class, 'updateEventAttendance'])->name('events.registrations.attendance');
     });
     Route::middleware('department.feature:CMC,cmc.analytics_exports')->group(function () {

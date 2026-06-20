@@ -77,7 +77,7 @@ class FrontendNavigation
                         ['label' => 'Offer Letters', 'route' => 'admission.offer-letters.index', 'paramsFrom' => 'first_admission_program', 'condition' => 'admission_first_program', 'active' => 'admission.offer-letters.*'],
                         ['label' => 'Enrollments', 'route' => 'admission.enrollment.index', 'active' => 'admission.enrollment.*'],
                         ['label' => 'Seat Control', 'route' => 'admission.offer-rounds.index', 'active' => ['admission.offer-rounds.*', 'admission.seat-control.*', 'admission.waitlist.*', 'admission.deferrals.*', 'admission.joining-kit.*']],
-                        ['label' => 'Handoff', 'route' => 'admission.handoff.index', 'active' => 'admission.handoff.*'],
+                        ['label' => 'Handoff', 'route' => 'admission.handoff.index', 'condition' => 'admission_handoff_access', 'active' => 'admission.handoff.*'],
                     ],
                     'Leads' => [
                         ['label' => 'All Leads', 'route' => 'admission.leads.index', 'active' => ['admission.leads.index', 'admission.leads.show']],
@@ -191,7 +191,7 @@ class FrontendNavigation
                         ['label' => 'Offer Letters', 'route' => 'admission.offer-letters.index', 'paramsFrom' => 'first_admission_program', 'condition' => 'admission_first_program', 'active' => 'admission.offer-letters.*'],
                         ['label' => 'Enrollments', 'route' => 'admission.enrollment.index', 'active' => 'admission.enrollment.*'],
                         ['label' => 'Seat Control', 'route' => 'admission.offer-rounds.index', 'active' => ['admission.offer-rounds.*', 'admission.seat-control.*', 'admission.waitlist.*', 'admission.deferrals.*', 'admission.joining-kit.*']],
-                        ['label' => 'Handoff', 'route' => 'admission.handoff.index', 'active' => 'admission.handoff.*'],
+                        ['label' => 'Handoff', 'route' => 'admission.handoff.index', 'condition' => 'admission_handoff_access', 'active' => 'admission.handoff.*'],
                         ['label' => 'Sessions', 'route' => 'admission.sessions.index', 'active' => 'admission.sessions.*'],
                     ],
                     'Leads' => [
@@ -206,6 +206,18 @@ class FrontendNavigation
                         ['label' => 'Consent & Safety', 'route' => 'admission.communication-safety.index', 'active' => ['admission.communication-safety.*', 'admission.consent-center.*', 'admission.template-approvals.*']],
                         ['label' => 'Integration Health', 'route' => 'admission.integration-health.index', 'active' => 'admission.integration-health.*'],
                         ['label' => 'Refunds', 'route' => 'admission.refunds.index', 'active' => 'admission.refunds.*'],
+                    ],
+                ],
+            ],
+            'admission_partner' => [
+                'email' => 'partner.citychannel@demo.edu',
+                'landing' => 'admission.partner-portal.dashboard',
+                'groups' => [
+                    'Command' => [
+                        ['label' => 'Dashboard', 'route' => 'admission.partner-portal.dashboard'],
+                    ],
+                    'Daily Work' => [
+                        ['label' => 'Submitted Leads', 'route' => 'admission.partner-portal.leads', 'active' => 'admission.partner-portal.leads'],
                     ],
                 ],
             ],
@@ -233,8 +245,6 @@ class FrontendNavigation
                         ['label' => 'IQAC Operating', 'route' => 'academics.iqac.index', 'active' => 'academics.iqac.*'],
                         ['label' => 'Program Leadership', 'route' => 'academics.program-leadership.index', 'active' => 'academics.program-leadership.*'],
                         ['label' => 'Course Delivery', 'route' => 'academics.course-delivery.index', 'active' => 'academics.course-delivery.*'],
-                        ['label' => 'Hostel', 'route' => 'admin.hostel.index', 'active' => 'admin.hostel.*'],
-                        ['label' => 'Library', 'route' => 'admin.library.index', 'active' => 'admin.library.*'],
                     ],
                     'Students' => [
                         ['label' => 'Academics Overview', 'route' => 'dean.academics'],
@@ -361,7 +371,6 @@ class FrontendNavigation
                 'groups' => [
                     'Command' => [
                         ['label' => 'CoE OS', 'route' => 'academics.coe.index'],
-                        ['label' => 'Exam Cell Dashboard', 'route' => 'exam-cell.dashboard'],
                         ['label' => 'CoE Workspace', 'route' => 'academics.workspaces.show', 'params' => ['coe'], 'active' => ['academics.workspaces.*', 'academics.attention.*']],
                         ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
                     ],
@@ -370,20 +379,9 @@ class FrontendNavigation
                         ['label' => 'Marks & Results', 'route' => 'academics.coe.marks-results'],
                         ['label' => 'Hall Tickets', 'route' => 'academics.coe.hall-ticket-readiness'],
                     ],
-                    'Exams' => [
-                        ['label' => 'All Exams', 'route' => 'exam-cell.exams', 'active' => 'exam-cell.exams'],
-                        ['label' => 'Schedule Exam', 'route' => 'exam-cell.exams.create'],
-                        ['label' => 'Results', 'route' => 'exam-cell.results'],
-                    ],
                     'Reports' => [
                         ['label' => 'Transcripts', 'route' => 'academics.coe.transcripts'],
                         ['label' => 'Reports', 'route' => 'academics.coe.reports'],
-                        ['label' => 'Legacy Transcripts', 'route' => 'academic.transcripts.index', 'active' => 'academic.transcripts.*'],
-                    ],
-                    'Governance' => [
-                        ['label' => 'Hall Ticket Admin', 'route' => 'exam-cell.hall-tickets', 'active' => 'exam-cell.hall-tickets*'],
-                        ['label' => 'Marks Appeals', 'route' => 'exam-cell.marks-appeals', 'active' => 'exam-cell.marks-appeals*'],
-                        ['label' => 'Anomaly Log', 'route' => 'exam-cell.anomalies.index', 'active' => 'exam-cell.anomalies.*'],
                     ],
                 ],
             ],
@@ -398,7 +396,7 @@ class FrontendNavigation
                         ['label' => 'OBE Readiness', 'route' => 'academics.iqac.obe-readiness'],
                     ],
                     'Quality' => [
-                        ['label' => 'OBE Framework', 'route' => 'academic.obe.co.index', 'active' => 'academic.obe.*'],
+                        ['label' => 'OBE Framework', 'route' => 'academics.iqac.obe-readiness', 'active' => 'academics.iqac.obe-readiness'],
                         ['label' => 'Attainment', 'route' => 'academics.iqac.attainment-monitoring'],
                         ['label' => 'Feedback Quality', 'route' => 'academics.iqac.feedback-quality'],
                         ['label' => 'Audit Compliance', 'route' => 'academics.iqac.audit-compliance'],

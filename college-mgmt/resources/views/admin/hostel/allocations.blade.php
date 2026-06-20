@@ -25,47 +25,53 @@
         <button class="btn btn-sm btn-primary">Search</button>
         @if(request('search'))<a href="{{ route('admin.hostel.allocations') }}" class="btn btn-sm btn-outline-secondary">Clear</a>@endif
     </form>
-    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#allocateModal"><i class="bi bi-plus-circle me-1"></i>Allocate Student</button>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.hostel.allocations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#allocateModal"><i class="bi bi-plus-circle me-1"></i>Allocate Student</button>
+    </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $allocations->total() }} active allocation record(s){{ request('search') ? ' for search: '.request('search') : '' }}.</div>
 
 <div class="card">
     <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Student</th>
-                    <th>Enrollment No.</th>
-                    <th>Block</th>
-                    <th>Room</th>
-                    <th>Bed</th>
-                    <th>Allocated From</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($allocations as $alloc)
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
                     <tr>
-                        <td>{{ $alloc->student?->user?->name ?? '-' }}</td>
-                        <td><code>{{ $alloc->student?->enrollment_number ?? '-' }}</code></td>
-                        <td>{{ $alloc->room?->block?->name ?? '-' }}</td>
-                        <td>{{ $alloc->room?->room_number ?? '-' }}</td>
-                        <td>{{ $alloc->bed_number }}</td>
-                        <td>{{ $alloc->allocated_from?->format('d M Y') }}</td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transferModal{{ $alloc->id }}">Transfer</button>
-                                <form method="POST" action="{{ route('admin.hostel.allocations.vacate', $alloc) }}" onsubmit="return confirm('Mark as vacated?')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Vacate</button>
-                                </form>
-                            </div>
-                        </td>
+                        <th>Student</th>
+                        <th>Enrollment No.</th>
+                        <th>Block</th>
+                        <th>Room</th>
+                        <th>Bed</th>
+                        <th>Allocated From</th>
+                        <th>Actions</th>
                     </tr>
-                @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">No active allocations found.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($allocations as $alloc)
+                        <tr>
+                            <td>{{ $alloc->student?->user?->name ?? '-' }}</td>
+                            <td><code>{{ $alloc->student?->enrollment_number ?? '-' }}</code></td>
+                            <td>{{ $alloc->room?->block?->name ?? '-' }}</td>
+                            <td>{{ $alloc->room?->room_number ?? '-' }}</td>
+                            <td>{{ $alloc->bed_number }}</td>
+                            <td>{{ $alloc->allocated_from?->format('d M Y') }}</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transferModal{{ $alloc->id }}">Transfer</button>
+                                    <form method="POST" action="{{ route('admin.hostel.allocations.vacate', $alloc) }}" onsubmit="return confirm('Mark as vacated?')">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Vacate</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="text-center text-muted py-4">No active allocations found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </div>
     @if($allocations->hasPages())
         <div class="card-footer">{{ $allocations->withQueryString()->links() }}</div>

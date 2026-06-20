@@ -58,10 +58,20 @@ class AttendanceController extends Controller
     public function mark(Request $request)
     {
         $teacher = auth()->user()->teacher;
-        if (!$teacher) return redirect()->route('teacher.dashboard');
-        $canMarkAttendance = $teacher->status === 'active';
-
         $date = $request->date ?? today()->toDateString();
+        if (!$teacher) {
+            $entries = collect();
+            $entry = null;
+            $students = collect();
+            $currentSemester = Semester::current();
+            $canMarkAttendance = false;
+            $actionBlockedReason = 'Your login has the Teacher role, but no teacher profile is attached yet. Ask Admin/Academics to link your teacher profile before marking attendance.';
+
+            return view('teacher.attendance.mark', compact('entries', 'entry', 'students', 'date', 'currentSemester', 'canMarkAttendance', 'actionBlockedReason'));
+        }
+
+        $canMarkAttendance = $teacher->status === 'active';
+        $actionBlockedReason = $canMarkAttendance ? null : 'Attendance marking is locked because this teacher profile is not active.';
         $dayOfWeek = (int) date('N', strtotime($date));
 
         // Teacher's timetable entries for the selected day
@@ -89,7 +99,7 @@ class AttendanceController extends Controller
             ])->orderBy('roll_number')->get();
         }
 
-        return view('teacher.attendance.mark', compact('entries', 'entry', 'students', 'date', 'currentSemester', 'canMarkAttendance'));
+        return view('teacher.attendance.mark', compact('entries', 'entry', 'students', 'date', 'currentSemester', 'canMarkAttendance', 'actionBlockedReason'));
     }
 
     public function store(Request $request)

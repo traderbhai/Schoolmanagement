@@ -101,12 +101,14 @@
                 <label class="form-label">Month</label>
                 <input type="month" name="month" value="{{ request('month') }}" class="form-control">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6 d-flex gap-2">
                 <button class="btn btn-outline-primary">Filter</button>
                 <a href="{{ route('admin.hostel.fees') }}" class="btn btn-outline-secondary">Reset</a>
+                <a href="{{ route('admin.hostel.fees.export', request()->query()) }}" class="btn btn-outline-secondary ms-auto"><i class="bi bi-download me-1"></i>Export Current View</a>
             </div>
         </form>
     </div>
+    <div class="px-3 pb-2 text-muted small">Showing {{ $demands->total() }} fee demand record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}{{ request('month') ? ' for month: '.request('month') : '' }}.</div>
     <div class="card-body p-0">
         @if($demands->isEmpty())
             <div class="text-center text-muted py-5">
@@ -152,11 +154,11 @@
                                 </td>
                                 <td class="text-end">
                                     @if($demand->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.hostel.fees.paid', $demand) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('admin.hostel.fees.paid', $demand) }}" class="d-inline" onsubmit="return confirm('Mark this hostel fee demand as paid?')">
                                             @csrf
                                             <button class="btn btn-sm btn-outline-success">Mark Paid</button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.hostel.fees.waive', $demand) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('admin.hostel.fees.waive', $demand) }}" class="d-inline" onsubmit="return confirm('Waive this hostel fee demand?')">
                                             @csrf
                                             <input type="hidden" name="waiver_reason" value="Approved hostel fee waiver from fee review queue.">
                                             <button class="btn btn-sm btn-outline-secondary">Waive</button>

@@ -4,7 +4,7 @@
 @section('content')
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Exam Cell Dashboard</h4>
+        <h1 class="h4 mb-1"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Exam Cell Dashboard</h1>
         <p class="text-muted mb-0">Track exam scheduling, marks entry, publication readiness, appeals, and anomalies.</p>
     </div>
     <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>Schedule Exam</a>

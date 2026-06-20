@@ -67,7 +67,8 @@ class AcademicsIqacV004Test extends TestCase
             ->assertSee('Attainment Monitoring')
             ->assertSee('Filtered Source List')
             ->assertSee('CO-IQAC-1')
-            ->assertSee(route('academic.obe.attainment'), false);
+            ->assertSee('metric=co_target_missed&amp;program_id=', false)
+            ->assertDontSee(route('academic.obe.attainment'), false);
 
         $this->actingAs($iqac)
             ->get(route('academics.iqac.feedback-quality'))

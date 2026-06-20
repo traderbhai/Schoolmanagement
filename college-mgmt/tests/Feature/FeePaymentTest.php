@@ -230,8 +230,9 @@ class FeePaymentTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('student.fee-payment.create'))
-            ->assertRedirect(route('student.fee-payment.index'))
-            ->assertSessionHas('error', 'There are no outstanding academic fee demands available for payment proof submission.');
+            ->assertOk()
+            ->assertSee('There are no outstanding academic fee demands available for payment proof submission.')
+            ->assertSee('disabled', false);
     }
 
     public function test_fee_payment_pages_show_only_outstanding_own_demands(): void
@@ -302,8 +303,9 @@ class FeePaymentTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('student.fee-payment.create'))
-            ->assertRedirect(route('student.fee-payment.index'))
-            ->assertSessionHas('error', 'New fee payment proofs are available only for active students. Contact accounts for archived records.');
+            ->assertOk()
+            ->assertSee('New fee payment proofs are available only for active students. Contact accounts for archived records.')
+            ->assertSee('disabled', false);
 
         $this->actingAs($user)
             ->post(route('student.fee-payment.store'), [

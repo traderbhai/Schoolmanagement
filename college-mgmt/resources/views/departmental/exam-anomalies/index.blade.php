@@ -5,7 +5,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Exam Anomaly Log</h4>
+            <h1 class="h4 fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Exam Anomaly Log</h1>
             <span class="text-muted small">Track malpractice, late entries, and other exam irregularities</span>
         </div>
         <a href="{{ route('exam-cell.anomalies.create') }}" class="btn btn-danger btn-sm">

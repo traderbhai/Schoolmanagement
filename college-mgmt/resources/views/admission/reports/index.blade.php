@@ -1,5 +1,8 @@
 @extends('layouts.admin')
 
+@section('title', 'Admission Reports')
+@section('page-title', 'Admission Reports')
+
 @section('content')
 <div class="container-fluid px-4 py-3">
 

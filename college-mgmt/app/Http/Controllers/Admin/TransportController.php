@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Student;
 use App\Models\TransportAssignment;
 use App\Models\TransportRoute;
@@ -18,14 +19,9 @@ class TransportController extends Controller
     {
         $this->authorizeTransportOperations($request);
 
-        $routes = TransportRoute::with('stops')->orderBy('name')->get();
-        $vehicles = TransportVehicle::withCount(['assignments as active_assignments_count' => fn ($query) => $query->where('status', 'active')])
-            ->orderBy('registration_number')
-            ->get();
-        $assignments = TransportAssignment::with(['student.user', 'route', 'stop', 'vehicle'])
-            ->where('status', 'active')
-            ->latest()
-            ->paginate(20);
+        $routes = $this->routeQuery()->get();
+        $vehicles = $this->vehicleQuery()->get();
+        $assignments = $this->assignmentQuery($request)->paginate(20)->withQueryString();
         $students = Student::with('user')->where('status', 'active')->orderBy('enrollment_number')->get();
 
         $stats = [
@@ -36,6 +32,75 @@ class TransportController extends Controller
         ];
 
         return view('admin.transport.index', compact('routes', 'vehicles', 'assignments', 'students', 'stats'));
+    }
+
+    public function exportRoutes(Request $request)
+    {
+        $this->authorizeTransportOperations($request);
+
+        $routes = $this->routeQuery()->get();
+        $this->recordExportActivity('routes and stops', $routes->count(), $request);
+
+        $rows = [['Route', 'Code', 'Start Point', 'End Point', 'Distance Km', 'Monthly Fee', 'Active', 'Stops']];
+        foreach ($routes as $route) {
+            $rows[] = [
+                $route->name,
+                $route->code,
+                $route->start_point,
+                $route->end_point,
+                $route->distance_km,
+                $route->monthly_fee,
+                $route->is_active ? 'Yes' : 'No',
+                $route->stops->map(fn(TransportStop $stop) => "{$stop->sequence}. {$stop->name}")->implode(' | '),
+            ];
+        }
+
+        return $this->csvDownload('transport-routes-' . now()->format('Ymd') . '.csv', $rows);
+    }
+
+    public function exportVehicles(Request $request)
+    {
+        $this->authorizeTransportOperations($request);
+
+        $vehicles = $this->vehicleQuery()->get();
+        $this->recordExportActivity('vehicles', $vehicles->count(), $request);
+
+        return $this->csvDownload('transport-vehicles-' . now()->format('Ymd') . '.csv', [
+            ['Registration', 'Type', 'Capacity', 'Driver', 'Driver Phone', 'Attendant', 'Status', 'Active Assignments'],
+            ...$vehicles->map(fn(TransportVehicle $vehicle) => [
+                $vehicle->registration_number,
+                $vehicle->vehicle_type,
+                $vehicle->capacity,
+                $vehicle->driver_name,
+                $vehicle->driver_phone,
+                $vehicle->attendant_name,
+                $vehicle->status,
+                $vehicle->active_assignments_count,
+            ])->all(),
+        ]);
+    }
+
+    public function exportAssignments(Request $request)
+    {
+        $this->authorizeTransportOperations($request);
+
+        $assignments = $this->assignmentQuery($request)->get();
+        $this->recordExportActivity('active assignments', $assignments->count(), $request);
+
+        return $this->csvDownload('transport-assignments-' . now()->format('Ymd') . '.csv', [
+            ['Student', 'Enrollment', 'Route', 'Stop', 'Vehicle', 'Start Date', 'Monthly Fee', 'Status', 'Notes'],
+            ...$assignments->map(fn(TransportAssignment $assignment) => [
+                $assignment->student?->user?->name,
+                $assignment->student?->enrollment_number,
+                $assignment->route?->name,
+                $assignment->stop?->name,
+                $assignment->vehicle?->registration_number,
+                $assignment->start_date?->toDateString(),
+                $assignment->monthly_fee,
+                $assignment->status,
+                $assignment->notes,
+            ])->all(),
+        ]);
     }
 
     public function routeStore(Request $request)
@@ -244,5 +309,55 @@ class TransportController extends Controller
             $request->user() && AccessControl::canManageTransportOperations($request->user()),
             403
         );
+    }
+
+    private function routeQuery()
+    {
+        return TransportRoute::with('stops')->orderBy('name');
+    }
+
+    private function vehicleQuery()
+    {
+        return TransportVehicle::withCount([
+            'assignments as active_assignments_count' => fn($query) => $query->where('status', 'active'),
+        ])->orderBy('registration_number');
+    }
+
+    private function assignmentQuery(Request $request)
+    {
+        $query = TransportAssignment::with(['student.user', 'route', 'stop', 'vehicle'])
+            ->where('status', 'active');
+
+        if ($request->filled('assignment_search')) {
+            $search = $request->assignment_search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('student.user', fn($user) => $user->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('student', fn($student) => $student->where('enrollment_number', 'like', "%{$search}%"))
+                    ->orWhereHas('route', fn($route) => $route->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
+                    ->orWhereHas('stop', fn($stop) => $stop->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('vehicle', fn($vehicle) => $vehicle->where('registration_number', 'like', "%{$search}%"));
+            });
+        }
+
+        return $query->latest();
+    }
+
+    private function csvDownload(string $filename, array $rows)
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "Transport {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

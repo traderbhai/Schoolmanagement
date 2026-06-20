@@ -92,6 +92,128 @@ class LibraryCirculationWorkflowTest extends TestCase
             ->assertSee('Issue History');
     }
 
+    public function test_admin_library_books_issues_and_reservations_export_current_filtered_view(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$matchingBook, $copy] = $this->bookWithCopy(['title' => 'Filtered Library Book', 'author' => 'Export Author']);
+        [$otherBook] = $this->bookWithCopy(['title' => 'Unmatched Library Book']);
+        $issue = BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'issued',
+        ]);
+        $copy->update(['is_available' => false]);
+        $matchingBook->update(['available_copies' => 0]);
+        $reservation = LibraryReservation::create([
+            'book_id' => $matchingBook->id,
+            'student_id' => $student->id,
+            'reserved_at' => now(),
+            'expires_at' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.books', ['search' => 'Filtered']))
+            ->assertOk()
+            ->assertSee(route('admin.library.books.export', ['search' => 'Filtered']))
+            ->assertSee('Showing 1 book record(s)')
+            ->assertSee($matchingBook->title)
+            ->assertDontSee($otherBook->title);
+
+        $bookCsv = $this->actingAs($admin)
+            ->get(route('admin.library.books.export', ['search' => 'Filtered']))
+            ->streamedContent();
+        $this->assertStringContainsString('Filtered Library Book', $bookCsv);
+        $this->assertStringNotContainsString('Unmatched Library Book', $bookCsv);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.issues', ['status' => 'issued']))
+            ->assertOk()
+            ->assertSee(route('admin.library.issues.export', ['status' => 'issued']))
+            ->assertSee('Showing 1 issue record(s)');
+
+        $issueCsv = $this->actingAs($admin)
+            ->get(route('admin.library.issues.export', ['status' => 'issued']))
+            ->streamedContent();
+        $this->assertStringContainsString($copy->accession_number, $issueCsv);
+        $this->assertStringContainsString('issued', $issueCsv);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.reservations', ['status' => 'pending', 'search' => 'Filtered']))
+            ->assertOk()
+            ->assertSee(route('admin.library.reservations.export', ['status' => 'pending', 'search' => 'Filtered']))
+            ->assertSee('Showing 1 reservation record(s)')
+            ->assertSee($reservation->book->title);
+
+        $reservationCsv = $this->actingAs($admin)
+            ->get(route('admin.library.reservations.export', ['status' => 'pending', 'search' => 'Filtered']))
+            ->streamedContent();
+        $this->assertStringContainsString('Filtered Library Book', $reservationCsv);
+        $this->assertStringContainsString('pending', $reservationCsv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Library reservations exported: 1 rows; filters={"status":"pending","search":"Filtered"}',
+        ]);
+    }
+
+    public function test_admin_library_memberships_and_fines_export_current_view(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student();
+        [$book, $copy] = $this->bookWithCopy(['title' => 'Fine Export Book']);
+        LibraryMembership::create([
+            'user_id' => $student->user_id,
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 2,
+            'is_active' => true,
+        ]);
+        BookIssue::create([
+            'book_copy_id' => $copy->id,
+            'student_id' => $student->id,
+            'issued_by' => $admin->id,
+            'issued_at' => now()->subDays(10),
+            'due_date' => now()->subDays(5)->toDateString(),
+            'returned_at' => now()->subDay(),
+            'fine_amount' => 30,
+            'fine_paid' => false,
+            'status' => 'returned',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.memberships'))
+            ->assertOk()
+            ->assertSee(route('admin.library.memberships.export'))
+            ->assertSee('Showing 1 membership record(s)');
+
+        $membershipCsv = $this->actingAs($admin)
+            ->get(route('admin.library.memberships.export'))
+            ->streamedContent();
+        $this->assertStringContainsString($student->user->email, $membershipCsv);
+        $this->assertStringContainsString('student', $membershipCsv);
+
+        $this->actingAs($admin)
+            ->get(route('admin.library.fines'))
+            ->assertOk()
+            ->assertSee(route('admin.library.fines.export'))
+            ->assertSee('Showing 1 unpaid fine record(s).');
+
+        $fineCsv = $this->actingAs($admin)
+            ->get(route('admin.library.fines.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('Fine Export Book', $fineCsv);
+        $this->assertStringContainsString('30', $fineCsv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Library unpaid fines exported: 1 rows; filters=none',
+        ]);
+    }
+
     public function test_admin_can_issue_and_return_book_copy_for_student(): void
     {
         $admin = $this->userWithRole('admin');

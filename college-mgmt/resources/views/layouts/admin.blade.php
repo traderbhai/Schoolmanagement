@@ -23,7 +23,7 @@
     } elseif ($user->hasRole('dean_academics')) {
         $brandName  = 'Dean Academics';
         $brandSub   = 'Academic Office';
-        $brandRoute = 'dean.dashboard';
+        $brandRoute = 'academics.dean-os.index';
     } elseif ($user->hasRole('hod')) {
         $brandName  = 'HOD Portal';
         $brandSub   = 'Head of Department';
@@ -31,11 +31,31 @@
     } elseif ($user->hasRole('program_chair')) {
         $brandName  = 'PMC Portal';
         $brandSub   = 'Program Management';
-        $brandRoute = 'chair.dashboard';
+        $brandRoute = 'academics.pmc.command';
     } elseif ($user->hasRole('exam_cell')) {
         $brandName  = 'Exam Cell';
         $brandSub   = 'Examinations Office';
         $brandRoute = 'exam-cell.dashboard';
+    } elseif ($user->hasAnyRole(['exam_manager', 'exam_officer'])) {
+        $brandName  = 'CoE Portal';
+        $brandSub   = 'Examinations Office';
+        $brandRoute = 'academics.coe.index';
+    } elseif ($user->hasAnyRole(['iqac_head', 'iqac_manager', 'iqac_officer'])) {
+        $brandName  = 'IQAC Portal';
+        $brandSub   = 'Quality Office';
+        $brandRoute = 'academics.iqac.index';
+    } elseif ($user->hasAnyRole(['pmc_head', 'pmc_manager', 'pmc_officer'])) {
+        $brandName  = 'PMC Portal';
+        $brandSub   = 'Program Management';
+        $brandRoute = 'academics.pmc.command';
+    } elseif ($user->hasAnyRole(['program_director', 'program_leader', 'semester_coordinator'])) {
+        $brandName  = 'Program Office';
+        $brandSub   = 'Program Leadership';
+        $brandRoute = 'academics.program-leadership.index';
+    } elseif ($user->hasAnyRole(['course_coordinator', 'faculty_mentor'])) {
+        $brandName  = 'Course Delivery';
+        $brandSub   = 'Academic Delivery';
+        $brandRoute = 'academics.course-delivery.index';
     } elseif ($user->hasRole('accounts_officer')) {
         $brandName  = 'Accounts';
         $brandSub   = 'Finance Office';
@@ -103,9 +123,9 @@
         @endhasrole
 
         {{-- ===================== EXAM CELL ===================== --}}
-        @hasrole('exam_cell')
+        @if(auth()->user()?->hasAnyRole(['exam_cell','exam_manager','exam_officer']))
         <x-ui.manifest-sidebar role="coe" brand-sub="Examination Office" brand-icon="bi-clipboard2-data" :show-brand="false" :show-footer="false" />
-        @endhasrole
+        @endif
 
         @if(auth()->user()?->hasAnyRole(['program_director','program_leader','semester_coordinator','course_coordinator','faculty_mentor']))
         <x-ui.manifest-sidebar role="program_leadership" brand-sub="Program Office" brand-icon="bi-mortarboard" :show-brand="false" :show-footer="false" />
@@ -195,9 +215,9 @@
         @endhasrole
 
         {{-- ===================== EXAM CELL MOBILE ===================== --}}
-        @hasrole('exam_cell')
+        @if(auth()->user()?->hasAnyRole(['exam_cell','exam_manager','exam_officer']))
         <x-ui.manifest-sidebar role="coe" brand-sub="Examination Office" brand-icon="bi-clipboard2-data" :show-brand="false" :show-footer="false" />
-        @endhasrole
+        @endif
 
         @if(auth()->user()?->hasAnyRole(['program_director','program_leader','semester_coordinator','course_coordinator','faculty_mentor']))
         <x-ui.manifest-sidebar role="program_leadership" brand-sub="Program Office" brand-icon="bi-mortarboard" :show-brand="false" :show-footer="false" />
@@ -276,7 +296,7 @@
 
             {{-- Page heading --}}
             <div class="page-heading">
-                <h6>@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h6>
+                <h1 class="h6 mb-0">@yield('page-title', trim($__env->yieldContent('title', 'Dashboard')))</h1>
                 @hasSection('breadcrumb')
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">

@@ -14,7 +14,7 @@
 <div class="admission-compact">
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div><h3 class="fw-bold mb-1">Reminder And Cadence Engine</h3><div class="text-muted small">{{ $reminders->total() }} reminders after filters. Scheduled reminders create queued communication logs.</div></div>
+    <div><h3 class="fw-bold mb-1">Reminder And Cadence Engine</h3><div class="text-muted small">{{ $reminders->total() }} reminders after filters. Scheduled reminders create queued communication logs; send, complete, and pause actions are audited.</div></div>
 </div>
 
 <div class="card border-0 shadow-sm mb-3">
@@ -45,9 +45,9 @@
                             <td>{{ optional($reminder->due_at)->format('d M Y H:i') }}</td>
                             <td><span class="badge bg-secondary">{{ ucfirst($reminder->status) }}</span></td>
                             <td class="d-flex gap-1 flex-wrap">
-                                <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
-                                <form method="POST" action="{{ route('admission.reminders.complete', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-primary">Done</button></form>
-                                <form method="POST" action="{{ route('admission.reminders.pause', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-warning">Pause</button></form>
+                                <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}" onsubmit="return confirm('Queue this reminder through the communication hub?')">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
+                                <form method="POST" action="{{ route('admission.reminders.complete', $reminder) }}" onsubmit="return confirm('Mark this reminder as completed?')">@csrf<button class="btn btn-sm btn-outline-primary">Done</button></form>
+                                <form method="POST" action="{{ route('admission.reminders.pause', $reminder) }}" onsubmit="return confirm('Pause this reminder cadence for this record?')">@csrf<button class="btn btn-sm btn-outline-warning">Pause</button></form>
                             </td>
                         </tr>
                     @endforeach
@@ -64,7 +64,7 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent fw-bold">Create Cadence Rule</div>
             <div class="card-body">
-                <form method="POST" action="{{ route('admission.reminders.cadence') }}" class="vstack gap-2">
+                <form method="POST" action="{{ route('admission.reminders.cadence') }}" class="vstack gap-2" onsubmit="return confirm('Create this reminder cadence rule for future matching records?')">
                     @csrf
                     <input class="form-control form-control-sm" name="name" placeholder="Rule name" required>
                     <select class="form-select form-select-sm" name="target_type"><option value="lead">Lead</option><option value="applicant">Applicant</option></select>

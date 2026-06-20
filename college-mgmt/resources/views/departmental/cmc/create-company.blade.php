@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">New Company</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.companies.store') }}">
+    <div class="alert alert-info small py-2">
+      Add verified recruiter contact details so drives, applications, and follow-ups remain traceable.
+    </div>
+    <form method="POST" action="{{ route('cmc.companies.store') }}" onsubmit="return confirm('Add this company to the recruiter database?')">
       @csrf
       <div class="row g-3">
         <div class="col-md-8">

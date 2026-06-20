@@ -13,7 +13,10 @@
     <h5 class="mb-0">{{ $event->title }}</h5>
     <div class="text-muted small">{{ ucwords(str_replace('_',' ',$event->event_type)) }} · {{ $event->event_date->format('d M Y') }} · {{ $event->venue ?? 'TBD' }}</div>
   </div>
-  <a href="{{ route('cmc.events') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  <div class="d-flex gap-2">
+    <a href="{{ route('cmc.events.registrations.export', $event) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+    <a href="{{ route('cmc.events') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
 </div>
 
 <div class="alert alert-info py-2 px-3 mb-3 d-flex flex-wrap align-items-center gap-3" style="font-size:.85rem;">

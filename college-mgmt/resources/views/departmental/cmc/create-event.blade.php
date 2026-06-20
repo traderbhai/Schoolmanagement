@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Create Career Event</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.events.store') }}">
+    <div class="alert alert-info small py-2">
+      Publish only after the date, venue, seats, and registration deadline are confirmed. Published events are visible to students.
+    </div>
+    <form method="POST" action="{{ route('cmc.events.store') }}" onsubmit="return confirm('Create this career event with the selected publication setting?')">
       @csrf
       <div class="row g-3">
         <div class="col-12">

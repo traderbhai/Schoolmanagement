@@ -3,7 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
-use App\Models\{Book, BookCopy, BookIssue, LibraryMembership, LibraryReservation, Student, Teacher, User};
+use App\Models\{ActivityLog, Book, BookCopy, BookIssue, LibraryMembership, LibraryReservation, Student, Teacher, User};
 use App\Services\LibraryFineService;
 use Illuminate\Http\Request;
 
@@ -39,17 +39,29 @@ class LibraryController extends Controller
     {
         $this->authorizeLibraryOperations($r);
 
-        $query = Book::withCount([
-            'copies',
-            'availableCopies as active_copies_count',
-            'issues' => fn($q) => $q->whereIn('status',['issued','overdue']),
-        ]);
-        if ($r->filled('search')) {
-            $s = $r->search;
-            $query->where(fn($q) => $q->where('title','like',"%$s%")->orWhere('author','like',"%$s%")->orWhere('isbn','like',"%$s%"));
-        }
-        $books = $query->orderBy('title')->paginate(20)->withQueryString();
+        $books = $this->bookQuery($r)->paginate(20)->withQueryString();
         return view('admin.library.books', compact('books'));
+    }
+
+    public function exportBooks(Request $r)
+    {
+        $this->authorizeLibraryOperations($r);
+
+        $books = $this->bookQuery($r)->get();
+        $this->recordExportActivity('books catalog', $books->count(), $r);
+
+        return $this->csvDownload('library-books-' . now()->format('Ymd') . '.csv', [
+            ['Title', 'Author', 'ISBN', 'Category', 'Total Copies', 'Available Copies', 'Active'],
+            ...$books->map(fn(Book $book) => [
+                $book->title,
+                $book->author,
+                $book->isbn,
+                $book->category,
+                $book->copies_count,
+                $book->active_copies_count,
+                $book->is_active ? 'Yes' : 'No',
+            ])->all(),
+        ]);
     }
 
     public function bookStore(Request $r)
@@ -234,9 +246,7 @@ class LibraryController extends Controller
 
         $this->expireStaleReservations();
 
-        $query = BookIssue::with(['bookCopy.book','student.user','teacher.user']);
-        if ($r->filled('status')) $query->where('status', $r->status);
-        $issues = $query->latest()->paginate(20)->withQueryString();
+        $issues = $this->issueQuery($r)->paginate(20)->withQueryString();
         $availableCopies = BookCopy::with('book')
             ->where('is_available', true)
             ->whereNotIn('condition_status', ['damaged', 'lost'])
@@ -258,26 +268,36 @@ class LibraryController extends Controller
         return view('admin.library.issues', compact('issues', 'availableCopies', 'students', 'teachers'));
     }
 
+    public function exportIssues(Request $r)
+    {
+        $this->authorizeLibraryOperations($r);
+
+        $this->expireStaleReservations();
+        $issues = $this->issueQuery($r)->get();
+        $this->recordExportActivity('book issues', $issues->count(), $r);
+
+        return $this->csvDownload('library-issues-' . now()->format('Ymd') . '.csv', [
+            ['Book', 'Accession', 'Borrower', 'Borrower Type', 'Issued', 'Due Date', 'Status', 'Fine'],
+            ...$issues->map(fn(BookIssue $issue) => [
+                $issue->bookCopy?->book?->title,
+                $issue->bookCopy?->accession_number,
+                $issue->student?->user?->name ?? $issue->teacher?->user?->name,
+                $issue->student ? 'student' : ($issue->teacher ? 'teacher' : ''),
+                $issue->issued_at?->toDateString(),
+                $issue->due_date?->toDateString(),
+                $issue->status,
+                $issue->fine_amount,
+            ])->all(),
+        ]);
+    }
+
     public function reservations(Request $r)
     {
         $this->authorizeLibraryOperations($r);
 
         $this->expireStaleReservations();
 
-        $query = LibraryReservation::with(['book', 'student.user', 'teacher.user']);
-        if ($r->filled('status') && $r->status !== 'all') {
-            $query->where('status', $r->status);
-        }
-        if ($r->filled('search')) {
-            $search = $r->search;
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('book', fn ($book) => $book->where('title', 'like', "%{$search}%")->orWhere('isbn', 'like', "%{$search}%"))
-                    ->orWhereHas('student.user', fn ($user) => $user->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('teacher.user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
-            });
-        }
-
-        $reservations = $query->latest('reserved_at')->paginate(20)->withQueryString();
+        $reservations = $this->reservationQuery($r)->paginate(20)->withQueryString();
         $availableCopiesByBook = BookCopy::where('is_available', true)
             ->whereNotIn('condition_status', ['damaged', 'lost'])
             ->selectRaw('book_id, count(*) as available_count')
@@ -285,6 +305,28 @@ class LibraryController extends Controller
             ->pluck('available_count', 'book_id');
 
         return view('admin.library.reservations', compact('reservations', 'availableCopiesByBook'));
+    }
+
+    public function exportReservations(Request $r)
+    {
+        $this->authorizeLibraryOperations($r);
+
+        $this->expireStaleReservations();
+        $reservations = $this->reservationQuery($r)->get();
+        $this->recordExportActivity('reservations', $reservations->count(), $r);
+
+        return $this->csvDownload('library-reservations-' . now()->format('Ymd') . '.csv', [
+            ['Book', 'ISBN', 'Borrower', 'Borrower Type', 'Reserved', 'Expires', 'Status'],
+            ...$reservations->map(fn(LibraryReservation $reservation) => [
+                $reservation->book?->title,
+                $reservation->book?->isbn,
+                $reservation->student?->user?->name ?? $reservation->teacher?->user?->name,
+                $reservation->student ? 'student' : ($reservation->teacher ? 'teacher' : ''),
+                $reservation->reserved_at?->toDateString(),
+                $reservation->expires_at?->toDateString(),
+                $reservation->status,
+            ])->all(),
+        ]);
     }
 
     public function fulfillReservation(Request $r, LibraryReservation $reservation)
@@ -375,9 +417,31 @@ class LibraryController extends Controller
     {
         $this->authorizeLibraryOperations($r);
 
-        $memberships = LibraryMembership::with('user')->latest()->paginate(20);
+        $memberships = $this->membershipQuery()->paginate(20);
         $users = User::orderBy('name')->get();
         return view('admin.library.memberships', compact('memberships', 'users'));
+    }
+
+    public function exportMemberships(Request $r)
+    {
+        $this->authorizeLibraryOperations($r);
+
+        $memberships = $this->membershipQuery()->get();
+        $this->recordExportActivity('memberships', $memberships->count(), $r);
+
+        return $this->csvDownload('library-memberships-' . now()->format('Ymd') . '.csv', [
+            ['User', 'Email', 'Type', 'Max Books', 'Max Days', 'Fine Per Day', 'Expiry', 'Active'],
+            ...$memberships->map(fn(LibraryMembership $membership) => [
+                $membership->user?->name,
+                $membership->user?->email,
+                $membership->member_type,
+                $membership->max_books_allowed,
+                $membership->max_days_allowed,
+                $membership->fine_per_day,
+                $membership->expiry_date?->toDateString(),
+                $membership->is_active ? 'Yes' : 'No',
+            ])->all(),
+        ]);
     }
 
     public function membershipStore(Request $r)
@@ -423,9 +487,28 @@ class LibraryController extends Controller
     {
         $this->authorizeLibraryOperations($r);
 
-        $issues = BookIssue::where('fine_paid', false)->where('fine_amount', '>', 0)
-            ->with(['bookCopy.book','student.user','teacher.user'])->latest()->paginate(20);
+        $issues = $this->fineQuery()->paginate(20);
         return view('admin.library.fines', compact('issues'));
+    }
+
+    public function exportFines(Request $r)
+    {
+        $this->authorizeLibraryOperations($r);
+
+        $issues = $this->fineQuery()->get();
+        $this->recordExportActivity('unpaid fines', $issues->count(), $r);
+
+        return $this->csvDownload('library-fines-' . now()->format('Ymd') . '.csv', [
+            ['Borrower', 'Book', 'Issued', 'Due Date', 'Days Overdue', 'Fine'],
+            ...$issues->map(fn(BookIssue $issue) => [
+                $issue->student?->user?->name ?? $issue->teacher?->user?->name,
+                $issue->bookCopy?->book?->title,
+                $issue->issued_at?->toDateString(),
+                $issue->due_date?->toDateString(),
+                $issue->days_overdue,
+                $issue->fine_amount,
+            ])->all(),
+        ]);
     }
 
     public function finePay(Request $r, BookIssue $issue)
@@ -505,5 +588,83 @@ class LibraryController extends Controller
         }
 
         return $activeIssues;
+    }
+
+    private function bookQuery(Request $request)
+    {
+        $query = Book::withCount([
+            'copies',
+            'availableCopies as active_copies_count',
+            'issues' => fn($q) => $q->whereIn('status', ['issued', 'overdue']),
+        ]);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(fn($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('author', 'like', "%{$search}%")
+                ->orWhere('isbn', 'like', "%{$search}%"));
+        }
+
+        return $query->orderBy('title');
+    }
+
+    private function issueQuery(Request $request)
+    {
+        $query = BookIssue::with(['bookCopy.book', 'student.user', 'teacher.user']);
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        return $query->latest();
+    }
+
+    private function reservationQuery(Request $request)
+    {
+        $query = LibraryReservation::with(['book', 'student.user', 'teacher.user']);
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('book', fn($book) => $book->where('title', 'like', "%{$search}%")->orWhere('isbn', 'like', "%{$search}%"))
+                    ->orWhereHas('student.user', fn($user) => $user->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('teacher.user', fn($user) => $user->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        return $query->latest('reserved_at');
+    }
+
+    private function membershipQuery()
+    {
+        return LibraryMembership::with('user')->latest();
+    }
+
+    private function fineQuery()
+    {
+        return BookIssue::where('fine_paid', false)
+            ->where('fine_amount', '>', 0)
+            ->with(['bookCopy.book', 'student.user', 'teacher.user'])
+            ->latest();
+    }
+
+    private function csvDownload(string $filename, array $rows)
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "Library {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

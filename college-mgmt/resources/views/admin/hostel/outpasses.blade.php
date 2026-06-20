@@ -14,13 +14,17 @@
 @endif
 
 {{-- Status Filter Tabs --}}
-<ul class="nav nav-tabs mb-3">
-    @foreach([''=>'All','pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected','returned'=>'Returned'] as $val => $label)
-        <li class="nav-item">
-            <a class="nav-link {{ request('status', '') === $val ? 'active' : '' }}" href="{{ route('admin.hostel.outpasses', ['status' => $val]) }}">{{ $label }}</a>
-        </li>
-    @endforeach
-</ul>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <ul class="nav nav-tabs mb-0">
+        @foreach([''=>'All','pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected','returned'=>'Returned'] as $val => $label)
+            <li class="nav-item">
+                <a class="nav-link {{ request('status', '') === $val ? 'active' : '' }}" href="{{ route('admin.hostel.outpasses', ['status' => $val]) }}">{{ $label }}</a>
+            </li>
+        @endforeach
+    </ul>
+    <a href="{{ route('admin.hostel.outpasses.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+</div>
+<div class="text-muted small mb-2">Showing {{ $outpasses->total() }} outpass record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}.</div>
 
 <div class="card">
     <div class="card-body p-0">
@@ -60,7 +64,7 @@
                                 @if($isExpiredPending)
                                     <span class="badge bg-secondary me-1">Expired</span>
                                 @else
-                                    <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline">
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline" onsubmit="return confirm('Approve this hostel outpass?')">
                                         @csrf
                                         <button type="submit" class="btn btn-xs btn-success btn-sm">Approve</button>
                                     </form>
@@ -68,7 +72,7 @@
                                 <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $op->id }}">Reject</button>
                             @elseif($op->status === 'approved')
                                 @if($canMarkReturned)
-                                    <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline">
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline" onsubmit="return confirm('Mark this student as returned from outpass?')">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-info">Mark Returned</button>
                                     </form>

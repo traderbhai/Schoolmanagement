@@ -106,6 +106,15 @@
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-transparent">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+                <h2 class="h6 fw-semibold mb-1">Asset Register</h2>
+                <div class="small text-muted">
+                    Showing {{ $assets->total() }} records. Filter: {{ $assetFilterSummary }}.
+                </div>
+            </div>
+            <a href="{{ route('admin.assets.export', request()->query()) }}" class="btn btn-sm btn-outline-success">Export Current View</a>
+        </div>
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Search</label>
@@ -183,7 +192,13 @@
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent fw-semibold">Active Assignments</div>
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="fw-semibold">Active Assignments</div>
+            <div class="small text-muted">Showing latest {{ $activeAssignments->count() }} of {{ $stats['active_assignments'] }} active assignments.</div>
+        </div>
+        <a href="{{ route('admin.assets.assignments.export') }}" class="btn btn-sm btn-outline-success">Export Active Assignments</a>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -202,7 +217,7 @@
                             <td>{{ $assignment->assignedTo->name ?? '-' }}</td>
                             <td>{{ $assignment->assigned_on?->format('d M Y') }}</td>
                             <td class="text-end">
-                                <form method="POST" action="{{ route('admin.assets.assignments.return', $assignment) }}" class="d-inline">
+                                <form method="POST" action="{{ route('admin.assets.assignments.return', $assignment) }}" class="d-inline" onsubmit="return confirm('Return this asset in good condition?')">
                                     @csrf
                                     <input type="hidden" name="returned_on" value="{{ now()->toDateString() }}">
                                     <input type="hidden" name="condition" value="good">
@@ -220,7 +235,13 @@
 </div>
 
 <div class="card border-0 shadow-sm mt-4">
-    <div class="card-header bg-transparent fw-semibold">Consumable Stock</div>
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="fw-semibold">Consumable Stock</div>
+            <div class="small text-muted">{{ $inventoryItems->count() }} stock items, {{ $stats['low_stock'] }} low-stock items.</div>
+        </div>
+        <a href="{{ route('admin.assets.stock-items.export') }}" class="btn btn-sm btn-outline-success">Export Stock Items</a>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -274,7 +295,13 @@
 </div>
 
 <div class="card border-0 shadow-sm mt-4">
-    <div class="card-header bg-transparent fw-semibold">Recent Stock Movements</div>
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="fw-semibold">Recent Stock Movements</div>
+            <div class="small text-muted">Showing latest {{ $recentMovements->count() }} of {{ $stats['stock_movements'] }} recorded movements.</div>
+        </div>
+        <a href="{{ route('admin.assets.stock-movements.export') }}" class="btn btn-sm btn-outline-success">Export Stock Movements</a>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -312,7 +339,7 @@
     <div class="modal fade" id="assignAsset{{ $asset->id }}" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" action="{{ route('admin.assets.assign', $asset) }}">
+                <form method="POST" action="{{ route('admin.assets.assign', $asset) }}" onsubmit="return confirm('Assign this asset to the selected user?')">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title">Assign {{ $asset->asset_tag }}</h5>
@@ -352,7 +379,7 @@
 <div class="modal fade" id="receiveStock{{ $item->id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.assets.stock-items.receive', $item) }}">
+            <form method="POST" action="{{ route('admin.assets.stock-items.receive', $item) }}" onsubmit="return confirm('Receive this stock quantity into inventory?')">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Receive {{ $item->name }}</h5>
@@ -377,7 +404,7 @@
 <div class="modal fade" id="issueStock{{ $item->id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.assets.stock-items.issue', $item) }}">
+            <form method="POST" action="{{ route('admin.assets.stock-items.issue', $item) }}" onsubmit="return confirm('Issue this stock quantity and reduce current inventory?')">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Issue {{ $item->name }}</h5>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\AssetAssignment;
 use App\Models\AssetCategory;
 use App\Models\InstituteAsset;
@@ -20,37 +21,17 @@ class AssetController extends Controller
     {
         $this->authorizeAssetManagement($request);
 
-        $query = InstituteAsset::with(['category', 'currentAssignment.assignedTo'])->latest();
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('asset_tag', 'like', "%{$search}%")
-                    ->orWhere('name', 'like', "%{$search}%")
-                    ->orWhere('serial_number', 'like', "%{$search}%")
-                    ->orWhere('location', 'like', "%{$search}%");
-            });
-        }
-
-        $assets = $query->paginate(20)->withQueryString();
+        $assets = $this->assetQuery($request)->paginate(20)->withQueryString();
         $categories = AssetCategory::where('is_active', true)->orderBy('name')->get();
         $users = User::orderBy('name')->get();
-        $activeAssignments = AssetAssignment::with(['asset', 'assignedTo'])
-            ->where('status', 'active')
-            ->latest()
+        $activeAssignments = $this->assignmentQuery()
             ->limit(10)
             ->get();
-        $inventoryItems = InventoryItem::with('category')
-            ->orderBy('name')
-            ->get();
-        $recentMovements = InventoryMovement::with(['item', 'issuedTo'])
-            ->latest()
+        $inventoryItems = $this->inventoryItemQuery()->get();
+        $recentMovements = $this->movementQuery()
             ->limit(10)
             ->get();
+        $assetFilterSummary = $this->assetFilterSummary($request);
 
         $stats = [
             'total' => InstituteAsset::count(),
@@ -60,6 +41,9 @@ class AssetController extends Controller
             'value' => InstituteAsset::sum('purchase_cost'),
             'stock_items' => InventoryItem::count(),
             'low_stock' => InventoryItem::whereColumn('current_stock', '<=', 'reorder_level')->count(),
+            'asset_filtered_total' => $this->assetQuery($request)->count(),
+            'active_assignments' => $this->assignmentQuery()->count(),
+            'stock_movements' => $this->movementQuery()->count(),
         ];
 
         return view('admin.assets.index', compact(
@@ -69,8 +53,100 @@ class AssetController extends Controller
             'activeAssignments',
             'inventoryItems',
             'recentMovements',
+            'assetFilterSummary',
             'stats'
         ));
+    }
+
+    public function exportAssets(Request $request)
+    {
+        $this->authorizeAssetManagement($request);
+
+        $assets = $this->assetQuery($request)->get();
+        $this->recordExportActivity('asset register', $assets->count(), $request);
+
+        return $this->csvDownload('assets-register-' . now()->format('Ymd') . '.csv', [
+            ['Asset Tag', 'Name', 'Category', 'Serial Number', 'Location', 'Condition', 'Status', 'Assigned To', 'Purchase Cost'],
+            ...$assets->map(fn (InstituteAsset $asset) => [
+                $asset->asset_tag,
+                $asset->name,
+                $asset->category?->name,
+                $asset->serial_number,
+                $asset->location,
+                $asset->condition,
+                $asset->status,
+                $asset->currentAssignment?->assignedTo?->name,
+                $asset->purchase_cost,
+            ]),
+        ]);
+    }
+
+    public function exportAssignments(Request $request)
+    {
+        $this->authorizeAssetManagement($request);
+
+        $assignments = $this->assignmentQuery()->get();
+        $this->recordExportActivity('active assignments', $assignments->count(), $request);
+
+        return $this->csvDownload('assets-active-assignments-' . now()->format('Ymd') . '.csv', [
+            ['Asset Tag', 'Asset', 'Assigned To', 'Assigned By', 'Assigned On', 'Status', 'Remarks'],
+            ...$assignments->map(fn (AssetAssignment $assignment) => [
+                $assignment->asset?->asset_tag,
+                $assignment->asset?->name,
+                $assignment->assignedTo?->name,
+                $assignment->assignedBy?->name,
+                $assignment->assigned_on?->toDateString(),
+                $assignment->status,
+                $assignment->remarks,
+            ]),
+        ]);
+    }
+
+    public function exportStockItems(Request $request)
+    {
+        $this->authorizeAssetManagement($request);
+
+        $items = $this->inventoryItemQuery()->get();
+        $this->recordExportActivity('consumable stock', $items->count(), $request);
+
+        return $this->csvDownload('assets-consumable-stock-' . now()->format('Ymd') . '.csv', [
+            ['SKU', 'Item', 'Category', 'Unit', 'Location', 'Current Stock', 'Reorder Level', 'Stock State', 'Status'],
+            ...$items->map(fn (InventoryItem $item) => [
+                $item->sku,
+                $item->name,
+                $item->category?->name,
+                $item->unit,
+                $item->location,
+                $item->current_stock,
+                $item->reorder_level,
+                $item->is_low_stock ? 'low_stock' : 'ok',
+                $item->status,
+            ]),
+        ]);
+    }
+
+    public function exportMovements(Request $request)
+    {
+        $this->authorizeAssetManagement($request);
+
+        $movements = $this->movementQuery()->get();
+        $this->recordExportActivity('stock movements', $movements->count(), $request);
+
+        return $this->csvDownload('assets-stock-movements-' . now()->format('Ymd') . '.csv', [
+            ['Date', 'SKU', 'Item', 'Type', 'Quantity', 'Reference', 'Vendor', 'Issued To', 'Performed By', 'Remarks'],
+            ...$movements->map(fn (InventoryMovement $movement) => [
+                $movement->movement_date?->toDateString(),
+                $movement->item?->sku,
+                $movement->item?->name,
+                $movement->movement_type,
+                $movement->quantity,
+                $movement->reference_number,
+                $movement->vendor_name,
+                $movement->issuedTo?->name,
+                $movement->performedBy?->name,
+                $movement->remarks,
+            ]),
+        ]);
     }
 
     public function categoryStore(Request $request)
@@ -287,5 +363,79 @@ class AssetController extends Controller
             $request->user() && AccessControl::canManageInstitutionAssets($request->user()),
             403
         );
+    }
+
+    private function assetQuery(Request $request)
+    {
+        $query = InstituteAsset::with(['category', 'currentAssignment.assignedTo'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('asset_tag', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('serial_number', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        return $query;
+    }
+
+    private function assignmentQuery()
+    {
+        return AssetAssignment::with(['asset', 'assignedTo', 'assignedBy'])
+            ->where('status', 'active')
+            ->latest();
+    }
+
+    private function inventoryItemQuery()
+    {
+        return InventoryItem::with('category')
+            ->orderBy('name');
+    }
+
+    private function movementQuery()
+    {
+        return InventoryMovement::with(['item', 'issuedTo', 'performedBy'])
+            ->latest();
+    }
+
+    private function assetFilterSummary(Request $request): string
+    {
+        $parts = [];
+
+        if ($request->filled('search')) {
+            $parts[] = 'search: ' . $request->search;
+        }
+
+        if ($request->filled('status')) {
+            $parts[] = 'status: ' . $request->status;
+        }
+
+        return empty($parts) ? 'All assets' : implode('; ', $parts);
+    }
+
+    private function csvDownload(string $filename, array $rows)
+    {
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function recordExportActivity(string $surface, int $rowCount, Request $request): void
+    {
+        $filters = $request->query();
+        $filterSummary = empty($filters) ? 'none' : json_encode($filters, JSON_UNESCAPED_SLASHES);
+
+        ActivityLog::record('export', "Assets {$surface} exported: {$rowCount} rows; filters={$filterSummary}");
     }
 }

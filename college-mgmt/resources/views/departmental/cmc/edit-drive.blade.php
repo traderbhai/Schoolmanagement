@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Edit Placement Drive</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.drives.update', $drive) }}">
+    <div class="alert alert-warning small py-2">
+      Changing an active drive can affect student applications and recruiter communication. Review dates, eligibility, and status before saving.
+    </div>
+    <form method="POST" action="{{ route('cmc.drives.update', $drive) }}" onsubmit="return confirm('Save placement drive changes?')">
       @csrf @method('PUT')
       <div class="row g-3">
         <div class="col-md-8">
@@ -24,7 +27,7 @@
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Company <span class="text-danger">*</span></label>
           <select name="company_id" class="form-select" required>
-            <option value="">— Select Company —</option>
+            <option value="">Select Company</option>
             @foreach($companies as $c)
             <option value="{{ $c->id }}" {{ old('company_id',$drive->company_id)==$c->id?'selected':'' }}>{{ $c->name }}</option>
             @endforeach

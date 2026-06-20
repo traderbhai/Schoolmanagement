@@ -6,7 +6,7 @@
     <div class="d-flex align-items-center mb-4 gap-3">
         <a href="{{ route('exam-cell.anomalies.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
         <div>
-            <h4 class="fw-bold mb-0">Report Exam Anomaly</h4>
+            <h1 class="h4 fw-bold mb-0">Report Exam Anomaly</h1>
             <span class="text-muted small">Log a malpractice or irregularity for investigation</span>
         </div>
     </div>

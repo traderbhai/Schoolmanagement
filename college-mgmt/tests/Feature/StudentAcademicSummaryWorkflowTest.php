@@ -114,4 +114,24 @@ class StudentAcademicSummaryWorkflowTest extends TestCase
             ->assertDontSee('60%')
             ->assertSee('Summary Attendance Subject');
     }
+
+    public function test_academic_summary_opens_when_student_has_user_mentor(): void
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+
+        $user = User::factory()->create();
+        $user->assignRole('student');
+        $mentor = User::factory()->create();
+
+        Student::factory()->create([
+            'user_id' => $user->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.summary.index'))
+            ->assertOk()
+            ->assertDontSee('Call to undefined relationship');
+    }
 }

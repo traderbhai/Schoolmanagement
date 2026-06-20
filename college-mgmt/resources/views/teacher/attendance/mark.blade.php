@@ -8,9 +8,9 @@
 
 @section('content')
 
-@if(!$canMarkAttendance)
+@if($actionBlockedReason)
     <div class="alert alert-warning">
-        Attendance marking is locked because this teacher profile is not active.
+        <i class="bi bi-lock me-1"></i>{{ $actionBlockedReason }}
     </div>
 @endif
 

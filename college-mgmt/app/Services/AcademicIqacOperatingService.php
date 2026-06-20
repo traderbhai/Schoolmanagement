@@ -80,17 +80,20 @@ class AcademicIqacOperatingService
                 'title' => $program->name,
                 'subtitle' => $program->code . ' - program outcomes missing',
                 'status' => 'PO gap',
-                'action' => route('academic.obe.po.index', ['program_id' => $program->id]),
+                'metric_keys' => ['programs_without_po', 'obe_gaps'],
+                'action' => route('academics.iqac.obe-readiness', ['metric' => 'programs_without_po', 'program_id' => $program->id]),
             ])->values())->concat($subjectsWithoutCo->map(fn (Subject $subject) => [
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - course outcomes missing',
                 'status' => 'CO gap',
-                'action' => route('academic.obe.co.index', ['program_id' => $subject->program_id, 'subject_id' => $subject->id]),
+                'metric_keys' => ['subjects_without_co', 'obe_gaps'],
+                'action' => route('academics.iqac.obe-readiness', ['metric' => 'subjects_without_co', 'program_id' => $subject->program_id, 'subject_id' => $subject->id]),
             ])->values())->concat($cosWithoutMapping->map(fn (CourseOutcome $co) => [
                 'title' => $co->code . ' - ' . ($co->subject?->name ?? 'Subject'),
                 'subtitle' => ($co->subject?->program?->code ?? 'Program') . ' - CO-PO mapping missing',
                 'status' => 'Mapping gap',
-                'action' => route('academic.obe.matrix', ['program_id' => $co->subject?->program_id, 'subject_id' => $co->subject_id]),
+                'metric_keys' => ['co_without_mapping', 'mapping_gaps'],
+                'action' => route('academics.iqac.obe-readiness', ['metric' => 'co_without_mapping', 'program_id' => $co->subject?->program_id, 'subject_id' => $co->subject_id]),
             ])->values())->values(),
         ];
     }
@@ -122,12 +125,14 @@ class AcademicIqacOperatingService
                 'title' => $row->courseOutcome?->code . ' - ' . ($row->subject?->name ?? 'Subject'),
                 'subtitle' => ($row->subject?->program?->code ?? 'Program') . ' - final ' . $row->final_attainment . ' / target ' . $row->target_attainment,
                 'status' => 'CO target missed',
-                'action' => route('academic.obe.attainment', ['program_id' => $row->subject?->program_id, 'term_id' => $row->term_id]),
+                'metric_keys' => ['co_target_missed', 'target_misses'],
+                'action' => route('academics.iqac.attainment-monitoring', ['metric' => 'co_target_missed', 'program_id' => $row->subject?->program_id, 'term_id' => $row->term_id]),
             ])->values())->concat($poMisses->map(fn (PoAttainment $row) => [
                 'title' => $row->programOutcome?->code . ' - ' . ($row->program?->code ?? 'Program'),
                 'subtitle' => 'Attainment ' . $row->attainment_value . ' / target ' . $row->target_value,
                 'status' => 'PO target missed',
-                'action' => route('academic.obe.attainment', ['program_id' => $row->program_id, 'term_id' => $row->term_id]),
+                'metric_keys' => ['po_target_missed', 'target_misses'],
+                'action' => route('academics.iqac.attainment-monitoring', ['metric' => 'po_target_missed', 'program_id' => $row->program_id, 'term_id' => $row->term_id]),
             ])->values())->values(),
         ];
     }
@@ -168,17 +173,20 @@ class AcademicIqacOperatingService
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - feedback missing',
                 'status' => 'Feedback gap',
-                'action' => route('chair.faculty.feedback'),
+                'metric_keys' => ['subjects_without_feedback', 'feedback_gaps'],
+                'action' => route('academics.iqac.feedback-quality', ['metric' => 'subjects_without_feedback', 'subject_id' => $subject->id]),
             ])->values())->concat($lowFeedbackSubjects->map(fn ($row) => [
                 'title' => $row->subject?->name ?? 'Subject',
                 'subtitle' => ($row->subject?->program?->code ?? 'Program') . ' - average rating ' . round($row->avg_rating, 1),
                 'status' => 'Action plan due',
-                'action' => route('chair.faculty.feedback'),
+                'metric_keys' => ['low_feedback_subjects'],
+                'action' => route('academics.iqac.feedback-quality', ['metric' => 'low_feedback_subjects', 'subject_id' => $row->subject_id]),
             ])->values())->concat($publishedSurveys->map(fn (ObeSurvey $survey) => [
                 'title' => $survey->title,
                 'subtitle' => ($survey->subject?->program?->code ?? 'Program') . ' - closes ' . ($survey->closes_at?->toDateString() ?? 'open'),
                 'status' => 'Survey live',
-                'action' => route('academic.obe.surveys.index'),
+                'metric_keys' => ['published_surveys'],
+                'action' => route('academics.iqac.feedback-quality', ['metric' => 'published_surveys', 'survey_id' => $survey->id]),
             ])->values())->values(),
         ];
     }
@@ -206,6 +214,11 @@ class AcademicIqacOperatingService
                 'title' => str($log->action)->replace('_', ' ')->title()->toString(),
                 'subtitle' => $log->description,
                 'status' => $log->created_at?->diffForHumans() ?? 'Recorded',
+                'metric_keys' => array_values(array_filter([
+                    'audit_events',
+                    $log->action === 'academic_scope_assigned' ? 'scope_changes' : null,
+                    $log->action === 'quality_audit_review' ? 'quality_reviews' : null,
+                ])),
                 'action' => route('academics.governance.index'),
             ])->values(),
         ];
@@ -241,6 +254,11 @@ class AcademicIqacOperatingService
     private function filterItems(Collection $items, array $filters): Collection
     {
         return $items
+            ->when(! empty($filters['metric']), function (Collection $collection) use ($filters) {
+                $metric = (string) $filters['metric'];
+
+                return $collection->filter(fn (array $item) => in_array($metric, $item['metric_keys'] ?? [], true));
+            })
             ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
                 $search = mb_strtolower((string) $filters['search']);
 
@@ -258,7 +276,7 @@ class AcademicIqacOperatingService
     private function filterSummary(array $filters): string
     {
         $active = collect($filters)
-            ->only(['search', 'status'])
+            ->only(['metric', 'search', 'status'])
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
 

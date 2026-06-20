@@ -210,6 +210,50 @@ class AcademicsDeanV007Test extends TestCase
         $this->assertTrue(AcademicDeanExportLog::where('report_key', 'branch_health')->exists());
     }
 
+    public function test_dean_action_cannot_be_closed_without_evidence_or_closure_note(): void
+    {
+        $this->seedDeanFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+
+        $this->actingAs($dean)
+            ->post(route('academics.dean-os.actions.store'), [
+                'title' => 'Dean Closure Evidence Guard',
+                'source_type' => 'manual',
+                'priority' => 'high',
+            ])
+            ->assertRedirect();
+
+        $action = AcademicDeanActionItem::where('title', 'Dean Closure Evidence Guard')->firstOrFail();
+
+        $this->actingAs($dean)
+            ->patch(route('academics.dean-os.actions.update', $action), [
+                'owner_user_id' => $action->owner_user_id,
+                'priority' => $action->priority,
+                'due_at' => $action->due_at,
+                'status' => 'done',
+                'closure_note' => '   ',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('open', $action->fresh()->status);
+
+        $this->actingAs($dean)
+            ->patch(route('academics.dean-os.actions.update', $action), [
+                'owner_user_id' => $action->owner_user_id,
+                'priority' => $action->priority,
+                'due_at' => $action->due_at,
+                'status' => 'done',
+                'closure_note' => 'Verified in Dean review.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('academic_dean_action_items', [
+            'id' => $action->id,
+            'status' => 'done',
+            'closure_note' => 'Verified in Dean review.',
+        ]);
+    }
+
     public function test_dean_handoff_reports_calendar_and_legacy_dashboard_links_render(): void
     {
         $this->seedDeanFixture();

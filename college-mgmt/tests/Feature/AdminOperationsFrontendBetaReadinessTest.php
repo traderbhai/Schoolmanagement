@@ -249,4 +249,83 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             $this->assertStringNotContainsString('Laravel', $contents, $path);
         }
     }
+
+    public function test_sensitive_operations_lifecycle_forms_have_confirmation_guards(): void
+    {
+        $expectations = [
+            resource_path('views/admin/assets/index.blade.php') => [
+                "confirm('Assign this asset to the selected user?')",
+                "confirm('Return this asset in good condition?')",
+                "confirm('Receive this stock quantity into inventory?')",
+                "confirm('Issue this stock quantity and reduce current inventory?')",
+            ],
+            resource_path('views/admin/transport/index.blade.php') => [
+                "confirm('End this transport assignment from today?')",
+            ],
+            resource_path('views/admin/hostel/fees.blade.php') => [
+                "confirm('Mark this hostel fee demand as paid?')",
+                "confirm('Waive this hostel fee demand?')",
+            ],
+            resource_path('views/admin/hostel/outpasses.blade.php') => [
+                "confirm('Approve this hostel outpass?')",
+                "confirm('Mark this student as returned from outpass?')",
+            ],
+            resource_path('views/admin/library/reservations.blade.php') => [
+                "confirm('Fulfil this reservation and issue the available copy?')",
+                "confirm('Cancel this library reservation?')",
+            ],
+            resource_path('views/admin/library/fines.blade.php') => [
+                "confirm('Mark this library fine as paid?')",
+            ],
+        ];
+
+        foreach ($expectations as $path => $guards) {
+            $contents = file_get_contents($path);
+
+            foreach ($guards as $guard) {
+                $this->assertStringContainsString($guard, $contents, $path);
+            }
+        }
+    }
+
+    public function test_batch_g_mobile_layouts_keep_navigation_and_tables_usable(): void
+    {
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+        $accounts = User::where('email', 'accounts@college.com')->firstOrFail();
+        $cmc = User::where('email', 'cmc@college.com')->firstOrFail();
+
+        foreach ([
+            [$admin, 'admin.transport.index'],
+            [$admin, 'admin.assets.index'],
+            [$admin, 'admin.library.issues'],
+            [$admin, 'admin.hostel.allocations'],
+            [$accounts, 'accounts.outstanding'],
+            [$accounts, 'accounts.reconciliation'],
+            [$cmc, 'cmc.drives'],
+            [$cmc, 'cmc.companies'],
+            [$cmc, 'cmc.events'],
+        ] as [$user, $route]) {
+            $response = $this->actingAs($user)->get(route($route));
+
+            $response->assertOk()
+                ->assertSee('id="mobileSidebar"', false)
+                ->assertSee('sidebar-mobile-toggle', false)
+                ->assertSee('aria-label="Open navigation menu"', false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false);
+
+            if (str_contains($response->getContent(), '<table')) {
+                $response->assertSee('table-responsive', false);
+            }
+        }
+
+        $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
+        $css = file_get_contents(public_path('css/app.css'));
+
+        $this->assertStringContainsString('offcanvas offcanvas-start sidebar-mobile', $layout);
+        $this->assertStringContainsString('data-bs-target="#mobileSidebar"', $layout);
+        $this->assertStringContainsString('.sidebar-mobile', $css);
+        $this->assertStringContainsString('overflow-y: auto;', $css);
+    }
 }

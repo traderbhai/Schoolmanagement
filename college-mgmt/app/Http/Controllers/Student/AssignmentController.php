@@ -64,7 +64,7 @@ class AssignmentController extends Controller
         return $canonical->merge($legacy)->unique()->values();
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $student = $this->getStudent();
 
@@ -79,8 +79,22 @@ class AssignmentController extends Controller
         $now = now();
         $upcoming = $assignments->filter(fn($a) => $a->due_at->isFuture());
         $past = $assignments->filter(fn($a) => $a->due_at->isPast());
+        $filterSummary = 'All published assignments in your enrolled subjects';
 
-        return view('student.assignments.index', compact('upcoming', 'past', 'now'));
+        if ($request->query('filter') === 'pending_next_7') {
+            $upcoming = $upcoming
+                ->filter(function ($assignment) use ($now) {
+                    $submission = $assignment->submissions->first();
+
+                    return $assignment->due_at <= $now->copy()->addDays(7)
+                        && (! $submission || ! in_array($submission->status, ['submitted', 'graded'], true));
+                })
+                ->values();
+            $past = collect();
+            $filterSummary = 'Pending assignments due in the next 7 days';
+        }
+
+        return view('student.assignments.index', compact('upcoming', 'past', 'now', 'filterSummary'));
     }
 
     public function show(Assignment $assignment)

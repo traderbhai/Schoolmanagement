@@ -22,7 +22,7 @@
     <button class="topbar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
         <i class="bi bi-list fs-4"></i>
     </button>
-    <span class="topbar-title d-none d-lg-block">@yield('page-title', 'Applicant Portal')</span>
+    <h1 class="topbar-title d-none d-lg-block mb-0">@yield('page-title', 'Applicant Portal')</h1>
     <div class="ms-auto d-flex align-items-center gap-3">
         <span class="text-muted small"><i class="bi bi-person-circle me-1"></i>{{ auth()->user()->name }}</span>
     </div>

@@ -2,11 +2,24 @@
 @section('title', 'Payment Verification Queue')
 
 @section('content')
+@php
+    $filterSummary = collect([
+        request('program_id') ? 'Program filtered' : null,
+        request('installment_id') ? 'Installment filtered' : null,
+        request('payment_mode') ? 'Mode: ' . strtoupper(request('payment_mode')) : null,
+        request('date_from') ? 'From: ' . request('date_from') : null,
+        request('date_to') ? 'To: ' . request('date_to') : null,
+    ])->filter()->implode(' | ') ?: 'All visible pending payments';
+@endphp
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0 fw-bold">Payment Verification Queue</h2>
         <small class="text-muted">Review and verify pending payment submissions</small>
+        <div class="small text-muted">Filter: {{ $filterSummary }}</div>
     </div>
+    <a href="{{ route('admission.payments.queue.export', request()->query()) }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download me-1"></i>Export Current View
+    </a>
 </div>
 
 {{-- Stats --}}
@@ -16,6 +29,9 @@
             <div class="card-body text-center py-3">
                 <div class="fs-2 fw-bold text-warning">{{ $stats['total_pending'] }}</div>
                 <div class="small text-muted">Pending Verification</div>
+                @if(($stats['all_pending'] ?? $stats['total_pending']) !== $stats['total_pending'])
+                    <div class="small text-muted">of {{ $stats['all_pending'] }} visible total</div>
+                @endif
             </div>
         </div>
     </div>
@@ -92,6 +108,10 @@
 
 {{-- Payments Table --}}
 <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="fw-semibold">Pending Payments ({{ $payments->total() }})</span>
+        <span class="small text-muted">Showing {{ $payments->firstItem() ?? 0 }}-{{ $payments->lastItem() ?? 0 }} of {{ $payments->total() }}</span>
+    </div>
     <div class="card-body p-0">
         @if($payments->isEmpty())
             <div class="text-center py-5 text-muted">

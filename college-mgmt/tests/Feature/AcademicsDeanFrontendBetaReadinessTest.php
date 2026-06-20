@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\AcademicDeanOperatingRecord;
+use App\Models\AcademicDeanApprovalItem;
+use App\Models\AcademicDeanExportLog;
 use App\Models\Program;
 use App\Models\User;
 use Database\Seeders\MasterDemoSeeder;
@@ -101,6 +103,7 @@ class AcademicsDeanFrontendBetaReadinessTest extends TestCase
             ->assertSee('Visible filter summary')
             ->assertSee('Search: Beta Faculty')
             ->assertSee('Severity: critical')
+            ->assertSee('Save current filters')
             ->assertSee(e(route('academics.dean-os.export', [
                 'report' => 'faculty_workload',
                 'search' => 'Beta Faculty',
@@ -109,6 +112,61 @@ class AcademicsDeanFrontendBetaReadinessTest extends TestCase
                 'sort' => 'score',
                 'direction' => 'desc',
             ])), false);
+
+        $this->actingAs($dean)->post(route('academics.dean-os.saved-views.store'), [
+            'name' => 'Critical Faculty Load',
+            'surface' => 'faculty-workload',
+            'filters' => [
+                'search' => 'Beta Faculty',
+                'severity' => 'critical',
+                'status' => 'open',
+                'sort' => 'score',
+                'direction' => 'desc',
+            ],
+            'is_default' => true,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('academic_dean_saved_views', [
+            'user_id' => $dean->id,
+            'surface' => 'faculty-workload',
+            'name' => 'Critical Faculty Load',
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.faculty-workload.index'))
+            ->assertOk()
+            ->assertSee('Critical Faculty Load')
+            ->assertSee(e(route('academics.dean-os.faculty-workload.index', [
+                'search' => 'Beta Faculty',
+                'severity' => 'critical',
+                'status' => 'open',
+                'sort' => 'score',
+                'direction' => 'desc',
+            ])), false);
+
+        $export = $this->actingAs($dean)->get(route('academics.dean-os.export', [
+            'report' => 'faculty_workload',
+            'search' => 'Beta Faculty',
+            'severity' => 'critical',
+            'status' => 'open',
+            'sort' => 'score',
+            'direction' => 'desc',
+        ]));
+
+        $export
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+        $csv = $export->streamedContent();
+        $this->assertStringContainsString('ZZZ Critical Beta Faculty Overload', $csv);
+        $this->assertStringNotContainsString('AAA Closed Beta Faculty Note', $csv);
+
+        $log = AcademicDeanExportLog::where('report_key', 'faculty_workload')->latest('id')->firstOrFail();
+        $this->assertSame(1, $log->row_count);
+        $this->assertSame('Beta Faculty', $log->filters['search']);
+        $this->assertSame('critical', $log->filters['severity']);
+        $this->assertSame('open', $log->filters['status']);
     }
 
     public function test_dean_shared_shell_uses_manifest_grouped_sidebar_links(): void
@@ -152,6 +210,62 @@ class AcademicsDeanFrontendBetaReadinessTest extends TestCase
         $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
 
         $this->assertStringContainsString('<x-ui.manifest-sidebar role="dean"', $layout);
+    }
+
+    public function test_dean_dashboard_kpis_and_mobile_sidebar_have_usable_targets(): void
+    {
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.index'))
+            ->assertOk()
+            ->assertSee(route('academics.dean-os.attention', 'overdue_dean_approvals'), false)
+            ->assertSee(route('academics.dean-os.reviews', ['status' => 'open']), false)
+            ->assertSee(route('academics.dean-os.program-risk', ['band' => 'critical_high']), false)
+            ->assertSee(route('academics.dean-os.handoff', ['status' => 'blocking']), false)
+            ->assertSee('Critical Attention')
+            ->assertSee('Summary only')
+            ->assertSee('sidebar-mobile-toggle', false)
+            ->assertSee('data-bs-target="#mobileSidebar"', false)
+            ->assertSee('id="mobileSidebar"', false)
+            ->assertSee('aria-label="Open navigation menu"', false);
+
+        $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
+        $css = file_get_contents(public_path('css/app.css'));
+
+        $this->assertStringContainsString('<x-ui.manifest-sidebar role="dean"', $layout);
+        $this->assertStringContainsString('offcanvas offcanvas-start sidebar-mobile', $layout);
+        $this->assertStringContainsString('.sidebar > .flex-grow-1', $css);
+        $this->assertStringContainsString('overflow-y: auto;', $css);
+        $this->assertStringContainsString('.offcanvas[id="mobileSidebar"] .offcanvas-body', $css);
+    }
+
+    public function test_approval_cockpit_shows_full_pending_decisions_and_locks_finalized_rows(): void
+    {
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $approval = AcademicDeanApprovalItem::where('status', 'pending')->firstOrFail();
+        $approval->update([
+            'status' => 'approved',
+            'decision_reason' => 'Approved before frontend readiness check.',
+        ]);
+
+        AcademicDeanApprovalItem::create([
+            'approval_type' => 'exam_readiness',
+            'title' => 'Frontend Pending Evidence Request Approval',
+            'source_type' => 'coe',
+            'source_key' => 'FRONTEND-EVIDENCE',
+            'status' => 'pending',
+            'risk_level' => 'high',
+            'due_at' => now()->addDay(),
+        ]);
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.approval-cockpit.index'))
+            ->assertOk()
+            ->assertSee('Request evidence')
+            ->assertSee('Escalate')
+            ->assertSee('Final decision locked.')
+            ->assertSee('Approved before frontend readiness check.');
     }
 
     public function test_primary_dean_views_do_not_have_placeholder_or_broken_action_links(): void

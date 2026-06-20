@@ -12,22 +12,32 @@
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['Allocation Batches', $kpis['allocation_batches'], route('academics.pmc.course-allocation.index')],
-            ['Student Allocations', $kpis['student_allocations'], route('academics.pmc.student-course-baskets.index')],
-            ['Course Groups', $kpis['course_groups'], route('academics.pmc.course-groups.index')],
-            ['Faculty Assignments', $kpis['faculty_assignments'], route('academics.pmc.section-faculty-allocation.index')],
-            ['Locked Slots', $kpis['locked_slots'], route('academics.pmc.locked-slots.index')],
-            ['Hard Conflicts', $kpis['hard_conflicts'], route('academics.pmc.timetable-planner.index', ['severity' => 'hard'])],
-            ['Soft Warnings', $kpis['soft_warnings'], route('academics.pmc.timetable-quality.index', ['severity' => 'soft'])],
-            ['Quality Score', $kpis['quality_score'] . '%', route('academics.pmc.timetable-quality.index')],
-        ] as [$label, $value, $url])
+            ['Allocation Batches', $kpis['allocation_batches'], route('academics.pmc.course-allocation.index'), true],
+            ['Student Allocations', $kpis['student_allocations'], route('academics.pmc.student-course-baskets.index'), true],
+            ['Course Groups', $kpis['course_groups'], route('academics.pmc.course-groups.index'), true],
+            ['Faculty Assignments', $kpis['faculty_assignments'], route('academics.pmc.section-faculty-allocation.index'), true],
+            ['Locked Slots', $kpis['locked_slots'], route('academics.pmc.locked-slots.index'), true],
+            ['Hard Conflicts', $kpis['hard_conflicts'], route('academics.pmc.timetable-planner.index', ['severity' => 'hard']), true],
+            ['Soft Warnings', $kpis['soft_warnings'], route('academics.pmc.timetable-planner.index', ['severity' => 'soft']), true],
+            ['Quality Score', $kpis['quality_score'] . '%', null, false],
+        ] as [$label, $value, $url, $clickable])
             <div class="col-6 col-md-3 col-xl">
-                <a href="{{ $url }}" class="card h-100 shadow-sm text-decoration-none">
-                    <div class="card-body py-2">
-                        <div class="small text-muted">{{ $label }}</div>
-                        <div class="h4 mb-0">{{ $value }}</div>
+                @if($clickable)
+                    <a href="{{ $url }}" class="card h-100 shadow-sm text-decoration-none">
+                        <div class="card-body py-2">
+                            <div class="small text-muted">{{ $label }}</div>
+                            <div class="h4 mb-0">{{ $value }}</div>
+                        </div>
+                    </a>
+                @else
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body py-2">
+                            <div class="small text-muted">{{ $label }}</div>
+                            <div class="h4 mb-0">{{ $value }}</div>
+                            <div class="small text-muted">Summary score</div>
+                        </div>
                     </div>
-                </a>
+                @endif
             </div>
         @endforeach
     </div>

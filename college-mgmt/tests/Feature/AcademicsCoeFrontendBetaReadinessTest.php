@@ -66,7 +66,7 @@ class AcademicsCoeFrontendBetaReadinessTest extends TestCase
             ->assertDontSee($other->student->user->name)
             ->assertSee('Visible filter summary: Search: ' . $target->student->user->name . ' | Status: Approval pending')
             ->assertSee('Export current view')
-            ->assertSee(route('exam-cell.hall-tickets', ['exam_id' => $target->exam_id]), false)
+            ->assertSee('metric=blocked_registrations&amp;exam_id=' . $target->exam_id, false)
             ->assertDontSee('href="#source-list"', false)
             ->assertDontSee('href="#"', false);
     }
@@ -99,10 +99,14 @@ class AcademicsCoeFrontendBetaReadinessTest extends TestCase
             ->assertSee('CoE OS')
             ->assertSee('CoE Workspace')
             ->assertSee('Academics Governance')
-            ->assertSee('Schedule Exam')
-            ->assertSee('Anomaly Log')
-            ->assertSee('Legacy Transcripts')
+            ->assertSee('Exam Readiness')
+            ->assertSee('Marks &amp; Results', false)
+            ->assertSee('Hall Tickets')
+            ->assertSee('Transcripts')
+            ->assertSee('Reports')
             ->assertSee(route('academics.workspaces.show', 'coe'), false)
+            ->assertDontSee(route('exam-cell.exams'), false)
+            ->assertDontSee(route('academic.transcripts.index'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
     }

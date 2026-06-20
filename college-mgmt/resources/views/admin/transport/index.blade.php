@@ -96,7 +96,11 @@
 </div>
 
 <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-transparent fw-semibold">Vehicle Fleet</div>
+            <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+                <span>Vehicle Fleet</span>
+                <a href="{{ route('admin.transport.vehicles.export') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+            </div>
+            <div class="px-3 pb-2 text-muted small">Showing {{ $vehicles->count() }} vehicle record(s).</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -219,7 +223,20 @@
 <div class="row g-4">
     <div class="col-lg-7">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-semibold">Active Assignments</div>
+            <div class="card-header bg-transparent">
+                <form method="GET" class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted mb-1">Active Assignments</label>
+                        <input type="search" name="assignment_search" value="{{ request('assignment_search') }}" class="form-control form-control-sm" placeholder="Search student, route, stop, or vehicle">
+                    </div>
+                    <div class="col-md-6 d-flex gap-2">
+                        <button class="btn btn-sm btn-primary">Filter</button>
+                        <a href="{{ route('admin.transport.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                        <a href="{{ route('admin.transport.assignments.export', request()->only('assignment_search')) }}" class="btn btn-sm btn-outline-secondary ms-auto"><i class="bi bi-download me-1"></i>Export Current View</a>
+                    </div>
+                </form>
+                <div class="text-muted small mt-2">Showing {{ $assignments->total() }} active assignment record(s){{ request('assignment_search') ? ' for search: '.request('assignment_search') : '' }}.</div>
+            </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
@@ -246,7 +263,7 @@
                                     <td>{{ $assignment->vehicle->registration_number ?? '-' }}</td>
                                     <td class="text-end">Rs. {{ number_format($assignment->monthly_fee, 2) }}</td>
                                     <td class="text-end">
-                                        <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline" onsubmit="return confirm('End this transport assignment from today?')">
                                             @csrf
                                             <input type="hidden" name="end_date" value="{{ now()->toDateString() }}">
                                             <button class="btn btn-sm btn-outline-danger">End</button>
@@ -267,7 +284,11 @@
     </div>
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-semibold">Routes And Stops</div>
+            <div class="card-header bg-transparent fw-semibold d-flex justify-content-between align-items-center">
+                <span>Routes And Stops</span>
+                <a href="{{ route('admin.transport.routes.export') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+            </div>
+            <div class="px-3 pb-2 text-muted small">Showing {{ $routes->count() }} route record(s).</div>
             <div class="card-body">
                 @forelse($routes as $route)
                     <div class="border-bottom pb-3 mb-3">

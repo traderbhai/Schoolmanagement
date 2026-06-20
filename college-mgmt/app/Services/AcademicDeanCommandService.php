@@ -93,10 +93,10 @@ class AcademicDeanCommandService
 
         return collect([
             ['key' => 'branch_health', 'label' => 'Dean branch health', 'count' => $this->branchHealth($user)->count(), 'route' => route('academics.dean-os.branch-health')],
-            ['key' => 'program_risk', 'label' => 'Program risk heatmap', 'count' => $this->risk->programRisks()->whereIn('band', ['critical', 'high'])->count(), 'route' => route('academics.dean-os.program-risk')],
+            ['key' => 'program_risk', 'label' => 'Program risk heatmap', 'count' => $this->risk->programRisks()->whereIn('band', ['critical', 'high'])->count(), 'route' => route('academics.dean-os.program-risk', ['band' => 'critical_high'])],
             ['key' => 'approval_sla', 'label' => 'Approval SLA', 'count' => ($queues['overdue_dean_approvals']['count'] ?? 0) + ($queues['pending_dean_approvals']['count'] ?? 0), 'route' => route('academics.dean-os.attention', 'pending_dean_approvals')],
-            ['key' => 'academic_actions', 'label' => 'Academic action tracker', 'count' => AcademicDeanActionItem::whereNotIn('status', ['done', 'cancelled'])->count(), 'route' => route('academics.dean-os.reviews')],
-            ['key' => 'handoff_readiness', 'label' => 'Admission handoff readiness', 'count' => $queues['admission_handoff_blockers']['count'] ?? 0, 'route' => route('academics.dean-os.handoff')],
+            ['key' => 'academic_actions', 'label' => 'Academic action tracker', 'count' => AcademicDeanActionItem::whereNotIn('status', ['done', 'cancelled'])->count(), 'route' => route('academics.dean-os.reviews', ['status' => 'open'])],
+            ['key' => 'handoff_readiness', 'label' => 'Admission handoff readiness', 'count' => $queues['admission_handoff_blockers']['count'] ?? 0, 'route' => route('academics.dean-os.handoff', ['status' => 'blocking'])],
             ['key' => 'course_delivery_gaps', 'label' => 'Course delivery gaps', 'count' => $queues['course_delivery_gaps']['count'] ?? 0, 'route' => route('academics.course-delivery.index')],
             ['key' => 'academic_planning', 'label' => 'Academic planning cycles', 'count' => AcademicDeanPlanningCycle::count(), 'route' => route('academics.dean-os.planning.index')],
             ['key' => 'approval_cockpit', 'label' => 'Dean approval cockpit', 'count' => AcademicDeanApprovalItem::where('status', 'pending')->count(), 'route' => route('academics.dean-os.approval-cockpit.index')],

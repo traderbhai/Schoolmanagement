@@ -26,10 +26,10 @@
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['label' => 'Assigned Courses', 'value' => $kpis['assigned_courses'], 'route' => route('academics.course-delivery.course-load')],
-            ['label' => 'Today Sessions', 'value' => $kpis['today_sessions'], 'route' => route('academics.course-delivery.session-delivery')],
-            ['label' => 'Attendance Risk', 'value' => $kpis['attendance_risk'], 'route' => route('academics.course-delivery.attendance-interventions')],
-            ['label' => 'Mentor Actions', 'value' => $kpis['mentor_actions'], 'route' => route('academics.course-delivery.mentor-actions')],
+            ['label' => 'Assigned Courses', 'value' => $kpis['assigned_courses'], 'route' => route('academics.course-delivery.course-load', ['metric' => 'assigned_subjects'])],
+            ['label' => 'Today Sessions', 'value' => $kpis['today_sessions'], 'route' => route('academics.course-delivery.session-delivery', ['metric' => 'today_sessions'])],
+            ['label' => 'Attendance Risk', 'value' => $kpis['attendance_risk'], 'route' => route('academics.course-delivery.attendance-interventions', ['metric' => 'attendance_risk_students'])],
+            ['label' => 'Mentor Actions', 'value' => $kpis['mentor_actions'], 'route' => route('academics.course-delivery.mentor-actions', ['metric' => 'open_mentor_actions'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
                 <a class="text-decoration-none" href="{{ $metric['route'] }}">
@@ -58,7 +58,7 @@
                         <div class="row g-2 mb-2">
                             @foreach($section['metrics'] as $label => $value)
                                 <div class="col-6 col-md-3">
-                                    <a href="{{ $meta['route'] }}" class="text-decoration-none">
+                                    <a href="{{ $meta['route'] }}?{{ http_build_query(['metric' => $label]) }}" class="text-decoration-none">
                                         <div class="border rounded p-2 h-100">
                                             <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
                                             <div class="fw-semibold">{{ $value }}</div>

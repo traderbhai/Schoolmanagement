@@ -21,11 +21,6 @@ class CourseFeedbackController extends Controller {
         $student = Auth::user()->student;
         abort_unless($student, 403);
 
-        if ($student->status !== 'active') {
-            return redirect()->route('student.feedback.index')
-                ->with('error', 'Course feedback can be submitted only by active students.');
-        }
-
         $termId = $this->feedbackTermId($student, $subject);
         abort_unless($this->isSubjectEnrolled($student, $subject), 403);
 
@@ -38,12 +33,13 @@ class CourseFeedbackController extends Controller {
             })
             ->exists();
 
-        if ($alreadySubmitted) {
-            return redirect()->route('student.feedback.index')
-                ->with('info', 'You have already submitted feedback for ' . $subject->name);
-        }
+        $actionBlockedReason = match (true) {
+            $student->status !== 'active' => 'Course feedback can be submitted only by active students.',
+            $alreadySubmitted => 'You have already submitted feedback for ' . $subject->name . '.',
+            default => null,
+        };
 
-        return view('student.feedback.create', compact('subject'));
+        return view('student.feedback.create', compact('subject', 'actionBlockedReason'));
     }
 
     public function store(Request $request, Subject $subject) {

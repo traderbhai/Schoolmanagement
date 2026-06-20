@@ -26,20 +26,30 @@
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['label' => 'Programs', 'value' => $kpis['programs'], 'route' => route('academics.program-leadership.portfolio')],
-            ['label' => 'Active Students', 'value' => $kpis['active_students'], 'route' => route('academics.program-leadership.student-success')],
-            ['label' => 'Delivery Gaps', 'value' => $kpis['delivery_gaps'], 'route' => route('academics.program-leadership.course-delivery')],
-            ['label' => 'Student Risk', 'value' => $kpis['student_risk'], 'route' => route('academics.program-leadership.student-success')],
+            ['label' => 'Programs', 'value' => $kpis['programs'], 'route' => route('academics.program-leadership.portfolio', ['metric' => 'active_programs'])],
+            ['label' => 'Active Students', 'value' => $kpis['active_students'], 'route' => null],
+            ['label' => 'Delivery Gaps', 'value' => $kpis['delivery_gaps'], 'route' => route('academics.program-leadership.course-delivery', ['metric' => 'delivery_gaps'])],
+            ['label' => 'Student Risk', 'value' => $kpis['student_risk'], 'route' => route('academics.program-leadership.student-success', ['metric' => 'student_risk'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
-                <a class="text-decoration-none" href="{{ $metric['route'] }}">
-                    <div class="card shadow-sm h-100">
+                @if($metric['route'])
+                    <a class="text-decoration-none d-block h-100" href="{{ $metric['route'] }}">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body py-2">
+                                <div class="small text-muted">{{ $metric['label'] }}</div>
+                                <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                            </div>
+                        </div>
+                    </a>
+                @else
+                    <div class="card shadow-sm h-100" aria-label="{{ $metric['label'] }} summary">
                         <div class="card-body py-2">
                             <div class="small text-muted">{{ $metric['label'] }}</div>
                             <div class="h4 mb-0">{{ $metric['value'] }}</div>
+                            <div class="small text-muted">Summary only</div>
                         </div>
                     </div>
-                </a>
+                @endif
             </div>
         @endforeach
     </div>
@@ -58,7 +68,7 @@
                         <div class="row g-2 mb-2">
                             @foreach($section['metrics'] as $label => $value)
                                 <div class="col-6 col-md-3">
-                                    <a href="{{ $meta['route'] }}" class="text-decoration-none">
+                                    <a href="{{ $meta['route'] }}?{{ http_build_query(['metric' => $label]) }}" class="text-decoration-none">
                                         <div class="border rounded p-2 h-100">
                                             <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
                                             <div class="fw-semibold">{{ $value }}</div>

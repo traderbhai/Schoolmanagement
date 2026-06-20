@@ -28,6 +28,12 @@ class AcademicDeanReviewService
 
     public function updateAction(User $actor, AcademicDeanActionItem $action, array $data): AcademicDeanActionItem
     {
+        if (($data['status'] ?? null) === 'done') {
+            $closureNote = trim((string) ($data['closure_note'] ?? ''));
+            abort_if($closureNote === '' && ! $action->evidence()->exists(), 422, 'Dean action closure requires evidence or a closure note.');
+            $data['closure_note'] = $closureNote;
+        }
+
         if (($data['status'] ?? null) === 'done' && ! $action->closed_at) {
             $data['closed_at'] = now();
         }

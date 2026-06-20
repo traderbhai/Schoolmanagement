@@ -21,6 +21,7 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\AcademicDeanPolicyAuditService;
 use App\Services\AcademicDeanRiskConfigService;
+use App\Services\AcademicDeanRiskService;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -139,6 +140,19 @@ class AcademicsDeanV008Test extends TestCase
         $this->assertTrue(AcademicDeanRiskMitigation::where('risk_snapshot_id', $snapshot->id)->exists());
     }
 
+    public function test_risk_snapshot_capture_is_idempotent_for_program_and_date(): void
+    {
+        $dean = $this->seedDeanFixture();
+        AcademicDeanRiskSnapshot::query()->delete();
+
+        $expectedSnapshots = app(AcademicDeanRiskService::class)->programRisks()->count();
+
+        $this->actingAs($dean)->post(route('academics.dean-os.risk-history.capture'))->assertRedirect();
+        $this->actingAs($dean)->post(route('academics.dean-os.risk-history.capture'))->assertRedirect();
+
+        $this->assertSame($expectedSnapshots, AcademicDeanRiskSnapshot::whereDate('snapshot_date', now()->toDateString())->count());
+    }
+
     public function test_approval_saved_view_report_pack_and_policy_audit(): void
     {
         $dean = $this->seedDeanFixture();
@@ -186,6 +200,30 @@ class AcademicsDeanV008Test extends TestCase
         $this->assertSame('Initial approved decision.', $approval->fresh()->decision_reason);
     }
 
+    public function test_dean_approval_evidence_request_requires_reason(): void
+    {
+        $dean = $this->seedDeanFixture();
+        $approval = AcademicDeanApprovalItem::where('status', 'pending')->firstOrFail();
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.approval-cockpit.decide', $approval), [
+            'status' => 'requested_evidence',
+            'decision_reason' => '   ',
+        ])->assertStatus(422);
+
+        $this->assertSame('pending', $approval->fresh()->status);
+
+        $this->actingAs($dean)->patch(route('academics.dean-os.approval-cockpit.decide', $approval), [
+            'status' => 'requested_evidence',
+            'decision_reason' => 'Upload signed timetable readiness evidence.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('academic_dean_approval_items', [
+            'id' => $approval->id,
+            'status' => 'requested_evidence',
+            'decision_reason' => 'Upload signed timetable readiness evidence.',
+        ]);
+    }
+
     public function test_published_dean_planning_cycle_cannot_be_downgraded(): void
     {
         $dean = $this->seedDeanFixture();
@@ -203,6 +241,26 @@ class AcademicsDeanV008Test extends TestCase
         $this->actingAs($dean)->patch(route('academics.dean-os.planning.approve', $cycle->fresh()), ['status' => 'draft'])->assertStatus(422);
 
         $this->assertSame('published', $cycle->fresh()->status);
+    }
+
+    public function test_readiness_blocker_action_creation_is_idempotent(): void
+    {
+        $dean = $this->seedDeanFixture();
+
+        $this->actingAs($dean)->post(route('academics.dean-os.planning.store'), [
+            'title' => 'Dean Readiness Action Idempotency Plan',
+            'cycle_type' => 'semester_readiness',
+            'academic_year' => '2026-27',
+            'status' => 'draft',
+        ])->assertRedirect();
+
+        $cycle = AcademicDeanPlanningCycle::where('title', 'Dean Readiness Action Idempotency Plan')->firstOrFail();
+        $item = $cycle->readinessItems()->where('is_blocker', true)->firstOrFail();
+
+        $this->actingAs($dean)->post(route('academics.dean-os.semester-readiness.action', $item))->assertRedirect();
+        $this->actingAs($dean)->post(route('academics.dean-os.semester-readiness.action', $item))->assertRedirect();
+
+        $this->assertSame(1, AcademicDeanActionItem::where('source_type', 'planning_readiness')->where('source_key', (string) $item->id)->count());
     }
 
     public function test_approved_meeting_minutes_cannot_create_duplicate_follow_up_actions(): void

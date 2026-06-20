@@ -4,7 +4,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="mb-0">Grade Sheet: {{ $exam->name }}</h4>
+        <h1 class="h4 mb-0">Grade Sheet: {{ $exam->name }}</h1>
         <small class="text-muted">{{ $exam->program?->name }} | {{ $exam->subject?->name }} | {{ $exam->exam_date->format('d M Y') }}</small>
     </div>
     <div class="d-flex gap-2">

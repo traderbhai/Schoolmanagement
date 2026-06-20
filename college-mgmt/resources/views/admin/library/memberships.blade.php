@@ -15,8 +15,12 @@
     <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
-<div class="d-flex justify-content-end mb-3">
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMembershipModal"><i class="bi bi-person-plus me-1"></i>Add Membership</button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted small">Showing {{ $memberships->total() }} membership record(s).</div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.library.memberships.export') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMembershipModal"><i class="bi bi-person-plus me-1"></i>Add Membership</button>
+    </div>
 </div>
 
 <div class="card">

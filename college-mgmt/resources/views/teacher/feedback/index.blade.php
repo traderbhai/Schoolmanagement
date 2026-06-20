@@ -14,6 +14,13 @@
         </h4>
     </div>
 
+    @if(!empty($profileMissing))
+        <div class="alert alert-warning">
+            <strong>Teacher profile not linked.</strong>
+            Feedback summaries cannot be loaded until administration links your login to a teacher profile.
+        </div>
+    @endif
+
     <div class="alert alert-info mb-4">
         <i class="bi bi-shield-lock me-2"></i>
         <strong>Ratings are aggregated and anonymous.</strong>

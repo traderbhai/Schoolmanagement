@@ -22,11 +22,7 @@ class AccountsController extends Controller
             ->get(['final_amount', 'penalty_amount'])
             ->sum(fn($demand) => (float) $demand->final_amount + (float) ($demand->penalty_amount ?? 0));
 
-        $overdue = FeeDemand::where('status', 'overdue')
-            ->orWhere(fn($q) => $q->where('status', 'pending')
-                ->whereNotNull('due_date')
-                ->where('due_date', '<', now()->toDateString()))
-            ->count();
+        $overdue = (clone $this->overdueDemandQuery())->count();
 
         $recentPayments = FeePayment::with(['student.user', 'feeStructure'])
             ->where('status', 'paid')
@@ -57,10 +53,7 @@ class AccountsController extends Controller
         $pendingScholarshipAmount = \App\Models\ApplicantScholarship::where('status', 'awarded')->sum('awarded_amount');
 
         // Overdue fee demands
-        $overdueDemandQuery = FeeDemand::where('status', 'overdue')
-            ->orWhere(fn($q) => $q->where('status', 'pending')
-                ->whereNotNull('due_date')
-                ->where('due_date', '<', now()->toDateString()));
+        $overdueDemandQuery = $this->overdueDemandQuery();
 
         $overdueDemandsCount = (clone $overdueDemandQuery)->count();
         $overdueDemandsAmount = (clone $overdueDemandQuery)
@@ -104,8 +97,18 @@ class AccountsController extends Controller
         return view('departmental.accounts.fee-collections', compact('payments', 'programs', 'batches'));
     }
 
-    public function outstanding()
+    public function outstanding(Request $request)
     {
+        if ($request->query('mode') === 'overdue_demands') {
+            $overdueDemands = $this->overdueDemandQuery()
+                ->with(['student.user', 'student.program', 'student.batch', 'term'])
+                ->orderBy('due_date')
+                ->paginate(25)
+                ->withQueryString();
+
+            return view('departmental.accounts.outstanding', compact('overdueDemands'));
+        }
+
         $outstandingStudents = $this->outstandingStudents();
 
         $programs = Program::where('is_active', true)->orderBy('name')->get()->map(function ($p) use ($outstandingStudents) {
@@ -300,6 +303,39 @@ class AccountsController extends Controller
 
     public function exportOutstanding(Request $request)
     {
+        if ($request->query('mode') === 'overdue_demands') {
+            $demands = $this->overdueDemandQuery()
+                ->with(['student.user', 'student.program', 'student.batch', 'term'])
+                ->orderBy('due_date')
+                ->get();
+            $this->recordExportActivity('overdue fee demands', $demands->count(), $request);
+
+            $filename = 'overdue-fee-demands-' . now()->format('Ymd') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            return response()->stream(function () use ($demands) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Student Name', 'Enrollment No.', 'Program', 'Batch', 'Term', 'Amount Due (Rs.)', 'Penalty (Rs.)', 'Due Date', 'Status']);
+                foreach ($demands as $demand) {
+                    fputcsv($out, [
+                        $demand->student?->user?->name ?? '-',
+                        $demand->student?->enrollment_number ?? '-',
+                        $demand->student?->program?->name ?? '-',
+                        $demand->student?->batch?->name ?? '-',
+                        $demand->term?->name ?? '-',
+                        number_format((float) $demand->final_amount, 2),
+                        number_format((float) ($demand->penalty_amount ?? 0), 2),
+                        $demand->due_date?->format('d M Y') ?? '-',
+                        $demand->status,
+                    ]);
+                }
+                fclose($out);
+            }, 200, $headers);
+        }
+
         $students = $this->outstandingStudents();
         $this->recordExportActivity('outstanding fees', $students->count(), $request);
 
@@ -362,6 +398,16 @@ class AccountsController extends Controller
             || ($demand->status === 'pending'
                 && $demand->due_date
                 && $demand->due_date->lt(now()->startOfDay()));
+    }
+
+    private function overdueDemandQuery()
+    {
+        return FeeDemand::where(function ($query) {
+            $query->where('status', 'overdue')
+                ->orWhere(fn ($query) => $query->where('status', 'pending')
+                    ->whereNotNull('due_date')
+                    ->where('due_date', '<', now()->toDateString()));
+        });
     }
 
     private function demandFinancialsBy(string $studentColumn)

@@ -141,8 +141,9 @@ class StudentDocumentRequestGuidanceTest extends TestCase
 
         $this->actingAs($student->user)
             ->get(route('student.documents.create'))
-            ->assertRedirect(route('student.documents.index'))
-            ->assertSessionHas('error', 'New document requests are available only for active students. Contact the administration office if you need archived records.');
+            ->assertOk()
+            ->assertSee('New document requests are available only for active students. Contact the administration office if you need archived records.')
+            ->assertSee('disabled');
 
         $this->actingAs($student->user)
             ->post(route('student.documents.store'), [

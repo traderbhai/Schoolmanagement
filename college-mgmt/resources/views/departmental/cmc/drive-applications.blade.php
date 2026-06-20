@@ -7,10 +7,15 @@
     <h5 class="mb-0">{{ $drive->title }}</h5>
     <div class="text-muted small">{{ $drive->company?->name }} · {{ $drive->job_role }} · {{ $drive->drive_date?->format('d M Y') }}</div>
   </div>
-  <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  <div class="d-flex gap-2">
+    <a href="{{ route('cmc.drives.applications.export', $drive) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+    <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $applications->count() }} application record(s) for this drive.</div>
 <div class="card">
   <div class="card-body p-0">
+    <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr><th class="ps-3">Student</th><th>Enrollment</th><th>Status</th><th>Package Offered</th><th>Remarks</th><th class="text-end pe-3">Update</th></tr>
@@ -43,6 +48,7 @@
         @endforelse
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 

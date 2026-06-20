@@ -78,18 +78,22 @@ class AcademicDeanPlanningService
 
     public function createActionFromBlocker(User $actor, AcademicDeanReadinessItem $item): AcademicDeanActionItem
     {
-        return AcademicDeanActionItem::create([
-            'title' => 'Clear readiness blocker: ' . $item->title,
-            'description' => 'Created from Dean planning readiness item.',
-            'source_type' => 'planning_readiness',
-            'source_key' => (string) $item->id,
-            'owner_user_id' => $item->owner_user_id,
-            'assigned_by' => $actor->id,
-            'priority' => $item->is_blocker ? 'high' : 'normal',
-            'due_at' => $item->due_at,
-            'status' => 'open',
-            'metadata' => ['planning_cycle_id' => $item->planning_cycle_id, 'readiness_section' => $item->section, 'version' => 'Academics OS v0.08'],
-        ]);
+        return AcademicDeanActionItem::firstOrCreate(
+            [
+                'source_type' => 'planning_readiness',
+                'source_key' => (string) $item->id,
+            ],
+            [
+                'title' => 'Clear readiness blocker: ' . $item->title,
+                'description' => 'Created from Dean planning readiness item.',
+                'owner_user_id' => $item->owner_user_id,
+                'assigned_by' => $actor->id,
+                'priority' => $item->is_blocker ? 'high' : 'normal',
+                'due_at' => $item->due_at,
+                'status' => 'open',
+                'metadata' => ['planning_cycle_id' => $item->planning_cycle_id, 'readiness_section' => $item->section, 'version' => 'Academics OS v0.08'],
+            ]
+        );
     }
 
     public function refreshScore(AcademicDeanPlanningCycle $cycle): int

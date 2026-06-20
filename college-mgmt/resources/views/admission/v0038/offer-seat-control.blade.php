@@ -21,6 +21,9 @@
         <div>
             <h3 class="fw-bold mb-1">Offer And Seat Control</h3>
             <div class="text-muted small">Offer rounds, waitlist movement, seat holds, deferrals, and joining-kit readiness.</div>
+            @unless($canManageSeatControl)
+                <div class="small text-warning">Read-only view for your Admission scope. Offer, seat, waitlist, and deferral changes require Admission leadership approval.</div>
+            @endunless
         </div>
         <div class="d-flex gap-2">
             @if($programs->isNotEmpty())
@@ -35,7 +38,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Create Offer Round</div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admission.offer-rounds.store') }}" class="row g-2">
+                    <form method="POST" action="{{ route('admission.offer-rounds.store') }}" class="row g-2" onsubmit="return confirm('Create this offer round for the selected program and batch?')">
                         @csrf
                         <div class="col-6">
                             <select name="program_id" class="form-select form-select-sm" aria-label="Program">
@@ -54,7 +57,7 @@
                         <div class="col-4"><input name="round_number" type="number" value="1" class="form-control form-control-sm" aria-label="Round number"></div>
                         <div class="col-8"><input name="name" value="Round {{ now()->format('M d') }}" class="form-control form-control-sm" aria-label="Round name"></div>
                         <div class="col-12"><input name="offer_valid_until" type="datetime-local" value="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" class="form-control form-control-sm" aria-label="Offer valid until"></div>
-                        <div class="col-12"><button class="btn btn-sm btn-primary">Create Round</button></div>
+                        <div class="col-12"><button class="btn btn-sm btn-primary" @disabled(! $canManageSeatControl)>Create Round</button></div>
                     </form>
                 </div>
             </div>
@@ -73,9 +76,9 @@
                                 <td><span class="badge text-bg-secondary">{{ str($round->status)->headline() }}</span></td>
                                 <td>{{ $round->offer_valid_until }}</td>
                                 <td>
-                                    <form method="POST" action="{{ route('admission.offer-rounds.publish', $round->id) }}">
+                                    <form method="POST" action="{{ route('admission.offer-rounds.publish', $round->id) }}" onsubmit="return confirm('Publish this offer round and create seat holds for eligible selected applicants?')">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-success">Publish</button>
+                                        <button class="btn btn-sm btn-outline-success" @disabled(! $canManageSeatControl)>Publish</button>
                                     </form>
                                 </td>
                             </tr>
@@ -95,7 +98,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Waitlist</div>
                 <div class="card-body py-2">
-                    <form method="POST" action="{{ route('admission.waitlist.store') }}" class="row g-1">
+                    <form method="POST" action="{{ route('admission.waitlist.store') }}" class="row g-1" onsubmit="return confirm('Add this applicant to the waitlist with the selected rank?')">
                         @csrf
                         <div class="col-12">
                             <select name="applicant_id" class="form-select form-select-sm" aria-label="Waitlist applicant" required>
@@ -106,7 +109,7 @@
                             </select>
                         </div>
                         <div class="col-4"><input name="rank" type="number" class="form-control form-control-sm" value="1" min="1" aria-label="Waitlist rank"></div>
-                        <div class="col-8"><button class="btn btn-sm btn-primary w-100">Add To Waitlist</button></div>
+                        <div class="col-8"><button class="btn btn-sm btn-primary w-100" @disabled(! $canManageSeatControl)>Add To Waitlist</button></div>
                     </form>
                 </div>
                 <div class="table-responsive">
@@ -142,10 +145,10 @@
                                 <td>{{ $hold->expires_at }}</td>
                                 <td>
                                     @if($hold->status === 'held')
-                                        <form method="POST" action="{{ route('admission.seat-control.release', $hold->id) }}">
+                                        <form method="POST" action="{{ route('admission.seat-control.release', $hold->id) }}" onsubmit="return confirm('Release this held seat and check waitlist promotion?')">
                                             @csrf
                                             <input type="hidden" name="reason" value="Manual release from seat control">
-                                            <button class="btn btn-sm btn-outline-danger">Release</button>
+                                            <button class="btn btn-sm btn-outline-danger" @disabled(! $canManageSeatControl)>Release</button>
                                         </form>
                                     @endif
                                 </td>
@@ -163,7 +166,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Deferrals And Joining Kit</div>
                 <div class="card-body py-2">
-                    <form method="POST" action="{{ route('admission.deferrals.store') }}" class="row g-1">
+                    <form method="POST" action="{{ route('admission.deferrals.store') }}" class="row g-1" onsubmit="return confirm('Request deferral for this applicant?')">
                         @csrf
                         <div class="col-12">
                             <select name="applicant_id" class="form-select form-select-sm" aria-label="Deferral applicant" required>
@@ -181,7 +184,7 @@
                             </select>
                         </div>
                         <div class="col-12"><input name="reason" class="form-control form-control-sm" value="Applicant requested future batch" aria-label="Deferral reason"></div>
-                        <div class="col-12"><button class="btn btn-sm btn-primary">Request Deferral</button></div>
+                        <div class="col-12"><button class="btn btn-sm btn-primary" @disabled(! $canManageSeatControl)>Request Deferral</button></div>
                     </form>
                 </div>
                 <div class="table-responsive">
@@ -218,10 +221,10 @@
                         <td>{{ \Illuminate\Support\Str::limit($deferral->reason, 70) }}</td>
                         <td>
                             @if($deferral->status !== 'approved')
-                                <form method="POST" action="{{ route('admission.deferrals.approve', $deferral->id) }}" class="d-flex gap-1">
+                                <form method="POST" action="{{ route('admission.deferrals.approve', $deferral->id) }}" class="d-flex gap-1" onsubmit="return confirm('Approve this deferral and update the applicant batch?')">
                                     @csrf
                                     <input name="carry_forward_notes" class="form-control form-control-sm" value="Approved from seat control review" aria-label="Carry forward notes">
-                                    <button class="btn btn-sm btn-outline-success">Approve</button>
+                                    <button class="btn btn-sm btn-outline-success" @disabled(! $canManageSeatControl)>Approve</button>
                                 </form>
                             @else
                                 {{ $deferral->carry_forward_notes ?: '-' }}

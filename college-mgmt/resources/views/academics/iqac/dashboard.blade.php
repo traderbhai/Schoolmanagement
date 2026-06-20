@@ -20,16 +20,16 @@
         <div class="btn-group btn-group-sm">
             <a href="{{ route('academics.workspaces.show', 'iqac') }}" class="btn btn-outline-secondary">Workspace</a>
             <a href="{{ route('academics.iqac.reports') }}" class="btn btn-outline-primary">Reports</a>
-            <a href="{{ route('academic.obe.co.index') }}" class="btn btn-primary">OBE Framework</a>
+            <a href="{{ route('academics.iqac.obe-readiness') }}" class="btn btn-primary">OBE Framework</a>
         </div>
     </div>
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['label' => 'OBE Gaps', 'value' => $kpis['obe_gaps'], 'route' => route('academics.iqac.obe-readiness')],
-            ['label' => 'Mapping Gaps', 'value' => $kpis['mapping_gaps'], 'route' => route('academics.iqac.obe-readiness')],
-            ['label' => 'Target Misses', 'value' => $kpis['target_misses'], 'route' => route('academics.iqac.attainment-monitoring')],
-            ['label' => 'Feedback Gaps', 'value' => $kpis['feedback_gaps'], 'route' => route('academics.iqac.feedback-quality')],
+            ['label' => 'OBE Gaps', 'value' => $kpis['obe_gaps'], 'route' => route('academics.iqac.obe-readiness', ['metric' => 'obe_gaps'])],
+            ['label' => 'Mapping Gaps', 'value' => $kpis['mapping_gaps'], 'route' => route('academics.iqac.obe-readiness', ['metric' => 'mapping_gaps'])],
+            ['label' => 'Target Misses', 'value' => $kpis['target_misses'], 'route' => route('academics.iqac.attainment-monitoring', ['metric' => 'target_misses'])],
+            ['label' => 'Feedback Gaps', 'value' => $kpis['feedback_gaps'], 'route' => route('academics.iqac.feedback-quality', ['metric' => 'feedback_gaps'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
                 <a class="text-decoration-none" href="{{ $metric['route'] }}">
@@ -58,7 +58,7 @@
                         <div class="row g-2 mb-2">
                             @foreach($section['metrics'] as $label => $value)
                                 <div class="col-6 col-md-3">
-                                    <a href="{{ $meta['route'] }}" class="text-decoration-none">
+                                    <a href="{{ $meta['route'] }}?{{ http_build_query(['metric' => $label]) }}" class="text-decoration-none">
                                         <div class="border rounded p-2 h-100">
                                             <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
                                             <div class="fw-semibold">{{ $value }}</div>

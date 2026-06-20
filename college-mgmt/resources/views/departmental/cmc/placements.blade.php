@@ -9,8 +9,8 @@
             <span class="text-muted small">All selected placements</span>
         </div>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.placements.export') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-download me-1"></i> Export
+            <a href="{{ route('cmc.placements.export') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> Export Current View
             </a>
             <a href="{{ route('cmc.dashboard') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left me-1"></i> Dashboard

@@ -75,11 +75,13 @@ class AcademicPmcOperatingService
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - ' . $subject->code,
                 'status' => 'Mapping missing',
+                'metric_keys' => ['curriculum_gaps', 'mapping_gaps'],
                 'action' => route('chair.curriculum.index'),
             ])->merge($pendingChanges->map(fn (CurriculumChange $change) => [
                 'title' => $change->title,
                 'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
                 'status' => ucfirst(str_replace('_', ' ', $change->status)),
+                'metric_keys' => ['curriculum_gaps', 'pending_changes'],
                 'action' => route('chair.approvals'),
             ]))->values(),
         ];
@@ -115,11 +117,13 @@ class AcademicPmcOperatingService
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty not assigned',
                 'status' => 'Unassigned',
+                'metric_keys' => ['faculty_gaps', 'unassigned_subjects'],
                 'action' => route('chair.curriculum.assignments'),
             ])->merge($loads->map(fn ($load) => [
                 'title' => $this->teacherLabel($load->teacher, $load->teacher_id),
                 'subtitle' => ($load->program?->code ?? 'Program') . ' - ' . $load->subject_count . ' subjects',
                 'status' => 'Workload review',
+                'metric_keys' => ['faculty_gaps', 'overloaded_faculty'],
                 'action' => route('chair.faculty.workload'),
             ]))->values(),
         ];
@@ -161,11 +165,13 @@ class AcademicPmcOperatingService
                 'title' => $entry->subject?->name ?? 'Timetable slot',
                 'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
                 'status' => ucfirst($entry->status ?? 'draft'),
+                'metric_keys' => ['draft_slots'],
                 'action' => route('chair.timetable.builder'),
             ])->merge($conflicts->map(fn ($conflict) => [
                 'title' => $this->teacherLabel($teacherMap->get($conflict->teacher_id), $conflict->teacher_id) . ' conflict',
                 'subtitle' => 'Day ' . $conflict->day_of_week . ', slot ' . ($conflict->timetable_slot_id ?: 'pending'),
                 'status' => 'Conflict',
+                'metric_keys' => ['teacher_conflicts'],
                 'action' => route('chair.timetable.builder'),
             ]))->values(),
         ];
@@ -214,16 +220,19 @@ class AcademicPmcOperatingService
                 'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => ($row->student?->program?->code ?? 'Program') . ' - ' . $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
+                'metric_keys' => ['student_risk', 'attendance_risk'],
                 'action' => route('chair.students.at-risk'),
             ])->merge($weakPerformance->map(fn (ExamResult $result) => [
                 'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
+                'metric_keys' => ['student_risk', 'weak_performance'],
                 'action' => route('chair.reports.subject-performance'),
             ]))->merge($pendingLeaves->map(fn (LeaveApplication $leave) => [
                 'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
+                'metric_keys' => ['pending_leaves'],
                 'action' => route('chair.students.leaves'),
             ]))->values(),
         ];
@@ -262,15 +271,53 @@ class AcademicPmcOperatingService
         ];
     }
 
-    public function section(User $user, string $section): array
+    public function section(User $user, string $section, array $filters = []): array
     {
-        return match ($section) {
+        $data = match ($section) {
             'curriculum-readiness' => $this->curriculumReadiness($user),
             'faculty-allocation' => $this->facultyAllocation($user),
             'timetable-readiness' => $this->timetableReadiness($user),
             'student-monitoring' => $this->studentMonitoring($user),
             default => abort(404),
         };
+
+        $data['items'] = $this->filterItems($data['items'], $filters)->values();
+        $data['filters'] = $filters;
+        $data['filter_summary'] = $this->filterSummary($filters);
+
+        return $data;
+    }
+
+    private function filterItems(Collection $items, array $filters): Collection
+    {
+        return $items
+            ->when(! empty($filters['metric']), function (Collection $collection) use ($filters) {
+                $metric = (string) $filters['metric'];
+
+                return $collection->filter(fn (array $item) => in_array($metric, $item['metric_keys'] ?? [], true));
+            })
+            ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
+                $search = mb_strtolower((string) $filters['search']);
+
+                return $collection->filter(fn (array $item) => str_contains(mb_strtolower($item['title'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['subtitle'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['status'] ?? ''), $search));
+            })
+            ->when(! empty($filters['status']), function (Collection $collection) use ($filters) {
+                $status = mb_strtolower((string) $filters['status']);
+
+                return $collection->filter(fn (array $item) => mb_strtolower($item['status'] ?? '') === $status);
+            });
+    }
+
+    private function filterSummary(array $filters): string
+    {
+        $active = collect($filters)
+            ->only(['metric', 'search', 'status'])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
+
+        return $active->isEmpty() ? 'Showing all scoped PMC records.' : $active->join(' | ');
     }
 
     private function visibleProgramIds(User $user): ?Collection

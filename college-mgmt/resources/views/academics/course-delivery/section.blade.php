@@ -43,12 +43,15 @@
         <div class="card-header py-2">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                    <div class="fw-semibold">Filtered Source List</div>
+                    <div class="fw-semibold">Filtered Source List ({{ $section['items']->count() }})</div>
                     <span class="small text-muted">Scoped, database-backed delivery records linked to source workflows.</span>
                 </div>
                 <a href="{{ request()->fullUrlWithQuery(['export' => 'current']) }}" class="btn btn-sm btn-outline-secondary">Export current view</a>
             </div>
             <form method="GET" action="{{ request()->url() }}" class="row g-2 align-items-end mt-2">
+                @if(! empty($filters['metric']))
+                    <input type="hidden" name="metric" value="{{ $filters['metric'] }}">
+                @endif
                 <div class="col-12 col-md-5">
                     <label for="course-delivery-search" class="form-label small text-muted mb-1">Search</label>
                     <input id="course-delivery-search" type="search" name="search" value="{{ $filters['search'] ?? '' }}" class="form-control form-control-sm" placeholder="Search record, status, subject, or student">

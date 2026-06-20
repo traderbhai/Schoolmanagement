@@ -24,14 +24,14 @@ class AdmissionOperatingDemoSeeder extends Seeder
             return;
         }
 
-        foreach (['admission_manager', 'admission_counsellor', 'admission_telecaller', 'evaluator'] as $role) {
+        foreach (['admission_manager', 'admission_counsellor', 'admission_telecaller', 'admission_partner', 'evaluator'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }
 
         $manager = $this->user('admission.manager@college.com', 'Neha Bansal', 'admission_manager');
         $counsellor = $this->user('counsellor@college.com', 'Amit Counsellor', 'admission_counsellor');
         $telecaller = $this->user('telecaller@college.com', 'Kavya Telecaller', 'admission_telecaller');
-        $partnerContact = $this->user('partner.citychannel@demo.edu', 'City Channel Partner', null);
+        $partnerContact = $this->user('partner.citychannel@demo.edu', 'City Channel Partner', 'admission_partner');
 
         $partner = \App\Models\AdmissionPartner::updateOrCreate(
             ['name' => 'City Admissions Channel'],

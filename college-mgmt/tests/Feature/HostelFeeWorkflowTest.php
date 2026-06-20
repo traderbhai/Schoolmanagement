@@ -118,6 +118,52 @@ class HostelFeeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_hostel_fee_demands_export_current_filtered_view(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $pendingStudent = $this->student('Pending Hostel Fee Export Student');
+        $paidStudent = $this->student('Paid Hostel Fee Export Student');
+        $pendingAllocation = $this->allocation($pendingStudent, $this->room(['room_number' => '601']));
+        $paidAllocation = $this->allocation($paidStudent, $this->room(['room_number' => '602']));
+
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $pendingAllocation->id,
+            'student_id' => $pendingStudent->id,
+            'month' => '2026-06',
+            'amount' => 4500,
+            'status' => 'pending',
+            'due_date' => '2026-06-30',
+        ]);
+        HostelFeeDemand::create([
+            'hostel_allocation_id' => $paidAllocation->id,
+            'student_id' => $paidStudent->id,
+            'month' => '2026-06',
+            'amount' => 4500,
+            'status' => 'paid',
+            'due_date' => '2026-06-30',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.fees', ['status' => 'pending', 'month' => '2026-06']))
+            ->assertOk()
+            ->assertSee(route('admin.hostel.fees.export', ['status' => 'pending', 'month' => '2026-06']))
+            ->assertSee('Showing 1 fee demand record(s)')
+            ->assertSee($pendingStudent->user->name)
+            ->assertDontSee($paidStudent->user->name);
+
+        $csv = $this->actingAs($admin)
+            ->get(route('admin.hostel.fees.export', ['status' => 'pending', 'month' => '2026-06']))
+            ->streamedContent();
+        $this->assertStringContainsString('Pending Hostel Fee Export Student', $csv);
+        $this->assertStringContainsString('pending', $csv);
+        $this->assertStringNotContainsString('Paid Hostel Fee Export Student', $csv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Hostel fee demands exported: 1 rows; filters={"status":"pending","month":"2026-06"}',
+        ]);
+    }
+
     public function test_monthly_hostel_fee_generation_does_not_duplicate_student_after_transfer(): void
     {
         $admin = $this->userWithRole('admin');

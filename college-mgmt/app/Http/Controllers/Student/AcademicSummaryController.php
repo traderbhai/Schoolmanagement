@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 class AcademicSummaryController extends Controller {
     public function index() {
         $student = Student::where('user_id', Auth::id())->firstOrFail();
-        $student->load(['user', 'program', 'batch', 'department', 'mentor.user', 'currentTerm']);
+        $student->load(['user', 'program', 'batch', 'department', 'mentor', 'currentTerm']);
 
         $gradeService = app(GradeService::class);
 

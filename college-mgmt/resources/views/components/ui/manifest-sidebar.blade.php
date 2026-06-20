@@ -199,6 +199,12 @@
                 : false;
         }
 
+        if (($item['condition'] ?? null) === 'admission_handoff_access') {
+            return $user
+                ? app(\App\Services\AdmissionAccessPolicyService::class)->can($user, 'read.handoff')
+                : false;
+        }
+
         if (($item['condition'] ?? null) === 'admission_first_program') {
             return (bool) $firstAdmissionProgram;
         }

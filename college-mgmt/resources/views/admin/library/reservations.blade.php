@@ -33,11 +33,13 @@
             <div class="col-md-4 d-flex gap-2">
                 <button class="btn btn-sm btn-primary">Apply</button>
                 <a href="{{ route('admin.library.reservations') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary ms-auto">Issues</a>
+                <a href="{{ route('admin.library.reservations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary ms-auto">Export Current View</a>
+                <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary">Issues</a>
             </div>
         </form>
     </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $reservations->total() }} reservation record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}{{ request('search') ? ' and search: '.request('search') : '' }}.</div>
 
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
@@ -75,11 +77,11 @@
                     <td><span class="badge text-bg-{{ $available > 0 ? 'success' : 'secondary' }}">{{ $available }}</span></td>
                     <td class="text-end">
                         @if($reservation->status === 'pending')
-                            <form method="POST" action="{{ route('admin.library.reservations.fulfill', $reservation) }}" class="d-inline">
+                            <form method="POST" action="{{ route('admin.library.reservations.fulfill', $reservation) }}" class="d-inline" onsubmit="return confirm('Fulfil this reservation and issue the available copy?')">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-success" @disabled($available < 1)>Fulfil</button>
                             </form>
-                            <form method="POST" action="{{ route('admin.library.reservations.cancel', $reservation) }}" class="d-inline">
+                            <form method="POST" action="{{ route('admin.library.reservations.cancel', $reservation) }}" class="d-inline" onsubmit="return confirm('Cancel this library reservation?')">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-danger">Cancel</button>
                             </form>

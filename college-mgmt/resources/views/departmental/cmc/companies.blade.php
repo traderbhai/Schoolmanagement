@@ -7,10 +7,15 @@
     <input type="search" name="search" class="form-control form-control-sm" placeholder="Search companies..." value="{{ request('search') }}" style="width:220px;">
     <button class="btn btn-sm btn-outline-secondary">Search</button>
   </form>
-  <a href="{{ route('cmc.companies.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i>Add Company</a>
+  <div class="d-flex gap-2">
+    <a href="{{ route('cmc.companies.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+    <a href="{{ route('cmc.companies.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i>Add Company</a>
+  </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $companies->total() }} company record(s){{ request('search') ? ' for search: '.request('search') : '' }}.</div>
 <div class="card">
   <div class="card-body p-0">
+    <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr><th class="ps-3">Name</th><th>Industry</th><th>Contact Person</th><th>Contact Email</th><th>Drives</th><th>Active</th><th class="text-end pe-3">Action</th></tr>
@@ -33,6 +38,7 @@
         @endforelse
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 {{ $companies->withQueryString()->links() }}

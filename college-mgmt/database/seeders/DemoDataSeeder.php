@@ -192,10 +192,10 @@ class DemoDataSeeder extends Seeder
 
         // 8. Teachers (4 teachers)
         $teacherData = [
-            ['name' => 'Dr. Anjali Sharma', 'email' => 'anjali@demo.edu', 'employee_id' => 'TCH001', 'designation' => 'Professor', 'qualification' => 'Ph.D Management', 'department_id' => $depts[0]->id],
-            ['name' => 'Prof. Rakesh Verma', 'email' => 'rakesh@demo.edu', 'employee_id' => 'TCH002', 'designation' => 'Associate Professor', 'qualification' => 'MBA Finance', 'department_id' => $depts[1]->id],
-            ['name' => 'Ms. Priya Nair', 'email' => 'priya.n@demo.edu', 'employee_id' => 'TCH003', 'designation' => 'Assistant Professor', 'qualification' => 'MBA Marketing', 'department_id' => $depts[2]->id],
-            ['name' => 'Dr. Suresh Menon', 'email' => 'suresh@demo.edu', 'employee_id' => 'TCH004', 'designation' => 'Professor', 'qualification' => 'Ph.D Finance', 'department_id' => $depts[1]->id],
+            ['name' => 'Dr. Anjali Sharma', 'email' => 'anjali@demo.edu', 'employee_id' => 'DEMO-TCH001', 'designation' => 'Professor', 'qualification' => 'Ph.D Management', 'department_id' => $depts[0]->id],
+            ['name' => 'Prof. Rakesh Verma', 'email' => 'rakesh@demo.edu', 'employee_id' => 'DEMO-TCH002', 'designation' => 'Associate Professor', 'qualification' => 'MBA Finance', 'department_id' => $depts[1]->id],
+            ['name' => 'Ms. Priya Nair', 'email' => 'priya.n@demo.edu', 'employee_id' => 'DEMO-TCH003', 'designation' => 'Assistant Professor', 'qualification' => 'MBA Marketing', 'department_id' => $depts[2]->id],
+            ['name' => 'Dr. Suresh Menon', 'email' => 'suresh@demo.edu', 'employee_id' => 'DEMO-TCH004', 'designation' => 'Professor', 'qualification' => 'Ph.D Finance', 'department_id' => $depts[1]->id],
         ];
         $teachers = [];
         foreach ($teacherData as $td) {
@@ -203,14 +203,24 @@ class DemoDataSeeder extends Seeder
                 'name' => $td['name'], 'password' => Hash::make('password'), 'email_verified_at' => now()
             ]);
             $user->assignRole('teacher');
-            $teacher = Teacher::firstOrCreate(['employee_id' => $td['employee_id']], [
+            $teacher = Teacher::firstOrCreate(['user_id' => $user->id], [
                 'user_id' => $user->id,
+                'employee_id' => $td['employee_id'],
                 'department_id' => $td['department_id'],
                 'designation' => $td['designation'],
                 'qualification' => $td['qualification'],
                 'employment_type' => 'full_time',
                 'status' => 'active',
                 'date_of_joining' => '2020-06-01',
+            ]);
+            $teacher->update([
+                'employee_id' => $teacher->employee_id ?: $td['employee_id'],
+                'department_id' => $teacher->department_id ?: $td['department_id'],
+                'designation' => $teacher->designation ?: $td['designation'],
+                'qualification' => $teacher->qualification ?: $td['qualification'],
+                'employment_type' => $teacher->employment_type ?: 'full_time',
+                'status' => $teacher->status ?: 'active',
+                'date_of_joining' => $teacher->date_of_joining ?: '2020-06-01',
             ]);
             $teachers[] = $teacher;
         }

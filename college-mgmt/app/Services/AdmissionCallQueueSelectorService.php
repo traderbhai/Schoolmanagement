@@ -59,6 +59,21 @@ class AdmissionCallQueueSelectorService
         ]);
     }
 
+    public function canAccess(Model $subject, User $user): bool
+    {
+        if ($this->seesAll($user)) {
+            return true;
+        }
+
+        $visibleIds = app(DepartmentHierarchyService::class)
+            ->visibleUserIds($user, 'ADM')
+            ->push($user->id)
+            ->unique();
+
+        return $visibleIds->contains($subject->assigned_to)
+            || $visibleIds->contains($subject->current_handler_user_id);
+    }
+
     private function score(Model $record): int
     {
         $priority = ['urgent' => 60, 'high' => 45, 'normal' => 25, 'low' => 10][$record->priority ?? 'normal'] ?? 20;
@@ -102,7 +117,7 @@ class AdmissionCallQueueSelectorService
             ->exists();
     }
 
-    private function seesAll(User $user): bool
+    public function seesAll(User $user): bool
     {
         return method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['admin', 'admission_head', 'director']);
     }

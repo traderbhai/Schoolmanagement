@@ -112,10 +112,11 @@ class AcademicPmcV004Service
     {
         $query = AcademicPmcApproval::with(['program', 'owner', 'requester', 'decider']);
         $this->applyFilters($query, $filters);
+        $this->applyApprovalSort($query, $filters);
 
         return [
             'title' => 'PMC Approval Cockpit',
-            'approvals' => $query->orderBy('due_at')->paginate(20)->withQueryString(),
+            'approvals' => $query->paginate(20)->withQueryString(),
             'pending' => AcademicPmcApproval::where('status', 'pending')->count(),
             'overdue' => AcademicPmcApproval::where('status', 'pending')->where('due_at', '<', now())->count(),
             'filters' => $filters,
@@ -140,12 +141,14 @@ class AcademicPmcV004Service
 
     public function analytics(User $user, array $filters = []): array
     {
-        $query = AcademicPmcAnalyticsSnapshot::with('program')->latest('snapshot_date');
-        $this->applyFilters($query, $filters);
+        $query = AcademicPmcAnalyticsSnapshot::with('program');
+        $this->applyAnalyticsFilters($query, $filters);
+        $this->applyAnalyticsSort($query, $filters);
 
         return [
             'snapshots' => $query->paginate(20)->withQueryString(),
             'reports' => $this->reports(),
+            'filters' => $filters,
             'filterSummary' => $this->filterSummary($filters),
             'savedViews' => $this->savedViews($user, 'analytics'),
         ];
@@ -838,7 +841,9 @@ class AcademicPmcV004Service
 
     public function export(string $report, User $actor, array $filters = []): StreamedResponse
     {
-        $rows = $this->exportRows($report, $filters);
+        $payload = $this->exportPayload($report, $filters);
+        $rows = $payload['rows'];
+        $headers = $payload['headers'];
         \App\Models\AcademicPmcExportLog::create([
             'user_id' => $actor->id,
             'report_key' => $report,
@@ -848,9 +853,9 @@ class AcademicPmcV004Service
             'metadata' => ['version' => 'Academics PMC OS v0.04'],
         ]);
 
-        return response()->streamDownload(function () use ($rows) {
+        return response()->streamDownload(function () use ($rows, $headers) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['title', 'type', 'status', 'owner', 'risk', 'score', 'due']);
+            fputcsv($out, $headers);
             foreach ($rows as $row) {
                 fputcsv($out, $row);
             }
@@ -1413,6 +1418,43 @@ class AcademicPmcV004Service
         }
     }
 
+    private function applyApprovalSort(Builder $query, array $filters): void
+    {
+        $allowed = ['title', 'approval_type', 'status', 'sla_status', 'due_at'];
+        $sort = in_array($filters['sort'] ?? null, $allowed, true) ? $filters['sort'] : 'due_at';
+        $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $query->orderBy($sort, $direction)->orderBy('id');
+    }
+
+    private function applyAnalyticsFilters(Builder $query, array $filters): void
+    {
+        foreach (['program_id', 'batch_id', 'term_id'] as $field) {
+            if (! empty($filters[$field])) {
+                $query->where($field, $filters[$field]);
+            }
+        }
+
+        $band = $filters['band'] ?? $filters['risk_band'] ?? null;
+        if (! empty($band)) {
+            $query->where('band', $band);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where('snapshot_type', 'like', "%{$search}%");
+        }
+    }
+
+    private function applyAnalyticsSort(Builder $query, array $filters): void
+    {
+        $allowed = ['snapshot_date', 'snapshot_type', 'score', 'band'];
+        $sort = in_array($filters['sort'] ?? null, $allowed, true) ? $filters['sort'] : 'snapshot_date';
+        $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sort, $direction)->orderBy('id');
+    }
+
     private function filterSummary(array $filters): string
     {
         $active = collect($filters)->filter(fn ($value) => $value !== null && $value !== '' && $value !== [])->map(fn ($value, $key) => str($key)->headline() . ': ' . (is_array($value) ? json_encode($value) : $value));
@@ -1422,6 +1464,28 @@ class AcademicPmcV004Service
     private function savedViews(User $user, string $surface): Collection
     {
         return AcademicPmcSavedView::where(fn ($q) => $q->where('user_id', $user->id)->orWhereNull('user_id'))->where('surface', $surface)->latest()->get();
+    }
+
+    private function exportPayload(string $report, array $filters): array
+    {
+        if ($report === 'approvals') {
+            return [
+                'headers' => ['title', 'type', 'status', 'owner', 'sla', 'due', 'reason'],
+                'rows' => $this->approvalExportRows($filters),
+            ];
+        }
+
+        if (in_array($report, ['analytics', 'scheduled-reports', 'export-logs'], true)) {
+            return [
+                'headers' => ['snapshot', 'program', 'score', 'band', 'date'],
+                'rows' => $this->analyticsExportRows($filters),
+            ];
+        }
+
+        return [
+            'headers' => ['title', 'type', 'status', 'owner', 'risk', 'score', 'due'],
+            'rows' => $this->exportRows($report, $filters),
+        ];
     }
 
     private function exportRows(string $report, array $filters): Collection
@@ -1438,6 +1502,38 @@ class AcademicPmcV004Service
             $row->risk_band ?? '',
             $row->score,
             $row->due_at?->toDateString() ?? '',
+        ]);
+    }
+
+    private function approvalExportRows(array $filters): Collection
+    {
+        $query = AcademicPmcApproval::with(['owner'])->select('academic_pmc_approvals.*');
+        $this->applyFilters($query, $filters);
+        $this->applyApprovalSort($query, $filters);
+
+        return $query->limit(1000)->get()->map(fn ($row) => [
+            $row->title,
+            $row->approval_type,
+            $row->status,
+            $row->owner?->name ?? 'PMC',
+            $row->sla_status,
+            $row->due_at?->toDateString() ?? '',
+            $row->decision_reason ?? '',
+        ]);
+    }
+
+    private function analyticsExportRows(array $filters): Collection
+    {
+        $query = AcademicPmcAnalyticsSnapshot::with('program')->select('academic_pmc_analytics_snapshots.*');
+        $this->applyAnalyticsFilters($query, $filters);
+        $this->applyAnalyticsSort($query, $filters);
+
+        return $query->limit(1000)->get()->map(fn ($row) => [
+            $row->snapshot_type,
+            $row->program?->code ?? 'All programs',
+            $row->score,
+            $row->band,
+            $row->snapshot_date?->toDateString() ?? '',
         ]);
     }
 

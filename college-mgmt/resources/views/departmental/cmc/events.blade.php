@@ -11,10 +11,15 @@
       @endforeach
     </select>
   </form>
-  <a href="{{ route('cmc.events.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i>New Event</a>
+  <div class="d-flex gap-2">
+    <a href="{{ route('cmc.events.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+    <a href="{{ route('cmc.events.create') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i>New Event</a>
+  </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $events->total() }} career event(s){{ request('type') ? ' filtered by type: '.request('type') : '' }}.</div>
 <div class="card">
   <div class="card-body p-0">
+    <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr><th class="ps-3">Title</th><th>Type</th><th>Date</th><th>Venue</th><th>Seats</th><th>Published</th><th class="text-end pe-3">Actions</th></tr>
@@ -54,6 +59,7 @@
         @endforelse
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 {{ $events->withQueryString()->links() }}

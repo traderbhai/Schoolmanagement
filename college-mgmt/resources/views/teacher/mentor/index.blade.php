@@ -6,6 +6,12 @@
 <div class="container-fluid px-4">
 
     <h4 class="mb-3"><i class="bi bi-person-heart me-2 text-primary"></i>My Mentees</h4>
+    @if(!empty($profileMissing))
+        <div class="alert alert-warning">
+            <strong>Teacher profile not linked.</strong>
+            Mentoring data cannot be loaded until administration links your login to a teacher profile.
+        </div>
+    @endif
     @if(!$canManageMentoring)
         <div class="alert alert-warning">
             Messaging and meeting scheduling are locked because this teacher profile is not active.

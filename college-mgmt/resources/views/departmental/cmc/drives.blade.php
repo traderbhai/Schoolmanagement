@@ -8,6 +8,9 @@
             <h4 class="fw-bold mb-0">Placement Drives</h4>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ route('cmc.drives.export', request()->query()) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i> Export Current View
+            </a>
             <a href="{{ route('cmc.drives.create') }}" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-circle me-1"></i> New Drive
             </a>
@@ -16,6 +19,36 @@
             </a>
         </div>
     </div>
+
+    <form method="GET" class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All statuses</option>
+                        @foreach(['upcoming','ongoing','completed','cancelled'] as $status)
+                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Company</label>
+                    <select name="company_id" class="form-select form-select-sm">
+                        <option value="">All companies</option>
+                        @foreach($companies as $company)
+                            <option value="{{ $company->id }}" @selected((string) request('company_id') === (string) $company->id)>{{ $company->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-5 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary">Apply Filters</button>
+                    <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                    <span class="small text-muted align-self-center">Showing {{ $drives->total() }} drive(s)</span>
+                </div>
+            </div>
+        </div>
+    </form>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
@@ -41,7 +74,7 @@
                             <td class="ps-3 fw-medium">{{ $drive->company->name ?? $drive->title ?? '—' }}</td>
                             <td class="small text-muted">{{ ucfirst($drive->type ?? 'placement') }}</td>
                             <td><span class="badge bg-{{ $sc[$s] ?? 'secondary' }}-subtle text-{{ $sc[$s] ?? 'secondary' }}">{{ ucfirst($s) }}</span></td>
-                            <td>{{ $drive->placements->count() }}</td>
+                            <td>{{ $drive->placements_count }}</td>
                             <td class="small text-muted">{{ $drive->created_at->format('d M Y') }}</td>
                             <td class="text-end pe-3">
                                 <a href="{{ route('cmc.drives.applications', $drive) }}" class="btn btn-sm btn-outline-info py-0 px-2" title="Applications">

@@ -10,6 +10,10 @@ class ProfileController extends Controller
     public function show()
     {
         $teacher = auth()->user()->teacher;
+        if (! $teacher) {
+            return view('teacher.profile-missing');
+        }
+
         $teacher->load('department', 'user');
         return view('teacher.profile', compact('teacher'));
     }

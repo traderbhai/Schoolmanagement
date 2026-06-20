@@ -15,6 +15,13 @@
         </h4>
     </div>
 
+    @if(!empty($profileMissing))
+        <div class="alert alert-warning">
+            <strong>Teacher profile not linked.</strong>
+            Your timetable cannot be loaded until administration links your login to a teacher profile.
+        </div>
+    @endif
+
     @if($todaySubstitutions->isNotEmpty())
         <div class="alert alert-warning alert-dismissible fade show" role="alert">
             <strong><i class="bi bi-arrow-left-right me-1"></i> Substitutions Today:</strong>

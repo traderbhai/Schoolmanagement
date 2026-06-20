@@ -2,9 +2,13 @@
 @section('title', 'Dean Program Risk')
 
 @section('content')
+@php
+    $filters = $filters ?? [];
+    $filterSummary = collect($filters)->filter(fn ($value) => $value !== null && $value !== '')->map(fn ($value, $key) => str($key)->headline().': '.$value)->join(' | ');
+@endphp
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><h1 class="h4 mb-1">Program Risk Heatmap</h1><div class="small text-muted">Deterministic risk scoring across attendance, performance, delivery, exams, quality, handoff, and actions.</div></div>@include('academics.dean-os.partials.nav')</div>
-    <div class="card shadow-sm mb-3"><div class="card-body py-2 small text-muted">Visible filter summary: all active programs | <a href="{{ route('academics.dean-os.export', 'program_risk') }}">Export Current View</a></div></div>
+    <div class="card shadow-sm mb-3"><div class="card-body py-2 small text-muted">Visible filter summary: {{ $filterSummary ?: 'all active programs' }} | Total: {{ $risks->count() }} | <a href="{{ route('academics.dean-os.export', 'program_risk') }}?{{ http_build_query($filters) }}">Export Current View</a></div></div>
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">

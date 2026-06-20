@@ -3,18 +3,25 @@ namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Term, TimetableSlot, TimetableEntry, TimetableSubstitution};
-use App\Services\TimetableService;
 
 class TimetableController extends Controller
 {
     public function index()
     {
         $teacher = auth()->user()->teacher;
-        if (!$teacher) abort(403);
-
         $currentTerm = Term::latest('start_date')->first();
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
         $days  = [1=>'Monday',2=>'Tuesday',3=>'Wednesday',4=>'Thursday',5=>'Friday',6=>'Saturday'];
+
+        if (! $teacher) {
+            $entries = collect();
+            $todaySubstitutions = collect();
+            $profileMissing = true;
+
+            return view('teacher.timetable.index', compact(
+                'slots', 'days', 'entries', 'currentTerm', 'todaySubstitutions', 'profileMissing'
+            ));
+        }
 
         $entries = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('term_id', $currentTerm?->id)
@@ -34,9 +41,10 @@ class TimetableController extends Controller
             ->where('date', today()->toDateString())
             ->with('entry.subject')
             ->get();
+        $profileMissing = false;
 
         return view('teacher.timetable.index', compact(
-            'slots', 'days', 'entries', 'currentTerm', 'todaySubstitutions'
+            'slots', 'days', 'entries', 'currentTerm', 'todaySubstitutions', 'profileMissing'
         ));
     }
 }

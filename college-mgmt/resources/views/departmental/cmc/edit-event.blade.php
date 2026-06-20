@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Edit Event</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.events.update', $event) }}">
+    <div class="alert alert-warning small py-2">
+      If students have registered, date/type/venue/registration deadline changes are restricted by the system. Review published visibility before saving.
+    </div>
+    <form method="POST" action="{{ route('cmc.events.update', $event) }}" onsubmit="return confirm('Save career event changes?')">
       @csrf @method('PUT')
       <div class="row g-3">
         <div class="col-12">

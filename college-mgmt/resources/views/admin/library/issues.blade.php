@@ -23,8 +23,12 @@
         <a href="{{ route('admin.library.issues') }}?status=overdue" class="btn btn-sm {{ request('status') === 'overdue' ? 'btn-danger' : 'btn-outline-danger' }}">Overdue</a>
         <a href="{{ route('admin.library.issues') }}?status=returned" class="btn btn-sm {{ request('status') === 'returned' ? 'btn-success' : 'btn-outline-success' }}">Returned</a>
     </div>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#issueBookModal"><i class="bi bi-plus-circle me-1"></i>Issue Book</button>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.library.issues.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#issueBookModal"><i class="bi bi-plus-circle me-1"></i>Issue Book</button>
+    </div>
 </div>
+<div class="text-muted small mb-2">Showing {{ $issues->total() }} issue record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}.</div>
 
 <div class="card">
     <div class="card-body p-0">

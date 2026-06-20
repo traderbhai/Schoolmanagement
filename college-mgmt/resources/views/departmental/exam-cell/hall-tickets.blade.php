@@ -2,6 +2,7 @@
 @section('title','Hall Tickets')
 @section('page-title','Hall Tickets')
 @section('content')
+<h1 class="h4 mb-3">Hall Tickets</h1>
 <div class="row justify-content-center"><div class="col-lg-8">
 <div class="card mb-4">
   <div class="card-header bg-transparent fw-semibold">Select Exam to Generate Hall Tickets</div>

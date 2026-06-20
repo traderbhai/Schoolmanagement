@@ -58,7 +58,7 @@
                     @elseif($feeOutstanding > 0)
                         <a href="{{ route('student.fees') }}" class="btn btn-warning btn-sm"><i class="bi bi-credit-card me-1"></i> Review Fees</a>
                     @elseif($pendingAssignmentCount > 0)
-                        <a href="{{ route('student.assignments.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i> Open Assignments</a>
+                        <a href="{{ route('student.assignments.index', ['filter' => 'pending_next_7']) }}" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i> Open Assignments</a>
                     @elseif(count($todayClasses) > 0)
                         <a href="{{ route('student.timetable') }}" class="btn btn-primary btn-sm"><i class="bi bi-calendar-week me-1"></i> View Timetable</a>
                     @else

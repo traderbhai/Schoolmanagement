@@ -67,7 +67,8 @@ class AcademicsCoeV003Test extends TestCase
             ->assertSee('Filtered Source List')
             ->assertSee('Kavya Nair')
             ->assertDontSee('Student #'.$fixture['student']->id)
-            ->assertSee(route('exam-cell.hall-tickets'), false);
+            ->assertSee('metric=blocked_registrations&amp;exam_id=', false)
+            ->assertDontSee(route('exam-cell.hall-tickets'), false);
 
         $this->actingAs($exam)
             ->get(route('academics.coe.appeals-anomalies'))

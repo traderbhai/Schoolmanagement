@@ -155,6 +155,8 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->get(route('accounts.outstanding'))
             ->assertStatus(200)
+            ->assertSee('Export Current View')
+            ->assertSee(route('accounts.export-outstanding'), false)
             ->assertSee($student->user->name)
             ->assertSee('Rs. 32,500.00')
             ->assertSee('1 open')
@@ -196,6 +198,92 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->assertStringContainsString($student->user->name, $content);
         $this->assertStringContainsString('41,000.00', $content);
         $this->assertStringNotContainsString('999,999', $content);
+    }
+
+    public function test_accounts_overdue_demand_export_matches_overdue_drilldown_view(): void
+    {
+        $user = $this->accountsUser();
+        $overdueStudent = Student::factory()->create();
+        $currentStudent = Student::factory()->create();
+        $term = Term::factory()->create(['program_id' => $overdueStudent->program_id]);
+
+        FeeDemand::factory()->create([
+            'student_id' => $overdueStudent->id,
+            'term_id' => $term->id,
+            'total_amount' => 45000,
+            'scholarship_deduction' => 5000,
+            'final_amount' => 40000,
+            'penalty_amount' => 1000,
+            'due_date' => now()->subDays(3)->toDateString(),
+            'status' => 'pending',
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $currentStudent->id,
+            'term_id' => $term->id,
+            'total_amount' => 20000,
+            'scholarship_deduction' => 0,
+            'final_amount' => 20000,
+            'penalty_amount' => 0,
+            'due_date' => now()->addDays(5)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.outstanding', ['mode' => 'overdue_demands']))
+            ->assertOk()
+            ->assertSee('Filtered Source List (1)')
+            ->assertSee('Export Current View')
+            ->assertSee(route('accounts.export-outstanding', ['mode' => 'overdue_demands']), false)
+            ->assertSee($overdueStudent->user->name)
+            ->assertDontSee($currentStudent->user->name);
+
+        $response = $this->actingAs($user)
+            ->get(route('accounts.export-outstanding', ['mode' => 'overdue_demands']))
+            ->assertOk();
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Amount Due (Rs.)', $content);
+        $this->assertStringContainsString($overdueStudent->user->name, $content);
+        $this->assertStringContainsString('40,000.00', $content);
+        $this->assertStringNotContainsString($currentStudent->user->name, $content);
+        $this->assertDatabaseHas('activity_logs', [
+            'user_id' => $user->id,
+            'action' => 'export',
+            'description' => 'Accounts overdue fee demands exported: 1 rows; filters={"mode":"overdue_demands"}',
+        ]);
+    }
+
+    public function test_accounts_reconciliation_page_exposes_filtered_export_link(): void
+    {
+        $user = $this->accountsUser();
+        $program = Program::factory()->create(['is_active' => true]);
+        $applicant = Applicant::factory()->create(['program_id' => $program->id]);
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $program->id,
+            'name' => 'Reconciliation Fee',
+            'amount' => 10000,
+            'installment_number' => 1,
+            'is_active' => true,
+        ]);
+        AdmissionPayment::create([
+            'applicant_id' => $applicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 10000,
+            'payment_date' => now()->toDateString(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'RECON-LINK',
+            'status' => 'verified',
+            'verified_by' => $user->id,
+            'verified_at' => now(),
+            'submitted_by' => $applicant->user_id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.reconciliation', ['program_id' => $program->id]))
+            ->assertOk()
+            ->assertSee('Export Current View')
+            ->assertSee(route('accounts.export-admission-payments', ['program_id' => $program->id]), false)
+            ->assertSee($applicant->application_number);
     }
 
     public function test_accounts_demand_letter_is_limited_to_active_open_demands(): void

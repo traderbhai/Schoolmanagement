@@ -6,7 +6,10 @@
 <div class="card">
   <div class="card-header bg-transparent fw-semibold">Edit Company</div>
   <div class="card-body">
-    <form method="POST" action="{{ route('cmc.companies.update', $company) }}">
+    <div class="alert alert-warning small py-2">
+      Deactivating a recruiter is blocked while active drives exist. Company name changes may be locked once placement or internship history exists.
+    </div>
+    <form method="POST" action="{{ route('cmc.companies.update', $company) }}" onsubmit="return confirm('Save company changes?')">
       @csrf @method('PUT')
       <div class="row g-3">
         <div class="col-md-8">

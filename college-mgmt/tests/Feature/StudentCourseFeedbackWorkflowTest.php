@@ -135,8 +135,9 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
 
         $this->actingAs($fixture['user'])
             ->get(route('student.feedback.create', $fixture['enrolledSubject']))
-            ->assertRedirect(route('student.feedback.index'))
-            ->assertSessionHas('info');
+            ->assertOk()
+            ->assertSee('You have already submitted feedback for Enrolled Marketing.')
+            ->assertSee('disabled', false);
     }
 
     public function test_direct_feedback_post_cannot_overwrite_existing_feedback(): void
@@ -206,8 +207,9 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
 
         $this->actingAs($fixture['user'])
             ->get(route('student.feedback.create', $fixture['enrolledSubject']))
-            ->assertRedirect(route('student.feedback.index'))
-            ->assertSessionHas('error');
+            ->assertOk()
+            ->assertSee('Course feedback can be submitted only by active students.')
+            ->assertSee('disabled', false);
 
         $this->actingAs($fixture['user'])
             ->post(route('student.feedback.store', $fixture['enrolledSubject']), [

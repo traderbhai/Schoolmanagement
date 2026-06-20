@@ -194,7 +194,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <a href="{{ route('academic.fee-demands.index') }}" class="text-decoration-none">
+        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
             <div class="kpi-card {{ $overdueCount > 0 ? 'kpi-red' : 'kpi-blue' }}">
                 <div class="d-flex align-items-center gap-3">
                     <div class="kpi-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>

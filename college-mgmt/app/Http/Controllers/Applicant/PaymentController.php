@@ -37,9 +37,14 @@ class PaymentController extends Controller
         $totalFee = $installments->sum('amount');
         $totalPaid = $applicant->total_paid;
         $outstanding = max(0, $totalFee - $totalPaid);
+        $paymentUnavailableReason = match (true) {
+            in_array($applicant->status, ['rejected', 'withdrawn', 'enrolled'], true) => 'Admission fee proof submission is closed because your application is in a final state.',
+            ! in_array($applicant->status, ['shortlisted', 'selected'], true) => 'Payment can be submitted after your application is shortlisted or selected.',
+            default => null,
+        };
 
         return view('applicant.fees.index', compact(
-            'applicant', 'installments', 'payments', 'totalFee', 'totalPaid', 'outstanding'
+            'applicant', 'installments', 'payments', 'totalFee', 'totalPaid', 'outstanding', 'paymentUnavailableReason'
         ));
     }
 

@@ -573,6 +573,13 @@ class PmcOperatingController extends Controller
         return view('academics.pmc.v041.surface', $this->pmcTimetableV041->surface($request->user(), $surface, $request->query()));
     }
 
+    public function v041ExportSurface(Request $request, string $surface)
+    {
+        $this->authorizePmc($request);
+
+        return $this->pmcTimetableV041->exportSurface($request->user(), $surface, $request->query());
+    }
+
     public function v044StudentTimetable(Request $request)
     {
         return view('academics.pmc.v041.scoped-timetable', $this->pmcTimetableV041->studentScopedTimetable($request->user(), $request->query()));
@@ -1339,7 +1346,7 @@ class PmcOperatingController extends Controller
         $this->authorizePmc($request);
 
         return view('academics.pmc.section', [
-            'section' => $this->pmc->section($request->user(), $section),
+            'section' => $this->pmc->section($request->user(), $section, $request->query()),
         ]);
     }
 

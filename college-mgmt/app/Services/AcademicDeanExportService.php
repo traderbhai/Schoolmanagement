@@ -18,7 +18,7 @@ class AcademicDeanExportService
 
     public function export(string $report, User $actor, array $filters = []): StreamedResponse
     {
-        $rows = $this->rows($report, $actor);
+        $rows = $this->rows($report, $actor, $filters);
         AcademicDeanExportLog::create([
             'user_id' => $actor->id,
             'report_key' => $report,
@@ -44,7 +44,7 @@ class AcademicDeanExportService
         }, 'dean-' . $report . '.csv', ['Content-Type' => 'text/csv']);
     }
 
-    public function rows(string $report, User $actor): Collection
+    public function rows(string $report, User $actor, array $filters = []): Collection
     {
         return match ($report) {
             'branch_health' => $this->command->branchHealth($actor),
@@ -56,15 +56,38 @@ class AcademicDeanExportService
             ]),
             'approval_sla' => $this->attention->queue('pending_dean_approvals')['items'],
             'handoff_readiness' => $this->attention->queue('admission_handoff_blockers')['items'],
-            default => $this->operatingRows($report),
+            default => $this->operatingRows($report, $filters),
         };
     }
 
-    private function operatingRows(string $report): Collection
+    private function operatingRows(string $report, array $filters = []): Collection
     {
+        $sortMap = [
+            'title' => 'title',
+            'status' => 'status',
+            'severity' => 'severity',
+            'score' => 'score',
+            'due_at' => 'due_at',
+            'created_at' => 'created_at',
+        ];
+        $sort = $sortMap[$filters['sort'] ?? 'due_at'] ?? 'due_at';
+        $direction = ($filters['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+
         return AcademicDeanOperatingRecord::with(['owner', 'program'])
             ->where('record_type', $report)
-            ->latest()
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['severity'] ?? null, fn ($q, $severity) => $q->where('severity', $severity))
+            ->when($filters['program_id'] ?? null, fn ($q, $programId) => $q->where('program_id', $programId))
+            ->when($filters['owner_user_id'] ?? null, fn ($q, $ownerId) => $q->where('owner_user_id', $ownerId))
+            ->when($filters['search'] ?? null, function ($q, $search) {
+                $q->where(function ($scope) use ($search) {
+                    $scope->where('title', 'like', "%{$search}%")
+                        ->orWhere('source_type', 'like', "%{$search}%")
+                        ->orWhere('source_key', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy($sort, $direction)
+            ->orderBy('id')
             ->limit(500)
             ->get()
             ->map(fn (AcademicDeanOperatingRecord $record) => [

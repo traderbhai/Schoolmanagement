@@ -35,6 +35,17 @@ class AdminAssetAccessControlTest extends TestCase
             $this->actingAs($user)
                 ->get(route('admin.assets.index'))
                 ->assertForbidden();
+
+            foreach ([
+                'admin.assets.export',
+                'admin.assets.assignments.export',
+                'admin.assets.stock-items.export',
+                'admin.assets.stock-movements.export',
+            ] as $route) {
+                $this->actingAs($user)
+                    ->get(route($route))
+                    ->assertForbidden();
+            }
         }
     }
 

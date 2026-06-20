@@ -143,6 +143,70 @@ class TransportWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_transport_exports_routes_vehicles_and_filtered_assignments(): void
+    {
+        $admin = $this->userWithRole('admin');
+        [$route, $stop] = $this->routeWithStop();
+        $vehicle = $this->vehicle(['registration_number' => 'DL01EXPORT']);
+        $matchingStudent = $this->student('Export Transport Student');
+        $otherStudent = $this->student('Other Transport Student');
+
+        TransportAssignment::create([
+            'student_id' => $matchingStudent->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'transport_vehicle_id' => $vehicle->id,
+            'start_date' => now()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+            'notes' => 'Export pickup note.',
+        ]);
+        TransportAssignment::create([
+            'student_id' => $otherStudent->id,
+            'transport_route_id' => $route->id,
+            'transport_stop_id' => $stop->id,
+            'transport_vehicle_id' => null,
+            'start_date' => now()->toDateString(),
+            'monthly_fee' => 2750,
+            'status' => 'active',
+            'notes' => 'Other pickup note.',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.transport.index', ['assignment_search' => 'Export Transport']))
+            ->assertOk()
+            ->assertSee(route('admin.transport.routes.export'))
+            ->assertSee(route('admin.transport.vehicles.export'))
+            ->assertSee(route('admin.transport.assignments.export', ['assignment_search' => 'Export Transport']))
+            ->assertSee('Showing 1 active assignment record(s)')
+            ->assertSee($matchingStudent->user->name)
+            ->assertDontSee('Other pickup note');
+
+        $routeCsv = $this->actingAs($admin)
+            ->get(route('admin.transport.routes.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('North Campus Route', $routeCsv);
+        $this->assertStringContainsString('City Center', $routeCsv);
+
+        $vehicleCsv = $this->actingAs($admin)
+            ->get(route('admin.transport.vehicles.export'))
+            ->streamedContent();
+        $this->assertStringContainsString('DL01EXPORT', $vehicleCsv);
+        $this->assertStringContainsString('Ramesh Driver', $vehicleCsv);
+
+        $assignmentCsv = $this->actingAs($admin)
+            ->get(route('admin.transport.assignments.export', ['assignment_search' => 'Export Transport']))
+            ->streamedContent();
+        $this->assertStringContainsString('Export Transport Student', $assignmentCsv);
+        $this->assertStringContainsString('Export pickup note', $assignmentCsv);
+        $this->assertStringNotContainsString('Other Transport Student', $assignmentCsv);
+        $this->assertStringNotContainsString('Other pickup note', $assignmentCsv);
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'export',
+            'description' => 'Transport active assignments exported: 1 rows; filters={"assignment_search":"Export Transport"}',
+        ]);
+    }
+
     public function test_transport_assignment_guards_duplicate_student_and_vehicle_capacity(): void
     {
         $admin = $this->userWithRole('admin');

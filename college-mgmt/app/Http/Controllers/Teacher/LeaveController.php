@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class LeaveController extends Controller
 {
@@ -17,14 +18,30 @@ class LeaveController extends Controller
     public function index()
     {
         $teacher = $this->getTeacher();
+        if (! $teacher) {
+            $leaves = new LengthAwarePaginator([], 0, 15);
+            $canApplyForLeave = false;
+            $profileMissing = true;
+
+            return view('teacher.leaves.index', compact('leaves', 'canApplyForLeave', 'profileMissing'));
+        }
+
         $leaves = $teacher->leaveApplications()->latest()->paginate(15);
         $canApplyForLeave = $teacher->status === 'active';
-        return view('teacher.leaves.index', compact('leaves', 'canApplyForLeave'));
+        $profileMissing = false;
+
+        return view('teacher.leaves.index', compact('leaves', 'canApplyForLeave', 'profileMissing'));
     }
 
     public function create()
     {
         $teacher = $this->getTeacher();
+        if (! $teacher) {
+            return redirect()
+                ->route('teacher.leaves.index')
+                ->with('error', 'Your teacher profile is not linked yet. Contact administration before submitting leave.');
+        }
+
         if ($teacher->status !== 'active') {
             return redirect()
                 ->route('teacher.leaves.index')
@@ -44,6 +61,12 @@ class LeaveController extends Controller
         ]);
 
         $teacher = $this->getTeacher();
+        if (! $teacher) {
+            return redirect()
+                ->route('teacher.leaves.index')
+                ->with('error', 'Your teacher profile is not linked yet. Contact administration before submitting leave.');
+        }
+
         if ($teacher->status !== 'active') {
             return redirect()
                 ->route('teacher.leaves.index')
@@ -86,7 +109,7 @@ class LeaveController extends Controller
     {
         $teacher = $this->getTeacher();
 
-        if ($teacher->status !== 'active' || $leave->teacher_id !== $teacher->id || $leave->status !== 'pending') {
+        if (! $teacher || $teacher->status !== 'active' || $leave->teacher_id !== $teacher->id || $leave->status !== 'pending') {
             return back()->with('error', 'Cannot cancel this leave application.');
         }
 

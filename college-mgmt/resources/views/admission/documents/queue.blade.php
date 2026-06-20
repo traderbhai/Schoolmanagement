@@ -2,11 +2,24 @@
 @section('title', 'Document Verification Queue')
 
 @section('content')
+@php
+    $filterSummary = collect([
+        request('program_id') ? 'Program filtered' : null,
+        request('batch_id') ? 'Batch filtered' : null,
+        request('document_name') ? 'Document: ' . request('document_name') : null,
+        request('uploaded_from') ? 'From: ' . request('uploaded_from') : null,
+        request('uploaded_to') ? 'To: ' . request('uploaded_to') : null,
+    ])->filter()->implode(' | ') ?: 'All visible pending documents';
+@endphp
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0 fw-bold"><i class="bi bi-folder-check me-2 text-primary"></i>Document Verification Queue</h2>
         <small class="text-muted">Review and verify uploaded applicant documents</small>
+        <div class="small text-muted">Filter: {{ $filterSummary }}</div>
     </div>
+    <a href="{{ route('admission.documents.queue.export', request()->query()) }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download me-1"></i>Export Current View
+    </a>
 </div>
 
 {{-- Stats --}}
@@ -15,6 +28,9 @@
         <div class="card border-0 shadow-sm text-center py-3">
             <div class="fs-1 fw-bold text-warning">{{ $stats['pending'] }}</div>
             <div class="small text-muted">Pending Verification</div>
+            @if(($stats['all_pending'] ?? $stats['pending']) !== $stats['pending'])
+                <div class="small text-muted">of {{ $stats['all_pending'] }} visible total</div>
+            @endif
         </div>
     </div>
     <div class="col-md-4">
@@ -101,6 +117,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Pending Documents ({{ $documents->total() }})</span>
+            <span class="small text-muted">Showing {{ $documents->firstItem() ?? 0 }}-{{ $documents->lastItem() ?? 0 }} of {{ $documents->total() }}</span>
             <button type="submit" class="btn btn-success btn-sm" id="bulkVerifyBtn" disabled
                     onclick="return confirm('Verify all selected documents?')">
                 <i class="bi bi-check-all me-1"></i>Verify Selected (<span id="selectedCount">0</span>)

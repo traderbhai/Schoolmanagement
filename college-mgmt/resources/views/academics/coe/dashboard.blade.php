@@ -21,16 +21,16 @@
         <div class="btn-group btn-group-sm">
             <a href="{{ route('academics.workspaces.show', 'coe') }}" class="btn btn-outline-secondary">Workspace</a>
             <a href="{{ route('academics.coe.reports') }}" class="btn btn-outline-primary">Reports</a>
-            <a href="{{ route('exam-cell.exams.create') }}" class="btn btn-primary">Schedule Exam</a>
+            <a href="{{ route('academics.coe.exam-readiness') }}" class="btn btn-primary">Exam Readiness</a>
         </div>
     </div>
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['label' => 'Upcoming Exams', 'value' => $kpis['upcoming_exams'], 'route' => route('academics.coe.exam-readiness')],
-            ['label' => 'Marks Pending', 'value' => $kpis['marks_pending'], 'route' => route('academics.coe.marks-results')],
-            ['label' => 'Hall Ticket Blocks', 'value' => $kpis['hall_ticket_blocks'], 'route' => route('academics.coe.hall-ticket-readiness')],
-            ['label' => 'Appeals/Anomalies', 'value' => $kpis['appeals_anomalies'], 'route' => route('academics.coe.appeals-anomalies')],
+            ['label' => 'Upcoming Exams', 'value' => $kpis['upcoming_exams'], 'route' => route('academics.coe.exam-readiness', ['metric' => 'upcoming_exams'])],
+            ['label' => 'Marks Pending', 'value' => $kpis['marks_pending'], 'route' => route('academics.coe.marks-results', ['metric' => 'marks_pending'])],
+            ['label' => 'Hall Ticket Blocks', 'value' => $kpis['hall_ticket_blocks'], 'route' => route('academics.coe.hall-ticket-readiness', ['metric' => 'blocked_registrations'])],
+            ['label' => 'Appeals/Anomalies', 'value' => $kpis['appeals_anomalies'], 'route' => route('academics.coe.appeals-anomalies', ['metric' => 'appeals_anomalies'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
                 <a class="text-decoration-none" href="{{ $metric['route'] }}">
@@ -59,7 +59,7 @@
                         <div class="row g-2 mb-2">
                             @foreach($section['metrics'] as $label => $value)
                                 <div class="col-6 col-md-3">
-                                    <a href="{{ $meta['route'] }}" class="text-decoration-none">
+                                    <a href="{{ $meta['route'] }}?{{ http_build_query(['metric' => $label]) }}" class="text-decoration-none">
                                         <div class="border rounded p-2 h-100">
                                             <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
                                             <div class="fw-semibold">{{ $value }}</div>

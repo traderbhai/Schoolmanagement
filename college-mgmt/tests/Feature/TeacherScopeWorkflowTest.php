@@ -389,13 +389,15 @@ class TeacherScopeWorkflowTest extends TestCase
 
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.materials.create'))
-            ->assertRedirect(route('teacher.materials.index'))
-            ->assertSessionHas('error', 'Only active teachers can upload study materials.');
+            ->assertOk()
+            ->assertSee('Only active teachers can upload study materials.')
+            ->assertSee('disabled', false);
 
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.assignments.create'))
-            ->assertRedirect(route('teacher.assignments.index'))
-            ->assertSessionHas('error', 'Only active teachers can create assignments.');
+            ->assertOk()
+            ->assertSee('Only active teachers can create assignments.')
+            ->assertSee('disabled', false);
 
         $this->actingAs($fixture['teacher']->user)
             ->post(route('teacher.materials.store'), [

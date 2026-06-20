@@ -17,7 +17,7 @@
             <div>Overall thresholds: medium {{ $threshold->medium_threshold }}, high {{ $threshold->high_threshold }}, critical {{ $threshold->critical_threshold }}</div>
             <form method="POST" action="{{ route('academics.dean-os.risk-history.capture') }}">
                 @csrf
-                <button class="btn btn-sm btn-primary">Capture Snapshot</button>
+                <button class="btn btn-sm btn-primary" onclick="return confirm('Capture or refresh today\\'s Dean risk snapshot?')">Capture Snapshot</button>
             </form>
         </div>
     </div>
@@ -70,7 +70,7 @@
                 <div class="card-body vstack gap-2">
                     <textarea class="form-control form-control-sm" name="plan" placeholder="Mitigation plan" required></textarea>
                     <input class="form-control form-control-sm" type="date" name="due_at">
-                    <button class="btn btn-sm btn-primary">Save Mitigation</button>
+                    <button class="btn btn-sm btn-primary" onclick="return confirm('Save this Dean risk mitigation plan?')">Save Mitigation</button>
                 </div>
             </form>
         </div>
