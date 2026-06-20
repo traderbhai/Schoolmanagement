@@ -209,6 +209,10 @@
             return (bool) $firstAdmissionProgram;
         }
 
+        if (($item['condition'] ?? null) === 'legacy_program_chair_access') {
+            return $user?->hasAnyRole(['program_chair', 'hod', 'dean_academics', 'admin']) ?? false;
+        }
+
         return true;
     };
 @endphp

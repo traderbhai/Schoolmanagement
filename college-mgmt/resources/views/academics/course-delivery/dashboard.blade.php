@@ -20,7 +20,7 @@
         </div>
         <div class="btn-group btn-group-sm">
             <a href="{{ route('academics.course-delivery.reports') }}" class="btn btn-outline-primary">Reports</a>
-            <a href="{{ route('teacher.timetable.index') }}" class="btn btn-primary">My Timetable</a>
+            <a href="{{ route('academics.course-delivery.course-load') }}" class="btn btn-primary">Course Load</a>
         </div>
     </div>
 

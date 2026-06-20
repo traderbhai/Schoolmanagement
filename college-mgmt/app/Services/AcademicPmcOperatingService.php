@@ -76,13 +76,13 @@ class AcademicPmcOperatingService
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - ' . $subject->code,
                 'status' => 'Mapping missing',
                 'metric_keys' => ['curriculum_gaps', 'mapping_gaps'],
-                'action' => route('chair.curriculum.index'),
+                'action' => route('academics.pmc.curriculum-governance.index'),
             ])->merge($pendingChanges->map(fn (CurriculumChange $change) => [
                 'title' => $change->title,
                 'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
                 'status' => ucfirst(str_replace('_', ' ', $change->status)),
                 'metric_keys' => ['curriculum_gaps', 'pending_changes'],
-                'action' => route('chair.approvals'),
+                'action' => route('academics.pmc.approvals.index'),
             ]))->values(),
         ];
     }
@@ -118,13 +118,13 @@ class AcademicPmcOperatingService
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty not assigned',
                 'status' => 'Unassigned',
                 'metric_keys' => ['faculty_gaps', 'unassigned_subjects'],
-                'action' => route('chair.curriculum.assignments'),
+                'action' => route('academics.pmc.faculty-allocation-v004.index'),
             ])->merge($loads->map(fn ($load) => [
                 'title' => $this->teacherLabel($load->teacher, $load->teacher_id),
                 'subtitle' => ($load->program?->code ?? 'Program') . ' - ' . $load->subject_count . ' subjects',
                 'status' => 'Workload review',
                 'metric_keys' => ['faculty_gaps', 'overloaded_faculty'],
-                'action' => route('chair.faculty.workload'),
+                'action' => route('academics.pmc.faculty-allocation-v004.index'),
             ]))->values(),
         ];
     }
@@ -166,13 +166,13 @@ class AcademicPmcOperatingService
                 'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
                 'status' => ucfirst($entry->status ?? 'draft'),
                 'metric_keys' => ['draft_slots'],
-                'action' => route('chair.timetable.builder'),
+                'action' => route('academics.pmc.timetable-planner.index'),
             ])->merge($conflicts->map(fn ($conflict) => [
                 'title' => $this->teacherLabel($teacherMap->get($conflict->teacher_id), $conflict->teacher_id) . ' conflict',
                 'subtitle' => 'Day ' . $conflict->day_of_week . ', slot ' . ($conflict->timetable_slot_id ?: 'pending'),
                 'status' => 'Conflict',
                 'metric_keys' => ['teacher_conflicts'],
-                'action' => route('chair.timetable.builder'),
+                'action' => route('academics.pmc.timetable-planner.index'),
             ]))->values(),
         ];
     }
@@ -221,19 +221,19 @@ class AcademicPmcOperatingService
                 'subtitle' => ($row->student?->program?->code ?? 'Program') . ' - ' . $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
                 'metric_keys' => ['student_risk', 'attendance_risk'],
-                'action' => route('chair.students.at-risk'),
+                'action' => route('academics.pmc.student-success-v004.index'),
             ])->merge($weakPerformance->map(fn (ExamResult $result) => [
                 'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
                 'metric_keys' => ['student_risk', 'weak_performance'],
-                'action' => route('chair.reports.subject-performance'),
+                'action' => route('academics.pmc.student-success-v004.index'),
             ]))->merge($pendingLeaves->map(fn (LeaveApplication $leave) => [
                 'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
                 'metric_keys' => ['pending_leaves'],
-                'action' => route('chair.students.leaves'),
+                'action' => route('academics.pmc.student-success-v004.index'),
             ]))->values(),
         ];
     }

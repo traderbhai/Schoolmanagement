@@ -8,6 +8,7 @@ use App\Models\AdmissionPayment;
 use App\Models\ApplicantDocument;
 use App\Models\Applicant;
 use App\Models\Lead;
+use App\Services\AdmissionKpiDrilldownService;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -533,5 +534,173 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
         $this->assertDatabaseMissing('admission_automations', [
             'name' => 'Unauthorized Telecaller Automation',
         ]);
+    }
+
+    public function test_admission_manager_counsellor_and_telecaller_visible_navigation_links_are_reachable(): void
+    {
+        foreach ([
+            ['admission.manager@college.com', 'admission.manager-workspace.index'],
+            ['counsellor@college.com', 'admission.counsellor-desk.index'],
+            ['telecaller@college.com', 'admission.calling-desk.index'],
+        ] as [$email, $routeName]) {
+            $user = User::where('email', $email)->firstOrFail();
+            $response = $this->actingAs($user)->get(route($routeName));
+
+            $response->assertOk()
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('Laravel', false);
+
+            foreach ($this->internalGetLinks($response->getContent()) as $path) {
+                $linkResponse = $this->actingAs($user)->get($path);
+
+                $this->assertNotContains($linkResponse->getStatusCode(), [403, 404, 500], "{$email} visible link failed: {$path}");
+            }
+        }
+    }
+
+    public function test_lower_role_admission_dashboard_kpis_match_scoped_drilldown_lists(): void
+    {
+        $service = app(AdmissionKpiDrilldownService::class);
+
+        foreach ([
+            'admission.manager@college.com',
+            'counsellor@college.com',
+            'telecaller@college.com',
+        ] as $email) {
+            $user = User::where('email', $email)->firstOrFail();
+            $dashboard = $service->dashboard($user);
+
+            $this->actingAs($user)->get(route('admission.leads.index'))
+                ->assertOk()
+                ->assertSee($dashboard['funnelData']['leads'] . ' records after filters')
+                ->assertSee('Filter: All visible leads');
+
+            $this->actingAs($user)->get(route('admission.applicants.index'))
+                ->assertOk()
+                ->assertSee($dashboard['funnelData']['applied'] . ' records after filters')
+                ->assertSee('Filter: All visible applicants');
+
+            $this->actingAs($user)->get(route('admission.documents.queue'))
+                ->assertOk()
+                ->assertSee('Pending Documents (' . $dashboard['kpis']['docs_pending'] . ')')
+                ->assertSee('Filter: All visible pending documents');
+
+            $this->actingAs($user)->get(route('admission.payments.queue'))
+                ->assertOk()
+                ->assertSee('Pending Payments (' . $dashboard['kpis']['payments_pending'] . ')')
+                ->assertSee('Filter: All visible pending payments');
+        }
+    }
+
+    public function test_lower_role_reminder_scheduling_and_document_actions_are_scoped(): void
+    {
+        $telecaller = User::where('email', 'telecaller@college.com')->firstOrFail();
+        $counsellor = User::where('email', 'counsellor@college.com')->firstOrFail();
+        $ownLead = Lead::where('assigned_to', $telecaller->id)->firstOrFail();
+        $outsideLead = Lead::where('assigned_to', '<>', $telecaller->id)
+            ->whereNotNull('assigned_to')
+            ->firstOrFail();
+
+        $this->actingAs($telecaller)
+            ->post(route('admission.reminders.store'), [
+                'subject_type' => 'lead',
+                'subject_id' => $outsideLead->id,
+                'reason' => 'callback_retry',
+                'channel' => 'sms',
+                'priority' => 'high',
+                'due_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'notes' => 'Unauthorized reminder should not persist.',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('admission_reminder_schedules', [
+            'subject_type' => Lead::class,
+            'subject_id' => $outsideLead->id,
+            'notes' => 'Unauthorized reminder should not persist.',
+        ]);
+
+        $this->actingAs($telecaller)
+            ->post(route('admission.reminders.store'), [
+                'subject_type' => 'lead',
+                'subject_id' => $ownLead->id,
+                'reason' => 'callback_retry',
+                'channel' => 'sms',
+                'priority' => 'high',
+                'due_at' => now()->addDay()->format('Y-m-d H:i:s'),
+                'notes' => 'Scoped reminder from Batch 3 UX test.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('admission_reminder_schedules', [
+            'subject_type' => Lead::class,
+            'subject_id' => $ownLead->id,
+            'assigned_to' => $telecaller->id,
+            'notes' => 'Scoped reminder from Batch 3 UX test.',
+        ]);
+
+        $assignedDocument = ApplicantDocument::where('status', 'pending')
+            ->whereHas('applicant', fn ($query) => $query->where('assigned_to', $counsellor->id))
+            ->firstOrFail();
+        $outsideDocument = ApplicantDocument::where('status', 'pending')
+            ->whereHas('applicant', fn ($query) => $query->where('assigned_to', '<>', $counsellor->id)->whereNotNull('assigned_to'))
+            ->firstOrFail();
+
+        $this->actingAs($counsellor)
+            ->post(route('admission.documents.verify', $outsideDocument))
+            ->assertForbidden();
+
+        $this->actingAs($counsellor)
+            ->post(route('admission.documents.verify', $assignedDocument))
+            ->assertRedirect();
+
+        $this->assertSame('verified', $assignedDocument->fresh()->status);
+        $this->assertSame('pending', $outsideDocument->fresh()->status);
+    }
+
+    public function test_lower_role_offer_seat_and_handoff_lists_show_filters_without_forbidden_actions(): void
+    {
+        $manager = User::where('email', 'admission.manager@college.com')->firstOrFail();
+        $counsellor = User::where('email', 'counsellor@college.com')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->get(route('admission.offer-rounds.index'))
+            ->assertOk()
+            ->assertSee('Read-only view for your Admission scope')
+            ->assertSee('Offer Rounds')
+            ->assertSee('Waitlist')
+            ->assertDontSee("confirm('Publish this offer round and create seat holds for eligible selected applicants?')", false);
+
+        $this->actingAs($manager)
+            ->get(route('admission.handoff.index', ['status' => 'blocked']))
+            ->assertOk()
+            ->assertSee('Admission To Academics / PMC Handoff')
+            ->assertSee('Filters: status=blocked');
+
+        $this->actingAs($counsellor)
+            ->get(route('admission.handoff.index', ['status' => 'blocked']))
+            ->assertForbidden();
+    }
+
+    private function internalGetLinks(string $html): array
+    {
+        preg_match_all('/href=["\']([^"\']+)["\']/i', $html, $matches);
+
+        return collect($matches[1] ?? [])
+            ->filter(fn ($href) => ! str_starts_with($href, '#'))
+            ->filter(fn ($href) => ! str_starts_with($href, 'javascript:'))
+            ->filter(fn ($href) => ! str_starts_with($href, 'mailto:'))
+            ->filter(fn ($href) => ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|json|webmanifest)(\?|$)/i', $href))
+            ->map(function ($href) {
+                if (str_starts_with($href, url('/'))) {
+                    return parse_url($href, PHP_URL_PATH) . (parse_url($href, PHP_URL_QUERY) ? '?' . parse_url($href, PHP_URL_QUERY) : '');
+                }
+
+                return $href;
+            })
+            ->filter(fn ($href) => str_starts_with($href, '/'))
+            ->unique()
+            ->values()
+            ->all();
     }
 }

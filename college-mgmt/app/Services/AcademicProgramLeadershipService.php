@@ -78,7 +78,7 @@ class AcademicProgramLeadershipService
                 'subtitle' => $program->code . ' - ' . $program->students_count . ' students, ' . $program->subjects_count . ' subjects',
                 'status' => 'Active',
                 'metric_keys' => ['active_programs', 'programs'],
-                'action' => route('dean.programs'),
+                'action' => route('academics.program-leadership.portfolio'),
             ])->values())->concat($pendingChanges->map(fn (CurriculumChange $change) => [
                 'title' => $change->title,
                 'subtitle' => ($change->program?->code ?? 'Program') . ' - ' . ($change->subject?->code ?? 'Program level'),
@@ -119,13 +119,13 @@ class AcademicProgramLeadershipService
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty assignment pending',
                 'status' => 'Faculty gap',
                 'metric_keys' => ['faculty_gaps', 'delivery_gaps'],
-                'action' => route('chair.curriculum.assignments'),
+                'action' => route('academics.program-leadership.course-delivery'),
             ])->values())->concat($draftTimetable->map(fn (TimetableEntry $entry) => [
                 'title' => $entry->subject?->name ?? 'Timetable entry',
                 'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name,
                 'status' => ucfirst($entry->status ?? 'draft'),
                 'metric_keys' => ['draft_timetable', 'delivery_gaps'],
-                'action' => route('chair.timetable.builder'),
+                'action' => route('academics.program-leadership.course-delivery'),
             ])->values())->values(),
         ];
     }
@@ -173,19 +173,19 @@ class AcademicProgramLeadershipService
                 'subtitle' => $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
                 'metric_keys' => ['attendance_risk', 'student_risk'],
-                'action' => route('chair.students.at-risk'),
+                'action' => route('academics.program-leadership.student-success'),
             ])->values())->concat($weakPerformance->map(fn (ExamResult $result) => [
                 'title' => $this->studentLabel($result->student, $result->student_id),
                 'subtitle' => ($result->exam?->subject?->code ?? 'Exam') . ' - ' . $result->marks_obtained . '/' . $result->exam?->passing_marks,
                 'status' => 'Weak performance',
                 'metric_keys' => ['weak_performance', 'student_risk'],
-                'action' => route('chair.reports.subject-performance'),
+                'action' => route('academics.program-leadership.student-success'),
             ])->values())->concat($pendingLeaves->map(fn (LeaveApplication $leave) => [
                 'title' => $this->studentLabel($leave->student, $leave->student_id),
                 'subtitle' => $leave->leave_type . ' from ' . $leave->from_date?->toDateString(),
                 'status' => 'Leave pending',
                 'metric_keys' => ['pending_leaves'],
-                'action' => route('chair.students.leaves'),
+                'action' => route('academics.program-leadership.student-success'),
             ])->values())->values(),
         ];
     }
@@ -238,7 +238,7 @@ class AcademicProgramLeadershipService
                 'subtitle' => ($row->subject?->program?->code ?? 'Program') . ' - average rating ' . round($row->avg_rating, 1),
                 'status' => 'Feedback action due',
                 'metric_keys' => ['low_feedback_subjects'],
-                'action' => route('chair.faculty.feedback'),
+                'action' => route('academics.program-leadership.quality-signals'),
             ])->values())->values(),
         ];
     }

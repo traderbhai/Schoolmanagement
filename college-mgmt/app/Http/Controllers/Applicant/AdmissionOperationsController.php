@@ -70,7 +70,7 @@ class AdmissionOperationsController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $service->set($applicant, $data['channel'], $data['status'], $request->user(), $data['reason'] ?? 'Applicant self-service');
+        $service->set($applicant, $data['channel'], $data['status'], $request->user(), $data['reason'] ?? 'Applicant self-service', 'applicant_portal');
 
         return back()->with('success', 'Consent preference updated.');
     }

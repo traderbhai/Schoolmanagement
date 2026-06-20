@@ -50,10 +50,32 @@ class IqacOperatingController extends Controller
     private function section(Request $request, string $section)
     {
         $this->authorizeIqac($request);
+        $data = $this->iqac->section($request->user(), $section, $request->query());
+
+        if ($request->query('export') === 'current') {
+            return $this->exportSection($data, "iqac-{$section}.csv");
+        }
 
         return view('academics.iqac.section', [
-            'section' => $this->iqac->section($request->user(), $section, $request->query()),
+            'section' => $data,
         ]);
+    }
+
+    private function exportSection(array $section, string $filename)
+    {
+        return response()->streamDownload(function () use ($section) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Record', 'Subtitle', 'Status', 'Action']);
+
+            foreach ($section['items'] ?? [] as $item) {
+                fputcsv($handle, [
+                    $item['title'] ?? '',
+                    $item['subtitle'] ?? '',
+                    $item['status'] ?? '',
+                    $item['action'] ?? '',
+                ]);
+            }
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     private function authorizeIqac(Request $request): void

@@ -6,6 +6,7 @@ use App\Models\{Program, Student, Batch, Term, Teacher, LeaveApplication, Attend
                 StudentGrievance, TermPromotion, Attendance, ExamResult, FeeDemand,
                 StudentSubjectEnrollment, RoleProgramAssignment, ProgramSubject};
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class PmcStudentController extends Controller {
@@ -19,15 +20,60 @@ class PmcStudentController extends Controller {
     // ── At-risk student dashboard ─────────────────────────────────────────────
     public function atRisk(Request $request) {
         $programIds = $this->programIds();
+        $atRisk = $this->atRiskStudents($request, $programIds);
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 25;
+        $atRiskStudents = new LengthAwarePaginator(
+            $atRisk->forPage($page, $perPage)->values(),
+            $atRisk->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
+        $batches  = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
+        $programs = Program::whereIn('id', $programIds)->orderBy('name')->get();
+        $currentTerm = Term::latest('start_date')->first();
+        $filterSummary = $this->atRiskFilterSummary($request, $programs, $batches);
+
+        return view('departmental.program-chair.students.at-risk', compact(
+            'atRisk', 'atRiskStudents', 'batches', 'programs', 'currentTerm', 'filterSummary'
+        ));
+    }
+
+    public function exportAtRisk(Request $request)
+    {
+        $programIds = $this->programIds();
+        $rows = $this->atRiskStudents($request, $programIds);
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Student', 'Enrollment', 'Program', 'Batch', 'Risk Flags', 'Attendance Issues', 'Mentor']);
+
+            foreach ($rows as $student) {
+                fputcsv($handle, [
+                    $student->user->name ?? '',
+                    $student->enrollment_number,
+                    $student->program->name ?? '',
+                    $student->batch->name ?? '',
+                    implode(', ', $student->risks ?? []),
+                    (int) ($student->low_att_count ?? 0),
+                    $student->mentor?->name ?? 'Unassigned',
+                ]);
+            }
+        }, 'program-chair-at-risk-students.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function atRiskStudents(Request $request, array $programIds)
+    {
         $students = Student::whereIn('program_id', $programIds)
             ->where('status', 'active')
-            ->with(['user', 'program', 'batch'])
+            ->with(['user', 'program', 'batch', 'mentor'])
+            ->when($request->filled('program_id'), fn ($query) => $query->where('program_id', $request->integer('program_id')))
+            ->when($request->filled('batch_id'), fn ($query) => $query->where('batch_id', $request->integer('batch_id')))
             ->get();
 
-        $currentTerm = Term::latest('start_date')->first();
-
-        $atRisk = $students->map(function ($student) use ($currentTerm) {
+        $atRisk = $students->map(function ($student) {
             $risks = [];
 
             // Attendance risk: any subject < 75%
@@ -77,17 +123,54 @@ class PmcStudentController extends Controller {
             return $student;
         })->filter(fn($s) => !empty($s->risks));
 
-        // Filter by risk type
         if ($request->filled('risk')) {
             $atRisk = $atRisk->filter(fn($s) => in_array($request->risk, $s->risks));
         }
 
-        $batches  = Batch::whereIn('program_id', $programIds)->orderBy('name')->get();
-        $programs = Program::whereIn('id', $programIds)->get();
+        if ($request->filled('search')) {
+            $search = mb_strtolower($request->string('search')->toString());
+            $atRisk = $atRisk->filter(function ($student) use ($search) {
+                return str_contains(mb_strtolower($student->user->name ?? ''), $search)
+                    || str_contains(mb_strtolower($student->enrollment_number ?? ''), $search)
+                    || str_contains(mb_strtolower($student->program->name ?? ''), $search)
+                    || str_contains(mb_strtolower($student->batch->name ?? ''), $search);
+            });
+        }
 
-        return view('departmental.program-chair.students.at-risk', compact(
-            'atRisk', 'batches', 'programs', 'currentTerm'
-        ));
+        $sort = $request->query('sort', 'student');
+        $direction = $request->query('direction') === 'desc' ? 'desc' : 'asc';
+        $sorters = [
+            'student' => fn ($student) => mb_strtolower($student->user->name ?? ''),
+            'program' => fn ($student) => mb_strtolower($student->program->name ?? ''),
+            'batch' => fn ($student) => mb_strtolower($student->batch->name ?? ''),
+            'risk_count' => fn ($student) => count($student->risks ?? []),
+            'attendance_issues' => fn ($student) => (int) ($student->low_att_count ?? 0),
+        ];
+        $atRisk = $atRisk->sortBy($sorters[$sort] ?? $sorters['student'], SORT_REGULAR, $direction === 'desc');
+
+        return $atRisk->values();
+    }
+
+    private function atRiskFilterSummary(Request $request, $programs, $batches): array
+    {
+        $summary = [];
+        if ($request->filled('search')) {
+            $summary[] = 'Search: '.$request->query('search');
+        }
+        if ($request->filled('program_id')) {
+            $summary[] = 'Program: '.($programs->firstWhere('id', (int) $request->query('program_id'))?->name ?? $request->query('program_id'));
+        }
+        if ($request->filled('batch_id')) {
+            $summary[] = 'Batch: '.($batches->firstWhere('id', (int) $request->query('batch_id'))?->name ?? $request->query('batch_id'));
+        }
+        if ($request->filled('risk')) {
+            $summary[] = 'Risk: '.$request->query('risk');
+        }
+        if ($request->filled('sort')) {
+            $summary[] = 'Sort: '.$request->query('sort').' '.($request->query('direction', 'asc'));
+        }
+
+        return $summary;
     }
 
     // ── Mentor assignment ─────────────────────────────────────────────────────

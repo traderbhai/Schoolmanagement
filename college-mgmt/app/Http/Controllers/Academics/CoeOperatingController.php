@@ -70,10 +70,32 @@ class CoeOperatingController extends Controller
     private function section(Request $request, string $section)
     {
         $this->authorizeCoe($request);
+        $data = $this->coe->section($request->user(), $section, $request->query());
+
+        if ($request->query('export') === 'current') {
+            return $this->exportSection($data, "coe-{$section}.csv");
+        }
 
         return view('academics.coe.section', [
-            'section' => $this->coe->section($request->user(), $section, $request->query()),
+            'section' => $data,
         ]);
+    }
+
+    private function exportSection(array $section, string $filename)
+    {
+        return response()->streamDownload(function () use ($section) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Record', 'Subtitle', 'Status', 'Action']);
+
+            foreach ($section['items'] ?? [] as $item) {
+                fputcsv($handle, [
+                    $item['title'] ?? '',
+                    $item['subtitle'] ?? '',
+                    $item['status'] ?? '',
+                    $item['action'] ?? '',
+                ]);
+            }
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     private function authorizeCoe(Request $request): void

@@ -73,6 +73,15 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ])), false)
             ->assertDontSee('href="#source-list"', false)
             ->assertDontSee('href="#"', false);
+
+        $csv = $this->actingAs($iqac)->get(route('academics.iqac.attainment-monitoring', [
+            'search' => $target->code,
+            'status' => 'CO target missed',
+            'export' => 'current',
+        ]))->assertOk()->streamedContent();
+
+        $this->assertStringContainsString($target->code, $csv);
+        $this->assertStringNotContainsString($other->code, $csv);
     }
 
     public function test_primary_iqac_views_do_not_contain_placeholder_actions_or_broken_form_markup(): void
@@ -111,6 +120,23 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('academics.workspaces.show', 'iqac'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+    }
+
+    public function test_iqac_manager_and_officer_rendered_navigation_links_are_reachable(): void
+    {
+        foreach (['iqac.manager@college.com', 'iqac.officer@college.com'] as $email) {
+            $user = User::where('email', $email)->firstOrFail();
+            $html = $this->actingAs($user)->get(route('academics.iqac.index'))
+                ->assertOk()
+                ->assertDontSee('SERVICE ERROR')
+                ->assertDontSee('Whoops')
+                ->content();
+
+            foreach ($this->internalGetLinks($html) as $path) {
+                $status = $this->actingAs($user)->get($path)->getStatusCode();
+                $this->assertNotContains($status, [403, 404, 500], "{$email} visible link {$path} returned a blocked/broken status.");
+            }
+        }
     }
 
     private function createAttainmentFixture(string $coCode, string $subjectName): CourseOutcome
@@ -163,5 +189,30 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
         $co->attainment_term_id = $term->id;
 
         return $co;
+    }
+
+    private function internalGetLinks(string $html): array
+    {
+        preg_match_all('/href="([^"]+)"/', $html, $matches);
+
+        return collect($matches[1] ?? [])
+            ->reject(fn (string $href) => $href === '#' || str_starts_with($href, 'javascript:') || str_starts_with($href, 'mailto:'))
+            ->map(function (string $href) {
+                $parts = parse_url(html_entity_decode($href));
+                if (! $parts || isset($parts['host']) && ! in_array($parts['host'], ['localhost', '127.0.0.1'], true)) {
+                    return null;
+                }
+
+                $path = $parts['path'] ?? '/';
+                if (preg_match('/\.(json|css|js|png|jpg|jpeg|svg|ico|webmanifest)$/', $path)) {
+                    return null;
+                }
+
+                return $path . (isset($parts['query']) ? '?'.$parts['query'] : '');
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

@@ -78,13 +78,13 @@ class AcademicCourseDeliveryService
                 'subtitle' => ($assignment->subject?->program?->code ?? $assignment->program?->code ?? 'Program') . ' - ' . ($assignment->teacher?->user?->name ?? 'Faculty pending'),
                 'status' => $assignment->is_primary ? 'Primary faculty' : 'Co-faculty',
                 'metric_keys' => array_values(array_filter(['assigned_subjects', $assignment->is_primary ? 'primary_assignments' : 'co_faculty_assignments'])),
-                'action' => route('teacher.timetable.index'),
+                'action' => route('academics.course-delivery.course-load'),
             ])->toBase()->merge($unassigned->map(fn (Subject $subject) => [
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty ownership missing',
                 'status' => 'Unassigned',
                 'metric_keys' => ['unassigned_scoped_subjects'],
-                'action' => route('chair.curriculum.assignments'),
+                'action' => route('academics.course-delivery.course-load'),
             ]))->values(),
         ];
     }
@@ -135,7 +135,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => ($entry->subject?->program?->code ?? 'Program') . ' - timetable publish pending',
                 'status' => 'Draft',
                 'metric_keys' => array_values(array_filter(['draft_sessions', $entry->classroom_id ? null : 'room_pending'])),
-                'action' => route('chair.timetable.builder'),
+                'action' => route('academics.course-delivery.session-delivery'),
             ]))->values(),
         ];
     }
@@ -176,13 +176,13 @@ class AcademicCourseDeliveryService
                 'subtitle' => $row->exception_count . ' absent/late records in scoped courses',
                 'status' => 'Follow-up due',
                 'metric_keys' => ['attendance_risk_students'],
-                'action' => route('chair.students.at-risk'),
+                'action' => route('academics.course-delivery.attendance-interventions'),
             ])->toBase()->merge($recentExceptions->map(fn (Attendance $attendance) => [
                 'title' => $this->studentLabel($attendance->student, $attendance->student_id),
                 'subtitle' => ($attendance->timetableEntry?->subject?->code ?? 'Subject') . ' - ' . $attendance->date?->toDateString(),
                 'status' => ucfirst($attendance->status),
                 'metric_keys' => ['recent_exceptions'],
-                'action' => route('teacher.attendance.mark'),
+                'action' => route('academics.course-delivery.attendance-interventions'),
             ]))->values(),
         ];
     }
@@ -221,7 +221,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => 'Average feedback ' . round((float) $row->avg_rating, 1) . ' from ' . $row->response_count . ' responses',
                 'status' => 'Feedback action',
                 'metric_keys' => ['low_feedback_subjects'],
-                'action' => route('chair.faculty.feedback'),
+                'action' => route('academics.course-delivery.course-engagement'),
             ]))->merge($announcements->map(fn (SubjectAnnouncement $announcement) => [
                 'title' => $announcement->title,
                 'subtitle' => ($announcement->subject?->code ?? 'Subject') . ' - announcement posted',
@@ -262,13 +262,13 @@ class AcademicCourseDeliveryService
                 'subtitle' => $meeting->topic . ' - ' . $meeting->meeting_date?->toDateString(),
                 'status' => ucfirst($meeting->status),
                 'metric_keys' => ['open_mentor_actions', 'meetings_this_week'],
-                'action' => route('teacher.mentor.index'),
+                'action' => route('academics.course-delivery.mentor-actions'),
             ])->toBase()->merge($mentorStudents->map(fn (Student $student) => [
                 'title' => $this->studentLabel($student, $student->id),
                 'subtitle' => 'Assigned mentee - ' . ($student->program?->code ?? 'Program'),
                 'status' => 'Mentor watch',
                 'metric_keys' => ['own_mentees', 'scoped_students'],
-                'action' => route('teacher.mentor.index'),
+                'action' => route('academics.course-delivery.mentor-actions'),
             ]))->values(),
         ];
     }

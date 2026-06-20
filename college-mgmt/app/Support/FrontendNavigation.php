@@ -323,7 +323,7 @@ class FrontendNavigation
                 'groups' => [
                     'Command' => [
                         ['label' => 'PMC Command', 'route' => 'academics.pmc.command'],
-                        ['label' => 'Legacy Dashboard', 'route' => 'chair.dashboard'],
+                        ['label' => 'Legacy Dashboard', 'route' => 'chair.dashboard', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'PMC Workspace', 'route' => 'academics.workspaces.show', 'params' => ['pmc'], 'active' => ['academics.workspaces.*', 'academics.attention.*']],
                         ['label' => 'PMC Operating', 'route' => 'academics.pmc.index', 'active' => 'academics.pmc.*'],
                         ['label' => 'Program Leadership', 'route' => 'academics.program-leadership.index', 'active' => 'academics.program-leadership.*'],
@@ -334,32 +334,32 @@ class FrontendNavigation
                         ['label' => 'Semester Readiness', 'route' => 'academics.pmc.semester-readiness.index'],
                     ],
                     'Curriculum' => [
-                        ['label' => 'Curriculum', 'route' => 'chair.curriculum.index', 'active' => 'chair.curriculum.*'],
+                        ['label' => 'Curriculum', 'route' => 'chair.curriculum.index', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.curriculum.*'],
                         ['label' => 'Curriculum Governance', 'route' => 'academics.pmc.curriculum-governance.index'],
                     ],
                     'Timetable' => [
                         ['label' => 'Course Allocation', 'route' => 'academics.pmc.course-allocation.index'],
                         ['label' => 'Section Builder', 'route' => 'academics.pmc.course-groups.index'],
                         ['label' => 'Timetable Planner', 'route' => 'academics.pmc.timetable-planner.index'],
-                        ['label' => 'Timetable Builder', 'route' => 'chair.timetable.builder', 'active' => 'chair.timetable.*'],
+                        ['label' => 'Timetable Builder', 'route' => 'chair.timetable.builder', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.timetable.*'],
                     ],
                     'Students' => [
-                        ['label' => 'At-Risk Students', 'route' => 'chair.students.at-risk'],
-                        ['label' => 'Leave Approvals', 'route' => 'chair.students.leaves'],
-                        ['label' => 'Condonations', 'route' => 'chair.students.condonations'],
+                        ['label' => 'At-Risk Students', 'route' => 'chair.students.at-risk', 'condition' => 'legacy_program_chair_access'],
+                        ['label' => 'Leave Approvals', 'route' => 'chair.students.leaves', 'condition' => 'legacy_program_chair_access'],
+                        ['label' => 'Condonations', 'route' => 'chair.students.condonations', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'Student Success', 'route' => 'academics.pmc.student-success-v004.index'],
                     ],
                     'Academics / Delivery' => [
-                        ['label' => 'Faculty Workload', 'route' => 'chair.faculty.workload', 'active' => 'chair.faculty.*'],
+                        ['label' => 'Faculty Workload', 'route' => 'chair.faculty.workload', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.faculty.*'],
                         ['label' => 'Faculty Allocation', 'route' => 'academics.pmc.faculty-allocation-v004.index'],
                         ['label' => 'Course Delivery', 'route' => 'academics.pmc.course-delivery.index'],
                     ],
                     'Approvals' => [
-                        ['label' => 'Approvals', 'route' => 'chair.approvals'],
+                        ['label' => 'Approvals', 'route' => 'chair.approvals', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'Approval Cockpit', 'route' => 'academics.pmc.approvals.index'],
                     ],
                     'Reports' => [
-                        ['label' => 'Subject Performance', 'route' => 'chair.reports.subject-performance', 'active' => 'chair.reports.*'],
+                        ['label' => 'Subject Performance', 'route' => 'chair.reports.subject-performance', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.reports.*'],
                         ['label' => 'Analytics', 'route' => 'academics.pmc.analytics.index'],
                         ['label' => 'Policy Audit', 'route' => 'academics.pmc.policy-audit.index'],
                     ],
@@ -418,12 +418,12 @@ class FrontendNavigation
                     'Daily Work' => [
                         ['label' => 'Student Success', 'route' => 'academics.program-leadership.student-success'],
                         ['label' => 'Course Delivery', 'route' => 'academics.program-leadership.course-delivery'],
-                        ['label' => 'Student Monitoring', 'route' => 'chair.students.at-risk', 'active' => 'chair.students.*'],
+                        ['label' => 'Student Monitoring', 'route' => 'chair.students.at-risk', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.students.*'],
                     ],
                     'Reports' => [
                         ['label' => 'Quality Signals', 'route' => 'academics.program-leadership.quality-signals'],
                         ['label' => 'Reports', 'route' => 'academics.program-leadership.reports'],
-                        ['label' => 'Program Reports', 'route' => 'chair.reports.subject-performance', 'active' => 'chair.reports.*'],
+                        ['label' => 'Program Reports', 'route' => 'chair.reports.subject-performance', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.reports.*'],
                     ],
                 ],
             ],
@@ -556,9 +556,14 @@ class FrontendNavigation
                         ['label' => 'Application', 'route' => 'applicant.application.show'],
                         ['label' => 'Documents', 'route' => 'applicant.documents.index'],
                         ['label' => 'Fees', 'route' => 'applicant.fees.index'],
+                        ['label' => 'Admission Operations', 'route' => 'applicant.admission-operations.index', 'active' => 'applicant.admission-operations.*'],
+                        ['label' => 'Offer Letters', 'route' => 'applicant.offer-letters.index', 'active' => 'applicant.offer-letters.*'],
                     ],
                     'Track' => [
                         ['label' => 'Status Tracker', 'route' => 'applicant.status'],
+                    ],
+                    'Settings' => [
+                        ['label' => 'Notifications', 'route' => 'applicant.notifications.edit', 'active' => 'applicant.notifications.*'],
                     ],
                 ],
             ],

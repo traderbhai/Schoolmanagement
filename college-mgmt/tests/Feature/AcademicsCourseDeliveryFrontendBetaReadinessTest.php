@@ -82,7 +82,7 @@ class AcademicsCourseDeliveryFrontendBetaReadinessTest extends TestCase
             ->assertDontSee($other->student->user->name)
             ->assertSee('Visible filter summary: Search: ' . $target->student->user->name . ' | Status: Follow-up due')
             ->assertSee('Export current view')
-            ->assertSee(route('chair.students.at-risk'), false)
+            ->assertSee(route('academics.course-delivery.attendance-interventions'), false)
             ->assertDontSee('href="#source-list"', false)
             ->assertDontSee('href="#"', false);
     }

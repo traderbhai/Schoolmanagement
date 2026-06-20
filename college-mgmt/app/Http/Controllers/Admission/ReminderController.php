@@ -42,6 +42,7 @@ class ReminderController extends Controller
         ]);
 
         $subject = $data['subject_type'] === 'lead' ? Lead::findOrFail($data['subject_id']) : Applicant::findOrFail($data['subject_id']);
+        $this->authorizeSubjectAccess($request, $data['subject_type'], (int) $data['subject_id']);
         $reminders->schedule($subject, $data, $request->user());
 
         return back()->with('success', 'Reminder scheduled.');
@@ -108,5 +109,20 @@ class ReminderController extends Controller
         ]);
 
         return back()->with('success', 'Cadence rule created.');
+    }
+
+    private function authorizeSubjectAccess(Request $request, string $subjectType, int $subjectId): void
+    {
+        $drilldowns = app(\App\Services\AdmissionKpiDrilldownService::class);
+
+        $query = $subjectType === 'lead' ? Lead::query() : Applicant::query();
+
+        if ($subjectType === 'lead') {
+            $drilldowns->applyLeadVisibility($query, $request->user());
+        } else {
+            $drilldowns->applyApplicantVisibility($query, $request->user());
+        }
+
+        abort_unless($query->whereKey($subjectId)->exists(), 403);
     }
 }

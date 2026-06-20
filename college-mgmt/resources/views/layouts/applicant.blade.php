@@ -19,7 +19,7 @@
 
 {{-- ===== TOPBAR ===== --}}
 <div class="topbar">
-    <button class="topbar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+    <button class="topbar-toggle sidebar-mobile-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Open navigation menu">
         <i class="bi bi-list fs-4"></i>
     </button>
     <h1 class="topbar-title d-none d-lg-block mb-0">@yield('page-title', 'Applicant Portal')</h1>

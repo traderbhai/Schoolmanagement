@@ -1545,6 +1545,7 @@ Route::middleware(['auth', 'role:program_chair|hod|dean_academics|admin'])->pref
     // PMC Sprint - Student oversight
     Route::middleware('department.feature:ACAD,academic.approvals')->group(function () {
         Route::get('students/at-risk', [Departmental\PmcStudentController::class, 'atRisk'])->name('students.at-risk');
+        Route::get('students/at-risk/export', [Departmental\PmcStudentController::class, 'exportAtRisk'])->name('students.at-risk.export');
         Route::get('students/mentors', [Departmental\PmcStudentController::class, 'mentors'])->name('students.mentors');
         Route::post('students/mentors/assign', [Departmental\PmcStudentController::class, 'assignMentor'])->name('students.mentors.assign');
         Route::post('students/mentors/bulk', [Departmental\PmcStudentController::class, 'bulkAssignMentor'])->name('students.mentors.bulk');

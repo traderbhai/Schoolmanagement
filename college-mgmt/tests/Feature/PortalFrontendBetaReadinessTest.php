@@ -321,4 +321,160 @@ class PortalFrontendBetaReadinessTest extends TestCase
             $this->assertStringNotContainsString('Stack trace', $contents, $path);
         }
     }
+
+    public function test_portal_visible_navigation_links_are_reachable_for_seeded_roles(): void
+    {
+        foreach ([
+            ['arjun.k@demo.edu', 'student.dashboard'],
+            ['anjali@demo.edu', 'teacher.dashboard'],
+            ['parent@demo.edu', 'parent.dashboard'],
+            ['priya.sharma@applicant.demo', 'applicant.dashboard'],
+        ] as [$email, $routeName]) {
+            $user = User::where('email', $email)->firstOrFail();
+            $response = $this->actingAs($user)->get(route($routeName));
+
+            $response->assertOk()
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false);
+
+            foreach ($this->internalGetLinks($response->getContent()) as $path) {
+                $linkResponse = $this->actingAs($user)->get($path);
+
+                $this->assertNotContains($linkResponse->getStatusCode(), [403, 404, 500], "{$email} visible link failed: {$path}");
+            }
+        }
+    }
+
+    public function test_portal_safe_action_entry_pages_are_reachable_and_guided(): void
+    {
+        $teacher = User::where('email', 'anjali@demo.edu')->firstOrFail();
+        foreach ([
+            'teacher.attendance.mark' => 'Mark Attendance',
+            'teacher.materials.create' => 'Upload Material',
+            'teacher.assignments.create' => 'Create Assignment',
+            'teacher.students.index' => 'My Students',
+        ] as $route => $heading) {
+            $this->actingAs($teacher)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee($heading, false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+        }
+
+        $student = User::where('email', 'arjun.k@demo.edu')->firstOrFail();
+        foreach ([
+            'student.fee-payment.create' => 'Submit Payment Proof',
+            'student.documents.create' => 'Request a Document',
+            'student.grievances.create' => 'Submit Grievance',
+            'student.leave.create' => 'Apply for Leave',
+        ] as $route => $heading) {
+            $this->actingAs($student)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee($heading)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+        }
+
+        $applicant = User::where('email', 'priya.sharma@applicant.demo')->firstOrFail();
+        foreach ([
+            'applicant.checklist' => 'Admission Checklist',
+            'applicant.documents.index' => 'Documents',
+            'applicant.fees.index' => 'Fees &amp; Payments',
+            'applicant.status' => 'Application Status',
+        ] as $route => $heading) {
+            $this->actingAs($applicant)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee($heading, false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+        }
+    }
+
+    public function test_parent_child_detail_links_and_portal_mobile_shell_are_usable(): void
+    {
+        $parent = User::where('email', 'parent@demo.edu')->firstOrFail();
+        $child = \App\Models\ParentProfile::where('user_id', $parent->id)->firstOrFail()
+            ->students()
+            ->firstOrFail();
+
+        foreach ([
+            'parent.children.attendance' => 'Attendance',
+            'parent.children.results' => 'Results',
+            'parent.children.fees' => 'Fees',
+        ] as $route => $heading) {
+            $this->actingAs($parent)
+                ->get(route($route, $child))
+                ->assertOk()
+                ->assertSee($heading)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+        }
+
+        foreach ([
+            ['arjun.k@demo.edu', 'student.dashboard'],
+            ['anjali@demo.edu', 'teacher.dashboard'],
+            ['parent@demo.edu', 'parent.dashboard'],
+            ['priya.sharma@applicant.demo', 'applicant.dashboard'],
+        ] as [$email, $route]) {
+            $user = User::where('email', $email)->firstOrFail();
+
+            $this->actingAs($user)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee('id="mobileSidebar"', false)
+                ->assertSee('sidebar-mobile-toggle', false)
+                ->assertSee('aria-label="Open navigation menu"', false);
+        }
+    }
+
+    public function test_student_personal_lists_show_operational_entries_or_empty_states(): void
+    {
+        $student = User::where('email', 'arjun.k@demo.edu')->firstOrFail();
+
+        foreach ([
+            'student.fees' => ['Fee Status', ['table-responsive', 'No fee demands']],
+            'student.fee-payment.index' => ['Fee Payment Submissions', ['table-responsive', 'No payment submissions yet']],
+            'student.documents.index' => ['Document Requests', ['table-responsive', 'No document requests yet']],
+            'student.feedback.index' => ['Course Feedback', ['Give Feedback', 'No enrolled subjects found for feedback']],
+            'student.grievances.index' => ['Grievances', ['table-responsive', 'No grievances']],
+        ] as $route => [$heading, $expectedAny]) {
+            $response = $this->actingAs($student)->get(route($route));
+
+            $response->assertOk()
+                ->assertSee($heading)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+
+            $this->assertTrue(
+                collect($expectedAny)->contains(fn ($needle) => str_contains($response->getContent(), $needle)),
+                "{$route} did not expose an operational list or empty state."
+            );
+        }
+    }
+
+    private function internalGetLinks(string $html): array
+    {
+        preg_match_all('/href=["\']([^"\']+)["\']/i', $html, $matches);
+
+        return collect($matches[1] ?? [])
+            ->filter(fn ($href) => ! str_starts_with($href, '#'))
+            ->filter(fn ($href) => ! str_starts_with($href, 'javascript:'))
+            ->filter(fn ($href) => ! str_starts_with($href, 'mailto:'))
+            ->filter(fn ($href) => ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|json|webmanifest)(\?|$)/i', $href))
+            ->map(function ($href) {
+                if (str_starts_with($href, url('/'))) {
+                    return parse_url($href, PHP_URL_PATH) . (parse_url($href, PHP_URL_QUERY) ? '?' . parse_url($href, PHP_URL_QUERY) : '');
+                }
+
+                return $href;
+            })
+            ->filter(fn ($href) => str_starts_with($href, '/'))
+            ->unique()
+            ->values()
+            ->all();
+    }
 }

@@ -13,6 +13,7 @@ use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Course;
+use App\Models\FeeDemand;
 use App\Models\Program;
 use App\Models\Student;
 use App\Models\Subject;
@@ -431,5 +432,139 @@ class AcademicsPmcFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('academics.workspaces.show', 'pmc'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+    }
+
+    public function test_legacy_at_risk_students_list_uses_filtered_total_and_export_current_view(): void
+    {
+        $chair = User::where('email', 'chair@college.com')->firstOrFail();
+        $program = Program::where('is_active', true)->firstOrFail();
+        $batch = Batch::where('program_id', $program->id)->firstOrFail();
+        $term = Term::where('program_id', $program->id)->where('batch_id', $batch->id)->firstOrFail();
+        $course = Course::where('department_id', $program->department_id)->firstOrFail();
+
+        $visibleUser = User::create([
+            'name' => 'ZZZ Legacy At Risk Student',
+            'email' => 'legacy.at-risk.visible@example.test',
+            'password' => 'password',
+        ]);
+        $visibleStudent = Student::create([
+            'user_id' => $visibleUser->id,
+            'department_id' => $program->department_id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'enrollment_number' => 'LEG-RISK-001',
+            'roll_number' => 'LR001',
+            'status' => 'active',
+        ]);
+
+        $hiddenUser = User::create([
+            'name' => 'AAA Legacy Hidden Risk Student',
+            'email' => 'legacy.at-risk.hidden@example.test',
+            'password' => 'password',
+        ]);
+        $hiddenStudent = Student::create([
+            'user_id' => $hiddenUser->id,
+            'department_id' => $program->department_id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'enrollment_number' => 'LEG-RISK-002',
+            'roll_number' => 'LR002',
+            'status' => 'active',
+        ]);
+
+        foreach ([$visibleStudent, $hiddenStudent] as $student) {
+            FeeDemand::create([
+                'student_id' => $student->id,
+                'term_id' => $term->id,
+                'total_amount' => 100000,
+                'scholarship_deduction' => 0,
+                'final_amount' => 100000,
+                'due_date' => now()->subDays(10)->toDateString(),
+                'penalty_amount' => 0,
+                'status' => 'pending',
+            ]);
+        }
+
+        $params = [
+            'search' => 'ZZZ Legacy',
+            'risk' => 'financial',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'sort' => 'student',
+            'direction' => 'asc',
+        ];
+
+        $this->actingAs($chair)
+            ->get(route('chair.students.at-risk', $params))
+            ->assertOk()
+            ->assertSee('ZZZ Legacy At Risk Student')
+            ->assertDontSee('AAA Legacy Hidden Risk Student')
+            ->assertSee('Visible filter summary')
+            ->assertSee('Search: ZZZ Legacy')
+            ->assertSee('Risk: financial')
+            ->assertSee('1</span> students flagged at-risk', false)
+            ->assertSee(e(route('chair.students.at-risk.export', $params)), false)
+            ->assertDontSee('â€”');
+
+        $csv = $this->actingAs($chair)
+            ->get(route('chair.students.at-risk.export', $params))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('ZZZ Legacy At Risk Student', $csv);
+        $this->assertStringNotContainsString('AAA Legacy Hidden Risk Student', $csv);
+    }
+
+    public function test_scoped_pmc_and_program_role_rendered_navigation_links_are_reachable(): void
+    {
+        $cases = [
+            ['pmc.manager@college.com', 'academics.pmc.command'],
+            ['pmc.officer@college.com', 'academics.pmc.command'],
+            ['hod@college.com', 'academics.program-leadership.index'],
+            ['course.coordinator@college.com', 'academics.course-delivery.index'],
+            ['faculty.mentor@college.com', 'academics.course-delivery.index'],
+        ];
+
+        foreach ($cases as [$email, $route]) {
+            $user = User::where('email', $email)->firstOrFail();
+            $html = $this->actingAs($user)->get(route($route))
+                ->assertOk()
+                ->assertDontSee('SERVICE ERROR')
+                ->assertDontSee('Whoops')
+                ->assertDontSee('Laravel')
+                ->content();
+
+            foreach ($this->internalGetLinks($html) as $path) {
+                $status = $this->actingAs($user)->get($path)->getStatusCode();
+                $this->assertNotContains($status, [403, 404, 500], "{$email} visible link {$path} returned a blocked/broken status.");
+            }
+        }
+    }
+
+    private function internalGetLinks(string $html): array
+    {
+        preg_match_all('/href="([^"]+)"/', $html, $matches);
+
+        return collect($matches[1] ?? [])
+            ->reject(fn (string $href) => $href === '#' || str_starts_with($href, 'javascript:') || str_starts_with($href, 'mailto:'))
+            ->map(function (string $href) {
+                $parts = parse_url(html_entity_decode($href));
+                if (! $parts || isset($parts['host']) && ! in_array($parts['host'], ['localhost', '127.0.0.1'], true)) {
+                    return null;
+                }
+
+                $path = $parts['path'] ?? '/';
+                if (preg_match('/\.(json|css|js|png|jpg|jpeg|svg|ico|webmanifest)$/', $path)) {
+                    return null;
+                }
+
+                return $path . (isset($parts['query']) ? '?'.$parts['query'] : '');
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 }

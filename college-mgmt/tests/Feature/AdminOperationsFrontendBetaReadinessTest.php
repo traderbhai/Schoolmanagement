@@ -120,6 +120,50 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->assertDontSee('href="#"', false);
     }
 
+    public function test_admin_dashboard_quick_actions_and_setup_entry_pages_are_reachable(): void
+    {
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee(route('admin.students.create'), false)
+            ->assertSee(route('admin.attendance.index'), false)
+            ->assertSee(route('admin.fees.collect'), false)
+            ->assertSee(route('admin.notices.create'), false)
+            ->assertSee(route('admin.admissions.create'), false)
+            ->assertSee(route('admin.institutional-kpi'), false)
+            ->assertSee(route('admin.aicte-report'), false)
+            ->assertSee(route('admin.audit.index'), false)
+            ->assertDontSee('href="#"', false);
+
+        foreach ([
+            'admin.academic-years.index',
+            'admin.academic-years.create',
+            'admin.departments.index',
+            'admin.departments.create',
+            'admin.programs.index',
+            'admin.programs.create',
+            'admin.batches.index',
+            'admin.batches.create',
+            'admin.users.roles.index',
+            'admin.users.roles.create',
+            'admin.roles.permissions.index',
+            'admin.roles.feature-access.index',
+            'admin.settings',
+            'admin.settings.branding',
+        ] as $route) {
+            $response = $this->actingAs($admin)->get(route($route));
+
+            $response->assertOk()
+                ->assertSee('<title', false)
+                ->assertSee('sidebar-mobile-toggle', false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false);
+        }
+    }
+
     public function test_accounts_and_cmc_branches_use_manifest_grouped_sidebar_links(): void
     {
         $accounts = User::where('email', 'accounts@college.com')->firstOrFail();
@@ -288,6 +332,72 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
         }
     }
 
+    public function test_batch_g_operations_action_entry_surfaces_are_guided(): void
+    {
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+
+        foreach ([
+            'admin.library.books' => ['Add Book', 'Export Current View'],
+            'admin.library.issues' => ['Issue Book', 'Export Current View'],
+            'admin.library.reservations' => ['Issues', 'Export Current View'],
+            'admin.library.fines' => ['Unpaid Library Fines', 'Export Current View'],
+            'admin.hostel.index' => ['Add Block', 'Create Block'],
+            'admin.hostel.allocations' => ['Hostel Allocations', 'Export Current View'],
+            'admin.hostel.fees' => ['Generate Monthly Demands', 'Export Current View'],
+            'admin.hostel.outpasses' => ['Outpasses', 'Export Current View'],
+            'admin.transport.index' => ['Create Route', 'Assign Student To Transport'],
+            'admin.assets.index' => ['Create Consumable Stock Item', 'Add Asset'],
+        ] as $route => $needles) {
+            $response = $this->actingAs($admin)->get(route($route));
+
+            $response->assertOk()
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false)
+                ->assertDontSee('href="#"', false);
+
+            foreach ($needles as $needle) {
+                $response->assertSee($needle);
+            }
+        }
+
+        $accounts = User::where('email', 'accounts@college.com')->firstOrFail();
+        foreach ([
+            'accounts.outstanding' => ['Outstanding Fees', 'Export Current View'],
+            'accounts.reconciliation' => ['Admission Fee Reconciliation', 'Export Current View'],
+        ] as $route => $needles) {
+            $response = $this->actingAs($accounts)->get(route($route));
+
+            $response->assertOk()
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false);
+
+            foreach ($needles as $needle) {
+                $response->assertSee($needle);
+            }
+        }
+
+        $cmc = User::where('email', 'cmc@college.com')->firstOrFail();
+        foreach ([
+            'cmc.drives.create' => ['Create Placement Drive', 'Create Drive', 'confirm('],
+            'cmc.companies.create' => ['Add Company', 'Company Name', 'confirm('],
+            'cmc.events.create' => ['Create Career Event', 'Create Event', 'confirm('],
+        ] as $route => $needles) {
+            $response = $this->actingAs($cmc)->get(route($route));
+
+            $response->assertOk()
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false)
+                ->assertDontSee('href="#"', false);
+
+            foreach ($needles as $needle) {
+                $response->assertSee($needle, false);
+            }
+        }
+    }
+
     public function test_batch_g_mobile_layouts_keep_navigation_and_tables_usable(): void
     {
         $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
@@ -327,5 +437,44 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
         $this->assertStringContainsString('data-bs-target="#mobileSidebar"', $layout);
         $this->assertStringContainsString('.sidebar-mobile', $css);
         $this->assertStringContainsString('overflow-y: auto;', $css);
+    }
+
+    public function test_admin_director_and_hod_mobile_shell_and_security_navigation_are_usable(): void
+    {
+        foreach ([
+            ['admin@demo.edu', 'admin.dashboard'],
+            ['director@college.com', 'director.dashboard'],
+            ['hod@college.com', 'hod.dashboard'],
+        ] as [$email, $route]) {
+            $user = User::where('email', $email)->firstOrFail();
+            $response = $this->actingAs($user)->get(route($route));
+
+            $response->assertOk()
+                ->assertSee('id="mobileSidebar"', false)
+                ->assertSee('sidebar-mobile-toggle', false)
+                ->assertSee('data-bs-target="#mobileSidebar"', false)
+                ->assertSee('aria-label="Open navigation menu"', false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Laravel\\', false);
+        }
+
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+
+        foreach ([
+            'admin.roles.permissions.index' => 'Permission Matrix',
+            'admin.users.roles.index' => 'Role Assignments',
+            'admin.roles.feature-access.index' => 'Feature Access Matrix',
+            'admin.settings' => 'System Settings',
+            'admin.audit.index' => 'Audit',
+        ] as $route => $label) {
+            $this->actingAs($admin)
+                ->get(route($route))
+                ->assertOk()
+                ->assertSee($label)
+                ->assertDontSee('href="#"', false)
+                ->assertDontSee('Whoops', false)
+                ->assertDontSee('SERVICE ERROR', false);
+        }
     }
 }
