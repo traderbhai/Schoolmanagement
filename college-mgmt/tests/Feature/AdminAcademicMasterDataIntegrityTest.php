@@ -1066,6 +1066,115 @@ class AdminAcademicMasterDataIntegrityTest extends TestCase
         $this->assertDatabaseMissing('timetable_entries', ['id' => $entry->id]);
     }
 
+    public function test_academic_master_data_cannot_be_created_under_inactive_departments(): void
+    {
+        $this->actingAs($this->admin());
+
+        $inactiveDepartment = Department::factory()->create(['is_active' => false]);
+
+        $this->post(route('admin.programs.store'), [
+            'name' => 'Archived Department Program',
+            'code' => 'ARCH-PROG',
+            'department_id' => $inactiveDepartment->id,
+            'system_type' => 'semester',
+            'duration_years' => 2,
+            'total_terms' => 4,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->post(route('admin.courses.store'), [
+            'department_id' => $inactiveDepartment->id,
+            'name' => 'Archived Department Course',
+            'code' => 'ARCH-COURSE',
+            'description' => 'Should not attach to inactive department.',
+            'duration_years' => 3,
+            'total_semesters' => 6,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->post(route('admin.subjects.store'), [
+            'department_id' => $inactiveDepartment->id,
+            'name' => 'Archived Department Subject',
+            'code' => 'ARCH-SUBJ',
+            'description' => 'Should not attach to inactive department.',
+            'credits' => 3,
+            'type' => 'theory',
+            'hours_per_week' => 3,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->assertDatabaseMissing('programs', ['code' => 'ARCH-PROG']);
+        $this->assertDatabaseMissing('courses', ['code' => 'ARCH-COURSE']);
+        $this->assertDatabaseMissing('subjects', ['code' => 'ARCH-SUBJ']);
+    }
+
+    public function test_academic_master_data_cannot_be_moved_to_inactive_departments(): void
+    {
+        $this->actingAs($this->admin());
+
+        $activeDepartment = Department::factory()->create(['is_active' => true]);
+        $inactiveDepartment = Department::factory()->create(['is_active' => false]);
+        $program = Program::factory()->create(['department_id' => $activeDepartment->id]);
+        $course = Course::factory()->create(['department_id' => $activeDepartment->id]);
+        $subject = Subject::factory()->create([
+            'department_id' => $activeDepartment->id,
+            'credits' => 3,
+            'type' => 'theory',
+            'hours_per_week' => 3,
+        ]);
+
+        $this->put(route('admin.programs.update', $program), [
+            'name' => $program->name,
+            'code' => $program->code,
+            'department_id' => $inactiveDepartment->id,
+            'system_type' => $program->system_type,
+            'duration_years' => $program->duration_years,
+            'total_terms' => $program->total_terms,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->put(route('admin.courses.update', $course), [
+            'department_id' => $inactiveDepartment->id,
+            'name' => $course->name,
+            'code' => $course->code,
+            'description' => $course->description,
+            'duration_years' => $course->duration_years,
+            'total_semesters' => $course->total_semesters,
+            'is_active' => true,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->put(route('admin.subjects.update', $subject), [
+            'department_id' => $inactiveDepartment->id,
+            'name' => $subject->name,
+            'code' => $subject->code,
+            'description' => $subject->description,
+            'credits' => $subject->credits,
+            'type' => $subject->type,
+            'hours_per_week' => $subject->hours_per_week,
+            'is_active' => true,
+        ])->assertSessionHasErrors('department_id');
+
+        $this->assertSame($activeDepartment->id, $program->fresh()->department_id);
+        $this->assertSame($activeDepartment->id, $course->fresh()->department_id);
+        $this->assertSame($activeDepartment->id, $subject->fresh()->department_id);
+    }
+
+    public function test_department_with_active_academic_children_cannot_be_deactivated(): void
+    {
+        $this->actingAs($this->admin());
+
+        $department = Department::factory()->create(['is_active' => true]);
+        Program::factory()->create(['department_id' => $department->id, 'is_active' => true]);
+        Course::factory()->create(['department_id' => $department->id, 'is_active' => true]);
+        Subject::factory()->create(['department_id' => $department->id, 'is_active' => true]);
+
+        $this->put(route('admin.departments.update', $department), [
+            'name' => $department->name,
+            'code' => $department->code,
+            'description' => $department->description,
+            'head_name' => $department->head_name,
+            'is_active' => false,
+        ])->assertSessionHasErrors('is_active');
+
+        $this->assertTrue((bool) $department->fresh()->is_active);
+    }
+
     public function test_empty_master_data_can_still_be_deleted(): void
     {
         $this->actingAs($this->admin());

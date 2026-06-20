@@ -6,9 +6,17 @@
     <div><h3 class="fw-bold mb-1">Admission Calling Desk</h3><div class="text-muted small">One-screen speed mode for telecallers and counsellors.</div></div>
     <div class="d-flex gap-2"><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.counsellor-desk.index') }}">Counsellor Desk</a><a class="btn btn-sm btn-outline-success" href="{{ route('admission.objection-analytics.index') }}">Objections</a></div>
 </div>
+@php
+    $metricLinks = [
+        'attempts_today' => route('admission.counsellor-performance.index'),
+        'contact_rate' => route('admission.counsellor-performance.index'),
+        'callback_due' => route('admission.reminders.index', ['reason' => 'callback_retry']),
+        'parent_due' => route('admission.parent-journeys.index'),
+    ];
+@endphp
 <div class="row g-2 mb-3">
 @foreach(['attempts_today' => $attempts_today, 'contact_rate' => $contact_rate . '%', 'callback_due' => $callback_due, 'parent_due' => $parent_due] as $label => $value)
-    <div class="col-6 col-lg-3"><a class="text-decoration-none text-dark" href="{{ route('admission.calling-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body py-2"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><div class="fs-4 fw-bold">{{ $value }}</div></div></div></a></div>
+    <div class="col-6 col-lg-3"><a class="text-decoration-none text-dark" href="{{ $metricLinks[$label] ?? route('admission.calling-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body py-2"><div class="d-flex justify-content-between"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="fs-4 fw-bold">{{ $value }}</div></div></div></a></div>
 @endforeach
 </div>
 <div class="row g-3">
@@ -40,7 +48,15 @@
                         @endif
                         <div class="col-md-8"><label class="form-label small">Notes</label><input name="notes" class="form-control form-control-sm" value="Discussed program fit, parent decision, and next action."></div>
                         <div class="col-md-4"><label class="form-label small">Next Action</label><input name="next_action" class="form-control form-control-sm" value="Send checklist and schedule follow-up"></div>
-                        <div class="col-12 d-flex flex-wrap gap-2"><button class="btn btn-sm btn-primary">Save Call Outcome</button></form><form method="POST" action="{{ route('admission.call-attempts.skip') }}">@csrf<input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}"><input type="hidden" name="subject_id" value="{{ $active->id }}"><input type="hidden" name="reason" value="Temporarily skipped during calling desk session"><button class="btn btn-sm btn-outline-secondary">Skip</button></form></div>
+                        <div class="col-12"><button class="btn btn-sm btn-primary">Save Call Outcome</button></div>
+                    </form>
+                    <form method="POST" action="{{ route('admission.call-attempts.skip') }}" class="mt-2">
+                        @csrf
+                        <input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}">
+                        <input type="hidden" name="subject_id" value="{{ $active->id }}">
+                        <input type="hidden" name="reason" value="Temporarily skipped during calling desk session">
+                        <button class="btn btn-sm btn-outline-secondary">Skip This Record</button>
+                    </form>
                 @else
                     <div class="text-muted">No eligible calling records found for your current scope.</div>
                 @endif

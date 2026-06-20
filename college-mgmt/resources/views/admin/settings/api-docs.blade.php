@@ -91,7 +91,7 @@
                 <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-warning"></i>Authentication</h6>
             </div>
             <div class="card-body">
-                <p class="small text-muted mb-2">This API uses <strong>Laravel Sanctum</strong> token-based authentication.</p>
+                <p class="small text-muted mb-2">This API uses secure Bearer token authentication.</p>
                 <ol class="small ps-3 mb-0">
                     <li class="mb-1">POST to <code>/api/v1/login</code> with email and password</li>
                     <li class="mb-1">Receive a Bearer token in the response</li>

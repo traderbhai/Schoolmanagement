@@ -354,7 +354,7 @@ class DeanOsController extends Controller
         return view('academics.dean-os.v008.operating-surface', [
             'surface' => $surface,
             'config' => $map[$surface],
-            'data' => app(AcademicDeanOperatingRecordService::class)->dashboard($map[$surface]['record_type']),
+            'data' => app(AcademicDeanOperatingRecordService::class)->dashboard($map[$surface]['record_type'], $request->query()),
         ]);
     }
 

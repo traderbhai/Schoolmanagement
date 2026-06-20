@@ -1379,7 +1379,7 @@ class AcademicPmcV004Service
             'course_delivery_delay' => route('academics.pmc.delivery-risk.index'),
             'marks_pending' => route('academics.pmc.course-delivery.index', ['category' => 'marks_pending']),
             'student_success_risk' => route('academics.pmc.student-success-v004.index', ['risk_band' => 'high']),
-            'overdue_actions' => route('academics.pmc.action-governance.index', ['status' => 'overdue']),
+            'overdue_actions' => route('academics.pmc.action-governance.index', ['due' => 'overdue']),
         ];
     }
 
@@ -1405,6 +1405,11 @@ class AcademicPmcV004Service
         if (! empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(fn ($q) => $q->where('title', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%"));
+        }
+
+        if (($filters['due'] ?? null) === 'overdue') {
+            $query->whereNotIn('status', ['done', 'closed', 'resolved', 'published', 'cancelled'])
+                ->where('due_at', '<', now());
         }
     }
 

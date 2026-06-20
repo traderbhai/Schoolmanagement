@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Subject, Department};
 use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SubjectController extends Controller
 {
@@ -26,7 +27,7 @@ class SubjectController extends Controller
         $this->authorizeAcademicStructure();
 
         $data = $request->validate([
-            'department_id'  => 'required|exists:departments,id',
+            'department_id'  => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
             'name'           => 'required|string|max:255',
             'code'           => 'required|string|max:20|unique:subjects',
             'description'    => 'nullable|string',
@@ -62,6 +63,12 @@ class SubjectController extends Controller
             'is_active'      => 'boolean',
         ]);
 
+        if ($this->movesToInactiveDepartment($subject, $data)) {
+            return back()->withErrors([
+                'department_id' => 'Subjects can be assigned only to active departments.',
+            ])->withInput();
+        }
+
         $structuralFields = ['department_id', 'code', 'credits', 'type', 'hours_per_week'];
         $changesStructure = collect($structuralFields)->contains(
             fn (string $field) => (string) $subject->{$field} !== (string) $data[$field]
@@ -92,5 +99,13 @@ class SubjectController extends Controller
     private function authorizeAcademicStructure(): void
     {
         abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
+    }
+
+    private function movesToInactiveDepartment(Subject $subject, array $data): bool
+    {
+        $departmentId = (int) $data['department_id'];
+
+        return $departmentId !== (int) $subject->department_id
+            && Department::whereKey($departmentId)->where('is_active', false)->exists();
     }
 }

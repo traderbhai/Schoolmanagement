@@ -26,10 +26,10 @@
                     <i class="bi bi-info-circle"></i>
                 </div>
                 <h6 class="fw-bold mb-1">System Info</h6>
-                <p class="text-muted small mb-3">PHP, Laravel, database info</p>
+                <p class="text-muted small mb-3">Runtime, framework, and database information</p>
                 <div class="text-start small">
                     <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">PHP</span><span class="fw-semibold">{{ $phpVersion }}</span></div>
-                    <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Laravel</span><span class="fw-semibold">{{ $laravelVersion }}</span></div>
+                    <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">App Framework</span><span class="fw-semibold">{{ $laravelVersion }}</span></div>
                     <div class="d-flex justify-content-between py-1"><span class="text-muted">Database</span><span class="fw-semibold">SQLite</span></div>
                 </div>
             </div>

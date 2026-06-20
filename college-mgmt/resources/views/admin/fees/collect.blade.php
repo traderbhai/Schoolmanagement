@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 @section('title', 'Collect Fee Payment')
 @section('page-title', 'Collect Fee Payment')
 @section('breadcrumb')
@@ -168,10 +168,10 @@
                     <td>{{ $demand->term->name ?? 'Term' }}</td>
                     <td>{{ $demand->due_date?->format('d M Y') ?? '-' }}</td>
                     <td><span class="badge bg-{{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $demand->status)) }}</span></td>
-                    <td class="text-end">â‚¹{{ number_format($demand->final_amount, 2) }}</td>
-                    <td class="text-end">â‚¹{{ number_format($penalty, 2) }}</td>
+                    <td class="text-end">Rs. {{ number_format($demand->final_amount, 2) }}</td>
+                    <td class="text-end">Rs. {{ number_format($penalty, 2) }}</td>
                     <td class="text-end fw-semibold {{ $outstanding > 0 ? 'text-danger' : 'text-success' }}">
-                        â‚¹{{ number_format($outstanding, 2) }}
+                        Rs. {{ number_format($outstanding, 2) }}
                     </td>
                 </tr>
             @endforeach
@@ -179,9 +179,9 @@
             <tfoot class="table-light">
                 <tr>
                     <td colspan="3" class="fw-bold">Outstanding Total</td>
-                    <td class="text-end fw-bold">â‚¹{{ number_format($studentDemands->sum('final_amount'), 2) }}</td>
-                    <td class="text-end fw-bold">â‚¹{{ number_format($studentDemands->whereIn('status', ['pending', 'partially_paid', 'overdue'])->sum('penalty_amount'), 2) }}</td>
-                    <td class="text-end fw-bold text-danger">â‚¹{{ number_format($balanceDue, 2) }}</td>
+                    <td class="text-end fw-bold">Rs. {{ number_format($studentDemands->sum('final_amount'), 2) }}</td>
+                    <td class="text-end fw-bold">Rs. {{ number_format($studentDemands->whereIn('status', ['pending', 'partially_paid', 'overdue'])->sum('penalty_amount'), 2) }}</td>
+                    <td class="text-end fw-bold text-danger">Rs. {{ number_format($balanceDue, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -246,3 +246,4 @@
 </script>
 @endpush
 @endsection
+

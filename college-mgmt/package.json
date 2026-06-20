@@ -4,7 +4,10 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "frontend:build": "vite build",
+        "frontend:smoke": "node scripts/frontend-smoke.mjs",
+        "frontend:smoke:mobile": "node scripts/frontend-smoke.mjs --mobile"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

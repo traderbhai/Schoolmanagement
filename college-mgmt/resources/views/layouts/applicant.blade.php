@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'EduManage — Applicant Portal')</title>
+    <title>@yield('title', 'EduManage - Applicant Portal')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -14,59 +14,7 @@
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
-    <a class="sidebar-brand" href="{{ route('applicant.dashboard') }}">
-        <span class="brand-icon"><i class="bi bi-mortarboard-fill"></i></span>
-        <span>
-            <div class="brand-text">EduManage</div>
-            <div class="brand-sub">Applicant Portal</div>
-        </span>
-    </a>
-
-    <div class="mt-2 pb-4 flex-grow-1">
-        <div class="section-label">Main</div>
-        <a href="{{ route('applicant.dashboard') }}" class="nav-link @if(request()->routeIs('applicant.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Application</div>
-        <a href="{{ route('applicant.application.show') }}" class="nav-link @if(request()->routeIs('applicant.application.*')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> My Application
-        </a>
-        <a href="{{ route('applicant.checklist') }}" class="nav-link @if(request()->routeIs('applicant.checklist')) active @endif">
-            <i class="bi bi-list-check"></i> Admission Checklist
-        </a>
-        <a href="{{ route('applicant.documents.index') }}" class="nav-link @if(request()->routeIs('applicant.documents')) active @endif">
-            <i class="bi bi-folder2-open"></i> Documents
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Track</div>
-        <a href="{{ route('applicant.status') }}" class="nav-link @if(request()->routeIs('applicant.status')) active @endif">
-            <i class="bi bi-clipboard2-check"></i> Status Tracker
-        </a>
-        <a href="{{ route('applicant.fees.index') }}" class="nav-link @if(request()->routeIs('applicant.fees.*')) active @endif">
-            <i class="bi bi-cash-coin"></i> Fees & Payments
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Account</div>
-        <a href="{{ route('profile.edit') }}" class="nav-link">
-            <i class="bi bi-gear"></i> Account Settings
-        </a>
-    </div>
-
-    <div class="sidebar-footer">
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                <i class="bi bi-box-arrow-left"></i> Logout
-            </button>
-        </form>
-    </div>
+    <x-ui.manifest-sidebar role="applicant" brand-sub="Applicant Portal" brand-icon="bi-mortarboard-fill" />
 </div>
 
 {{-- ===== TOPBAR ===== --}}
@@ -93,26 +41,13 @@
         <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body p-0">
-        <div class="mt-2 pb-4">
-            <a href="{{ route('applicant.dashboard') }}" class="nav-link @if(request()->routeIs('applicant.dashboard')) active @endif">
-                <i class="bi bi-speedometer2"></i> Dashboard
-            </a>
-            <a href="{{ route('applicant.application.show') }}" class="nav-link @if(request()->routeIs('applicant.application.*')) active @endif">
-                <i class="bi bi-file-earmark-text"></i> My Application
-            </a>
-            <a href="{{ route('applicant.checklist') }}" class="nav-link @if(request()->routeIs('applicant.checklist')) active @endif">
-                <i class="bi bi-list-check"></i> Admission Checklist
-            </a>
-            <a href="{{ route('applicant.documents.index') }}" class="nav-link @if(request()->routeIs('applicant.documents')) active @endif">
-                <i class="bi bi-folder2-open"></i> Documents
-            </a>
-            <a href="{{ route('applicant.status') }}" class="nav-link @if(request()->routeIs('applicant.status')) active @endif">
-                <i class="bi bi-clipboard2-check"></i> Status Tracker
-            </a>
-            <a href="{{ route('applicant.fees.index') }}" class="nav-link @if(request()->routeIs('applicant.fees.*')) active @endif">
-                <i class="bi bi-cash-coin"></i> Fees & Payments
-            </a>
-        </div>
+        <x-ui.manifest-sidebar
+            role="applicant"
+            brand-sub="Applicant Portal"
+            brand-icon="bi-mortarboard-fill"
+            :show-brand="false"
+            :show-footer="false"
+        />
     </div>
 </div>
 

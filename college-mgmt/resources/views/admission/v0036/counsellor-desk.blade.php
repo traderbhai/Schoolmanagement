@@ -19,9 +19,17 @@
     <div class="d-flex flex-wrap gap-2"><a href="{{ route('admission.call-queue.index') }}" class="btn btn-primary btn-sm">Call Queue</a><a href="{{ route('admission.counsellor-performance.index') }}" class="btn btn-outline-success btn-sm">Performance</a><a href="{{ route('admission.script-compliance.index') }}" class="btn btn-outline-dark btn-sm">Scripts</a><a href="{{ route('admission.objection-analytics.index') }}" class="btn btn-outline-warning btn-sm">Objections</a><a href="{{ route('admission.parent-journeys.index') }}" class="btn btn-outline-info btn-sm">Parents</a><a href="{{ route('admission.counsellor-playbooks.index') }}" class="btn btn-outline-primary btn-sm">Playbooks</a></div>
 </div>
 
+@php
+    $statLinks = [
+        'next_calls' => route('admission.calling-desk.index'),
+        'applicant_blockers' => route('admission.applicants.index', ['status' => 'under_review']),
+        'assessment_followups' => route('admission.assessment-control-room.index'),
+        'due_reminders' => route('admission.reminders.index'),
+    ];
+@endphp
 <div class="row g-2 mb-3">
 @foreach($desk['stats'] as $label => $value)
-    <div class="col-6 col-lg-3"><a class="metric-link" href="{{ route('admission.counsellor-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><div class="fs-4 fw-bold">{{ $value }}</div></div></div></a></div>
+    <div class="col-6 col-lg-3"><a class="metric-link" href="{{ $statLinks[$label] ?? route('admission.counsellor-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body"><div class="d-flex justify-content-between"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="fs-4 fw-bold">{{ $value }}</div></div></div></a></div>
 @endforeach
 </div>
 
@@ -32,7 +40,7 @@
             <div class="list-group list-group-flush">
                 @forelse($desk['nextBestCalls'] as $lead)
                     <a class="list-group-item list-group-item-action d-flex justify-content-between gap-2" href="{{ route('admission.leads.show', $lead) }}">
-                        <span><strong>{{ $lead->name }}</strong><div class="small text-muted">{{ $lead->phone }} · {{ $lead->program?->name }} · {{ $lead->next_action }}</div></span>
+                        <span><strong>{{ $lead->name }}</strong><div class="small text-muted">{{ $lead->phone }} | {{ $lead->program?->name }} | {{ $lead->next_action }}</div></span>
                         <span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span>
                     </a>
                 @empty
@@ -47,7 +55,7 @@
                 @forelse($desk['applicantBlockers'] as $applicant)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.applicants.show', $applicant) }}">
                         <strong>{{ $applicant->user?->name ?? $applicant->application_number }}</strong>
-                        <div class="small text-muted">{{ $applicant->status_label }} · {{ $applicant->program?->name }} · {{ $applicant->next_action }}</div>
+                        <div class="small text-muted">{{ $applicant->status_label }} | {{ $applicant->program?->name }} | {{ $applicant->next_action }}</div>
                     </a>
                 @empty
                     <div class="list-group-item text-muted">No applicant blockers.</div>
@@ -61,7 +69,7 @@
                 @forelse($desk['assessmentFollowups'] as $assignment)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.assessment-control-room.index') }}">
                         <strong>{{ $assignment->applicant?->user?->name }}</strong>
-                        <div class="small text-muted">{{ $assignment->panel?->name }} · {{ ucwords(str_replace('_', ' ', $assignment->lifecycle_status)) }}</div>
+                        <div class="small text-muted">{{ $assignment->panel?->name }} | {{ ucwords(str_replace('_', ' ', $assignment->lifecycle_status)) }}</div>
                     </a>
                 @empty
                     <div class="list-group-item text-muted">No assessment follow-ups.</div>
@@ -76,7 +84,7 @@
             <div class="list-group list-group-flush">
                 @forelse($desk['reminders'] as $reminder)
                     <div class="list-group-item d-flex justify-content-between gap-2">
-                        <span><strong>{{ ucfirst(str_replace('_', ' ', $reminder->reason)) }}</strong><div class="small text-muted">{{ class_basename($reminder->subject_type) }} #{{ $reminder->subject_id }} · {{ optional($reminder->due_at)->format('d M H:i') }}</div></span>
+                        <span><strong>{{ ucfirst(str_replace('_', ' ', $reminder->reason)) }}</strong><div class="small text-muted">{{ class_basename($reminder->subject_type) }} #{{ $reminder->subject_id }} | {{ optional($reminder->due_at)->format('d M H:i') }}</div></span>
                         <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
                     </div>
                 @empty

@@ -69,6 +69,14 @@ class ExamController extends Controller
     public function index()
     {
         $teacher = auth()->user()->teacher;
+        if (! $teacher) {
+            $semesters = Semester::orderByDesc('id')->get();
+            $exams = collect();
+
+            return view('teacher.exams.index', compact('exams', 'semesters'))
+                ->with('warning', 'Your teacher profile is not linked yet. Exams will appear after the profile is assigned.');
+        }
+
         // Subjects this teacher teaches (via timetable entries)
         $subjectIds = TimetableEntry::where('teacher_id', $teacher->id)
             ->where('is_active', true)->pluck('subject_id')->unique();

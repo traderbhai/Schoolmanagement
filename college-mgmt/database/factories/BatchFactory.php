@@ -19,11 +19,13 @@ class BatchFactory extends Factory
      */
     public function definition(): array
     {
+        $sequence = self::$codeSequence++;
+
         return [
             'program_id'       => \App\Models\Program::factory(),
             'academic_year_id' => \App\Models\AcademicYear::factory(),
-            'name'             => 'Batch ' . $this->faker->year,
-            'code'             => sprintf('B%06d', self::$codeSequence++),
+            'name'             => sprintf('Batch %06d', $sequence),
+            'code'             => sprintf('B%06d', $sequence),
             'start_date'       => now()->startOfYear(),
             'end_date'         => now()->endOfYear(),
             'intake_capacity'  => 60,

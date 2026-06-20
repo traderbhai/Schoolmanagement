@@ -78,7 +78,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => ($assignment->subject?->program?->code ?? $assignment->program?->code ?? 'Program') . ' - ' . ($assignment->teacher?->user?->name ?? 'Faculty pending'),
                 'status' => $assignment->is_primary ? 'Primary faculty' : 'Co-faculty',
                 'action' => route('teacher.timetable.index'),
-            ])->merge($unassigned->map(fn (Subject $subject) => [
+            ])->toBase()->merge($unassigned->map(fn (Subject $subject) => [
                 'title' => $subject->name,
                 'subtitle' => ($subject->program?->code ?? 'Program') . ' - faculty ownership missing',
                 'status' => 'Unassigned',
@@ -127,7 +127,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => $entry->day_name . ' - ' . ($entry->slot?->name ?? 'Slot pending') . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
                 'status' => ucfirst($entry->status ?? 'draft'),
                 'action' => route('teacher.attendance.mark'),
-            ])->merge($draftEntries->map(fn (TimetableEntry $entry) => [
+            ])->toBase()->merge($draftEntries->map(fn (TimetableEntry $entry) => [
                 'title' => $entry->subject?->name ?? 'Session #' . $entry->id,
                 'subtitle' => ($entry->subject?->program?->code ?? 'Program') . ' - timetable publish pending',
                 'status' => 'Draft',
@@ -172,7 +172,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => $row->exception_count . ' absent/late records in scoped courses',
                 'status' => 'Follow-up due',
                 'action' => route('chair.students.at-risk'),
-            ])->merge($recentExceptions->map(fn (Attendance $attendance) => [
+            ])->toBase()->merge($recentExceptions->map(fn (Attendance $attendance) => [
                 'title' => $this->studentLabel($attendance->student, $attendance->student_id),
                 'subtitle' => ($attendance->timetableEntry?->subject?->code ?? 'Subject') . ' - ' . $attendance->date?->toDateString(),
                 'status' => ucfirst($attendance->status),
@@ -209,7 +209,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => ($discussion->subject?->code ?? 'Subject') . ' - unresolved discussion',
                 'status' => 'Reply due',
                 'action' => route('student.discussions.show', [$discussion->subject_id, $discussion]),
-            ])->merge($lowFeedback->map(fn ($row) => [
+            ])->toBase()->merge($lowFeedback->map(fn ($row) => [
                 'title' => $this->subjectLabel($row->subject, $row->subject_id),
                 'subtitle' => 'Average feedback ' . round((float) $row->avg_rating, 1) . ' from ' . $row->response_count . ' responses',
                 'status' => 'Feedback action',
@@ -253,7 +253,7 @@ class AcademicCourseDeliveryService
                 'subtitle' => $meeting->topic . ' - ' . $meeting->meeting_date?->toDateString(),
                 'status' => ucfirst($meeting->status),
                 'action' => route('teacher.mentor.index'),
-            ])->merge($mentorStudents->map(fn (Student $student) => [
+            ])->toBase()->merge($mentorStudents->map(fn (Student $student) => [
                 'title' => $this->studentLabel($student, $student->id),
                 'subtitle' => 'Assigned mentee - ' . ($student->program?->code ?? 'Program'),
                 'status' => 'Mentor watch',
@@ -273,9 +273,9 @@ class AcademicCourseDeliveryService
         ];
     }
 
-    public function section(User $user, string $section): array
+    public function section(User $user, string $section, array $filters = []): array
     {
-        return match ($section) {
+        $data = match ($section) {
             'course-load' => $this->courseLoad($user),
             'session-delivery' => $this->sessionDelivery($user),
             'attendance-interventions' => $this->attendanceInterventions($user),
@@ -283,6 +283,39 @@ class AcademicCourseDeliveryService
             'mentor-actions' => $this->mentorActions($user),
             default => abort(404),
         };
+
+        $data['items'] = $this->filterItems($data['items'], $filters)->values();
+        $data['filters'] = $filters;
+        $data['filter_summary'] = $this->filterSummary($filters);
+
+        return $data;
+    }
+
+    private function filterItems(Collection $items, array $filters): Collection
+    {
+        return $items
+            ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
+                $search = mb_strtolower((string) $filters['search']);
+
+                return $collection->filter(fn (array $item) => str_contains(mb_strtolower($item['title'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['subtitle'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['status'] ?? ''), $search));
+            })
+            ->when(! empty($filters['status']), function (Collection $collection) use ($filters) {
+                $status = mb_strtolower((string) $filters['status']);
+
+                return $collection->filter(fn (array $item) => mb_strtolower($item['status'] ?? '') === $status);
+            });
+    }
+
+    private function filterSummary(array $filters): string
+    {
+        $active = collect($filters)
+            ->only(['search', 'status'])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
+
+        return $active->isEmpty() ? 'Showing all scoped course-delivery records.' : $active->join(' | ');
     }
 
     private function visibleSubjectIds(User $user): ?Collection

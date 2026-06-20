@@ -61,6 +61,8 @@ class CoeOperatingController extends Controller
                     'status' => 'Open report',
                     'action' => $report['route'],
                 ])->values(),
+                'filters' => $request->query(),
+                'filter_summary' => 'Showing all scoped CoE reports.',
             ],
         ]);
     }
@@ -70,7 +72,7 @@ class CoeOperatingController extends Controller
         $this->authorizeCoe($request);
 
         return view('academics.coe.section', [
-            'section' => $this->coe->section($request->user(), $section),
+            'section' => $this->coe->section($request->user(), $section, $request->query()),
         ]);
     }
 

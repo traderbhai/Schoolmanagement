@@ -184,7 +184,17 @@
 
 @push('scripts')
 <script>
-const blocksData = @json($blocks->map(fn($b) => ['id' => $b->id, 'rooms' => $b->rooms->map(fn($r) => ['id' => $r->id, 'room_number' => $r->room_number, 'status' => $r->status])]));
+@php
+    $blocksData = $blocks->map(fn ($block) => [
+        'id' => $block->id,
+        'rooms' => $block->rooms->map(fn ($room) => [
+            'id' => $room->id,
+            'room_number' => $room->room_number,
+            'status' => $room->status,
+        ])->values(),
+    ])->values();
+@endphp
+const blocksData = @json($blocksData);
 
 function fillRoomSelect(blockId, roomSelect) {
     roomSelect.innerHTML = '<option value="">- Select Room -</option>';

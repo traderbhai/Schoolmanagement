@@ -80,963 +80,67 @@
     </a>
 
     <div class="mt-2 pb-4 flex-grow-1">
-
         {{-- ===================== ADMIN ===================== --}}
         @hasrole('admin')
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('admin.dashboard') }}" class="nav-link @if(request()->routeIs('admin.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academic Setup</div>
-        <a href="{{ route('admin.academic-years.index') }}" class="nav-link @if(request()->routeIs('admin.academic-years.*')) active @endif">
-            <i class="bi bi-calendar3"></i> Academic Years
-        </a>
-        <a href="{{ route('admin.semesters.index') }}" class="nav-link @if(request()->routeIs('admin.semesters.*')) active @endif">
-            <i class="bi bi-calendar-range"></i> Semesters
-        </a>
-        <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif">
-            <i class="bi bi-building"></i> Departments
-        </a>
-        <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif">
-            <i class="bi bi-book"></i> Subjects
-        </a>
-        <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif">
-            <i class="bi bi-door-open"></i> Classrooms
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academic Structure</div>
-        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif">
-            <i class="bi bi-mortarboard"></i> Programs
-        </a>
-        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif">
-            <i class="bi bi-collection"></i> Batches
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Timetable</div>
-        <a href="{{ route('admin.timetable-slots.index') }}" class="nav-link @if(request()->routeIs('admin.timetable-slots.*')) active @endif">
-            <i class="bi bi-clock"></i> Time Slots
-        </a>
-        <a href="{{ route('admin.timetable.index') }}" class="nav-link @if(request()->routeIs('admin.timetable.index') || request()->routeIs('admin.timetable.create') || request()->routeIs('admin.timetable.edit')) active @endif">
-            <i class="bi bi-grid-3x3-gap"></i> Weekly Timetable
-        </a>
-        <a href="{{ route('admin.timetable.teacher-view') }}" class="nav-link @if(request()->routeIs('admin.timetable.teacher-view')) active @endif">
-            <i class="bi bi-person-lines-fill"></i> Teacher View
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">People</div>
-        <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif">
-            <i class="bi bi-person-badge"></i> Teachers
-        </a>
-        <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif">
-            <i class="bi bi-people"></i> Students
-        </a>
-        <a href="{{ route('admin.document-requests.index') }}" class="nav-link @if(request()->routeIs('admin.document-requests.*')) active @endif">
-            <i class="bi bi-file-earmark-check"></i> Student Documents
-            @php $studentDocsPending = \App\Models\DocumentRequest::whereIn('status', ['pending', 'approved'])->count(); @endphp
-            @if($studentDocsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $studentDocsPending }}</span>@endif
-        </a>
-        <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif">
-            <i class="bi bi-person-lines-fill"></i> Applications
-        </a>
-        <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif">
-            <i class="bi bi-person-plus-fill"></i> Admissions
-        </a>
-        <a href="{{ route('admin.parents.index') }}" class="nav-link @if(request()->routeIs('admin.parents.*')) active @endif">
-            <i class="bi bi-people-fill"></i> Parents
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Admission CRM</div>
-        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> CRM Dashboard
-        </a>
-        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
-            <i class="bi bi-kanban"></i> Workbench
-        </a>
-        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
-            <i class="bi bi-telephone-outbound"></i> Calling Desk
-        </a>
-        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
-            <i class="bi bi-search"></i> Quick Search
-        </a>
-        <div class="section-label">Command</div>
-        <a href="{{ route('admission.assessment-control-room.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-control-room.*')) active @endif">
-            <i class="bi bi-display"></i> Assessment Control
-        </a>
-        <a href="{{ route('admission.counsellor-desk.index') }}" class="nav-link @if(request()->routeIs('admission.counsellor-desk.*')) active @endif">
-            <i class="bi bi-person-workspace"></i> Counsellor Desk
-        </a>
-        <a href="{{ route('admission.integrations.index') }}" class="nav-link @if(request()->routeIs('admission.integrations.*')) active @endif">
-            <i class="bi bi-plug"></i> Integrations
-        </a>
-        <a href="{{ route('admission.automation-simulation.index') }}" class="nav-link @if(request()->routeIs('admission.automation-simulation.*')) active @endif">
-            <i class="bi bi-lightning-charge"></i> Automation Ops
-        </a>
-        <a href="{{ route('admission.saved-views.index') }}" class="nav-link @if(request()->routeIs('admission.saved-views.*')) active @endif">
-            <i class="bi bi-bookmark-check"></i> Saved Views
-        </a>
-        <div class="section-label">Calling</div>
-        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
-            <i class="bi bi-telephone-outbound"></i> Calling Desk
-        </a>
-        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
-            <i class="bi bi-search"></i> Quick Search
-        </a>
-        <div class="section-label">Assessments</div>
-        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*') || request()->routeIs('admission.gd-groups.*') || request()->routeIs('admission.assessment-submissions.*')) active @endif">
-            <i class="bi bi-calendar2-check"></i> Scheduling
-        </a>
-        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif">
-            <i class="bi bi-clipboard2-check"></i> Committee Board
-        </a>
-        <div class="section-label">Offers & Safety</div>
-        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*')) active @endif">
-            <i class="bi bi-ui-checks-grid"></i> Seat Control
-        </a>
-        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif">
-            <i class="bi bi-arrow-left-right"></i> Handoff
-        </a>
-        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*') || request()->routeIs('admission.consent-center.*') || request()->routeIs('admission.template-approvals.*')) active @endif">
-            <i class="bi bi-shield-check"></i> Consent & Safety
-        </a>
-        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif">
-            <i class="bi bi-activity"></i> Integration Health
-        </a>
-        <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif">
-            <i class="bi bi-diagram-3"></i> Process Templates
-        </a>
-        <a href="{{ route('admission.assignment-rules.index') }}" class="nav-link @if(request()->routeIs('admission.assignment-rules.*')) active @endif">
-            <i class="bi bi-shuffle"></i> Assignment Rules
-        </a>
-        <a href="{{ route('admission.workflow-config.index') }}" class="nav-link @if(request()->routeIs('admission.workflow-config.*')) active @endif">
-            <i class="bi bi-sliders"></i> Workflow Config
-        </a>
-        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
-            <i class="bi bi-person-lines-fill"></i> Applicants CRM
-        </a>
-        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
-            <i class="bi bi-calendar-event"></i> Sessions
-        </a>
-        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif">
-            <i class="bi bi-folder-check"></i> Document Queue
-            @php $docsPending = \App\Models\ApplicantDocument::where('status','pending')->count(); @endphp
-            @if($docsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $docsPending }}</span>@endif
-        </a>
-        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif">
-            <i class="bi bi-cash-coin"></i> Payment Queue
-            @php $paymentsPending = \App\Models\AdmissionPayment::where('status','pending')->count(); @endphp
-            @if($paymentsPending > 0)<span class="badge bg-info text-dark ms-1">{{ $paymentsPending }}</span>@endif
-        </a>
-        @if($firstProgram)
-        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
-            <i class="bi bi-list-ol"></i> Merit List
-        </a>
-        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif">
-            <i class="bi bi-envelope-open"></i> Offer Letters
-        </a>
-        @endif
-        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
-            <i class="bi bi-person-check-fill"></i> Enrollments
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Leads & Pipeline</div>
-        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index') || request()->routeIs('admission.leads.show')) active @endif">
-            <i class="bi bi-funnel"></i> All Leads
-            @php $newLeads = \App\Models\Lead::where('status','new')->count(); @endphp
-            @if($newLeads > 0)<span class="badge bg-info text-dark ms-1">{{ $newLeads }}</span>@endif
-        </a>
-        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif">
-            <i class="bi bi-upload"></i> Import Leads
-        </a>
-        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif">
-            <i class="bi bi-calendar3"></i> Follow-up Calendar
-        </a>
-        <a href="{{ route('admission.leads.analytics') }}" class="nav-link @if(request()->routeIs('admission.leads.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Lead Analytics
-        </a>
-        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Admission Reports
-        </a>
-        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif">
-            <i class="bi bi-megaphone"></i> Bulk Communication
-        </a>
-        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif">
-            <i class="bi bi-arrow-counterclockwise"></i> Refunds
-        </a>
-
-        @if($firstProgram)
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Program Tools</div>
-        <a href="{{ route('admission.seat-matrices.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.seat-matrices.*')) active @endif">
-            <i class="bi bi-grid-3x3"></i> Seat Matrix
-        </a>
-        <a href="{{ route('admission.selection-process.steps', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.selection-process.*')) active @endif">
-            <i class="bi bi-diagram-3"></i> Selection Process
-        </a>
-        <a href="{{ route('admission.fee-installments.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.fee-installments.*')) active @endif">
-            <i class="bi bi-credit-card"></i> Fee Installments
-        </a>
-        @endif
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Scholarships</div>
-        <a href="{{ route('admission.scholarship-schemes.index') }}" class="nav-link {{ request()->routeIs('admission.scholarship-schemes.*') ? 'active' : '' }}">
-            <i class="bi bi-award me-2"></i>Scholarship Schemes
-        </a>
-        <a href="{{ route('admission.scholarship-disbursements.index') }}" class="nav-link {{ request()->routeIs('admission.scholarship-disbursements.*') ? 'active' : '' }}">
-            <i class="bi bi-send me-2"></i>Disbursements
-        </a>
-        <a href="{{ route('admin.student-scholarships.index') }}" class="nav-link {{ request()->routeIs('admin.student-scholarships.*') ? 'active' : '' }}">
-            <i class="bi bi-person-check me-2"></i>Student Applications
-            @php $studentScholarshipsPending = \App\Models\StudentScholarshipApplication::whereIn('status', ['pending', 'shortlisted', 'approved'])->count(); @endphp
-            @if($studentScholarshipsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $studentScholarshipsPending }}</span>@endif
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('academics.command-center.index') }}" class="nav-link @if(request()->routeIs('academics.command-center.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> Academics Command
-        </a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Academics Governance
-        </a>
-        <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
-            <i class="bi bi-journal-text"></i> Curriculum Changes
-        </a>
-        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
-            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
-        </a>
-        <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.*')) active @endif">
-            <i class="bi bi-people"></i> Faculty Roster
-        </a>
-        <a href="{{ route('hod.leaves') }}" class="nav-link @if(request()->routeIs('hod.leaves*')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave Approvals
-        </a>
-        <a href="{{ route('admin.leaves.index') }}" class="nav-link @if(request()->routeIs('admin.leaves.*')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave Mgmt
-        </a>
-        <a href="{{ route('admin.faculty.workload') }}" class="nav-link @if(request()->routeIs('admin.faculty.*')) active @endif">
-            <i class="bi bi-bar-chart"></i> Faculty Workload
-        </a>
-        <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif">
-            <i class="bi bi-check2-square"></i> Attendance
-        </a>
-        <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> Exams &amp; Results
-        </a>
-        <a href="{{ route('admin.enrollments.index') }}" class="nav-link @if(request()->routeIs('admin.enrollments.*')) active @endif">
-            <i class="bi bi-person-check"></i> Enrollments
-        </a>
-        <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif">
-            <i class="bi bi-award"></i> Grade Reports
-        </a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> Transcripts
-        </a>
-        <a href="{{ route('exam-cell.exams.create') }}" class="nav-link @if(request()->routeIs('exam-cell.exams.create')) active @endif">
-            <i class="bi bi-plus-circle"></i> Schedule Exam
-        </a>
-        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif">
-            <i class="bi bi-ticket-perforated"></i> Hall Tickets
-        </a>
-        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif">
-            <i class="bi bi-envelope-exclamation"></i> Marks Appeals
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index') || request()->routeIs('admin.fees.show') || request()->routeIs('admin.fees.create') || request()->routeIs('admin.fees.edit') || request()->routeIs('admin.fees.collect') || request()->routeIs('admin.fees.receipt')) active @endif">
-            <i class="bi bi-cash-coin"></i> Fees
-        </a>
-        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif">
-            <i class="bi bi-graph-up"></i> Fee Report
-        </a>
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif">
-            <i class="bi bi-cash-stack"></i> Accounts Dashboard
-        </a>
-        <a href="{{ route('accounts.reconciliation') }}" class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}">
-            <i class="bi bi-arrow-left-right"></i> Reconciliation
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Placement</div>
-        <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif">
-            <i class="bi bi-building"></i> Companies
-        </a>
-        <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif">
-            <i class="bi bi-briefcase"></i> Drives
-        </a>
-        <a href="{{ route('cmc.drives') }}" class="nav-link @if(request()->routeIs('cmc.drives*')) active @endif">
-            <i class="bi bi-briefcase"></i> Placement Drives
-        </a>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Placement Stats
-        </a>
-        <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif">
-            <i class="bi bi-laptop"></i> Internships
-        </a>
-        <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif">
-            <i class="bi bi-people-fill"></i> Alumni Database
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Communication</div>
-        <a href="{{ route('admin.notices.index') }}" class="nav-link @if(request()->routeIs('admin.notices.*')) active @endif">
-            <i class="bi bi-megaphone"></i> Notices
-        </a>
-        <a href="{{ route('admin.bulk-mail.index') }}" class="nav-link @if(request()->routeIs('admin.bulk-mail.*')) active @endif">
-            <i class="bi bi-envelope-paper"></i> Bulk Mail
-        </a>
-        <a href="{{ route('admin.email-logs.index') }}" class="nav-link @if(request()->routeIs('admin.email-logs.*')) active @endif">
-            <i class="bi bi-journal-text"></i> Email Logs
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('approvals.inbox') }}" class="nav-link @if(request()->routeIs('approvals.*')) active @endif">
-            <i class="bi bi-check2-circle"></i> My Approvals
-            @php $pendingCount = \App\Models\ApprovalWorkflow::whereIn('approver_role', auth()->user()->getRoleNames()->toArray())->where('status','pending')->count(); @endphp
-            @if($pendingCount > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingCount }}</span>@endif
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Access Control</div>
-        <a href="{{ route('admin.roles.hierarchy') }}" class="nav-link @if(request()->routeIs('admin.roles.hierarchy')) active @endif">
-            <i class="bi bi-diagram-3"></i> Role Hierarchy
-        </a>
-        <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif">
-            <i class="bi bi-key"></i> Permissions
-        </a>
-        <a href="{{ route('admin.roles.feature-access.index') }}" class="nav-link @if(request()->routeIs('admin.roles.feature-access.*')) active @endif">
-            <i class="bi bi-grid-3x3"></i> Feature Matrix
-        </a>
-        <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif">
-            <i class="bi bi-person-badge"></i> Role Assignments
-        </a>
-        <a href="{{ route('admin.role-assignments.index') }}" class="nav-link @if(request()->routeIs('admin.role-assignments.*')) active @endif">
-            <i class="bi bi-shield-lock"></i> Legacy Assignments
-        </a>
-        <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Org Hierarchy
-        </a>
-        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
-            <i class="bi bi-person-workspace"></i> Department Hierarchy
-        </a>
-        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif">
-            <i class="bi bi-sliders"></i> Department Governance
-        </a>
-        <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif">
-            <i class="bi bi-journal-text"></i> Audit Log
-        </a>
-        <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif">
-            <i class="bi bi-shield-exclamation"></i> Grievances
-            @php $openGrievances = \App\Models\StudentGrievance::whereIn('status',['open'])->count(); @endphp
-            @if($openGrievances > 0)<span class="badge bg-warning text-dark ms-1">{{ $openGrievances }}</span>@endif
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Hostel</div>
-        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
-            <i class="bi bi-building me-2"></i>Hostel
-        </a>
-        <a href="{{ route('admin.transport.index') }}" class="nav-link @if(request()->routeIs('admin.transport.*')) active @endif">
-            <i class="bi bi-bus-front me-2"></i>Transport
-        </a>
-        <a href="{{ route('admin.assets.index') }}" class="nav-link @if(request()->routeIs('admin.assets.*')) active @endif">
-            <i class="bi bi-box-seam me-2"></i>Assets
-        </a>
-        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
-            <i class="bi bi-book-half me-2"></i>Library
-        </a>
-        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
-            <i class="bi bi-book-half me-2"></i>Library
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">System</div>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Analytics
-        </a>
-        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif">
-            <i class="bi bi-speedometer2"></i> Institutional KPI
-        </a>
-        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif">
-            <i class="bi bi-file-earmark-bar-graph"></i> AICTE Report
-        </a>
-        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif">
-            <i class="bi bi-gear"></i> Settings
-        </a>
-        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif">
-            <i class="bi bi-clock-history"></i> Activity Log
-        </a>
-
+        <x-ui.manifest-sidebar role="admin" brand-sub="Admin Portal" brand-icon="bi-grid-1x2-fill" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== DEAN ACADEMICS ===================== --}}
         @hasrole('dean_academics')
 
-        <div class="section-label">Main</div>
-        <a href="{{ route('dean.dashboard') }}" class="nav-link @if(request()->routeIs('dean.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Command</div>
-        <a href="{{ route('academics.dean-os.index') }}" class="nav-link @if(request()->routeIs('academics.dean-os.*')) active @endif">
-            <i class="bi bi-command"></i> Dean OS
-        </a>
-        <a href="{{ route('academics.command-center.index') }}" class="nav-link @if(request()->routeIs('academics.command-center.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> Command Center
-        </a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Governance</div>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Academics Governance
-        </a>
-        <a href="{{ route('academics.hierarchy.index') }}" class="nav-link @if(request()->routeIs('academics.hierarchy.*')) active @endif">
-            <i class="bi bi-diagram-2"></i> Hierarchy
-        </a>
-        <a href="{{ route('academics.permission-matrix.index') }}" class="nav-link @if(request()->routeIs('academics.permission-matrix.*')) active @endif">
-            <i class="bi bi-shield-lock"></i> Permission Matrix
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Operations</div>
-        <a href="{{ route('academics.pmc.index') }}" class="nav-link @if(request()->routeIs('academics.pmc.*')) active @endif">
-            <i class="bi bi-kanban"></i> PMC Operating
-        </a>
-        <a href="{{ route('academics.pmc.command') }}" class="nav-link @if(request()->routeIs('academics.pmc.command')) active @endif">
-            <i class="bi bi-speedometer2"></i> PMC Command
-        </a>
-        <a href="{{ route('academics.coe.index') }}" class="nav-link @if(request()->routeIs('academics.coe.*')) active @endif">
-            <i class="bi bi-clipboard2-data"></i> CoE Operating
-        </a>
-        <a href="{{ route('academics.iqac.index') }}" class="nav-link @if(request()->routeIs('academics.iqac.*')) active @endif">
-            <i class="bi bi-shield-check"></i> IQAC Operating
-        </a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif">
-            <i class="bi bi-mortarboard"></i> Program Leadership
-        </a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif">
-            <i class="bi bi-journal-check"></i> Course Delivery
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('dean.academics') }}" class="nav-link @if(request()->routeIs('dean.academics')) active @endif">
-            <i class="bi bi-mortarboard-fill"></i> Academics Overview
-        </a>
-        <a href="{{ route('dean.programs') }}" class="nav-link @if(request()->routeIs('dean.programs')) active @endif">
-            <i class="bi bi-mortarboard"></i> Programs
-        </a>
-        <a href="{{ route('dean.students') }}" class="nav-link @if(request()->routeIs('dean.students')) active @endif">
-            <i class="bi bi-people"></i> Students
-        </a>
-        <a href="{{ route('dean.attendance') }}" class="nav-link @if(request()->routeIs('dean.attendance')) active @endif">
-            <i class="bi bi-check2-square"></i> Attendance
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Curriculum</div>
-        <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif">
-            <i class="bi bi-journal-text"></i> Curriculum Changes
-        </a>
-        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
-            <i class="bi bi-diagram-3 me-2"></i>OBE Framework
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Exams</div>
-        <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> Exams
-        </a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> Transcripts
-        </a>
-        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif">
-            <i class="bi bi-ticket-perforated"></i> Hall Tickets
-        </a>
-        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif">
-            <i class="bi bi-envelope-exclamation"></i> Marks Appeals
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('dean.approvals') }}" class="nav-link @if(request()->routeIs('dean.approvals')) active @endif">
-            <i class="bi bi-check2-circle"></i> Approvals
-            @php $pendingCount = \App\Models\ApprovalWorkflow::where('approver_role','dean_academics')->where('status','pending')->count(); @endphp
-            @if($pendingCount > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingCount }}</span>@endif
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('academics.dean-os.reports') }}" class="nav-link @if(request()->routeIs('academics.dean-os.reports')) active @endif">
-            <i class="bi bi-file-earmark-bar-graph"></i> Dean Reports
-        </a>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Analytics
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Placement</div>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Placement Stats
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Hostel</div>
-        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif">
-            <i class="bi bi-building me-2"></i>Hostel
-        </a>
-        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif">
-            <i class="bi bi-book-half me-2"></i>Library
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Analytics
-        </a>
-        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif">
-            <i class="bi bi-file-earmark-bar-graph"></i> AICTE Report
-        </a>
+        <x-ui.manifest-sidebar role="dean" brand-sub="Academic Office" brand-icon="bi-command" :show-brand="false" :show-footer="false" />
 
         @endhasrole
 
         {{-- ===================== HOD ===================== --}}
         @hasrole('hod')
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Faculty</div>
-        <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.roster') || request()->routeIs('hod.faculty.roster.alias')) active @endif">
-            <i class="bi bi-people"></i> Faculty Roster
-        </a>
-        <a href="{{ route('hod.faculty.workload') }}" class="nav-link @if(request()->routeIs('hod.faculty.workload')) active @endif">
-            <i class="bi bi-bar-chart"></i> Faculty Workload
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('hod.leaves') }}" class="nav-link @if(request()->routeIs('hod.leaves*')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave Approvals
-        </a>
-        <a href="{{ route('hod.department-performance') }}" class="nav-link @if(request()->routeIs('hod.department-performance')) active @endif">
-            <i class="bi bi-graph-up"></i> Dept Performance
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Grievances</div>
-        <a href="{{ route('hod.grievances.index') }}" class="nav-link @if(request()->routeIs('hod.grievances.*')) active @endif">
-            <i class="bi bi-chat-square-text"></i> Student Grievances
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('hod.approvals') }}" class="nav-link @if(request()->routeIs('hod.approvals')) active @endif">
-            <i class="bi bi-check2-circle"></i> Approvals
-            @php $pendingCount = \App\Models\ApprovalWorkflow::where('approver_role','hod')->where('status','pending')->count(); @endphp
-            @if($pendingCount > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingCount }}</span>@endif
-        </a>
-
+        <x-ui.manifest-sidebar role="hod" brand-sub="Head of Department" brand-icon="bi-building" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== PROGRAM CHAIR ===================== --}}
         @hasrole('program_chair')
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{{ route('academics.workspaces.show', 'pmc') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> PMC Workspace
-        </a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif">
-            <i class="bi bi-mortarboard"></i> Program Leadership
-        </a>
-        <a href="{{ route('academics.pmc.index') }}" class="nav-link @if(request()->routeIs('academics.pmc.*')) active @endif">
-            <i class="bi bi-kanban"></i> PMC Operating
-        </a>
-        <a href="{{ route('academics.pmc.command') }}" class="nav-link @if(request()->routeIs('academics.pmc.command')) active @endif">
-            <i class="bi bi-speedometer2"></i> PMC Command
-        </a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Academics Governance
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Curriculum</div>
-        <a href="{{ route('chair.curriculum.index') }}" class="nav-link @if(request()->routeIs('chair.curriculum.*')) active @endif">
-            <i class="bi bi-journal-bookmark"></i> Curriculum
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Timetable</div>
-        <a href="{{ route('chair.timetable.builder') }}" class="nav-link @if(request()->routeIs('chair.timetable.*')) active @endif">
-            <i class="bi bi-grid-3x3"></i> Timetable Builder
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.at-risk')) active @endif">
-            <i class="bi bi-exclamation-triangle"></i> At-Risk Students
-        </a>
-        <a href="{{ route('chair.students.leaves') }}" class="nav-link @if(request()->routeIs('chair.students.leaves')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave Approvals
-        </a>
-        <a href="{{ route('chair.students.condonations') }}" class="nav-link @if(request()->routeIs('chair.students.condonations')) active @endif">
-            <i class="bi bi-shield-check"></i> Condonations
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Faculty</div>
-        <a href="{{ route('chair.faculty.workload') }}" class="nav-link @if(request()->routeIs('chair.faculty.*')) active @endif">
-            <i class="bi bi-person-badge"></i> Faculty Workload
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('chair.reports.subject-performance') }}" class="nav-link @if(request()->routeIs('chair.reports.*')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Subject Performance
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('chair.approvals') }}" class="nav-link @if(request()->routeIs('chair.approvals')) active @endif">
-            <i class="bi bi-check2-circle"></i> Approvals
-            @php $pendingCount = \App\Models\ApprovalWorkflow::where('approver_role','program_chair')->where('status','pending')->count(); @endphp
-            @if($pendingCount > 0)<span class="badge bg-warning text-dark ms-1">{{ $pendingCount }}</span>@endif
-        </a>
-
+        <x-ui.manifest-sidebar role="pmc" brand-sub="Program Management" brand-icon="bi-kanban" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== EXAM CELL ===================== --}}
         @hasrole('exam_cell')
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{{ route('academics.workspaces.show', 'coe') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> CoE Workspace
-        </a>
-        <a href="{{ route('academics.coe.index') }}" class="nav-link @if(request()->routeIs('academics.coe.*')) active @endif">
-            <i class="bi bi-clipboard2-data"></i> CoE Operating
-        </a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Academics Governance
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Exams</div>
-        <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> All Exams
-        </a>
-        <a href="{{ route('exam-cell.exams.create') }}" class="nav-link @if(request()->routeIs('exam-cell.exams.create')) active @endif">
-            <i class="bi bi-plus-circle"></i> Schedule Exam
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Results</div>
-        <a href="{{ route('exam-cell.results') }}" class="nav-link @if(request()->routeIs('exam-cell.results')) active @endif">
-            <i class="bi bi-award"></i> Results
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Admin</div>
-        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif">
-            <i class="bi bi-ticket-perforated"></i> Hall Tickets
-        </a>
-        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif">
-            <i class="bi bi-envelope-exclamation"></i> Marks Appeals
-        </a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif">
-            <i class="bi bi-file-earmark-text"></i> Transcripts
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Anomalies</div>
-        <a href="{{ route('exam-cell.anomalies.index') }}" class="nav-link @if(request()->routeIs('exam-cell.anomalies.*')) active @endif">
-            <i class="bi bi-exclamation-triangle"></i> Anomaly Log
-        </a>
-
+        <x-ui.manifest-sidebar role="coe" brand-sub="Examination Office" brand-icon="bi-clipboard2-data" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         @if(auth()->user()?->hasAnyRole(['program_director','program_leader','semester_coordinator','course_coordinator','faculty_mentor']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('academics.workspaces.show', 'program') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> Program Workspace
-        </a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif">
-            <i class="bi bi-mortarboard"></i> Program Leadership
-        </a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif">
-            <i class="bi bi-journal-check"></i> Course Delivery
-        </a>
-        <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.*')) active @endif">
-            <i class="bi bi-exclamation-triangle"></i> Student Monitoring
-        </a>
-        <a href="{{ route('chair.reports.subject-performance') }}" class="nav-link @if(request()->routeIs('chair.reports.*')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Program Reports
-        </a>
+        <x-ui.manifest-sidebar role="program_leadership" brand-sub="Program Office" brand-icon="bi-mortarboard" :show-brand="false" :show-footer="false" />
         @endif
 
         @if(auth()->user()?->hasAnyRole(['teacher','faculty']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('teacher.dashboard') }}" class="nav-link @if(request()->routeIs('teacher.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif">
-            <i class="bi bi-journal-check"></i> Course Delivery
-        </a>
-        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif">
-            <i class="bi bi-calendar-week"></i> Timetable
-        </a>
-        <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif">
-            <i class="bi bi-check2-square"></i> Attendance
-        </a>
-        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif">
-            <i class="bi bi-person-hearts"></i> Mentoring
-        </a>
+        <x-ui.manifest-sidebar role="teacher" brand-sub="Teacher Portal" brand-icon="bi-person-badge-fill" :show-brand="false" :show-footer="false" />
         @endif
 
         @if(auth()->user()?->hasAnyRole(['iqac_head','iqac_manager','iqac_officer']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('academics.workspaces.show', 'iqac') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif">
-            <i class="bi bi-display"></i> IQAC Workspace
-        </a>
-        <a href="{{ route('academics.iqac.index') }}" class="nav-link @if(request()->routeIs('academics.iqac.*')) active @endif">
-            <i class="bi bi-shield-check"></i> IQAC Operating
-        </a>
-        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif">
-            <i class="bi bi-diagram-3"></i> OBE Framework
-        </a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.governance.*')) active @endif">
-            <i class="bi bi-diagram-3-fill"></i> Academics Governance
-        </a>
+        <x-ui.manifest-sidebar role="iqac" brand-sub="Quality Office" brand-icon="bi-shield-check" :show-brand="false" :show-footer="false" />
         @endif
 
         {{-- ===================== ACCOUNTS OFFICER ===================== --}}
         @hasrole('accounts_officer')
 
-        <div class="section-label">Main</div>
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Fee Collections</div>
-        <a href="{{ route('accounts.fee-collections') }}" class="nav-link @if(request()->routeIs('accounts.fee-collections')) active @endif">
-            <i class="bi bi-cash-coin"></i> Fee Collections
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Payments</div>
-        <a href="{{ route('accounts.admission-payments') }}" class="nav-link @if(request()->routeIs('accounts.admission-payments')) active @endif">
-            <i class="bi bi-credit-card"></i> Admission Payments
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Finance</div>
-        <a href="{{ route('accounts.outstanding') }}" class="nav-link @if(request()->routeIs('accounts.outstanding')) active @endif">
-            <i class="bi bi-exclamation-circle"></i> Outstanding
-        </a>
-        <a href="{{ route('accounts.reconciliation') }}" class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}">
-            <i class="bi bi-arrow-left-right"></i> Reconciliation
-        </a>
-        <a href="{{ route('accounts.reports') }}" class="nav-link @if(request()->routeIs('accounts.reports')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Reports
-        </a>
+        <x-ui.manifest-sidebar role="accounts" brand-sub="Finance Office" brand-icon="bi-cash-stack" :show-brand="false" :show-footer="false" />
 
         @endhasrole
 
         {{-- ===================== CMC ===================== --}}
         @hasrole('cmc')
 
-        <div class="section-label">Main</div>
-        <a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Placement</div>
-        <a href="{{ route('cmc.drives') }}" class="nav-link @if(request()->routeIs('cmc.drives*')) active @endif">
-            <i class="bi bi-briefcase"></i> Placement Drives
-        </a>
-        <a href="{{ route('cmc.companies') }}" class="nav-link @if(request()->routeIs('cmc.companies*')) active @endif">
-            <i class="bi bi-building"></i> Companies
-        </a>
-        <a href="{{ route('cmc.events') }}" class="nav-link @if(request()->routeIs('cmc.events*')) active @endif">
-            <i class="bi bi-calendar-event"></i> Career Events
-        </a>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Placement Stats
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif">
-            <i class="bi bi-laptop"></i> Internships
-        </a>
-        <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif">
-            <i class="bi bi-people-fill"></i> Alumni Database
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Analytics</div>
-        <a href="{{ route('cmc.analytics') }}" class="nav-link @if(request()->routeIs('cmc.analytics')) active @endif">
-            <i class="bi bi-pie-chart"></i> Analytics
-        </a>
+        <x-ui.manifest-sidebar role="cmc" brand-sub="Placement & Careers" brand-icon="bi-briefcase-fill" :show-brand="false" :show-footer="false" />
 
         @endhasrole
 
         {{-- ===================== DIRECTOR ===================== --}}
         @hasrole('director')
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('director.programs') }}" class="nav-link @if(request()->routeIs('director.programs')) active @endif">
-            <i class="bi bi-mortarboard"></i> Programs
-        </a>
-        <a href="{{ route('director.reports') }}" class="nav-link @if(request()->routeIs('director.reports')) active @endif">
-            <i class="bi bi-file-earmark-bar-graph"></i> Reports
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Analytics</div>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Analytics
-        </a>
-        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif">
-            <i class="bi bi-speedometer2"></i> Institutional KPI
-        </a>
-        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif">
-            <i class="bi bi-file-earmark-bar-graph"></i> AICTE Report
-        </a>
-
+        <x-ui.manifest-sidebar role="director" brand-sub="Institute Management" brand-icon="bi-person-badge" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== ADMISSION HEAD / OFFICER ===================== --}}
         @if($departmentHierarchyService->isAdmissionUser($user))
-
-        <div class="section-label">Main</div>
-        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif">
-            <i class="bi bi-kanban"></i> Workbench
-        </a>
-        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*') || request()->routeIs('admission.call-attempts.*')) active @endif">
-            <i class="bi bi-telephone-outbound"></i> Calling Desk
-        </a>
-        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif">
-            <i class="bi bi-search"></i> Quick Search
-        </a>
-        @if($departmentHierarchyService->canAccessDepartmentGovernance($user, 'ADM'))
-        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif">
-            <i class="bi bi-person-workspace"></i> Department Hierarchy
-        </a>
-        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif">
-            <i class="bi bi-sliders"></i> Department Governance
-        </a>
-        @endif
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Applications</div>
-        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif">
-            <i class="bi bi-person-lines-fill"></i> Applicants
-        </a>
-        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif">
-            <i class="bi bi-folder-check"></i> Document Queue
-            @php $docsPending = \App\Models\ApplicantDocument::where('status','pending')->count(); @endphp
-            @if($docsPending > 0)<span class="badge bg-warning text-dark ms-1">{{ $docsPending }}</span>@endif
-        </a>
-        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif">
-            <i class="bi bi-cash-coin"></i> Payment Queue
-            @php $paymentsPending = \App\Models\AdmissionPayment::where('status','pending')->count(); @endphp
-            @if($paymentsPending > 0)<span class="badge bg-info text-dark ms-1">{{ $paymentsPending }}</span>@endif
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Process</div>
-        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*') || request()->routeIs('admission.gd-groups.*') || request()->routeIs('admission.assessment-submissions.*')) active @endif">
-            <i class="bi bi-calendar2-check"></i> Assessment Scheduling
-        </a>
-        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif">
-            <i class="bi bi-clipboard2-check"></i> Committee Board
-        </a>
-        @if($firstProgram)
-        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif">
-            <i class="bi bi-list-ol"></i> Merit List
-        </a>
-        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif">
-            <i class="bi bi-envelope-open"></i> Offer Letters
-        </a>
-        @endif
-        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif">
-            <i class="bi bi-person-check-fill"></i> Enrollments
-        </a>
-        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*') || request()->routeIs('admission.seat-control.*') || request()->routeIs('admission.waitlist.*') || request()->routeIs('admission.deferrals.*') || request()->routeIs('admission.joining-kit.*')) active @endif">
-            <i class="bi bi-ui-checks-grid"></i> Seat Control
-        </a>
-        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif">
-            <i class="bi bi-arrow-left-right"></i> Handoff
-        </a>
-        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif">
-            <i class="bi bi-calendar-event"></i> Sessions
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Leads</div>
-        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index') || request()->routeIs('admission.leads.show')) active @endif">
-            <i class="bi bi-funnel"></i> All Leads
-            @php $newLeads = \App\Models\Lead::where('status','new')->count(); @endphp
-            @if($newLeads > 0)<span class="badge bg-info text-dark ms-1">{{ $newLeads }}</span>@endif
-        </a>
-        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif">
-            <i class="bi bi-upload"></i> Import Leads
-        </a>
-        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif">
-            <i class="bi bi-calendar3"></i> Follow-up Calendar
-        </a>
-        <a href="{{ route('admission.leads.analytics') }}" class="nav-link @if(request()->routeIs('admission.leads.analytics')) active @endif">
-            <i class="bi bi-graph-up-arrow"></i> Lead Analytics
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif">
-            <i class="bi bi-bar-chart-line"></i> Admission Reports
-        </a>
-        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif">
-            <i class="bi bi-megaphone"></i> Bulk Communication
-        </a>
-        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*') || request()->routeIs('admission.consent-center.*') || request()->routeIs('admission.template-approvals.*')) active @endif">
-            <i class="bi bi-shield-check"></i> Consent & Safety
-        </a>
-        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif">
-            <i class="bi bi-activity"></i> Integration Health
-        </a>
-        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif">
-            <i class="bi bi-arrow-counterclockwise"></i> Refunds
-        </a>
-
+        <x-ui.manifest-sidebar role="admission" brand-sub="CRM & Enrollment" brand-icon="bi-person-plus-fill" :show-brand="false" :show-footer="false" />
         @endif
 
         @if($showDepartmentControls)
@@ -1070,355 +174,61 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
-
         {{-- ===================== ADMIN MOBILE ===================== --}}
         @hasrole('admin')
-        <div class="section-label">Main</div>
-        <a href="{{ route('admin.dashboard') }}" class="nav-link @if(request()->routeIs('admin.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academic Setup</div>
-        <a href="{{ route('admin.academic-years.index') }}" class="nav-link @if(request()->routeIs('admin.academic-years.*')) active @endif"><i class="bi bi-calendar3"></i> Academic Years</a>
-        <a href="{{ route('admin.semesters.index') }}" class="nav-link @if(request()->routeIs('admin.semesters.*')) active @endif"><i class="bi bi-calendar-range"></i> Semesters</a>
-        <a href="{{ route('admin.departments.index') }}" class="nav-link @if(request()->routeIs('admin.departments.*')) active @endif"><i class="bi bi-building"></i> Departments</a>
-        <a href="{{ route('admin.subjects.index') }}" class="nav-link @if(request()->routeIs('admin.subjects.*')) active @endif"><i class="bi bi-book"></i> Subjects</a>
-        <a href="{{ route('admin.classrooms.index') }}" class="nav-link @if(request()->routeIs('admin.classrooms.*')) active @endif"><i class="bi bi-door-open"></i> Classrooms</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academic Structure</div>
-        <a href="{{ route('admin.programs.index') }}" class="nav-link @if(request()->routeIs('admin.programs.*') || request()->routeIs('admin.admission-config.*')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
-        <a href="{{ route('admin.batches.index') }}" class="nav-link @if(request()->routeIs('admin.batches.*')) active @endif"><i class="bi bi-collection"></i> Batches</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Timetable</div>
-        <a href="{{ route('admin.timetable-slots.index') }}" class="nav-link @if(request()->routeIs('admin.timetable-slots.*')) active @endif"><i class="bi bi-clock"></i> Time Slots</a>
-        <a href="{{ route('admin.timetable.index') }}" class="nav-link @if(request()->routeIs('admin.timetable.index')||request()->routeIs('admin.timetable.create')||request()->routeIs('admin.timetable.edit')) active @endif"><i class="bi bi-grid-3x3-gap"></i> Weekly Timetable</a>
-        <a href="{{ route('admin.timetable.teacher-view') }}" class="nav-link @if(request()->routeIs('admin.timetable.teacher-view')) active @endif"><i class="bi bi-person-lines-fill"></i> Teacher View</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">People</div>
-        <a href="{{ route('admin.teachers.index') }}" class="nav-link @if(request()->routeIs('admin.teachers.*')) active @endif"><i class="bi bi-person-badge"></i> Teachers</a>
-        <a href="{{ route('admin.students.index') }}" class="nav-link @if(request()->routeIs('admin.students.*')) active @endif"><i class="bi bi-people"></i> Students</a>
-        <a href="{{ route('admin.document-requests.index') }}" class="nav-link @if(request()->routeIs('admin.document-requests.*')) active @endif"><i class="bi bi-file-earmark-check"></i> Student Documents</a>
-        <a href="{{ route('admin.applicants.index') }}" class="nav-link @if(request()->routeIs('admin.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applications</a>
-        <a href="{{ route('admin.admissions.index') }}" class="nav-link @if(request()->routeIs('admin.admissions.*')) active @endif"><i class="bi bi-person-plus-fill"></i> Admissions</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Admission CRM</div>
-        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> CRM Dashboard</a>
-        <a href="{{ route('admission.command-center.index') }}" class="nav-link @if(request()->routeIs('admission.command-center.*')) active @endif"><i class="bi bi-command"></i> Command Center</a>
-        <a href="{{ route('admission.counsellor-workspace.index') }}" class="nav-link @if(request()->routeIs('admission.counsellor-workspace.*')) active @endif"><i class="bi bi-person-workspace"></i> Counsellor Workspace</a>
-        <a href="{{ route('admission.manager-workspace.index') }}" class="nav-link @if(request()->routeIs('admission.manager-workspace.*')) active @endif"><i class="bi bi-diagram-2"></i> Manager Workspace</a>
-        <a href="{{ route('admission.reminders.index') }}" class="nav-link @if(request()->routeIs('admission.reminders.*')) active @endif"><i class="bi bi-bell"></i> Reminders</a>
-        <a href="{{ route('admission.calendar.index') }}" class="nav-link @if(request()->routeIs('admission.calendar.*')) active @endif"><i class="bi bi-calendar-event"></i> Admission Calendar</a>
-        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
-        <a href="{{ route('admission.calling-desk.index') }}" class="nav-link @if(request()->routeIs('admission.calling-desk.*')||request()->routeIs('admission.call-attempts.*')) active @endif"><i class="bi bi-telephone-outbound"></i> Calling Desk</a>
-        <a href="{{ route('admission.quick-search.index') }}" class="nav-link @if(request()->routeIs('admission.quick-search.*')) active @endif"><i class="bi bi-search"></i> Quick Search</a>
-        <a href="{{ route('admission.call-queue.index') }}" class="nav-link @if(request()->routeIs('admission.call-queue.*')) active @endif"><i class="bi bi-telephone-outbound"></i> Call Queue</a>
-        <a href="{{ route('admission.pipeline.index') }}" class="nav-link @if(request()->routeIs('admission.pipeline.*')) active @endif"><i class="bi bi-columns-gap"></i> Pipeline</a>
-        <a href="{{ route('admission.communication.index') }}" class="nav-link @if(request()->routeIs('admission.communication.*')) active @endif"><i class="bi bi-chat-dots"></i> Communication Hub</a>
-        <a href="{{ route('admission.automations.index') }}" class="nav-link @if(request()->routeIs('admission.automations.*')) active @endif"><i class="bi bi-lightning-charge"></i> Automations</a>
-        <a href="{{ route('admission.scoring.index') }}" class="nav-link @if(request()->routeIs('admission.scoring.*')) active @endif"><i class="bi bi-stars"></i> Lead Scoring</a>
-        <a href="{{ route('admission.journeys.index') }}" class="nav-link @if(request()->routeIs('admission.journeys.*')) active @endif"><i class="bi bi-map"></i> Journeys</a>
-        <a href="{{ route('admission.partners.index') }}" class="nav-link @if(request()->routeIs('admission.partners.*')) active @endif"><i class="bi bi-people-fill"></i> Partners</a>
-        <a href="{{ route('admission.data-quality.index') }}" class="nav-link @if(request()->routeIs('admission.data-quality.*')) active @endif"><i class="bi bi-shield-check"></i> Data Quality</a>
-        <a href="{{ route('admission.forecasting.index') }}" class="nav-link @if(request()->routeIs('admission.forecasting.*')) active @endif"><i class="bi bi-graph-up-arrow"></i> Forecasting</a>
-        <a href="{{ route('admission.approvals.index') }}" class="nav-link @if(request()->routeIs('admission.approvals.*')) active @endif"><i class="bi bi-patch-check"></i> Approvals</a>
-        <a href="{{ route('admission.assessment-panels.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-panels.*')||request()->routeIs('admission.assessment-operations.*')) active @endif"><i class="bi bi-clipboard2-data"></i> Assessment Panels</a>
-        <a href="{{ route('admission.assessment-slots.index') }}" class="nav-link @if(request()->routeIs('admission.assessment-slots.*')||request()->routeIs('admission.gd-groups.*')||request()->routeIs('admission.assessment-submissions.*')) active @endif"><i class="bi bi-calendar2-check"></i> Assessment Scheduling</a>
-        <a href="{{ route('admission.selection-committee.index') }}" class="nav-link @if(request()->routeIs('admission.selection-committee.*')) active @endif"><i class="bi bi-clipboard2-check"></i> Committee Board</a>
-        <a href="{{ route('admission.walk-ins.index') }}" class="nav-link @if(request()->routeIs('admission.walk-ins.*')) active @endif"><i class="bi bi-door-open"></i> Walk-ins</a>
-        <a href="{{ route('admission.manager-reviews.index') }}" class="nav-link @if(request()->routeIs('admission.manager-reviews.*')) active @endif"><i class="bi bi-clipboard-check"></i> Manager Reviews</a>
-        <a href="{{ route('admission.process-templates.index') }}" class="nav-link @if(request()->routeIs('admission.process-templates.*')) active @endif"><i class="bi bi-diagram-3"></i> Process Templates</a>
-        <a href="{{ route('admission.assignment-rules.index') }}" class="nav-link @if(request()->routeIs('admission.assignment-rules.*')) active @endif"><i class="bi bi-shuffle"></i> Assignment Rules</a>
-        <a href="{{ route('admission.workflow-config.index') }}" class="nav-link @if(request()->routeIs('admission.workflow-config.*')) active @endif"><i class="bi bi-sliders"></i> Workflow Config</a>
-        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants</a>
-        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif"><i class="bi bi-folder-check"></i> Document Queue</a>
-        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
-        @if($firstProgram)
-        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
-        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif"><i class="bi bi-envelope-open"></i> Offer Letters</a>
-        @endif
-        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
-        <a href="{{ route('admission.offer-rounds.index') }}" class="nav-link @if(request()->routeIs('admission.offer-rounds.*')||request()->routeIs('admission.seat-control.*')||request()->routeIs('admission.waitlist.*')||request()->routeIs('admission.deferrals.*')||request()->routeIs('admission.joining-kit.*')) active @endif"><i class="bi bi-ui-checks-grid"></i> Seat Control</a>
-        <a href="{{ route('admission.handoff.index') }}" class="nav-link @if(request()->routeIs('admission.handoff.*')) active @endif"><i class="bi bi-arrow-left-right"></i> Handoff</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Leads</div>
-        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>
-        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif"><i class="bi bi-upload"></i> Import Leads</a>
-        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
-        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
-        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
-        <a href="{{ route('admission.communication-safety.index') }}" class="nav-link @if(request()->routeIs('admission.communication-safety.*')||request()->routeIs('admission.consent-center.*')||request()->routeIs('admission.template-approvals.*')) active @endif"><i class="bi bi-shield-check"></i> Consent & Safety</a>
-        <a href="{{ route('admission.integration-health.index') }}" class="nav-link @if(request()->routeIs('admission.integration-health.*')) active @endif"><i class="bi bi-activity"></i> Integration Health</a>
-        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('admin.attendance.index') }}" class="nav-link @if(request()->routeIs('admin.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
-        <a href="{{ route('admin.exams.index') }}" class="nav-link @if(request()->routeIs('admin.exams.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams &amp; Results</a>
-        <a href="{{ route('admin.results.index') }}" class="nav-link @if(request()->routeIs('admin.results.*')) active @endif"><i class="bi bi-award"></i> Grade Reports</a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Transcripts</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Finance</div>
-        <a href="{{ route('admin.fees.index') }}" class="nav-link @if(request()->routeIs('admin.fees.index')) active @endif"><i class="bi bi-cash-coin"></i> Fees</a>
-        <a href="{{ route('admin.fees.report') }}" class="nav-link @if(request()->routeIs('admin.fees.report')) active @endif"><i class="bi bi-graph-up"></i> Fee Report</a>
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif"><i class="bi bi-cash-stack"></i> Accounts</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Placement</div>
-        <a href="{{ route('admin.companies.index') }}" class="nav-link @if(request()->routeIs('admin.companies.*')) active @endif"><i class="bi bi-building"></i> Companies</a>
-        <a href="{{ route('admin.placement-drives.index') }}" class="nav-link @if(request()->routeIs('admin.placement-drives.*')) active @endif"><i class="bi bi-briefcase"></i> Drives</a>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif"><i class="bi bi-bar-chart-line"></i> Placement Stats</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Communication</div>
-        <a href="{{ route('admin.notices.index') }}" class="nav-link @if(request()->routeIs('admin.notices.*')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
-        <a href="{{ route('admin.bulk-mail.index') }}" class="nav-link @if(request()->routeIs('admin.bulk-mail.*')) active @endif"><i class="bi bi-envelope-paper"></i> Bulk Mail</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('approvals.inbox') }}" class="nav-link @if(request()->routeIs('approvals.*')) active @endif"><i class="bi bi-check2-circle"></i> My Approvals</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Access Control</div>
-        <a href="{{ route('admin.roles.hierarchy') }}" class="nav-link @if(request()->routeIs('admin.roles.hierarchy')) active @endif"><i class="bi bi-diagram-3"></i> Role Hierarchy</a>
-        <a href="{{ route('admin.roles.permissions.index') }}" class="nav-link @if(request()->routeIs('admin.roles.permissions.*')) active @endif"><i class="bi bi-key"></i> Permissions</a>
-        <a href="{{ route('admin.users.roles.index') }}" class="nav-link @if(request()->routeIs('admin.users.roles.*')) active @endif"><i class="bi bi-person-badge"></i> Role Assignments</a>
-        <a href="{{ route('admin.org-hierarchy.index') }}" class="nav-link @if(request()->routeIs('admin.org-hierarchy.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Org Hierarchy</a>
-        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif"><i class="bi bi-person-workspace"></i> Department Hierarchy</a>
-        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif"><i class="bi bi-sliders"></i> Department Governance</a>
-        <a href="{{ route('admin.audit.index') }}" class="nav-link @if(request()->routeIs('admin.audit.*')) active @endif"><i class="bi bi-journal-text"></i> Audit Log</a>
-        <a href="{{ route('admin.grievances.index') }}" class="nav-link @if(request()->routeIs('admin.grievances.*')) active @endif"><i class="bi bi-shield-exclamation"></i> Grievances</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">System</div>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
-        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
-        <a href="{{ route('admin.settings') }}" class="nav-link @if(request()->routeIs('admin.settings*')) active @endif"><i class="bi bi-gear"></i> Settings</a>
-        <a href="{{ route('admin.activity-log') }}" class="nav-link @if(request()->routeIs('admin.activity-log')) active @endif"><i class="bi bi-clock-history"></i> Activity Log</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Hostel</div>
-        <a href="{{ route('admin.hostel.index') }}" class="nav-link @if(request()->routeIs('admin.hostel.*')) active @endif"><i class="bi bi-building me-2"></i>Hostel</a>
-        <a href="{{ route('admin.transport.index') }}" class="nav-link @if(request()->routeIs('admin.transport.*')) active @endif"><i class="bi bi-bus-front me-2"></i>Transport</a>
-        <a href="{{ route('admin.assets.index') }}" class="nav-link @if(request()->routeIs('admin.assets.*')) active @endif"><i class="bi bi-box-seam me-2"></i>Assets</a>
-        <a href="{{ route('admin.library.index') }}" class="nav-link @if(request()->routeIs('admin.library.*')) active @endif"><i class="bi bi-book-half me-2"></i>Library</a>
+        <x-ui.manifest-sidebar role="admin" brand-sub="Admin Portal" brand-icon="bi-grid-1x2-fill" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== DEAN ACADEMICS MOBILE ===================== --}}
         @hasrole('dean_academics')
-        <div class="section-label">Main</div>
-        <a href="{{ route('dean.dashboard') }}" class="nav-link @if(request()->routeIs('dean.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Command</div>
-        <a href="{{ route('academics.dean-os.index') }}" class="nav-link @if(request()->routeIs('academics.dean-os.*')) active @endif"><i class="bi bi-command"></i> Dean OS</a>
-        <a href="{{ route('academics.command-center.index') }}" class="nav-link @if(request()->routeIs('academics.command-center.*')) active @endif"><i class="bi bi-display"></i> Command Center</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Operations</div>
-        <a href="{{ route('academics.pmc.index') }}" class="nav-link @if(request()->routeIs('academics.pmc.*')) active @endif"><i class="bi bi-kanban"></i> PMC Operating</a>
-        <a href="{{ route('academics.pmc.command') }}" class="nav-link @if(request()->routeIs('academics.pmc.command')) active @endif"><i class="bi bi-speedometer2"></i> PMC Command</a>
-        <a href="{{ route('academics.coe.index') }}" class="nav-link @if(request()->routeIs('academics.coe.*')) active @endif"><i class="bi bi-clipboard2-data"></i> CoE Operating</a>
-        <a href="{{ route('academics.iqac.index') }}" class="nav-link @if(request()->routeIs('academics.iqac.*')) active @endif"><i class="bi bi-shield-check"></i> IQAC Operating</a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif"><i class="bi bi-mortarboard"></i> Program Leadership</a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif"><i class="bi bi-journal-check"></i> Course Delivery</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('dean.academics') }}" class="nav-link @if(request()->routeIs('dean.academics')) active @endif"><i class="bi bi-mortarboard-fill"></i> Academics</a>
-        <a href="{{ route('dean.programs') }}" class="nav-link @if(request()->routeIs('dean.programs')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
-        <a href="{{ route('dean.students') }}" class="nav-link @if(request()->routeIs('dean.students')) active @endif"><i class="bi bi-people"></i> Students</a>
-        <a href="{{ route('dean.attendance') }}" class="nav-link @if(request()->routeIs('dean.attendance')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Curriculum</div>
-        <a href="{{ route('academic.curriculum-changes.index') }}" class="nav-link @if(request()->routeIs('academic.curriculum-changes.*')) active @endif"><i class="bi bi-journal-text"></i> Curriculum Changes</a>
-        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif"><i class="bi bi-diagram-3 me-1"></i>OBE Framework</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Exams</div>
-        <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif"><i class="bi bi-file-earmark-text"></i> Exams</a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Transcripts</a>
-        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif"><i class="bi bi-ticket-perforated"></i> Hall Tickets</a>
-        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif"><i class="bi bi-envelope-exclamation"></i> Marks Appeals</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('dean.approvals') }}" class="nav-link @if(request()->routeIs('dean.approvals')) active @endif"><i class="bi bi-check2-circle"></i> Approvals</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('academics.dean-os.reports') }}" class="nav-link @if(request()->routeIs('academics.dean-os.reports')) active @endif"><i class="bi bi-file-earmark-bar-graph"></i> Dean Reports</a>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif"><i class="bi bi-bar-chart-line"></i> Placement Stats</a>
+        <x-ui.manifest-sidebar role="dean" brand-sub="Academic Office" brand-icon="bi-command" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== HOD MOBILE ===================== --}}
         @hasrole('hod')
-        <div class="section-label">Main</div>
-        <a href="{{ route('hod.dashboard') }}" class="nav-link @if(request()->routeIs('hod.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Faculty</div>
-        <a href="{{ route('hod.faculty.roster') }}" class="nav-link @if(request()->routeIs('hod.faculty.roster') || request()->routeIs('hod.faculty.roster.alias')) active @endif"><i class="bi bi-people"></i> Faculty Roster</a>
-        <a href="{{ route('hod.faculty.workload') }}" class="nav-link @if(request()->routeIs('hod.faculty.workload')) active @endif"><i class="bi bi-bar-chart"></i> Faculty Workload</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('hod.leaves') }}" class="nav-link @if(request()->routeIs('hod.leaves*')) active @endif"><i class="bi bi-calendar-x"></i> Leave Approvals</a>
-        <a href="{{ route('hod.department-performance') }}" class="nav-link @if(request()->routeIs('hod.department-performance')) active @endif"><i class="bi bi-graph-up"></i> Dept Performance</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Grievances</div>
-        <a href="{{ route('hod.grievances.index') }}" class="nav-link @if(request()->routeIs('hod.grievances.*')) active @endif"><i class="bi bi-chat-square-text"></i> Student Grievances</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('hod.approvals') }}" class="nav-link @if(request()->routeIs('hod.approvals')) active @endif"><i class="bi bi-check2-circle"></i> Approvals</a>
+        <x-ui.manifest-sidebar role="hod" brand-sub="Head of Department" brand-icon="bi-building" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== PROGRAM CHAIR MOBILE ===================== --}}
         @hasrole('program_chair')
-        <div class="section-label">Main</div>
-        <a href="{{ route('chair.dashboard') }}" class="nav-link @if(request()->routeIs('chair.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="{{ route('academics.workspaces.show', 'pmc') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif"><i class="bi bi-display"></i> PMC Workspace</a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif"><i class="bi bi-mortarboard"></i> Program Leadership</a>
-        <a href="{{ route('academics.pmc.index') }}" class="nav-link @if(request()->routeIs('academics.pmc.*')) active @endif"><i class="bi bi-kanban"></i> PMC Operating</a>
-        <a href="{{ route('academics.pmc.command') }}" class="nav-link @if(request()->routeIs('academics.pmc.command')) active @endif"><i class="bi bi-speedometer2"></i> PMC Command</a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Academics Governance</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Curriculum</div>
-        <a href="{{ route('chair.curriculum.index') }}" class="nav-link @if(request()->routeIs('chair.curriculum.*')) active @endif"><i class="bi bi-journal-bookmark"></i> Curriculum</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Timetable</div>
-        <a href="{{ route('chair.timetable.builder') }}" class="nav-link @if(request()->routeIs('chair.timetable.*')) active @endif"><i class="bi bi-grid-3x3"></i> Timetable Builder</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.at-risk')) active @endif"><i class="bi bi-exclamation-triangle"></i> At-Risk Students</a>
-        <a href="{{ route('chair.students.leaves') }}" class="nav-link @if(request()->routeIs('chair.students.leaves')) active @endif"><i class="bi bi-calendar-x"></i> Leave Approvals</a>
-        <a href="{{ route('chair.students.condonations') }}" class="nav-link @if(request()->routeIs('chair.students.condonations')) active @endif"><i class="bi bi-shield-check"></i> Condonations</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Faculty</div>
-        <a href="{{ route('chair.faculty.workload') }}" class="nav-link @if(request()->routeIs('chair.faculty.*')) active @endif"><i class="bi bi-person-badge"></i> Faculty Workload</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('chair.reports.subject-performance') }}" class="nav-link @if(request()->routeIs('chair.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Subject Performance</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Approvals</div>
-        <a href="{{ route('chair.approvals') }}" class="nav-link @if(request()->routeIs('chair.approvals')) active @endif"><i class="bi bi-check2-circle"></i> Approvals</a>
+        <x-ui.manifest-sidebar role="pmc" brand-sub="Program Management" brand-icon="bi-kanban" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== EXAM CELL MOBILE ===================== --}}
         @hasrole('exam_cell')
-        <div class="section-label">Main</div>
-        <a href="{{ route('exam-cell.dashboard') }}" class="nav-link @if(request()->routeIs('exam-cell.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="{{ route('academics.workspaces.show', 'coe') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif"><i class="bi bi-display"></i> CoE Workspace</a>
-        <a href="{{ route('academics.coe.index') }}" class="nav-link @if(request()->routeIs('academics.coe.*')) active @endif"><i class="bi bi-clipboard2-data"></i> CoE Operating</a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Academics Governance</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Exams</div>
-        <a href="{{ route('exam-cell.exams') }}" class="nav-link @if(request()->routeIs('exam-cell.exams') && !request()->routeIs('exam-cell.exams.create')) active @endif"><i class="bi bi-file-earmark-text"></i> All Exams</a>
-        <a href="{{ route('exam-cell.exams.create') }}" class="nav-link @if(request()->routeIs('exam-cell.exams.create')) active @endif"><i class="bi bi-plus-circle"></i> Schedule Exam</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Results</div>
-        <a href="{{ route('exam-cell.results') }}" class="nav-link @if(request()->routeIs('exam-cell.results')) active @endif"><i class="bi bi-award"></i> Results</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Admin</div>
-        <a href="{{ route('exam-cell.hall-tickets') }}" class="nav-link @if(request()->routeIs('exam-cell.hall-tickets*')) active @endif"><i class="bi bi-ticket-perforated"></i> Hall Tickets</a>
-        <a href="{{ route('exam-cell.marks-appeals') }}" class="nav-link @if(request()->routeIs('exam-cell.marks-appeals*')) active @endif"><i class="bi bi-envelope-exclamation"></i> Marks Appeals</a>
-        <a href="{{ route('academic.transcripts.index') }}" class="nav-link @if(request()->routeIs('academic.transcripts.*')) active @endif"><i class="bi bi-file-earmark-text"></i> Transcripts</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Anomalies</div>
-        <a href="{{ route('exam-cell.anomalies.index') }}" class="nav-link @if(request()->routeIs('exam-cell.anomalies.*')) active @endif"><i class="bi bi-exclamation-triangle"></i> Anomaly Log</a>
+        <x-ui.manifest-sidebar role="coe" brand-sub="Examination Office" brand-icon="bi-clipboard2-data" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         @if(auth()->user()?->hasAnyRole(['program_director','program_leader','semester_coordinator','course_coordinator','faculty_mentor']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('academics.workspaces.show', 'program') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif"><i class="bi bi-display"></i> Program Workspace</a>
-        <a href="{{ route('academics.program-leadership.index') }}" class="nav-link @if(request()->routeIs('academics.program-leadership.*')) active @endif"><i class="bi bi-mortarboard"></i> Program Leadership</a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif"><i class="bi bi-journal-check"></i> Course Delivery</a>
-        <a href="{{ route('chair.students.at-risk') }}" class="nav-link @if(request()->routeIs('chair.students.*')) active @endif"><i class="bi bi-exclamation-triangle"></i> Student Monitoring</a>
-        <a href="{{ route('chair.reports.subject-performance') }}" class="nav-link @if(request()->routeIs('chair.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Program Reports</a>
+        <x-ui.manifest-sidebar role="program_leadership" brand-sub="Program Office" brand-icon="bi-mortarboard" :show-brand="false" :show-footer="false" />
         @endif
 
         @if(auth()->user()?->hasAnyRole(['teacher','faculty']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('teacher.dashboard') }}" class="nav-link @if(request()->routeIs('teacher.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="{{ route('academics.course-delivery.index') }}" class="nav-link @if(request()->routeIs('academics.course-delivery.*')) active @endif"><i class="bi bi-journal-check"></i> Course Delivery</a>
-        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif"><i class="bi bi-calendar-week"></i> Timetable</a>
-        <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Attendance</a>
-        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif"><i class="bi bi-person-hearts"></i> Mentoring</a>
+        <x-ui.manifest-sidebar role="teacher" brand-sub="Teacher Portal" brand-icon="bi-person-badge-fill" :show-brand="false" :show-footer="false" />
         @endif
 
         @if(auth()->user()?->hasAnyRole(['iqac_head','iqac_manager','iqac_officer']))
-        <div class="section-label">Main</div>
-        <a href="{{ route('academics.workspaces.show', 'iqac') }}" class="nav-link @if(request()->routeIs('academics.workspaces.*') || request()->routeIs('academics.attention.*')) active @endif"><i class="bi bi-display"></i> IQAC Workspace</a>
-        <a href="{{ route('academics.iqac.index') }}" class="nav-link @if(request()->routeIs('academics.iqac.*')) active @endif"><i class="bi bi-shield-check"></i> IQAC Operating</a>
-        <a href="{{ route('academic.obe.co.index') }}" class="nav-link @if(request()->routeIs('academic.obe.*')) active @endif"><i class="bi bi-diagram-3"></i> OBE Framework</a>
-        <a href="{{ route('academics.governance.index') }}" class="nav-link @if(request()->routeIs('academics.governance.*')) active @endif"><i class="bi bi-diagram-3-fill"></i> Academics Governance</a>
+        <x-ui.manifest-sidebar role="iqac" brand-sub="Quality Office" brand-icon="bi-shield-check" :show-brand="false" :show-footer="false" />
         @endif
 
         {{-- ===================== ACCOUNTS MOBILE ===================== --}}
         @hasrole('accounts_officer')
-        <div class="section-label">Main</div>
-        <a href="{{ route('accounts.dashboard') }}" class="nav-link @if(request()->routeIs('accounts.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Collections</div>
-        <a href="{{ route('accounts.fee-collections') }}" class="nav-link @if(request()->routeIs('accounts.fee-collections')) active @endif"><i class="bi bi-cash-coin"></i> Fee Collections</a>
-        <a href="{{ route('accounts.admission-payments') }}" class="nav-link @if(request()->routeIs('accounts.admission-payments')) active @endif"><i class="bi bi-credit-card"></i> Admission Payments</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Finance</div>
-        <a href="{{ route('accounts.outstanding') }}" class="nav-link @if(request()->routeIs('accounts.outstanding')) active @endif"><i class="bi bi-exclamation-circle"></i> Outstanding</a>
-        <a href="{{ route('accounts.reconciliation') }}" class="nav-link {{ request()->routeIs('accounts.reconciliation') ? 'active' : '' }}"><i class="bi bi-arrow-left-right"></i> Reconciliation</a>
-        <a href="{{ route('accounts.reports') }}" class="nav-link @if(request()->routeIs('accounts.reports')) active @endif"><i class="bi bi-bar-chart-line"></i> Reports</a>
+        <x-ui.manifest-sidebar role="accounts" brand-sub="Finance Office" brand-icon="bi-cash-stack" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== CMC MOBILE ===================== --}}
         @hasrole('cmc')
-        <div class="section-label">Main</div>
-        <a href="{{ route('cmc.dashboard') }}" class="nav-link @if(request()->routeIs('cmc.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Placement</div>
-        <a href="{{ route('cmc.drives') }}" class="nav-link @if(request()->routeIs('cmc.drives*')) active @endif"><i class="bi bi-briefcase"></i> Placement Drives</a>
-        <a href="{{ route('cmc.companies') }}" class="nav-link @if(request()->routeIs('cmc.companies*')) active @endif"><i class="bi bi-building"></i> Companies</a>
-        <a href="{{ route('cmc.events') }}" class="nav-link @if(request()->routeIs('cmc.events*')) active @endif"><i class="bi bi-calendar-event"></i> Career Events</a>
-        <a href="{{ route('cmc.placement-stats') }}" class="nav-link @if(request()->routeIs('cmc.placement-stats')) active @endif"><i class="bi bi-bar-chart-line"></i> Placement Stats</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Students</div>
-        <a href="{{ route('cmc.internships.index') }}" class="nav-link @if(request()->routeIs('cmc.internships.*')) active @endif"><i class="bi bi-laptop"></i> Internships</a>
-        <a href="{{ route('cmc.alumni.index') }}" class="nav-link @if(request()->routeIs('cmc.alumni.*')) active @endif"><i class="bi bi-people-fill"></i> Alumni Database</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Analytics</div>
-        <a href="{{ route('cmc.analytics') }}" class="nav-link @if(request()->routeIs('cmc.analytics')) active @endif"><i class="bi bi-pie-chart"></i> Analytics</a>
+        <x-ui.manifest-sidebar role="cmc" brand-sub="Placement & Careers" brand-icon="bi-briefcase-fill" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== DIRECTOR MOBILE ===================== --}}
         @hasrole('director')
-        <div class="section-label">Main</div>
-        <a href="{{ route('director.dashboard') }}" class="nav-link @if(request()->routeIs('director.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('director.programs') }}" class="nav-link @if(request()->routeIs('director.programs')) active @endif"><i class="bi bi-mortarboard"></i> Programs</a>
-        <a href="{{ route('director.reports') }}" class="nav-link @if(request()->routeIs('director.reports')) active @endif"><i class="bi bi-file-earmark-bar-graph"></i> Reports</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Analytics</div>
-        <a href="{{ route('admin.analytics') }}" class="nav-link @if(request()->routeIs('admin.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Analytics</a>
-        <a href="{{ route('admin.institutional-kpi') }}" class="nav-link @if(request()->routeIs('admin.institutional-kpi')) active @endif"><i class="bi bi-speedometer2"></i> Institutional KPI</a>
-        <a href="{{ route('admin.aicte-report') }}" class="nav-link @if(request()->routeIs('admin.aicte-report*')) active @endif"><i class="bi bi-file-earmark-bar-graph"></i> AICTE Report</a>
+        <x-ui.manifest-sidebar role="director" brand-sub="Institute Management" brand-icon="bi-person-badge" :show-brand="false" :show-footer="false" />
         @endhasrole
 
         {{-- ===================== ADMISSION MOBILE ===================== --}}
         @if($departmentHierarchyService->isAdmissionUser($user))
-        <div class="section-label">Main</div>
-        <a href="{{ route('admission.dashboard') }}" class="nav-link @if(request()->routeIs('admission.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="{{ route('admission.workbench') }}" class="nav-link @if(request()->routeIs('admission.workbench')) active @endif"><i class="bi bi-kanban"></i> Workbench</a>
-        @if($departmentHierarchyService->canAccessDepartmentGovernance($user, 'ADM'))
-        <a href="{{ route('department-hierarchy.index') }}" class="nav-link @if(request()->routeIs('department-hierarchy.*')) active @endif"><i class="bi bi-person-workspace"></i> Department Hierarchy</a>
-        <a href="{{ route('department-governance.index') }}" class="nav-link @if(request()->routeIs('department-governance.*')) active @endif"><i class="bi bi-sliders"></i> Department Governance</a>
-        @endif
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Applications</div>
-        <a href="{{ route('admission.applicants.index') }}" class="nav-link @if(request()->routeIs('admission.applicants.*')) active @endif"><i class="bi bi-person-lines-fill"></i> Applicants</a>
-        <a href="{{ route('admission.documents.queue') }}" class="nav-link @if(request()->routeIs('admission.documents.*')) active @endif"><i class="bi bi-folder-check"></i> Document Queue</a>
-        <a href="{{ route('admission.payments.queue') }}" class="nav-link @if(request()->routeIs('admission.payments.queue')) active @endif"><i class="bi bi-cash-coin"></i> Payment Queue</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Process</div>
-        @if($firstProgram)
-        <a href="{{ route('admission.merit-list.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.merit-list.*')) active @endif"><i class="bi bi-list-ol"></i> Merit List</a>
-        <a href="{{ route('admission.offer-letters.index', $firstProgram) }}" class="nav-link @if(request()->routeIs('admission.offer-letters.*')) active @endif"><i class="bi bi-envelope-open"></i> Offer Letters</a>
-        @endif
-        <a href="{{ route('admission.enrollment.index') }}" class="nav-link @if(request()->routeIs('admission.enrollment.*')) active @endif"><i class="bi bi-person-check-fill"></i> Enrollments</a>
-        <a href="{{ route('admission.sessions.index') }}" class="nav-link @if(request()->routeIs('admission.sessions.*')) active @endif"><i class="bi bi-calendar-event"></i> Sessions</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Leads</div>
-        <a href="{{ route('admission.leads.index') }}" class="nav-link @if(request()->routeIs('admission.leads.index')||request()->routeIs('admission.leads.show')) active @endif"><i class="bi bi-funnel"></i> All Leads</a>
-        <a href="{{ route('admission.leads.import') }}" class="nav-link @if(request()->routeIs('admission.leads.import')) active @endif"><i class="bi bi-upload"></i> Import Leads</a>
-        <a href="{{ route('admission.leads.follow-ups.calendar') }}" class="nav-link @if(request()->routeIs('admission.leads.follow-ups.*')) active @endif"><i class="bi bi-calendar3"></i> Follow-up Calendar</a>
-        <a href="{{ route('admission.leads.analytics') }}" class="nav-link @if(request()->routeIs('admission.leads.analytics')) active @endif"><i class="bi bi-graph-up-arrow"></i> Lead Analytics</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Reports</div>
-        <a href="{{ route('admission.reports.index') }}" class="nav-link @if(request()->routeIs('admission.reports.*')) active @endif"><i class="bi bi-bar-chart-line"></i> Admission Reports</a>
-        <a href="{{ route('admission.bulk-communication.index') }}" class="nav-link @if(request()->routeIs('admission.bulk-communication.*')) active @endif"><i class="bi bi-megaphone"></i> Bulk Communication</a>
-        <a href="{{ route('admission.refunds.index') }}" class="nav-link @if(request()->routeIs('admission.refunds.*')) active @endif"><i class="bi bi-arrow-counterclockwise"></i> Refunds</a>
+        <x-ui.manifest-sidebar role="admission" brand-sub="CRM & Enrollment" brand-icon="bi-person-plus-fill" :show-brand="false" :show-footer="false" />
         @endif
 
         @if($showDepartmentControls)
@@ -1686,3 +496,4 @@
 @stack('scripts')
 </body>
 </html>
+

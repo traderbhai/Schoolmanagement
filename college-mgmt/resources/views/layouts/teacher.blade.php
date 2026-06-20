@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>@yield('title', 'EduManage — Teacher')</title>
+    <title>@yield('title', 'EduManage - Teacher')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -13,63 +13,7 @@
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
-    <a class="sidebar-brand" href="{{ route('teacher.dashboard') }}">
-        <span class="brand-icon"><i class="bi bi-person-badge-fill"></i></span>
-        <span>
-            <div class="brand-text">EduManage</div>
-            <div class="brand-sub">Teacher Portal</div>
-        </span>
-    </a>
-
-    <div class="mt-2 pb-4 flex-grow-1">
-        <div class="section-label">Main</div>
-        <a href="{{ route('teacher.dashboard') }}" class="nav-link @if(request()->routeIs('teacher.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Academics</div>
-        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif">
-            <i class="bi bi-grid-3x3-gap"></i> My Timetable
-        </a>
-        <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif">
-            <i class="bi bi-check2-square"></i> Mark Attendance
-        </a>
-        <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif">
-            <i class="bi bi-pencil-square"></i> Enter Marks
-        </a>
-        <a href="{{ route('teacher.materials.index') }}" class="nav-link @if(request()->routeIs('teacher.materials.*')) active @endif">
-            <i class="bi bi-folder2-open"></i> Study Materials
-        </a>
-        <a href="{{ route('teacher.assignments.index') }}" class="nav-link @if(request()->routeIs('teacher.assignments.*')) active @endif">
-            <i class="bi bi-clipboard2-check"></i> Assignments
-        </a>
-        <a href="{{ route('teacher.announcements.index') }}" class="nav-link @if(request()->routeIs('teacher.announcements.*')) active @endif">
-            <i class="bi bi-megaphone"></i> Announcements
-        </a>
-        <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif">
-            <i class="bi bi-people"></i> My Students
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Mentoring</div>
-        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif">
-            <i class="bi bi-person-hearts"></i> My Mentees
-        </a>
-
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Account</div>
-        <a href="{{ route('teacher.feedback.index') }}" class="nav-link @if(request()->routeIs('teacher.feedback.*')) active @endif">
-            <i class="bi bi-star-half"></i> My Feedback
-        </a>
-        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif">
-            <i class="bi bi-calendar-x"></i> Leave
-        </a>
-        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif">
-            <i class="bi bi-person-circle"></i> My Profile
-        </a>
-    </div>
+    <x-ui.manifest-sidebar role="teacher" brand-sub="Teacher Portal" brand-icon="bi-person-badge-fill" :show-footer="false" />
 </div>
 
 {{-- ===== MOBILE OFFCANVAS SIDEBAR ===== --}}
@@ -85,25 +29,13 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
-        <div class="section-label">Main</div>
-        <a href="{{ route('teacher.dashboard') }}" class="nav-link @if(request()->routeIs('teacher.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Academics</div>
-        <a href="{{ route('teacher.timetable.index') }}" class="nav-link @if(request()->routeIs('teacher.timetable.*')) active @endif"><i class="bi bi-grid-3x3-gap"></i> My Timetable</a>
-        <a href="{{ route('teacher.attendance.mark') }}" class="nav-link @if(request()->routeIs('teacher.attendance.*')) active @endif"><i class="bi bi-check2-square"></i> Mark Attendance</a>
-        <a href="{{ route('teacher.exams.index') }}" class="nav-link @if(request()->routeIs('teacher.exams.*')) active @endif"><i class="bi bi-pencil-square"></i> Enter Marks</a>
-        <a href="{{ route('teacher.materials.index') }}" class="nav-link @if(request()->routeIs('teacher.materials.*')) active @endif"><i class="bi bi-folder2-open"></i> Study Materials</a>
-        <a href="{{ route('teacher.assignments.index') }}" class="nav-link @if(request()->routeIs('teacher.assignments.*')) active @endif"><i class="bi bi-clipboard2-check"></i> Assignments</a>
-        <a href="{{ route('teacher.announcements.index') }}" class="nav-link @if(request()->routeIs('teacher.announcements.*')) active @endif"><i class="bi bi-megaphone"></i> Announcements</a>
-        <a href="{{ route('teacher.students.index') }}" class="nav-link @if(request()->routeIs('teacher.students.*')) active @endif"><i class="bi bi-people"></i> My Students</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Mentoring</div>
-        <a href="{{ route('teacher.mentor.index') }}" class="nav-link @if(request()->routeIs('teacher.mentor.*')) active @endif"><i class="bi bi-person-hearts"></i> My Mentees</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Account</div>
-        <a href="{{ route('teacher.feedback.index') }}" class="nav-link @if(request()->routeIs('teacher.feedback.*')) active @endif"><i class="bi bi-star-half"></i> My Feedback</a>
-        <a href="{{ route('teacher.leaves.index') }}" class="nav-link @if(request()->routeIs('teacher.leaves.*')) active @endif"><i class="bi bi-calendar-x"></i> Leave</a>
-        <a href="{{ route('teacher.profile') }}" class="nav-link @if(request()->routeIs('teacher.profile')) active @endif"><i class="bi bi-person-circle"></i> My Profile</a>
+        <x-ui.manifest-sidebar
+            role="teacher"
+            brand-sub="Teacher Portal"
+            brand-icon="bi-person-badge-fill"
+            :show-brand="false"
+            :show-footer="false"
+        />
     </div>
 </div>
 
@@ -244,7 +176,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// ── Auto-dismiss success/info alerts ──────────────────────
+// Auto-dismiss success/info alerts.
 (function () {
     setTimeout(function () {
         document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {

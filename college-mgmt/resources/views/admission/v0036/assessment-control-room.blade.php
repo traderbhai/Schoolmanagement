@@ -29,10 +29,18 @@
 
 <div class="row g-2 mb-3">
 @foreach($dashboard['stats'] as $label => $value)
+    @php
+        $metricUrl = match ($label) {
+            'pending_scores' => route('admission.evaluator-scoring.index'),
+            'no_show', 'rescheduled' => route('admission.assessment-slots.index'),
+            'sessions_today', 'upcoming_sessions' => route('admission.sessions.index'),
+            default => route('admission.assessment-control-room.index'),
+        };
+    @endphp
     <div class="col-6 col-lg-2">
-        <a class="metric" href="{{ $label === 'pending_scores' ? route('admission.evaluator-scoring.index') : route('admission.assessment-control-room.index') }}">
+        <a class="metric" href="{{ $metricUrl }}">
             <div class="card border-0 shadow-sm"><div class="card-body">
-                <div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div>
+                <div class="d-flex justify-content-between"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div>
                 <div class="fs-4 fw-bold">{{ $value }}</div>
             </div></div>
         </a>
@@ -56,7 +64,7 @@
                             <td>
                                 <span class="badge bg-{{ $row['ready'] ? 'success' : 'warning text-dark' }}">{{ $row['ready'] ? 'Ready' : 'Needs setup' }}</span>
                                 <div class="small text-muted">
-                                    {{ $row['has_evaluator'] ? 'Evaluator' : 'No evaluator' }} · {{ $row['has_rubric'] ? 'Rubric' : 'No rubric' }} · {{ $row['has_venue'] ? 'Venue' : 'No venue' }}
+                                    {{ $row['has_evaluator'] ? 'Evaluator' : 'No evaluator' }} | {{ $row['has_rubric'] ? 'Rubric' : 'No rubric' }} | {{ $row['has_venue'] ? 'Venue' : 'No venue' }}
                                 </div>
                             </td>
                             <td>{{ $row['scores_pending'] }}</td>
@@ -109,7 +117,7 @@
                 @forelse($dashboard['pendingScores'] as $assignment)
                     <a href="{{ route('admission.evaluator-scoring.index') }}" class="list-group-item list-group-item-action">
                         <strong>{{ $assignment->applicant?->user?->name }}</strong>
-                        <div class="small text-muted">{{ $assignment->panel?->name }} · {{ $assignment->evaluator?->name ?? 'Unassigned evaluator' }}</div>
+                        <div class="small text-muted">{{ $assignment->panel?->name }} | {{ $assignment->evaluator?->name ?? 'Unassigned evaluator' }}</div>
                     </a>
                 @empty
                     <div class="list-group-item text-muted">No pending scores.</div>
@@ -123,7 +131,7 @@
                 @forelse($dashboard['varianceQueue'] as $assignment)
                     <div class="list-group-item">
                         <strong>{{ $assignment->applicant?->user?->name }}</strong>
-                        <div class="small text-muted">Variance {{ $assignment->variance_score }} · Aggregate {{ $assignment->aggregate_score }}</div>
+                        <div class="small text-muted">Variance {{ $assignment->variance_score }} | Aggregate {{ $assignment->aggregate_score }}</div>
                     </div>
                 @empty
                     <div class="list-group-item text-muted">No score variance flags.</div>

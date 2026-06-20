@@ -2,14 +2,43 @@
 @section('title', $config['title'])
 @section('content')
 <div class="container-fluid py-3">
+    @php
+        $filters = $data['filters'] ?? [];
+        $metricLinks = [
+            'Open' => request()->fullUrlWithQuery(['status' => 'open', 'page' => null]),
+            'Critical' => request()->fullUrlWithQuery(['severity' => 'critical', 'page' => null]),
+            'Overdue' => request()->fullUrlWithQuery(['status' => 'open', 'sort' => 'due_at', 'direction' => 'asc', 'page' => null]),
+            'Avg Score' => request()->fullUrlWithQuery(['sort' => 'score', 'direction' => 'desc', 'page' => null]),
+        ];
+        $activeSummary = collect([
+            'search' => $filters['search'] ?? null,
+            'status' => $filters['status'] ?? null,
+            'severity' => $filters['severity'] ?? null,
+            'program' => $filters['program_id'] ?? null,
+            'owner' => $filters['owner_user_id'] ?? null,
+        ])->filter()->map(fn ($value, $key) => ucfirst($key).': '.$value)->join(' | ');
+    @endphp
     <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><h1 class="h4 mb-1">{{ $config['title'] }}</h1><div class="small text-muted">{{ $config['description'] }}</div></div>@include('academics.dean-os.partials.nav')</div>
     <div class="row g-2 mb-3">
         @foreach(['Open'=>$data['open'],'Critical'=>$data['critical'],'Overdue'=>$data['overdue'],'Avg Score'=>$data['avg_score']] as $label=>$value)
-            <div class="col-6 col-lg-3"><a class="card shadow-sm text-decoration-none" href="{{ request()->fullUrlWithQuery(['status'=>'open']) }}"><div class="card-body py-2"><div class="small text-muted">{{ $label }}</div><div class="h4 mb-0">{{ $value }}</div></div></a></div>
+            <div class="col-6 col-lg-3"><a class="card shadow-sm text-decoration-none text-reset h-100" href="{{ $metricLinks[$label] }}"><div class="card-body py-2"><div class="d-flex justify-content-between"><div class="small text-muted">{{ $label }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="h4 mb-0">{{ $value }}</div></div></a></div>
         @endforeach
     </div>
-    <div class="card shadow-sm"><div class="card-header py-2 d-flex justify-content-between"><span class="small text-muted">Visible filter summary: {{ str_replace('_',' ', $config['record_type']) }} | search/filter/sort/pagination enabled by source query</span><a href="{{ route('academics.dean-os.export', $config['record_type']) }}" class="btn btn-sm btn-outline-secondary">Export Current View</a></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Record</th><th>Program</th><th>Owner</th><th>Severity</th><th>Status</th><th>Due</th><th>Score</th></tr></thead><tbody>
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-3"><label class="form-label small mb-1">Search</label><input name="search" value="{{ $filters['search'] ?? '' }}" class="form-control form-control-sm" placeholder="Record, source, key"></div>
+                <div class="col-md-2"><label class="form-label small mb-1">Status</label><select name="status" class="form-select form-select-sm"><option value="">All</option>@foreach(['open','in_progress','blocked','resolved','closed','done','cancelled'] as $status)<option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ str($status)->headline() }}</option>@endforeach</select></div>
+                <div class="col-md-2"><label class="form-label small mb-1">Severity</label><select name="severity" class="form-select form-select-sm"><option value="">All</option>@foreach(['critical','high','medium','low'] as $severity)<option value="{{ $severity }}" @selected(($filters['severity'] ?? '') === $severity)>{{ ucfirst($severity) }}</option>@endforeach</select></div>
+                <div class="col-md-2"><label class="form-label small mb-1">Sort</label><select name="sort" class="form-select form-select-sm">@foreach(['due_at'=>'Due date','score'=>'Score','severity'=>'Severity','status'=>'Status','title'=>'Title','created_at'=>'Created'] as $key => $label)<option value="{{ $key }}" @selected(($filters['sort'] ?? 'due_at') === $key)>{{ $label }}</option>@endforeach</select></div>
+                <div class="col-md-1"><label class="form-label small mb-1">Dir</label><select name="direction" class="form-select form-select-sm"><option value="asc" @selected(($filters['direction'] ?? 'asc') === 'asc')>Asc</option><option value="desc" @selected(($filters['direction'] ?? '') === 'desc')>Desc</option></select></div>
+                <div class="col-md-2 d-flex gap-1"><button class="btn btn-sm btn-primary flex-fill">Apply</button><a href="{{ route(request()->route()->getName()) }}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+            </form>
+        </div>
+    </div>
+    <div class="card shadow-sm"><div class="card-header py-2 d-flex flex-wrap gap-2 justify-content-between"><span class="small text-muted">Visible filter summary: {{ str_replace('_',' ', $config['record_type']) }}{{ $activeSummary ? ' | '.$activeSummary : ' | all records' }}</span><a href="{{ route('academics.dean-os.export', ['report' => $config['record_type']] + request()->query()) }}" class="btn btn-sm btn-outline-secondary">Export Current View</a></div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'title','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Record</a></th><th>Program</th><th>Owner</th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'severity','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Severity</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'status','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Status</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'due_at','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Due</a></th><th><a class="text-decoration-none" href="{{ request()->fullUrlWithQuery(['sort'=>'score','direction'=>($filters['direction'] ?? 'asc') === 'asc' ? 'desc' : 'asc']) }}">Score</a></th></tr></thead><tbody>
         @foreach($data['records'] as $record)<tr><td><div class="fw-semibold">{{ $record->title }}</div><div class="small text-muted">{{ $record->source_type }} {{ $record->source_key }}</div></td><td>{{ $record->program?->code ?? '-' }}</td><td>{{ $record->owner?->name ?? 'Unassigned' }}</td><td>{{ $record->severity }}</td><td>{{ $record->status }}</td><td>{{ optional($record->due_at)->format('d M Y') }}</td><td>{{ $record->score }}</td></tr>@endforeach
+        @if($data['records']->isEmpty())<tr><td colspan="7" class="text-center text-muted py-4">No records match the current filters.</td></tr>@endif
     </tbody></table></div><div class="card-footer py-2">{{ $data['records']->links() }}</div></div>
 </div>
 @endsection

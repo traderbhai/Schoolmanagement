@@ -11,7 +11,32 @@ class DashboardController extends Controller
     public function index() {
         $user = auth()->user()->load('teacher.department');
         $teacher = $user->teacher;
-        if (!$teacher) return redirect()->route('login');
+        if (!$teacher) {
+            $currentSemester = Semester::current();
+            $notices = Notice::active()
+                ->where(fn($q) => $q->where('audience','all')->orWhere('audience','teachers'))
+                ->latest()
+                ->take(5)
+                ->get();
+            $slots = TimetableSlot::where('is_active',true)->orderBy('sort_order')->get();
+            $grid = [];
+            $todayClasses = [];
+            $weeklyLoad = 0;
+            $activeAssignments = 0;
+            $pendingGrading = 0;
+
+            return view('teacher.dashboard', compact(
+                'teacher',
+                'currentSemester',
+                'notices',
+                'slots',
+                'grid',
+                'todayClasses',
+                'weeklyLoad',
+                'activeAssignments',
+                'pendingGrading'
+            ))->with('warning', 'Your teacher profile is not linked yet. Contact administration to complete your staff profile.');
+        }
 
         $currentSemester = Semester::current();
         $notices = Notice::active()->where(fn($q) => $q->where('audience','all')->orWhere('audience','teachers'))->latest()->take(5)->get();

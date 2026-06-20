@@ -10,10 +10,10 @@
             <div class="opacity-75 small fw-semibold text-uppercase mb-1">
                 <i class="bi bi-person-workspace me-1"></i>Faculty Portal
             </div>
-            <h3 class="fw-bold mb-1" style="font-size:1.5rem">{{ $teacher->user->name }}</h3>
+            <h3 class="fw-bold mb-1" style="font-size:1.5rem">{{ $teacher?->user?->name ?? auth()->user()->name }}</h3>
             <div class="d-flex gap-3 flex-wrap" style="font-size:.85rem">
-                <span class="opacity-85"><i class="bi bi-briefcase me-1 opacity-75"></i>{{ $teacher->designation }}</span>
-                <span class="opacity-85"><i class="bi bi-card-text me-1 opacity-75"></i>{{ $teacher->employee_id }}</span>
+                <span class="opacity-85"><i class="bi bi-briefcase me-1 opacity-75"></i>{{ $teacher?->designation ?? 'Teacher profile pending' }}</span>
+                <span class="opacity-85"><i class="bi bi-card-text me-1 opacity-75"></i>{{ $teacher?->employee_id ?? 'Not linked' }}</span>
                 <span class="opacity-85"><i class="bi bi-clock me-1 opacity-75"></i>{{ $weeklyLoad }} periods/week</span>
             </div>
         </div>

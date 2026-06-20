@@ -3,7 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
-use App\Models\Department;
+use App\Models\{Department, Program};
 use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
 
@@ -66,6 +66,13 @@ class DepartmentController extends Controller
             'head_name'   => 'nullable|string|max:255',
             'is_active'   => 'boolean',
         ]);
+
+        if ($this->deactivatesDepartmentWithActiveChildren($department, $data)) {
+            return back()->withErrors([
+                'is_active' => 'Departments with active programs, courses, subjects, teachers, or students cannot be deactivated.',
+            ])->withInput();
+        }
+
         $department->update($data);
         return redirect()->route('admin.departments.index')->with('success', 'Department updated.');
     }
@@ -87,5 +94,19 @@ class DepartmentController extends Controller
     private function authorizeAcademicStructure(): void
     {
         abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
+    }
+
+    private function deactivatesDepartmentWithActiveChildren(Department $department, array $data): bool
+    {
+        return array_key_exists('is_active', $data)
+            && ! (bool) $data['is_active']
+            && (bool) $department->is_active
+            && (
+                $department->courses()->where('is_active', true)->exists()
+                || $department->subjects()->where('is_active', true)->exists()
+                || $department->teachers()->where('status', 'active')->exists()
+                || $department->students()->where('status', 'active')->exists()
+                || Program::where('department_id', $department->id)->where('is_active', true)->exists()
+            );
     }
 }

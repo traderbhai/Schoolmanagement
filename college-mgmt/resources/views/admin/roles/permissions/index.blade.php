@@ -89,7 +89,7 @@
 
     <div class="mt-4 p-3 bg-light rounded small text-muted">
         <i class="bi bi-info-circle me-1"></i>
-        These are Spatie Laravel Permission role-level grants. For fine-grained feature access (view / create / edit / approve), use the
+        These are role-level grants for core permissions. For fine-grained feature access (view / create / edit / approve), use the
         <a href="{{ route('admin.roles.feature-access.index') }}">Feature Access Matrix</a>.
     </div>
 </div>

@@ -13,34 +13,7 @@
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
-    <a class="sidebar-brand" href="{{ route('parent.dashboard') }}">
-        <span class="brand-icon"><i class="bi bi-house-heart-fill"></i></span>
-        <span>
-            <div class="brand-text">EduManage</div>
-            <div class="brand-sub">Parent Portal</div>
-        </span>
-    </a>
-
-    <div class="mt-2 pb-4 flex-grow-1">
-        <div class="section-label">Main</div>
-        <a href="{{ route('parent.dashboard') }}" class="nav-link @if(request()->routeIs('parent.dashboard')) active @endif">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Children</div>
-        <a href="{{ route('parent.children') }}" class="nav-link @if(request()->routeIs('parent.children*')) active @endif">
-            <i class="bi bi-people"></i> My Children
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <div class="section-label">Communication</div>
-        <a href="{{ route('parent.notices') }}" class="nav-link @if(request()->routeIs('parent.notices')) active @endif">
-            <i class="bi bi-megaphone"></i> Notices
-        </a>
-    </div>
+    <x-ui.manifest-sidebar role="parent" brand-sub="Parent Portal" brand-icon="bi-house-heart-fill" :show-footer="false" />
 </div>
 
 {{-- ===== MOBILE OFFCANVAS SIDEBAR ===== --}}
@@ -56,14 +29,13 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
-        <div class="section-label">Main</div>
-        <a href="{{ route('parent.dashboard') }}" class="nav-link @if(request()->routeIs('parent.dashboard')) active @endif"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Children</div>
-        <a href="{{ route('parent.children') }}" class="nav-link @if(request()->routeIs('parent.children*')) active @endif"><i class="bi bi-people"></i> My Children</a>
-        <div class="sidebar-divider"></div>
-        <div class="section-label">Communication</div>
-        <a href="{{ route('parent.notices') }}" class="nav-link @if(request()->routeIs('parent.notices')) active @endif"><i class="bi bi-megaphone"></i> Notices</a>
+        <x-ui.manifest-sidebar
+            role="parent"
+            brand-sub="Parent Portal"
+            brand-icon="bi-house-heart-fill"
+            :show-brand="false"
+            :show-footer="false"
+        />
     </div>
 </div>
 

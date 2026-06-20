@@ -221,15 +221,48 @@ class AcademicIqacOperatingService
         ];
     }
 
-    public function section(User $user, string $section): array
+    public function section(User $user, string $section, array $filters = []): array
     {
-        return match ($section) {
+        $data = match ($section) {
             'obe-readiness' => $this->obeReadiness($user),
             'attainment-monitoring' => $this->attainmentMonitoring($user),
             'feedback-quality' => $this->feedbackQuality($user),
             'audit-compliance' => $this->auditCompliance($user),
             default => abort(404),
         };
+
+        $data['items'] = $this->filterItems($data['items'], $filters)->values();
+        $data['filters'] = $filters;
+        $data['filter_summary'] = $this->filterSummary($filters);
+
+        return $data;
+    }
+
+    private function filterItems(Collection $items, array $filters): Collection
+    {
+        return $items
+            ->when(! empty($filters['search']), function (Collection $collection) use ($filters) {
+                $search = mb_strtolower((string) $filters['search']);
+
+                return $collection->filter(fn (array $item) => str_contains(mb_strtolower($item['title'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['subtitle'] ?? ''), $search)
+                    || str_contains(mb_strtolower($item['status'] ?? ''), $search));
+            })
+            ->when(! empty($filters['status']), function (Collection $collection) use ($filters) {
+                $status = mb_strtolower((string) $filters['status']);
+
+                return $collection->filter(fn (array $item) => mb_strtolower($item['status'] ?? '') === $status);
+            });
+    }
+
+    private function filterSummary(array $filters): string
+    {
+        $active = collect($filters)
+            ->only(['search', 'status'])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value, $key) => str($key)->headline() . ': ' . $value);
+
+        return $active->isEmpty() ? 'Showing all scoped IQAC records.' : $active->join(' | ');
     }
 
     private function visibleProgramIds(User $user): ?Collection

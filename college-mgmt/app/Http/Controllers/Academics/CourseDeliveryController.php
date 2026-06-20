@@ -42,6 +42,8 @@ class CourseDeliveryController extends Controller
                     'status' => 'Open report',
                     'action' => $report['route'],
                 ])->values(),
+                'filters' => $request->query(),
+                'filter_summary' => 'Showing all scoped course-delivery reports.',
             ],
         ]);
     }
@@ -51,7 +53,7 @@ class CourseDeliveryController extends Controller
         $this->authorizeCourseDelivery($request);
 
         return view('academics.course-delivery.section', [
-            'section' => $this->delivery->section($request->user(), $section),
+            'section' => $this->delivery->section($request->user(), $section, $request->query()),
         ]);
     }
 

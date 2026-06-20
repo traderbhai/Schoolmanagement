@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\{Program, Department};
 use App\Services\AcademicMasterDataIntegrityService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProgramController extends Controller
 {
@@ -34,7 +35,7 @@ class ProgramController extends Controller
         $r->validate([
             'name'          => 'required|string|max:191',
             'code'          => 'required|string|max:20|unique:programs,code',
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
             'system_type'   => 'required|in:semester,trimester,annual,quarter',
             'duration_years'=> 'required|integer|min:1|max:5',
             'total_terms'   => 'required|integer|min:1|max:12',
@@ -74,6 +75,12 @@ class ProgramController extends Controller
             'total_terms'   => 'required|integer|min:1|max:12',
         ]);
 
+        if ($this->movesToInactiveDepartment($program, $validated)) {
+            return back()->withErrors([
+                'department_id' => 'Programs can be assigned only to active departments.',
+            ])->withInput();
+        }
+
         $structuralFields = ['department_id', 'system_type', 'duration_years', 'total_terms'];
         $changesStructure = collect($structuralFields)->contains(
             fn (string $field) => (string) $program->{$field} !== (string) $validated[$field]
@@ -106,5 +113,13 @@ class ProgramController extends Controller
     private function authorizeAcademicStructure(): void
     {
         abort_unless(auth()->user() && AccessControl::canManageAcademicStructure(auth()->user()), 403);
+    }
+
+    private function movesToInactiveDepartment(Program $program, array $data): bool
+    {
+        $departmentId = (int) $data['department_id'];
+
+        return $departmentId !== (int) $program->department_id
+            && Department::whereKey($departmentId)->where('is_active', false)->exists();
     }
 }

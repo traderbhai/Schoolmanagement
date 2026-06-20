@@ -18,7 +18,7 @@
             ['Student Risk', $kpis['student_success_risk'], $links['student_success_risk']],
             ['Overdue Actions', $kpis['overdue_actions'], $links['overdue_actions']],
         ] as [$label,$value,$url])
-            <div class="col-6 col-md-4 col-xl"><a href="{{ $url }}" class="card text-decoration-none shadow-sm h-100"><div class="card-body py-2"><div class="small text-muted">{{ $label }}</div><div class="h4 mb-0">{{ $value }}</div></div></a></div>
+            <div class="col-6 col-md-4 col-xl"><a href="{{ $url }}" class="card text-decoration-none text-reset shadow-sm h-100"><div class="card-body py-2"><div class="d-flex justify-content-between gap-2"><div class="small text-muted">{{ $label }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="h4 mb-0">{{ $value }}</div></div></a></div>
         @endforeach
     </div>
     <div class="row g-3">

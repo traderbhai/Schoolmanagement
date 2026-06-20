@@ -4,6 +4,7 @@ use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
 use App\Models\{Course, Department};
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CourseController extends Controller
@@ -24,7 +25,7 @@ class CourseController extends Controller
         $this->authorizeAcademicStructure();
 
         $data = $request->validate([
-            'department_id'   => 'required|exists:departments,id',
+            'department_id'   => ['required', Rule::exists('departments', 'id')->where('is_active', true)],
             'name'            => 'required|string|max:255',
             'code'            => 'required|string|max:20|unique:courses',
             'description'     => 'nullable|string',
@@ -58,6 +59,12 @@ class CourseController extends Controller
             'total_semesters' => 'required|integer|min:1|max:12',
             'is_active'       => 'boolean',
         ]);
+
+        if ($this->movesToInactiveDepartment($course, $data)) {
+            throw ValidationException::withMessages([
+                'department_id' => 'Courses can be assigned only to active departments.',
+            ]);
+        }
 
         if ($this->hasOperationalDependencies($course) && $this->changesStructuralFields($course, $data)) {
             throw ValidationException::withMessages([
@@ -109,6 +116,14 @@ class CourseController extends Controller
             && ! (bool) $data['is_active']
             && (bool) $course->is_active
             && $course->students()->where('status', 'active')->exists();
+    }
+
+    private function movesToInactiveDepartment(Course $course, array $data): bool
+    {
+        $departmentId = (int) $data['department_id'];
+
+        return $departmentId !== (int) $course->department_id
+            && Department::whereKey($departmentId)->where('is_active', false)->exists();
     }
 
     private function authorizeAcademicStructure(): void

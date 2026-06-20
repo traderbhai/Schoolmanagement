@@ -41,6 +41,8 @@ class IqacOperatingController extends Controller
                     'status' => 'Open report',
                     'action' => $report['route'],
                 ])->values(),
+                'filters' => $request->query(),
+                'filter_summary' => 'Showing all scoped IQAC reports.',
             ],
         ]);
     }
@@ -50,7 +52,7 @@ class IqacOperatingController extends Controller
         $this->authorizeIqac($request);
 
         return view('academics.iqac.section', [
-            'section' => $this->iqac->section($request->user(), $section),
+            'section' => $this->iqac->section($request->user(), $section, $request->query()),
         ]);
     }
 

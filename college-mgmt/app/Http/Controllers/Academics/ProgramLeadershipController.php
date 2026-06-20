@@ -41,6 +41,8 @@ class ProgramLeadershipController extends Controller
                     'status' => 'Open report',
                     'action' => $report['route'],
                 ])->values(),
+                'filters' => $request->query(),
+                'filter_summary' => 'Showing all scoped program leadership reports.',
             ],
         ]);
     }
@@ -50,7 +52,7 @@ class ProgramLeadershipController extends Controller
         $this->authorizeProgramLeadership($request);
 
         return view('academics.program-leadership.section', [
-            'section' => $this->programs->section($request->user(), $section),
+            'section' => $this->programs->section($request->user(), $section, $request->query()),
         ]);
     }
 

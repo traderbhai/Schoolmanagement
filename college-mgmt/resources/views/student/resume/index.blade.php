@@ -32,7 +32,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">CGPA (auto)</label>
-                        <input type="text" class="form-control" value="{{ $cgpa ?? '—' }}" disabled>
+                        <input type="text" class="form-control" value="{{ $cgpa ?? '-' }}" disabled>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Objective / Summary</label>
@@ -71,7 +71,7 @@
             <div class="card-body">
                 <input type="text" name="skills" class="form-control"
                        value="{{ old('skills', implode(', ', $resume->skills ?? [])) }}"
-                       placeholder="Python, Laravel, MySQL, React (comma-separated)">
+                       placeholder="Python, PHP, MySQL, React (comma-separated)">
                 <div class="form-text">Comma-separated list of skills.</div>
             </div>
         </div>
@@ -148,7 +148,7 @@
                     <input type="text" name="certifications[{{ $i }}][name]" class="form-control form-control-sm" placeholder="Certification name" value="{{ $c['name'] ?? '' }}">
                     <input type="text" name="certifications[{{ $i }}][issuer]" class="form-control form-control-sm" placeholder="Issuer" value="{{ $c['issuer'] ?? '' }}">
                     <input type="month" name="certifications[{{ $i }}][date]" class="form-control form-control-sm" value="{{ $c['date'] ?? '' }}">
-                    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.closest('.cert-item').remove()">×</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.closest('.cert-item').remove()">x</button>
                 </div>
                 @empty
                 <p class="text-muted small mb-0">No certifications added yet.</p>
@@ -205,7 +205,7 @@ function addCert() {
         <input type="text" name="certifications[${certCount}][name]" class="form-control form-control-sm" placeholder="Certification name">
         <input type="text" name="certifications[${certCount}][issuer]" class="form-control form-control-sm" placeholder="Issuer">
         <input type="month" name="certifications[${certCount}][date]" class="form-control form-control-sm">
-        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.closest('.cert-item').remove()">×</button>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.closest('.cert-item').remove()">x</button>
     </div>`;
     document.getElementById('certContainer').insertAdjacentHTML('beforeend', html);
     certCount++;
