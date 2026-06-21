@@ -53,7 +53,10 @@
                 </div>
                 <div class="card-body" style="max-height:420px;overflow-y:auto;" id="message-thread">
                     @if($messages->isEmpty())
-                        <div class="text-center text-muted py-3">No messages yet. Start the conversation below.</div>
+                        <div class="text-center text-muted py-3">
+                            <div class="fw-semibold text-dark mb-1">No mentor messages are recorded yet</div>
+                            <div class="small">Start with a short check-in message, ask about attendance or academic blockers, and keep the conversation history here for future reviews.</div>
+                        </div>
                     @else
                         @foreach($messages as $msg)
                             @php $isMine = $msg->sender_id === auth()->id(); @endphp
@@ -99,7 +102,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($meetings->isEmpty())
-                        <div class="text-center text-muted py-3">No meetings recorded yet.</div>
+                        <div class="text-center text-muted py-3">
+                            <div class="fw-semibold text-dark mb-1">No mentor meetings are scheduled or recorded yet</div>
+                            <div class="small">Use the schedule form to create the first progress review, then record the agenda and follow-up notes after the discussion.</div>
+                        </div>
                     @else
                         <div class="accordion accordion-flush" id="meetings-accordion">
                             @foreach($meetings as $i => $meeting)
@@ -190,7 +196,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($attBySubject->isEmpty())
-                        <div class="text-center text-muted py-3 small">No attendance data.</div>
+                        <div class="text-center text-muted py-3 small">
+                            <div class="fw-semibold text-dark mb-1">No published attendance is available yet</div>
+                            <div>Attendance appears here after classes are marked against the student's published timetable. Use this section to spot subject-wise attendance risk.</div>
+                        </div>
                     @else
                         <table class="table table-sm mb-0">
                             <thead class="table-light">
@@ -225,7 +234,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($results->isEmpty())
-                        <div class="text-center text-muted py-3 small">No exam results yet.</div>
+                        <div class="text-center text-muted py-3 small">
+                            <div class="fw-semibold text-dark mb-1">No published exam results are available yet</div>
+                            <div>Only official published marks are shown to mentors. Draft or unpublished results stay hidden until CoE publication.</div>
+                        </div>
                     @else
                         <table class="table table-sm mb-0">
                             <thead class="table-light">

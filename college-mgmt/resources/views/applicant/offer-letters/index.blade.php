@@ -42,8 +42,19 @@
 
     @if($offerLetters->isEmpty())
         <div class="alert alert-info">
-            <h5>No Offer Letters Yet</h5>
-            <p>You will see your offer letters here once the admission team has issued them.</p>
+            <h5 class="mb-2">No offer letters are available yet</h5>
+            <p class="mb-2">
+                Offer letters appear here only after the admission team completes selection or waitlist movement, publishes the offer round, and creates the seat-hold deadline for your program and batch.
+            </p>
+            <p class="small mb-3">
+                Until then, keep your checklist, documents, registration fee, assessment status, and admission-fee readiness up to date. If your status already says selected or waitlisted, watch this page and the status tracker for the published offer.
+            </p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ route('applicant.status') }}" class="btn btn-sm btn-outline-primary">Track status</a>
+                <a href="{{ route('applicant.checklist') }}" class="btn btn-sm btn-outline-secondary">Checklist</a>
+                <a href="{{ route('applicant.admission-operations.index') }}" class="btn btn-sm btn-outline-secondary">Admission operations</a>
+                <a href="{{ route('applicant.fees.index') }}" class="btn btn-sm btn-outline-secondary">Fees</a>
+            </div>
         </div>
     @else
         <div class="row">
@@ -75,19 +86,19 @@
                                 @endphp
                                 <div class="alert alert-warning mb-3">
                                     <small>
-                                        <strong>⏰ {{ $daysLeft }}</strong> day{{ $daysLeft !== 1 ? 's' : '' }} left to respond
+                                        <strong>{{ $daysLeft }}</strong> day{{ $daysLeft !== 1 ? 's' : '' }} left to respond
                                     </small>
                                 </div>
                             @elseif($offer->isAccepted())
                                 <div class="alert alert-success mb-3">
                                     <small>
-                                        ✓ Accepted on {{ $offer->accepted_at?->format('d M Y') ?? '—' }}
+                                        Accepted on {{ $offer->accepted_at?->format('d M Y') ?? 'not recorded' }}
                                     </small>
                                 </div>
                             @elseif($offer->isDeclined())
                                 <div class="alert alert-danger mb-3">
                                     <small>
-                                        ✗ Declined on {{ $offer->declined_at?->format('d M Y') ?? '—' }}
+                                        Declined on {{ $offer->declined_at?->format('d M Y') ?? 'not recorded' }}
                                         @if($offer->declined_reason)
                                             <br>Reason: {{ $offer->declined_reason }}
                                         @endif

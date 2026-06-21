@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Merit List — ' . $program->name)
+@section('title', 'Merit List - ' . $program->name)
 
 @section('content')
 @if(session('success'))
@@ -12,7 +12,10 @@
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
                 <h3 class="fw-bold mb-1"><i class="bi bi-list-ol me-2"></i>Merit List</h3>
-                <div class="text-muted">{{ $program->name }} @if($program->code) <span class="badge bg-secondary">{{ $program->code }}</span> @endif</div>
+                <div class="text-muted">
+                    Selection ranking, waitlist source, and offer-round input for {{ $program->name }}
+                    @if($program->code) <span class="badge bg-secondary">{{ $program->code }}</span> @endif
+                </div>
             </div>
             <div class="d-flex gap-2">
                 @if($latestVersion)
@@ -28,7 +31,19 @@
     </div>
 </div>
 
-{{-- Batch filter --}}
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    <div class="fw-semibold mb-2"><i class="bi bi-diagram-3 me-1"></i>Merit-list control sequence</div>
+    <div class="d-flex flex-wrap gap-2 small">
+        <span class="badge bg-light text-dark">1. Shortlist applicants</span>
+        <span class="badge bg-light text-dark">2. Record assessment scores</span>
+        <span class="badge bg-light text-dark">3. Confirm seat matrix</span>
+        <span class="badge bg-light text-dark">4. Generate ranked list</span>
+        <span class="badge bg-light text-dark">5. Decide selected or waitlisted</span>
+        <span class="badge bg-light text-dark">6. Issue offers</span>
+    </div>
+    <div class="small text-muted mt-2">Regeneration is blocked once active offer letters exist, so verify scores, batch filter, and seat capacity before publishing selection decisions.</div>
+</div>
+
 <form method="GET" class="mb-4">
     <div class="row g-2 align-items-end">
         <div class="col-sm-4">
@@ -44,22 +59,22 @@
 </form>
 
 @if($latestVersion)
-{{-- Stats --}}
 <div class="row g-3 mb-4">
     @foreach([
-        ['label'=>'Total Applicants','value'=>$stats['total'],'color'=>'primary','icon'=>'people'],
-        ['label'=>'Selected','value'=>$stats['selected'],'color'=>'success','icon'=>'check-circle'],
-        ['label'=>'Waitlisted','value'=>$stats['waitlisted'],'color'=>'warning','icon'=>'clock-history'],
-        ['label'=>'Rejected','value'=>$stats['rejected'],'color'=>'danger','icon'=>'x-circle'],
-        ['label'=>'Pending','value'=>$stats['pending'],'color'=>'secondary','icon'=>'hourglass-split'],
+        ['label'=>'Total Applicants','value'=>$stats['total'],'color'=>'primary','icon'=>'people','decision'=>null],
+        ['label'=>'Selected','value'=>$stats['selected'],'color'=>'success','icon'=>'check-circle','decision'=>'selected'],
+        ['label'=>'Waitlisted','value'=>$stats['waitlisted'],'color'=>'warning','icon'=>'clock-history','decision'=>'waitlisted'],
+        ['label'=>'Rejected','value'=>$stats['rejected'],'color'=>'danger','icon'=>'x-circle','decision'=>'rejected'],
+        ['label'=>'Pending','value'=>$stats['pending'],'color'=>'secondary','icon'=>'hourglass-split','decision'=>'pending'],
     ] as $stat)
+    @php($statUrl = route('admission.merit-list.show', array_filter(['program' => $program->id, 'batch_id' => $batchId, 'decision' => $stat['decision']])))
     <div class="col-6 col-md">
-        <div class="card border-0 shadow-sm text-center">
+        <a href="{{ $statUrl }}" class="card border-0 shadow-sm text-center text-decoration-none h-100" aria-label="Open {{ $stat['label'] }} merit list entries">
             <div class="card-body py-3">
                 <div class="fs-2 fw-bold text-{{ $stat['color'] }}">{{ $stat['value'] }}</div>
                 <div class="small text-muted"><i class="bi bi-{{ $stat['icon'] }} me-1"></i>{{ $stat['label'] }}</div>
             </div>
-        </div>
+        </a>
     </div>
     @endforeach
 </div>
@@ -67,19 +82,21 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body text-muted small">
         <i class="bi bi-info-circle me-1"></i>Merit List Version: <strong>{{ $latestVersion }}</strong>.
-        Use "Regenerate" below to recalculate scores.
+        Use "Regenerate" below only after confirming no active offer letters are linked to this program/batch list.
     </div>
 </div>
 @endif
 
-{{-- Generate / Regenerate form --}}
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white border-bottom">
         <h6 class="mb-0">{{ $latestVersion ? 'Regenerate Merit List' : 'Generate Merit List' }}</h6>
     </div>
     <div class="card-body">
         @if(!$latestVersion)
-        <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No merit list generated yet. Configure weights and click Generate.</div>
+        <div class="alert alert-info">
+            <div class="fw-semibold mb-1"><i class="bi bi-info-circle me-2"></i>No merit list is generated for this program yet</div>
+            <div class="small mb-0">Before generating, confirm shortlisted applicants, assessment scores, academic/entrance data, and seat matrix setup. The generated list becomes the source for selected, waitlisted, rejected, offer-letter, and seat-control workflows.</div>
+        </div>
         @endif
         <form method="POST" action="{{ route('admission.merit-list.generate', $program) }}">
             @csrf

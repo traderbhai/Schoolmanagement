@@ -39,7 +39,15 @@ class ApplicationWindowTest extends TestCase
         ]);
 
         $response = $this->actingAs($officer)->get(route('admission.application-windows.index', $program));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('Application Windows')
+            ->assertSee($program->name)
+            ->assertSee('Currently Open')
+            ->assertSee('Windows')
+            ->assertSee('100')
+            ->assertSee('Open')
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Whoops', false);
     }
 
     public function test_application_window_status_open(): void

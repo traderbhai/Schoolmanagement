@@ -21,6 +21,22 @@
         </div>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">CMC operating sequence</div>
+                <div class="small text-muted">Use this dashboard to run placement operations from drive setup to student applications, events, analytics, and employer follow-up.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Check active drives</span>
+                <span class="badge text-bg-light">2. Create drive/event</span>
+                <span class="badge text-bg-light">3. Track applications</span>
+                <span class="badge text-bg-light">4. Review placement rate</span>
+                <span class="badge text-bg-light">5. Open analytics</span>
+            </div>
+        </div>
+    </div>
+
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
@@ -36,56 +52,64 @@
 
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-3">
-            <div class="kpi-card kpi-blue">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $activeDrives }}</div>
-                        <div class="kpi-label">Active Drives</div>
+            <a href="{{ route('cmc.drives', ['status' => 'active']) }}" class="text-decoration-none">
+                <div class="kpi-card kpi-blue">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
+                        <div>
+                            <div class="kpi-value">{{ $activeDrives }}</div>
+                            <div class="kpi-label">Active Drives</div>
+                        </div>
+                    </div>
+                    <div class="kpi-trend {{ $activeDrives > 0 ? 'up' : '' }}">
+                        <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Open active drives
                     </div>
                 </div>
-                <div class="kpi-trend {{ $activeDrives > 0 ? 'up' : '' }}">
-                    <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Upcoming or ongoing
-                </div>
-            </div>
+            </a>
         </div>
         <div class="col-sm-6 col-lg-3">
-            <div class="kpi-card kpi-green">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-trophy-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $totalPlacements }}</div>
-                        <div class="kpi-label">Total Placed</div>
+            <a href="{{ route('cmc.placements') }}" class="text-decoration-none">
+                <div class="kpi-card kpi-green">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="kpi-icon"><i class="bi bi-trophy-fill"></i></div>
+                        <div>
+                            <div class="kpi-value">{{ $totalPlacements }}</div>
+                            <div class="kpi-label">Total Placed</div>
+                        </div>
                     </div>
+                    <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open selected placements</div>
                 </div>
-                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Selected applications</div>
-            </div>
+            </a>
         </div>
         <div class="col-sm-6 col-lg-3">
-            <div class="kpi-card kpi-cyan">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $totalStudents }}</div>
-                        <div class="kpi-label">Total Students</div>
+            <a href="{{ route('cmc.analytics') }}" class="text-decoration-none">
+                <div class="kpi-card kpi-cyan">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+                        <div>
+                            <div class="kpi-value">{{ $totalStudents }}</div>
+                            <div class="kpi-label">Total Students</div>
+                        </div>
                     </div>
+                    <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Open placement analytics</div>
                 </div>
-                <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Placement eligible pool</div>
-            </div>
+            </a>
         </div>
         <div class="col-sm-6 col-lg-3">
-            <div class="kpi-card {{ $placementRate >= 70 ? 'kpi-green' : ($placementRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-percent"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $placementRate }}%</div>
-                        <div class="kpi-label">Placement Rate</div>
+            <a href="{{ route('cmc.analytics') }}" class="text-decoration-none">
+                <div class="kpi-card {{ $placementRate >= 70 ? 'kpi-green' : ($placementRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="kpi-icon"><i class="bi bi-percent"></i></div>
+                        <div>
+                            <div class="kpi-value">{{ $placementRate }}%</div>
+                            <div class="kpi-label">Placement Rate</div>
+                        </div>
+                    </div>
+                    <div class="kpi-trend {{ $placementRate >= 70 ? 'up' : 'down' }}">
+                        <i class="bi bi-arrow-{{ $placementRate >= 70 ? 'up' : 'down' }} me-1"></i>Open analytics
                     </div>
                 </div>
-                <div class="kpi-trend {{ $placementRate >= 70 ? 'up' : 'down' }}">
-                    <i class="bi bi-arrow-{{ $placementRate >= 70 ? 'up' : 'down' }} me-1"></i>This academic year
-                </div>
-            </div>
+            </a>
         </div>
     </div>
 

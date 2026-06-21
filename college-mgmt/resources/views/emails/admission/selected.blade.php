@@ -6,8 +6,8 @@
 <p>We are delighted to inform you that you have been <strong>selected</strong> for admission to {{ env('INSTITUTE_NAME', config('app.name')) }}.</p>
 
 <div class="info-box">
-    <p><strong>Application Number:</strong> {{ $applicant->application_number }}</p>
-    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'N/A' }}</p>
+    <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}</p>
+    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}</p>
     @if(isset($meritRank) && $meritRank)
     <p><strong>Merit Rank:</strong> {{ $meritRank }}</p>
     @endif

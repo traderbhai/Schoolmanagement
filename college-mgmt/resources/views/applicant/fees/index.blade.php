@@ -63,7 +63,7 @@
                 <div>
                     <h6 class="fw-bold mb-0">{{ $installment->name }}</h6>
                     <small class="text-muted">
-                        Due: {{ $installment->due_date ? $installment->due_date->format('d M Y') : 'N/A' }}
+                        Due: {{ $installment->due_date ? $installment->due_date->format('d M Y') : 'Due date not published' }}
                         @if($isOverdue) <span class="text-danger fw-bold ms-1">(Overdue)</span> @endif
                     </small>
                 </div>
@@ -200,7 +200,17 @@
         </div>
     </div>
     @empty
-    <div class="alert alert-info">No fee installments configured for your program yet.</div>
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1">No admission fee installments are available yet</div>
+        <div class="small">
+            Admission or Accounts staff will publish program fee milestones after your admission stage, batch, and fee rules are ready. Until then, track your application status and registration-fee proof separately; admission-fee proof submission opens only after you are shortlisted or selected.
+        </div>
+        <div class="mt-3 d-flex gap-2 flex-wrap">
+            <a href="{{ route('applicant.status') }}" class="btn btn-sm btn-outline-primary">Track status</a>
+            <a href="{{ route('applicant.registration-fee.show') }}" class="btn btn-sm btn-outline-secondary">Registration fee</a>
+            <a href="{{ route('applicant.checklist') }}" class="btn btn-sm btn-outline-secondary">Checklist</a>
+        </div>
+    </div>
     @endforelse
 
 </div>

@@ -127,4 +127,19 @@ class AlumniWorkflowGuidanceTest extends TestCase
             ->assertSee('Infosys')
             ->assertDontSee('Hidden Employer');
     }
+
+    public function test_student_alumni_empty_state_explains_verified_profile_source_and_filters(): void
+    {
+        $currentStudent = $this->student(Program::factory()->create(), ['status' => 'active']);
+
+        $this->actingAs($currentStudent->user)
+            ->get(route('student.alumni.index'))
+            ->assertOk()
+            ->assertSee('Alumni network is being built')
+            ->assertSee('No verified alumni match this view yet')
+            ->assertSee('Alumni appear here only after CMC verifies graduate career details')
+            ->assertSee('Try clearing filters')
+            ->assertSee('mentoring, referrals, and career-path discovery')
+            ->assertDontSee('No verified alumni found matching your filters.');
+    }
 }

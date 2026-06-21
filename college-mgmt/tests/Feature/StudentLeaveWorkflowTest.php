@@ -60,6 +60,37 @@ class StudentLeaveWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_student_leave_empty_state_and_pending_review_guidance_are_actionable(): void
+    {
+        $fixture = $this->studentFixture();
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.leave.index'))
+            ->assertOk()
+            ->assertSee('No leave applications submitted yet')
+            ->assertSee('Apply before planned absence, medical leave, or urgent family leave')
+            ->assertSee('program office or academic reviewer approves or rejects it')
+            ->assertSee('Apply for Leave')
+            ->assertDontSee('No leave applications yet.');
+
+        LeaveApplication::create([
+            'student_id' => $fixture['student']->id,
+            'leave_type' => 'student',
+            'from_date' => now()->addDays(3)->toDateString(),
+            'to_date' => now()->addDays(3)->toDateString(),
+            'days' => 1,
+            'reason' => 'Pending family leave',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.leave.index'))
+            ->assertOk()
+            ->assertSee('Pending family leave')
+            ->assertSee('No reviewer remarks yet')
+            ->assertDontSee('â€”');
+    }
+
     public function test_student_cannot_submit_overlapping_open_leave_request(): void
     {
         $fixture = $this->studentFixture();
@@ -275,6 +306,44 @@ class StudentLeaveWorkflowTest extends TestCase
             'admin_remarks' => 'Cancelled by teacher before review.',
         ]);
         $this->assertNotNull($leave->fresh()->reviewed_at);
+    }
+
+    public function test_teacher_leave_empty_state_and_pending_review_guidance_are_actionable(): void
+    {
+        $teacherUser = $this->userWithRole('teacher');
+        $teacher = Teacher::factory()->create([
+            'user_id' => $teacherUser->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.leaves.index'))
+            ->assertOk()
+            ->assertSee('Submit planned, medical, duty, or earned leave here')
+            ->assertSee('No teacher leave applications submitted yet')
+            ->assertSee('reviewed by the academic administration')
+            ->assertSee('pending requests can be cancelled before review')
+            ->assertSee('Apply for Leave')
+            ->assertDontSee('No leave applications yet.')
+            ->assertDontSee('â€“');
+
+        LeaveApplication::create([
+            'teacher_id' => $teacher->id,
+            'leave_type' => 'duty',
+            'from_date' => now()->addDays(4)->toDateString(),
+            'to_date' => now()->addDays(4)->toDateString(),
+            'days' => 1,
+            'reason' => 'Invited for academic workshop',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.leaves.index'))
+            ->assertOk()
+            ->assertSee('Invited for academic workshop')
+            ->assertSee('No reviewer remarks yet')
+            ->assertSee('data-confirm-delete', false)
+            ->assertDontSee('â€“');
     }
 
     public function test_admin_cannot_reapprove_reject_or_delete_reviewed_leave_history(): void

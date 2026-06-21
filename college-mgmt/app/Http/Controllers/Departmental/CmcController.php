@@ -547,7 +547,11 @@ class CmcController extends Controller
         $query = PlacementDrive::with(['company'])->withCount('placements')->latest();
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if ($request->status === 'active') {
+                $query->whereIn('status', self::ACTIVE_DRIVE_STATUSES);
+            } else {
+                $query->where('status', $request->status);
+            }
         }
         if ($request->filled('company_id')) {
             $query->where('company_id', $request->company_id);

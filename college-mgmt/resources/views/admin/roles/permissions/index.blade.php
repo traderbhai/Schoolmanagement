@@ -3,6 +3,8 @@
 
 @section('content')
 <div class="container-fluid py-4">
+    @include('admin.partials.setup-sequence')
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-0">Role Permissions</h4>

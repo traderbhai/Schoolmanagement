@@ -6,9 +6,9 @@
 <p>You have a follow-up scheduled for today with the following applicant:</p>
 
 <div class="info-box">
-    <p><strong>Applicant:</strong> {{ $applicant->user?->name ?? ($applicant->personal_data['name'] ?? 'N/A') }}</p>
-    <p><strong>Application Number:</strong> {{ $applicant->application_number }}</p>
-    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'N/A' }}</p>
+    <p><strong>Applicant:</strong> {{ $applicant->user?->name ?? ($applicant->personal_data['name'] ?? 'Applicant name not provided') }}</p>
+    <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}</p>
+    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}</p>
     <p><strong>Follow-up Date:</strong> {{ isset($log) && $log->next_followup_date ? \Carbon\Carbon::parse($log->next_followup_date)->format('d M Y') : today()->format('d M Y') }}</p>
     @if(isset($log) && $log->notes)
     <p><strong>Previous Notes:</strong> {{ $log->notes }}</p>
@@ -20,5 +20,5 @@
 
 <p>Please log in to the admission portal to record this interaction and update the follow-up status.</p>
 
-<p>— {{ env('INSTITUTE_NAME', config('app.name')) }} Notification System</p>
+<p>{{ env('INSTITUTE_NAME', config('app.name')) }} Notification System</p>
 @endsection

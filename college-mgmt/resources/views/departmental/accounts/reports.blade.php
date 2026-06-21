@@ -49,7 +49,11 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted">No data.</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            No active programs are available for fee reporting yet. Create programs and fee demands before using the program-wise finance report.
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>
@@ -93,7 +97,11 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted">No data.</td></tr>
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No batches are available for fee reporting yet. Add batches, active students, and fee demands before using the batch-wise finance report.
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>

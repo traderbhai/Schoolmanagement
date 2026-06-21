@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit — ' . $scholarshipScheme->name)
+@section('title', 'Edit - ' . $scholarshipScheme->name)
 
 @section('content')
 <div class="mb-4">
@@ -8,6 +8,13 @@
     <h2 class="fw-bold mb-0 mt-1">Edit Scheme</h2>
     <p class="text-muted mb-0">{{ $scholarshipScheme->name }}</p>
 </div>
+
+@if($errors->has('scholarship_scheme'))
+    <div class="alert alert-warning mb-4">
+        <div class="fw-semibold">Scheme contract is locked for active scholarship records.</div>
+        <div>{{ $errors->first('scholarship_scheme') }}</div>
+    </div>
+@endif
 
 <form action="{{ route('admission.scholarship-schemes.update', $scholarshipScheme) }}" method="POST">
     @csrf
@@ -49,9 +56,9 @@
                     @error('program_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
-                    <label for="max_amount" class="form-label fw-semibold">Maximum Amount (₹) <span class="text-danger">*</span></label>
+                    <label for="max_amount" class="form-label fw-semibold">Maximum Amount (Rs.) <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text">₹</span>
+                        <span class="input-group-text">Rs.</span>
                         <input type="number" name="max_amount" id="max_amount" class="form-control @error('max_amount') is-invalid @enderror"
                                value="{{ old('max_amount', $scholarshipScheme->max_amount) }}" min="0" step="100" required>
                     </div>
@@ -94,7 +101,7 @@
                         <input type="hidden" name="is_active" value="0">
                         <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1"
                                {{ old('is_active', $scholarshipScheme->is_active) ? 'checked' : '' }}>
-                        <label class="form-check-label fw-semibold" for="is_active">Active</label>
+                        <label class="form-check-label fw-semibold" for="is_active">Active and available for awarding</label>
                     </div>
                 </div>
             </div>

@@ -27,6 +27,15 @@
                 <a href="{{ route('academic.transcripts.index') }}" class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
             </div>
         </form>
+        @if(request('program_id') || request('search'))
+            @php $selectedProgram = request('program_id') ? $programs->firstWhere('id', (int) request('program_id')) : null; @endphp
+            <div class="small text-muted mt-2">
+                <span class="fw-semibold text-dark">Visible filters:</span>
+                @if(request('search')) Search: {{ request('search') }} @endif
+                @if($selectedProgram) @if(request('search')) | @endif Program: {{ $selectedProgram->name }} @endif
+                <span class="ms-1">Only active students are listed for transcript review.</span>
+            </div>
+        @endif
     </div>
 </div>
 
@@ -79,7 +88,18 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">No students found.</td></tr>
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="fw-semibold text-dark">No transcript candidates match this view</div>
+                            <div class="small text-muted mx-auto mt-1" style="max-width: 620px;">
+                                Transcripts are prepared for active students only. Clear filters, confirm the student is active and linked to a program/batch, then issue official transcripts only after the published exam results are complete.
+                            </div>
+                            <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
+                                <a href="{{ route('academic.transcripts.index') }}" class="btn btn-sm btn-outline-secondary">Clear filters</a>
+                                <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-primary">Review student records</a>
+                            </div>
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>

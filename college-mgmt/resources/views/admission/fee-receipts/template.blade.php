@@ -197,6 +197,7 @@
 <body>
 
 @php
+if (! function_exists('amountInWords')) {
 function amountInWords(float $amount): string {
     $ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
              'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
@@ -211,6 +212,7 @@ function amountInWords(float $amount): string {
     if ($rupees >= 20)     { $words .= $tens[(int)($rupees/10)] . ($rupees%10 ? ' '.$ones[$rupees%10] : '') . ' '; $rupees = 0; }
     elseif ($rupees > 0)   { $words .= $ones[$rupees] . ' '; }
     return trim($words) . ' Rupees Only';
+}
 }
 @endphp
 
@@ -235,7 +237,7 @@ function amountInWords(float $amount): string {
         </td>
         <td class="meta-right">
             <div><span class="meta-label">Application No: </span></div>
-            <div><span class="meta-value">{{ $applicant->application_number ?? 'N/A' }}</span></div>
+            <div><span class="meta-value">{{ $applicant->application_number ?? 'Application number pending' }}</span></div>
         </td>
     </tr>
 </table>
@@ -247,19 +249,19 @@ function amountInWords(float $amount): string {
     </tr>
     <tr>
         <td class="label-col">Name</td>
-        <td class="value-col">{{ $applicant->user->name ?? 'N/A' }}</td>
+        <td class="value-col">{{ $applicant->user->name ?? 'Applicant name not recorded' }}</td>
     </tr>
     <tr>
         <td class="label-col">Program</td>
-        <td class="value-col">{{ $applicant->program->name ?? 'N/A' }}</td>
+        <td class="value-col">{{ $applicant->program->name ?? 'Program not selected' }}</td>
     </tr>
     <tr>
         <td class="label-col">Batch</td>
-        <td class="value-col">{{ $applicant->batch->name ?? 'N/A' }}</td>
+        <td class="value-col">{{ $applicant->batch->name ?? 'Batch not selected' }}</td>
     </tr>
     <tr>
         <td class="label-col">Contact (Email)</td>
-        <td class="value-col">{{ $applicant->user->email ?? 'N/A' }}</td>
+        <td class="value-col">{{ $applicant->user->email ?? 'Email not recorded' }}</td>
     </tr>
 </table>
 
@@ -278,12 +280,12 @@ function amountInWords(float $amount): string {
         <tr>
             <td class="pd-label">Payment Method</td>
             <td class="pd-colon">:</td>
-            <td class="pd-value">{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?? '')) }}</td>
+            <td class="pd-value">{{ $payment->payment_mode ? $payment->payment_mode_label : 'Payment method not recorded' }}</td>
         </tr>
         <tr>
             <td class="pd-label">Reference / UTR No.</td>
             <td class="pd-colon">:</td>
-            <td class="pd-value">{{ $payment->reference_number ?? 'N/A' }}</td>
+            <td class="pd-value">{{ $payment->transaction_reference ?? 'Reference not recorded' }}</td>
         </tr>
         <tr>
             <td class="pd-label">Payment Type</td>
@@ -294,7 +296,7 @@ function amountInWords(float $amount): string {
             <td class="pd-label">Verified On</td>
             <td class="pd-colon">:</td>
             <td class="pd-value">
-                {{ $payment->verified_at ? $payment->verified_at->format('d M Y H:i') : 'N/A' }}
+                {{ $payment->verified_at ? $payment->verified_at->format('d M Y H:i') : 'Verification time not recorded' }}
             </td>
         </tr>
     </table>
@@ -311,7 +313,7 @@ function amountInWords(float $amount): string {
 {{-- ===== FOOTER ===== --}}
 <div class="footer">
     <div class="footer-note">This is a computer-generated receipt. No signature required.</div>
-    <div class="footer-address">{{ $collegeName }} &bull; [College Address Placeholder] &bull; [City, State, PIN]</div>
+    <div class="footer-address">{{ $collegeFooterLine ?? $collegeName }}</div>
 </div>
 
 </body>

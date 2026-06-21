@@ -19,6 +19,22 @@
     <div class="alert alert-danger">{{ $errors->first() }}</div>
 @endif
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Asset operating sequence</div>
+            <div class="small text-muted">Start with stock and availability, then create categories/items, add assets, assign or return, and export the current register.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Check availability</span>
+            <span class="badge text-bg-light">2. Review low stock</span>
+            <span class="badge text-bg-light">3. Create item/asset</span>
+            <span class="badge text-bg-light">4. Assign or return</span>
+            <span class="badge text-bg-light">5. Export register</span>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Assets</div><div class="fs-3 fw-bold">{{ $stats['total'] }}</div></div></div></div>
     <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Available</div><div class="fs-3 fw-bold text-success">{{ $stats['available'] }}</div></div></div></div>

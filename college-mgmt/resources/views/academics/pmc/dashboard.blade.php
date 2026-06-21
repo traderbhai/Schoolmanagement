@@ -27,13 +27,12 @@
 
     <div class="row g-2 mb-3">
         @foreach([
-            ['label' => 'Scoped Programs', 'value' => $kpis['programs'], 'route' => null],
+            ['label' => 'Scoped Programs', 'value' => $kpis['programs'], 'route' => route('academics.pmc.programs', ['metric' => 'active_programs'])],
             ['label' => 'Curriculum Gaps', 'value' => $kpis['curriculum_gaps'], 'route' => route('academics.pmc.curriculum-readiness', ['metric' => 'curriculum_gaps'])],
             ['label' => 'Faculty Gaps', 'value' => $kpis['faculty_gaps'], 'route' => route('academics.pmc.faculty-allocation', ['metric' => 'faculty_gaps'])],
             ['label' => 'Student Risk', 'value' => $kpis['student_risk'], 'route' => route('academics.pmc.student-monitoring', ['metric' => 'student_risk'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
-                @if($metric['route'])
                 <a class="text-decoration-none d-block h-100" href="{{ $metric['route'] }}">
                     <div class="card shadow-sm h-100">
                         <div class="card-body py-2">
@@ -42,15 +41,6 @@
                         </div>
                     </div>
                 </a>
-                @else
-                    <div class="card shadow-sm h-100" aria-label="{{ $metric['label'] }} summary">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $metric['label'] }}</div>
-                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                            <div class="small text-muted">Summary only</div>
-                        </div>
-                    </div>
-                @endif
             </div>
         @endforeach
     </div>

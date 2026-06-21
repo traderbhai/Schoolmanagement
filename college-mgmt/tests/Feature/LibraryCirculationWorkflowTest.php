@@ -674,6 +674,26 @@ class LibraryCirculationWorkflowTest extends TestCase
         $this->assertSame('cancelled', $reservation->fresh()->status);
     }
 
+    public function test_student_library_empty_states_explain_borrowing_reservations_and_history(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.library.index'))
+            ->assertOk()
+            ->assertSee('No books currently borrowed')
+            ->assertSee('Issued books will appear here with due dates')
+            ->assertSee('No reservations yet')
+            ->assertSee('Reserve a book only when all issuable copies are unavailable')
+            ->assertSee('No catalog books are available yet')
+            ->assertSee('library team must add books and issuable copies')
+            ->assertSee('No borrowing history yet')
+            ->assertSee('Past issues, returns, and paid fines will appear here')
+            ->assertDontSee('No reservations yet.')
+            ->assertDontSee('â€”')
+            ->assertDontSee('â‚¹');
+    }
+
     public function test_inactive_student_cannot_create_library_reservation_through_direct_route(): void
     {
         $student = $this->student();

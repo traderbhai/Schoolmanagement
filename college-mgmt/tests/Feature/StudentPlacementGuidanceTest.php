@@ -91,6 +91,23 @@ class StudentPlacementGuidanceTest extends TestCase
             ->assertSee('Apply Now');
     }
 
+    public function test_student_placement_empty_states_explain_cmc_drive_and_application_workflow(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.placements'))
+            ->assertOk()
+            ->assertSee('No placement drives are open right now')
+            ->assertSee('CMC publishes drives after company details, eligibility, application deadline, and drive date are confirmed')
+            ->assertSee('use My Applications to track submitted applications')
+            ->assertSee('No placement applications submitted yet')
+            ->assertSee('Applications appear here after you apply to an open drive')
+            ->assertSee('CMC updates shortlist, interview, selected, rejected, and joining-status outcomes')
+            ->assertDontSee('No placement drives are open right now.')
+            ->assertDontSee('You have not applied to any placement drives yet.');
+    }
+
     public function test_student_cannot_apply_to_completed_or_expired_drive(): void
     {
         $student = $this->student();
@@ -270,5 +287,30 @@ class StudentPlacementGuidanceTest extends TestCase
             ->assertSee('Interview')
             ->assertSee('7.3 LPA')
             ->assertSee('Watch for interview schedule and instructions.');
+    }
+
+    public function test_student_application_tracking_uses_readable_package_fallback(): void
+    {
+        $student = $this->student();
+        $drive = $this->drive([
+            'status' => 'ongoing',
+            'title' => 'Fallback Placement Drive',
+            'job_role' => 'Analyst Trainee',
+            'package' => null,
+        ]);
+
+        Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'applied',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.placements.applications'))
+            ->assertOk()
+            ->assertSee('Fallback Placement Drive')
+            ->assertSee('Analyst Trainee')
+            ->assertSee('Package pending')
+            ->assertDontSee('<td>-</td>', false);
     }
 }

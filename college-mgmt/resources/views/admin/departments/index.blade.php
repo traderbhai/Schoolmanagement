@@ -8,6 +8,8 @@
 
 @section('content')
 
+@include('admin.partials.setup-sequence')
+
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h5 class="mb-0 fw-bold">Departments</h5>

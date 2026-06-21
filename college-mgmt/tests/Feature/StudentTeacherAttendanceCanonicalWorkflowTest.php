@@ -381,6 +381,22 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
         $this->assertSame(1, AttendanceCondonation::where('student_id', $fixture['student']->id)->count());
     }
 
+    public function test_empty_condonation_history_explains_attendance_threshold_and_review_owner(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.condonation.index'))
+            ->assertOk()
+            ->assertSee('No condonation requests submitted yet.')
+            ->assertSee('Request condonation only for enrolled subjects below the attendance threshold.')
+            ->assertSee('reviewed by the academic/program office')
+            ->assertSee('Check Eligible Subjects')
+            ->assertSee(route('student.condonation.create'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     public function test_student_condonation_ignores_draft_timetable_attendance_history(): void
     {
         $fixture = $this->fixture();

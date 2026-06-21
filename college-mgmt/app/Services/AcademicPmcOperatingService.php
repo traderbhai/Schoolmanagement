@@ -35,7 +35,7 @@ class AcademicPmcOperatingService
         return [
             'scopeSummary' => $this->scopeSummary($user),
             'kpis' => [
-                'programs' => $this->applyProgramScope(Program::where('is_active', true), $programIds)->count(),
+                'programs' => $this->scopedPrograms($user)['metrics']['active_programs'],
                 'curriculum_gaps' => $curriculum['metrics']['mapping_gaps'] + $curriculum['metrics']['pending_changes'],
                 'faculty_gaps' => $faculty['metrics']['unassigned_subjects'] + $faculty['metrics']['overloaded_faculty'],
                 'student_risk' => $students['metrics']['attendance_risk'] + $students['metrics']['weak_performance'],
@@ -45,6 +45,33 @@ class AcademicPmcOperatingService
             'timetable' => $timetable,
             'students' => $students,
             'reports' => $this->reports($user),
+        ];
+    }
+
+    public function scopedPrograms(User $user): array
+    {
+        $programIds = $this->visibleProgramIds($user);
+        $programs = $this->applyProgramScope(
+            Program::withCount(['students', 'subjects'])->where('is_active', true),
+            $programIds,
+            'id'
+        )->orderBy('name')->limit(100)->get();
+
+        return [
+            'title' => 'Scoped Programs',
+            'description' => 'Programs currently visible to PMC for planning, curriculum, timetable, delivery, and student monitoring.',
+            'metrics' => [
+                'active_programs' => $programs->count(),
+                'student_strength' => $programs->sum('students_count'),
+                'subject_coverage' => $programs->sum('subjects_count'),
+            ],
+            'items' => $programs->map(fn (Program $program) => [
+                'title' => $program->name,
+                'subtitle' => trim(($program->code ?: 'Program') . ' - ' . $program->students_count . ' students - ' . $program->subjects_count . ' subjects'),
+                'status' => 'Active program',
+                'metric_keys' => ['active_programs', 'programs'],
+                'action' => route('admin.programs.show', $program),
+            ])->values(),
         ];
     }
 
@@ -266,7 +293,7 @@ class AcademicPmcOperatingService
             'active_programs' => [
                 'label' => 'Active scoped programs',
                 'count' => $this->applyProgramScope(Program::where('is_active', true), $programIds)->count(),
-                'route' => route('academics.pmc.index'),
+                'route' => route('academics.pmc.programs', ['metric' => 'active_programs']),
             ],
         ];
     }
@@ -274,6 +301,7 @@ class AcademicPmcOperatingService
     public function section(User $user, string $section, array $filters = []): array
     {
         $data = match ($section) {
+            'programs' => $this->scopedPrograms($user),
             'curriculum-readiness' => $this->curriculumReadiness($user),
             'faculty-allocation' => $this->facultyAllocation($user),
             'timetable-readiness' => $this->timetableReadiness($user),

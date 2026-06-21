@@ -88,11 +88,26 @@ class AdmissionApplicantReadinessService
 
     private function registrationFee(Applicant $applicant): array
     {
+        if ($applicant->hasRegistrationFeePaid()) {
+            return $this->item('Registration Fee', true, [], 'applicant.registration-fee.show');
+        }
+
+        if ($applicant->status !== 'draft') {
+            return $this->item(
+                'Registration Fee Not Recorded',
+                false,
+                ['Your application has already been submitted. Track the registration fee with the admission team instead of submitting details again.'],
+                'applicant.status',
+                'Track Status'
+            );
+        }
+
         return $this->item(
             'Registration Fee',
-            $applicant->hasRegistrationFeePaid(),
-            $applicant->hasRegistrationFeePaid() ? [] : ['Registration fee is not recorded.'],
-            'applicant.registration-fee.show'
+            false,
+            ['Registration fee is not recorded.'],
+            'applicant.registration-fee.show',
+            'Submit Fee Details'
         );
     }
 
@@ -251,13 +266,14 @@ class AdmissionApplicantReadinessService
         return true;
     }
 
-    private function item(string $label, bool $ready, array $blockers, string $route): array
+    private function item(string $label, bool $ready, array $blockers, string $route, ?string $actionLabel = null): array
     {
         return [
             'label' => $label,
             'ready' => $ready,
             'blockers' => array_values($blockers),
             'route' => $route,
+            'action_label' => $actionLabel,
         ];
     }
 }

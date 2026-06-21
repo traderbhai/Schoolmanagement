@@ -13,17 +13,27 @@
 
 @section('content')
 <div class="v036">
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h3 class="fw-bold mb-1">Assessment Control Room</h3>
-        <div class="text-muted small">Panels, candidate lifecycle, evaluator readiness, pending scores, and variance review.</div>
+<x-ui.page-header
+    title="Assessment Control Room"
+    subtitle="Daily operating board for sessions, panel readiness, candidate lifecycle, pending scores, and score variance review."
+    action-label="Evaluator Workspace"
+    :action-route="route('admission.evaluator-scoring.index')"
+    action-icon="bi-clipboard-check"
+/>
+
+<div class="alert alert-info border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-3">
+    <div class="d-flex gap-3">
+        <div class="ui-kpi-tile-icon bg-white text-info"><i class="bi bi-display"></i></div>
+        <div>
+            <div class="fw-bold">Assessment-day control sequence</div>
+            <div class="small">1. Confirm panel readiness &nbsp; 2. Move candidates through lifecycle &nbsp; 3. Chase pending scores &nbsp; 4. Review variance before committee decisions.</div>
+        </div>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{{ route('admission.evaluator-scoring.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-clipboard-check me-1"></i>Evaluator Workspace</a>
-        <a href="{{ route('admission.assessment-schedule-conflicts.index') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-calendar-x me-1"></i>Schedule Conflicts</a>
-        <a href="{{ route('admission.assessment-bulk-assignment.index') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-people me-1"></i>Bulk Assign</a>
-        <a href="{{ route('admission.assessment-normalization.index') }}" class="btn btn-outline-dark btn-sm"><i class="bi bi-sliders me-1"></i>Normalization</a>
-        <a href="{{ route('admission.assessment-rubrics.index') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list-stars me-1"></i>Rubrics</a>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('admission.assessment-schedule-conflicts.index') }}" class="btn btn-outline-info btn-sm">Schedule Conflicts</a>
+        <a href="{{ route('admission.assessment-bulk-assignment.index') }}" class="btn btn-outline-info btn-sm">Bulk Assign</a>
+        <a href="{{ route('admission.assessment-normalization.index') }}" class="btn btn-outline-info btn-sm">Normalization</a>
+        <a href="{{ route('admission.assessment-rubrics.index') }}" class="btn btn-outline-info btn-sm">Rubrics</a>
     </div>
 </div>
 
@@ -51,7 +61,7 @@
 <div class="row g-3">
     <div class="col-xl-7">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Panel Readiness</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Panel Readiness</span><span class="small text-muted">Evaluator, rubric, venue, capacity, and pending score status</span></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Panel</th><th>Type</th><th>Capacity</th><th>Readiness</th><th>Pending</th><th></th></tr></thead>
@@ -79,7 +89,7 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Upcoming Sessions</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Upcoming Sessions</span><span class="small text-muted">Open the source session before assessment day</span></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Session</th><th>Program</th><th>Date</th><th>Candidates</th><th></th></tr></thead>
@@ -101,7 +111,7 @@
 
     <div class="col-xl-5">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Candidate Lifecycle</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Candidate Lifecycle</span><span class="small text-muted">Track invited to completed/no-show/rescheduled</span></div>
             <div class="card-body">
                 <div class="row g-2">
                     @foreach(['invited','confirmed','checked_in','waiting','in_progress','completed','no_show','rescheduled','cancelled'] as $state)
@@ -112,7 +122,7 @@
         </div>
 
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Pending Score Queue</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Pending Score Queue</span><span class="small text-muted">Ask evaluator or chair to finalize</span></div>
             <div class="list-group list-group-flush">
                 @forelse($dashboard['pendingScores'] as $assignment)
                     <a href="{{ route('admission.evaluator-scoring.index') }}" class="list-group-item list-group-item-action">
@@ -126,7 +136,7 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Variance / Override Queue</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Variance / Override Queue</span><span class="small text-muted">Review before committee selection</span></div>
             <div class="list-group list-group-flush">
                 @forelse($dashboard['varianceQueue'] as $assignment)
                     <div class="list-group-item">

@@ -15,8 +15,10 @@
     </div>
 @endif
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div></div>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+    <div class="text-muted small">
+        Submit planned, medical, duty, or earned leave here. Pending requests can be cancelled before review; approved or rejected requests stay as audit history.
+    </div>
     @if($canApplyForLeave)
         <a href="{{ route('teacher.leaves.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Apply for Leave</a>
     @else
@@ -64,7 +66,7 @@
                         <span class="badge badge-danger">Rejected</span>
                     @endif
                 </td>
-                <td style="font-size:.83rem">{{ $leave->admin_remarks ? Str::limit($leave->admin_remarks, 50) : '–' }}</td>
+                <td style="font-size:.83rem">{{ $leave->admin_remarks ? Str::limit($leave->admin_remarks, 50) : 'No reviewer remarks yet' }}</td>
                 <td style="font-size:.83rem">{{ $leave->created_at->format('d M Y') }}</td>
                 <td>
                     @if($canApplyForLeave && $leave->status === 'pending')
@@ -81,9 +83,15 @@
             <tr><td colspan="9">
                 <div class="empty-state py-4">
                     <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
-                    <div class="text-muted">No leave applications yet.</div>
+                    <div class="fw-semibold text-dark mb-1">No teacher leave applications submitted yet</div>
+                    <div class="text-muted small mx-auto" style="max-width:560px">
+                        Use this page when you need planned leave, medical leave, duty leave, or other approved absence.
+                        Your request is reviewed by the academic administration; pending requests can be cancelled before review.
+                    </div>
                     @if($canApplyForLeave)
                         <a href="{{ route('teacher.leaves.create') }}" class="btn btn-sm btn-primary mt-2">Apply for Leave</a>
+                    @else
+                        <div class="text-muted small mt-2">Leave submission is enabled only after your active teacher profile is linked.</div>
                     @endif
                 </div>
             </td></tr>

@@ -60,7 +60,11 @@
             <div class="card">
                 <div class="card-body text-center py-5 text-muted">
                     <i class="bi bi-briefcase fs-1 d-block mb-2"></i>
-                    No placement drives are open right now.
+                    <div class="fw-semibold text-dark mb-1">No placement drives are open right now</div>
+                    <div class="small mx-auto" style="max-width:560px">
+                        CMC publishes drives after company details, eligibility, application deadline, and drive date are confirmed.
+                        Check this page again for upcoming or ongoing drives, and use My Applications to track submitted applications.
+                    </div>
                 </div>
             </div>
         @else

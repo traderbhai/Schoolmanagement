@@ -27,6 +27,7 @@ class AcademicsPmcKpiDrilldownConsistencyTest extends TestCase
         $dashboard = $service->dashboard($user);
 
         $cases = [
+            ['kpi' => 'programs', 'section' => 'programs', 'metric' => 'active_programs', 'route' => 'academics.pmc.programs'],
             ['kpi' => 'curriculum_gaps', 'section' => 'curriculum-readiness', 'metric' => 'curriculum_gaps', 'route' => 'academics.pmc.curriculum-readiness'],
             ['kpi' => 'faculty_gaps', 'section' => 'faculty-allocation', 'metric' => 'faculty_gaps', 'route' => 'academics.pmc.faculty-allocation'],
             ['kpi' => 'student_risk', 'section' => 'student-monitoring', 'metric' => 'student_risk', 'route' => 'academics.pmc.student-monitoring'],
@@ -57,15 +58,39 @@ class AcademicsPmcKpiDrilldownConsistencyTest extends TestCase
             ->assertSee('Export current view');
     }
 
-    public function test_pmc_scoped_programs_card_is_summary_only_until_program_source_list_exists(): void
+    public function test_pmc_scoped_programs_card_opens_filtered_program_source_list(): void
     {
         $user = User::where('email', 'chair@college.com')->firstOrFail();
+        $service = app(AcademicPmcOperatingService::class);
+        $dashboard = $service->dashboard($user);
 
         $this->actingAs($user)
             ->get(route('academics.pmc.index'))
             ->assertOk()
             ->assertSee('Scoped Programs')
-            ->assertSee('Summary only');
+            ->assertSee(route('academics.pmc.programs', ['metric' => 'active_programs']), false)
+            ->assertDontSee('Summary only');
+
+        $this->actingAs($user)
+            ->get(route('academics.pmc.programs', ['metric' => 'active_programs']))
+            ->assertOk()
+            ->assertSee('Filtered Source List (' . $dashboard['kpis']['programs'] . ')')
+            ->assertSee('Visible filter summary: Metric: active_programs');
+    }
+
+    public function test_pmc_section_empty_state_explains_scope_filters_and_next_steps(): void
+    {
+        $user = User::where('email', 'chair@college.com')->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('academics.pmc.faculty-allocation', ['search' => 'NO_MATCH_PMC_SCOPE_999']))
+            ->assertOk()
+            ->assertSee('Faculty Allocation')
+            ->assertSee('Filtered Source List (0)')
+            ->assertSee('Visible filter summary: Search: NO_MATCH_PMC_SCOPE_999')
+            ->assertSee('No PMC records match this view')
+            ->assertSee('Clear filters, check your assigned program/batch scope, or create/update the source workflow')
+            ->assertDontSee('No records match the current PMC scope.');
     }
 
     public function test_pmc_timetable_conflict_kpis_match_filtered_planner_panel(): void
@@ -87,7 +112,7 @@ class AcademicsPmcKpiDrilldownConsistencyTest extends TestCase
         }
     }
 
-    public function test_pmc_timetable_quality_score_is_summary_only(): void
+    public function test_pmc_timetable_quality_score_opens_quality_source_surface(): void
     {
         $user = User::where('email', 'chair@college.com')->firstOrFail();
 
@@ -95,7 +120,14 @@ class AcademicsPmcKpiDrilldownConsistencyTest extends TestCase
             ->get(route('academics.pmc.timetable-os.index'))
             ->assertOk()
             ->assertSee('Quality Score')
-            ->assertSee('Summary score')
-            ->assertDontSee('>Quality Score</div><div class="h4 mb-0">', false);
+            ->assertSee(route('academics.pmc.timetable-quality.index'), false)
+            ->assertSee('Open Quality Score source list', false)
+            ->assertDontSee('Summary score');
+
+        $this->actingAs($user)
+            ->get(route('academics.pmc.timetable-quality.index'))
+            ->assertOk()
+            ->assertSee('PMC Constraint-Based Timetable Generator')
+            ->assertSee('Visible filter summary:');
     }
 }

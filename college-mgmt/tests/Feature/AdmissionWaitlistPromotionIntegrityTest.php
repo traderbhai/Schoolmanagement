@@ -242,4 +242,58 @@ class AdmissionWaitlistPromotionIntegrityTest extends TestCase
             'applicant_id' => $finalApplicant->id,
         ]);
     }
+
+    public function test_waitlist_empty_state_explains_filters_source_and_seat_setup(): void
+    {
+        $staff = $this->admissionUser();
+        $program = Program::factory()->create(['is_active' => true, 'name' => 'Waitlist Program']);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'name' => 'Waitlist Batch']);
+
+        $this->actingAs($staff)
+            ->get(route('admission.waitlist.index', [$program, 'batch_id' => $batch->id]))
+            ->assertOk()
+            ->assertSee('Waitlist Management')
+            ->assertSee('Program: Waitlist Program | Batch: Waitlist Batch')
+            ->assertSee('Not configured')
+            ->assertSee('Configure a seat matrix before promotions can proceed.')
+            ->assertSee('No waitlisted candidates are visible')
+            ->assertSee('check merit-list decisions, selected batch filters, and seat matrix setup')
+            ->assertSee('Clear Batch Filter')
+            ->assertSee('Open Merit List')
+            ->assertSee('Review Seat Matrix')
+            ->assertDontSee('No waitlisted candidates for this program.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+    }
+
+    public function test_waitlist_rows_use_readable_candidate_labels_and_capacity_context(): void
+    {
+        $staff = $this->admissionUser();
+        $matrix = $this->matrix([
+            'total_seats' => 3,
+            'general_seats' => 3,
+            'obc_seats' => 0,
+        ]);
+        $entry = $this->waitlistedEntry($matrix, 'general');
+        $entry->applicant->user->update([
+            'name' => 'Visible Waitlist Applicant',
+            'email' => 'waitlist-applicant@example.test',
+        ]);
+        $entry->applicant->update(['application_number' => 'APP-WAIT-001']);
+
+        $this->actingAs($staff)
+            ->get(route('admission.waitlist.index', [$matrix->program, 'batch_id' => $matrix->batch_id]))
+            ->assertOk()
+            ->assertSee('Visible Waitlist Applicant')
+            ->assertSee('waitlist-applicant@example.test')
+            ->assertSee('APP-WAIT-001')
+            ->assertSee('Program: '.$matrix->program->name.' | Batch: '.$matrix->batch->name)
+            ->assertSee('Available Seats')
+            ->assertSee('Promote')
+            ->assertSee('Candidates are listed in merit order')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+    }
 }

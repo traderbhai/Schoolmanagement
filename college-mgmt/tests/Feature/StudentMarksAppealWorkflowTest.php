@@ -99,6 +99,22 @@ class StudentMarksAppealWorkflowTest extends TestCase
             ->assertSee('Mid Term Retest');
     }
 
+    public function test_empty_marks_appeal_history_explains_official_result_review_next_step(): void
+    {
+        $fixture = $this->studentWithResult();
+
+        $this->actingAs($fixture['user'])
+            ->get(route('student.appeals.index'))
+            ->assertOk()
+            ->assertSee('No marks appeals submitted yet')
+            ->assertSee('Submit an appeal only after official results are published')
+            ->assertSee('Exam Cell to review a mark entry, totaling issue, or evaluation concern')
+            ->assertSee('Check Eligible Results')
+            ->assertSee(route('student.appeals.create'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     public function test_student_can_submit_one_valid_appeal_for_own_result(): void
     {
         $fixture = $this->studentWithResult();

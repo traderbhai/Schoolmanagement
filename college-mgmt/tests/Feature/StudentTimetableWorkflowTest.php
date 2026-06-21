@@ -11,6 +11,40 @@ class StudentTimetableWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_student_timetable_empty_state_explains_registration_and_publication_next_steps(): void
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+        ]);
+        $course = Course::factory()->create();
+        $user = User::factory()->create();
+        $user->assignRole('student');
+        Student::factory()->create([
+            'user_id' => $user->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'course_id' => $course->id,
+            'current_term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.timetable'))
+            ->assertOk()
+            ->assertSee('No published timetable is available for your enrolled subjects yet')
+            ->assertSee('review subject registration first')
+            ->assertSee('PMC/academic office to publish the official timetable')
+            ->assertSee('Review subject registration')
+            ->assertDontSee('No timetable entries found for your enrolled subjects');
+    }
+
     public function test_student_timetable_uses_canonical_subject_enrollments_and_numeric_weekdays(): void
     {
         Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);

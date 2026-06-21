@@ -36,9 +36,18 @@
         </div>
     @endunless
 
-    @if($myApplications->isNotEmpty())
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header fw-semibold"><i class="bi bi-clock-history me-2"></i>My Applications</div>
+        @if($myApplications->isEmpty())
+        <div class="card-body text-center py-4">
+            <i class="bi bi-file-earmark-check fs-2 d-block mb-2 text-muted"></i>
+            <div class="fw-semibold text-dark mb-1">No scholarship applications submitted yet</div>
+            <div class="text-muted small mx-auto" style="max-width:620px">
+                Apply from an eligible active scheme below. Submitted applications will appear here with
+                pending, shortlisted, approved, rejected, or disbursed status after the scholarship office reviews them.
+            </div>
+        </div>
+        @else
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -67,14 +76,20 @@
                 </tbody>
             </table>
         </div>
+        @endif
     </div>
-    @endif
 
     <div class="card border-0 shadow-sm">
         <div class="card-header fw-semibold"><i class="bi bi-award me-2"></i>Available Scholarships</div>
         @if($schemes->isEmpty())
-        <div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-award fs-1 d-block mb-2"></i>No active scholarships at this time.
+        <div class="card-body text-center py-5">
+            <i class="bi bi-award fs-1 d-block mb-2 text-muted"></i>
+            <div class="fw-semibold text-dark mb-1">No active scholarships are open for your program right now</div>
+            <div class="text-muted small mx-auto" style="max-width:640px">
+                Scholarship schemes appear here only after the office publishes an active scheme for your
+                program or for all programs. If you expect a scheme, check that your program, CGPA,
+                guardian income, and required proof documents are up to date.
+            </div>
         </div>
         @else
         <div class="list-group list-group-flush">

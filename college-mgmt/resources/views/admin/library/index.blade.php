@@ -11,6 +11,22 @@
     <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Library operating sequence</div>
+            <div class="small text-muted">Start with overdue and due-today queues, then manage catalog, issues, reservations, memberships, and fines.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Check overdue</span>
+            <span class="badge text-bg-light">2. Review due today</span>
+            <span class="badge text-bg-light">3. Manage issues</span>
+            <span class="badge text-bg-light">4. Update catalog</span>
+            <span class="badge text-bg-light">5. Clear fines</span>
+        </div>
+    </div>
+</div>
+
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-4 col-md-2">

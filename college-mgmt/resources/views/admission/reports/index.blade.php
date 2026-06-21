@@ -5,6 +5,17 @@
 
 @section('content')
 <div class="container-fluid px-4 py-3">
+    <div class="alert alert-info border-0 shadow-sm small mb-4">
+        <div class="fw-semibold mb-1">Report interpretation workflow</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Start with funnel totals</span>
+            <span class="badge text-bg-light border">2. Compare source and program conversion</span>
+            <span class="badge text-bg-light border">3. Review category and compliance gaps</span>
+            <span class="badge text-bg-light border">4. Check counsellor and geography signals</span>
+            <span class="badge text-bg-light border">5. Export with current context</span>
+        </div>
+        <div class="text-muted mt-2">Use these reports for management review and follow-up planning. When a metric looks off, open the matching operational list from the dashboard or workbench before acting.</div>
+    </div>
 
     {{-- ── Header ─────────────────────────────────────────────────────────── --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
@@ -148,7 +159,10 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-muted text-center py-4 mb-0">No lead source data yet.</p>
+                        <div class="text-center py-4 px-3">
+                            <div class="fw-semibold text-dark mb-1">No lead source data is available yet</div>
+                            <p class="text-muted small mb-0">Capture or import leads with a source value so management can compare channel quality and conversion.</p>
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -190,7 +204,10 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">No active programs found.</td>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="fw-semibold text-dark mb-1">No active programs are available for admission reporting</div>
+                                    <div class="text-muted small">Activate programs and map applicants to their program before reviewing program-wise conversion.</div>
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -248,7 +265,10 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-muted text-center py-5 mb-0">No category data yet.</p>
+                        <div class="text-center py-5 px-3">
+                            <div class="fw-semibold text-dark mb-1">No applicant category data is available yet</div>
+                            <p class="text-muted small mb-0">Capture applicant category details to compare reservation mix, compliance, and seat-fill risk.</p>
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -298,7 +318,10 @@
             <h5 class="mb-0 fw-semibold"><i class="bi bi-shield-check me-2"></i>AICTE Category Compliance</h5>
         </div>
         <div class="card-body">
-            <p class="text-muted small mb-3">Seat fill vs AICTE mandate for reservation categories. Total intake: {{ $totalIntake ?? '—' }} seats.</p>
+            <p class="text-muted small mb-3">
+                Seat fill vs AICTE mandate for reservation categories.
+                Total intake: {{ $totalIntake > 0 ? number_format($totalIntake) . ' seats' : 'Seat intake not configured' }}.
+            </p>
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
                     <thead class="bg-light">
@@ -349,7 +372,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($counsellorStats->isEmpty())
-                        <p class="text-muted p-3 mb-0">No leads assigned yet.</p>
+                        <div class="text-center py-4 px-3">
+                            <div class="fw-semibold text-dark mb-1">No counsellor lead assignments are available yet</div>
+                            <p class="text-muted small mb-0">Assign leads to counsellors before comparing workload, conversions, and follow-up effectiveness.</p>
+                        </div>
                     @else
                     <table class="table table-sm mb-0">
                         <thead class="bg-light">
@@ -388,7 +414,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($geoStats->isEmpty())
-                        <p class="text-muted p-3 mb-0">No geographic data available yet.</p>
+                        <div class="text-center py-4 px-3">
+                            <div class="fw-semibold text-dark mb-1">No geographic data is available yet</div>
+                            <p class="text-muted small mb-0">Capture applicant city/state details to analyze regional demand and travel/outreach planning.</p>
+                        </div>
                     @else
                     <table class="table table-sm mb-0">
                         <thead class="bg-light">

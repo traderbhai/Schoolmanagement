@@ -59,7 +59,7 @@ class AdminOperationsKpiDrilldownConsistencyTest extends TestCase
             ->assertSee('mode=overdue_demands');
     }
 
-    public function test_cmc_dashboard_primary_kpis_are_summary_only_not_false_drilldowns(): void
+    public function test_cmc_dashboard_primary_kpis_open_source_surfaces(): void
     {
         $user = User::where('email', 'cmc@college.com')->firstOrFail();
 
@@ -67,8 +67,11 @@ class AdminOperationsKpiDrilldownConsistencyTest extends TestCase
             ->get(route('cmc.dashboard'))
             ->assertOk()
             ->assertSee('Active Drives')
+            ->assertSee(route('cmc.drives', ['status' => 'active']), false)
             ->assertSee('Total Placed')
+            ->assertSee(route('cmc.placements'), false)
             ->assertSee('Placement Rate')
+            ->assertSee(route('cmc.analytics'), false)
             ->assertDontSee('href="#', false);
     }
 }

@@ -19,7 +19,7 @@ class PaymentRejected extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Payment Verification Failed — Action Required');
+        return new Envelope(subject: 'Payment Verification Failed - Action Required');
     }
 
     public function content(): Content

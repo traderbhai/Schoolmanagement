@@ -30,7 +30,17 @@
     </div>
 
     @if($requests->isEmpty())
-    <div class="alert alert-info">No document requests yet.</div>
+    <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="fw-semibold mb-1">No document requests yet.</div>
+            <div class="small mb-0">
+                Use this page to request bonafide, fee, character, migration, NOC, or ID documents. Once submitted, the request status and download action will appear here.
+            </div>
+        </div>
+        <a href="{{ route('student.documents.create') }}" class="btn btn-sm btn-primary align-self-start align-self-md-center">
+            Request Document
+        </a>
+    </div>
     @else
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">

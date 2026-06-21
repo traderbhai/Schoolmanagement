@@ -10,18 +10,18 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
 </style></head>
 <body>
 <div class="container">
-    <div class="header"><h1 style="margin:0;font-size:22px">Payment Confirmed ✓</h1></div>
+    <div class="header"><h1 style="margin:0;font-size:22px">Payment Confirmed</h1></div>
     <div class="body">
-        <p>Dear {{ $applicant->user->name }},</p>
+        <p>Dear {{ $applicant->user?->name ?? ($applicant->personal_data['name'] ?? 'Applicant') }},</p>
         <p>Your payment has been verified successfully.</p>
         <div class="info-box">
-            <strong>Installment:</strong> {{ $installmentName }}<br>
-            <strong>Amount:</strong> ₹{{ number_format($payment->amount_paid, 2) }}<br>
-            <strong>Mode:</strong> {{ ucfirst($payment->payment_mode) }}<br>
+            <strong>Installment:</strong> {{ $installmentName ?? 'Admission fee installment' }}<br>
+            <strong>Amount:</strong> Rs. {{ number_format((float) $payment->amount_paid, 2) }}<br>
+            <strong>Mode:</strong> {{ $payment->payment_mode ? ucfirst($payment->payment_mode) : 'Payment mode not recorded' }}<br>
             @if($payment->transaction_reference)
             <strong>Reference:</strong> {{ $payment->transaction_reference }}<br>
             @endif
-            <strong>Verified on:</strong> {{ $payment->verified_at?->format('d M Y H:i') }}
+            <strong>Verified on:</strong> {{ $payment->verified_at?->format('d M Y H:i') ?? 'Verification time not recorded' }}
         </div>
         <p>Please keep this email as your payment confirmation record.</p>
     </div>

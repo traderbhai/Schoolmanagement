@@ -29,11 +29,31 @@ class AdmissionOsV033Test extends TestCase
             ->assertDontSee('QueryException');
 
         $this->actingAs($head)
-            ->get(route('admission.walk-ins.index', ['per_page' => 10, 'search' => 'Walk-in Demo']))
+            ->get(route('admission.walk-ins.index', [
+                'per_page' => 10,
+                'search' => 'Walk-in Demo',
+                'sort' => 'visitor_name',
+                'direction' => 'asc',
+            ]))
             ->assertOk()
             ->assertSee('visits after filters')
+            ->assertSee('Walk-in workflow')
+            ->assertSee('Visible filter summary')
+            ->assertSee('Sort: visitor name asc')
             ->assertSee('Walk-in Demo')
             ->assertSee('Showing')
+            ->assertSee('Conversion Report')
+            ->assertSee('sort=visited_at', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('QueryException');
+
+        $this->actingAs($head)
+            ->get(route('admission.walk-ins.index', ['search' => 'no-matching-walk-in-visitor']))
+            ->assertOk()
+            ->assertSee('No walk-in visits match the current scope or filters.')
+            ->assertSee('Clear Filters')
+            ->assertSee('No scoped walk-in visits are available for conversion reporting yet.')
+            ->assertDontSee('N/A', false)
             ->assertDontSee('QueryException');
 
         $this->actingAs($head)

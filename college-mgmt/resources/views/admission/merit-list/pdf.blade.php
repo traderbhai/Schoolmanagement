@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Merit List — {{ $program->name }}</title>
+    <title>Merit List - {{ $program->name }}</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 11px; color: #333; }
         h1 { font-size: 18px; text-align: center; margin-bottom: 4px; }
@@ -21,7 +21,7 @@
 <body>
     <h1>{{ config('app.name', 'College Management System') }}</h1>
     <div class="subtitle">
-        <strong>Merit List — {{ $program->name }}</strong>
+        <strong>Merit List - {{ $program->name }}</strong>
         @if($batch) | Batch: {{ $batch->name }} @endif<br>
         Generated: {{ now()->format('d M Y, H:i') }}
     </div>
@@ -44,13 +44,13 @@
             @foreach($entries as $entry)
             <tr>
                 <td>#{{ $entry->rank }}</td>
-                <td>{{ $entry->applicant->user->name ?? 'N/A' }}</td>
-                <td>{{ $entry->applicant->application_number }}</td>
+                <td>{{ $entry->applicant->user->name ?? 'Applicant name not recorded' }}</td>
+                <td>{{ $entry->applicant->application_number ?? 'Application number pending' }}</td>
                 @foreach($steps as $stepId => $step)
                 @php $ss = ($entry->step_scores ?? [])[$stepId] ?? null; @endphp
-                    <td>{{ $ss ? number_format($ss['percentage'] ?? 0, 1).'%' : '—' }}</td>
+                    <td>{{ $ss ? number_format($ss['percentage'] ?? 0, 1).'%' : 'Step score not recorded' }}</td>
                 @endforeach
-                <td>{{ $entry->academic_score !== null ? number_format($entry->academic_score, 1).'%' : '—' }}</td>
+                <td>{{ $entry->academic_score !== null ? number_format($entry->academic_score, 1).'%' : 'Academic score not recorded' }}</td>
                 <td>{{ number_format($entry->composite_score, 2) }}</td>
                 <td><span class="badge-{{ $entry->decision }}">{{ $entry->decisionLabel }}</span></td>
             </tr>

@@ -99,7 +99,7 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
 
     public function test_admission_award_respects_structured_cgpa_and_income_eligibility(): void
     {
-        $officer = $this->admissionOfficer();
+        $officer = $this->admissionUserWithRole('admission_head');
         $applicant = $this->applicant([
             'academic_data' => ['cgpa' => 6.8],
             'family_data' => ['annual_income' => '800000'],
@@ -642,5 +642,88 @@ class AdmissionApplicantScholarshipWorkflowTest extends TestCase
             ->assertSessionHas('error', 'Scholarship schemes with active applications or awards cannot be activated or deactivated directly. Create a new scheme version or close existing applications first.');
 
         $this->assertTrue($scheme->fresh()->is_active);
+    }
+
+    public function test_scholarship_scheme_pages_use_readable_amount_labels_and_guidance(): void
+    {
+        $officer = $this->admissionOfficer();
+        $scheme = $this->scheme([
+            'name' => 'Readable Merit Scholarship',
+            'max_amount' => 18000,
+            'available_seats' => null,
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.scholarship-schemes.index'))
+            ->assertOk()
+            ->assertSee('Scholarship Schemes')
+            ->assertSee('Readable Merit Scholarship')
+            ->assertSee('Max Amount (Rs.)')
+            ->assertSee('Rs. 18,000')
+            ->assertSee('Unlimited')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.scholarship-schemes.create'))
+            ->assertOk()
+            ->assertSee('Define the eligibility, award limit, proof requirement, and capacity')
+            ->assertSee('Maximum Amount (Rs.)')
+            ->assertSee('Select type')
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.scholarship-schemes.edit', $scheme))
+            ->assertOk()
+            ->assertSee('Edit Scheme')
+            ->assertSee('Maximum Amount (Rs.)')
+            ->assertSee('Active and available for awarding')
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+    }
+
+    public function test_scholarship_disbursement_queue_empty_and_row_states_are_operational(): void
+    {
+        $officer = $this->admissionUserWithRole('admission_head');
+        $program = Program::factory()->create(['is_active' => true, 'name' => 'Scholarship Program']);
+
+        $this->actingAs($officer)
+            ->get(route('admission.scholarship-disbursements.index', ['program_id' => $program->id]))
+            ->assertOk()
+            ->assertSee('No scholarship disbursements are pending')
+            ->assertSee('Admission visibility scope')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Applicants')
+            ->assertSee('Review Schemes')
+            ->assertDontSee('All scholarships have been disbursed.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+
+        $scheme = $this->scheme(['name' => 'Visible Disbursement Scheme']);
+        $applicant = $this->applicant(['program' => $program]);
+        $applicant->user->update(['name' => 'Visible Disbursement Applicant']);
+        ApplicantScholarship::create([
+            'applicant_id' => $applicant->id,
+            'scheme_id' => $scheme->id,
+            'awarded_amount' => 9000,
+            'status' => 'awarded',
+            'awarded_by' => $officer->id,
+            'awarded_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.scholarship-disbursements.index'))
+            ->assertOk()
+            ->assertSee('Visible Disbursement Applicant')
+            ->assertSee('Visible Disbursement Scheme')
+            ->assertSee('Amount (Rs.)')
+            ->assertSee('Rs. 9,000.00')
+            ->assertSee('Disbursing <strong>Rs. 9,000.00</strong>', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
     }
 }

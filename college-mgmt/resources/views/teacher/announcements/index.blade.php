@@ -101,7 +101,8 @@
             @if($announcements->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-megaphone fs-1 d-block mb-2 opacity-25"></i>
-                    No announcements posted yet.
+                    <div class="fw-semibold text-dark mb-1">No subject announcements are posted yet</div>
+                    <div class="small">Use the form above to publish the first notice for an assigned subject. Students will see it after posting.</div>
                 </div>
             @else
                 <div class="table-responsive">

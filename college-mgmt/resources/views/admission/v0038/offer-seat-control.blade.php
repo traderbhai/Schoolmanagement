@@ -17,26 +17,36 @@
 @endphp
 
 <div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
-        <div>
-            <h3 class="fw-bold mb-1">Offer And Seat Control</h3>
-            <div class="text-muted small">Offer rounds, waitlist movement, seat holds, deferrals, and joining-kit readiness.</div>
-            @unless($canManageSeatControl)
-                <div class="small text-warning">Read-only view for your Admission scope. Offer, seat, waitlist, and deferral changes require Admission leadership approval.</div>
-            @endunless
+    <x-ui.page-header
+        title="Offer And Seat Control"
+        subtitle="Control offer rounds, waitlist movement, seat holds, deferrals, and joining-kit readiness from one seat-pressure board."
+        action-label="Export Current View"
+        :action-route="route('admission.v039.exports','offer-seat-control')"
+        action-icon="bi-download"
+    />
+
+    <div class="alert alert-warning border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-3">
+        <div class="d-flex gap-3">
+            <div class="ui-kpi-tile-icon bg-white text-warning"><i class="bi bi-ui-checks-grid"></i></div>
+            <div>
+                <div class="fw-bold">Offer-to-enrollment control sequence</div>
+                <div class="small">1. Create/publish offer round &nbsp; 2. Hold or release seats &nbsp; 3. Promote waitlist where seats open &nbsp; 4. Approve deferrals &nbsp; 5. Clear joining-kit blockers.</div>
+                @unless($canManageSeatControl)
+                    <div class="small text-warning mt-1">Read-only view for your Admission scope. Offer, seat, waitlist, and deferral changes require Admission leadership approval.</div>
+                @endunless
+            </div>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             @if($programs->isNotEmpty())
-                <a class="btn btn-sm btn-outline-primary" href="{{ route('admission.offer-letters.index', $programs->first()) }}">Offer Letters</a>
+                <a class="btn btn-sm btn-outline-warning" href="{{ route('admission.offer-letters.index', $programs->first()) }}">Offer Letters</a>
             @endif
-            <a class="btn btn-sm btn-outline-secondary" href="{{ route('admission.v039.exports','offer-seat-control') }}">Export Current View</a>
         </div>
     </div>
 
     <div class="row g-3">
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold">Create Offer Round</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Create Offer Round</span><span class="small text-muted">Start a controlled offer batch</span></div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admission.offer-rounds.store') }}" class="row g-2" onsubmit="return confirm('Create this offer round for the selected program and batch?')">
                         @csrf
@@ -65,7 +75,7 @@
 
         <div class="col-xl-8">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold">Offer Rounds</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Offer Rounds</span><span class="small text-muted">Publish only after source merit/committee review</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Offer rounds">
                         <thead><tr><th>Round</th><th>Status</th><th>Valid Until</th><th></th></tr></thead>
@@ -96,7 +106,7 @@
     <div class="row g-3 mt-1">
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold">Waitlist</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Waitlist</span><span class="small text-muted">Rank and promote when seats release</span></div>
                 <div class="card-body py-2">
                     <form method="POST" action="{{ route('admission.waitlist.store') }}" class="row g-1" onsubmit="return confirm('Add this applicant to the waitlist with the selected rank?')">
                         @csrf
@@ -133,7 +143,7 @@
 
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold">Seat Holds</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Seat Holds</span><span class="small text-muted">Watch expiry, release, and payment deadlines</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Seat holds">
                         <thead><tr><th>Applicant</th><th>Status</th><th>Expires</th><th></th></tr></thead>
@@ -164,7 +174,7 @@
 
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white fw-bold">Deferrals And Joining Kit</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Deferrals And Joining Kit</span><span class="small text-muted">Approve carry-forward and clear onboarding tasks</span></div>
                 <div class="card-body py-2">
                     <form method="POST" action="{{ route('admission.deferrals.store') }}" class="row g-1" onsubmit="return confirm('Request deferral for this applicant?')">
                         @csrf
@@ -208,7 +218,7 @@
     </div>
 
     <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-white fw-bold">Deferral Requests</div>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Deferral Requests</span><span class="small text-muted">Approval requires carry-forward notes</span></div>
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Deferral requests">
                 <thead><tr><th>Applicant</th><th>Target Batch</th><th>Status</th><th>Reason</th><th>Approval</th></tr></thead>

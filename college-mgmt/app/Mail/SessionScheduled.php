@@ -21,8 +21,8 @@ class SessionScheduled extends Mailable implements ShouldQueue
     {
         $session   = $this->data['session'] ?? null;
         $stepLabel = $session?->step?->type ? strtoupper($session->step->type) : 'Session';
-        $date      = $session?->scheduled_date ? $session->scheduled_date->format('d M Y') : '';
-        return new Envelope(subject: "Your {$stepLabel} is Scheduled — {$date}");
+        $date      = $session?->scheduled_date ? $session->scheduled_date->format('d M Y') : 'date to be confirmed';
+        return new Envelope(subject: "Your {$stepLabel} is Scheduled - {$date}");
     }
 
     public function content(): Content

@@ -11,6 +11,17 @@
         </div>
         @include('academics.dean-os.partials.nav')
     </div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Risk governance sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Check thresholds</span>
+            <span class="badge text-bg-light border">2. Capture snapshot</span>
+            <span class="badge text-bg-light border">3. Review trend and band</span>
+            <span class="badge text-bg-light border">4. Assign mitigation</span>
+            <span class="badge text-bg-light border">5. Recheck after action closure</span>
+        </div>
+        <div class="text-muted mt-2">Risk is a governance trigger, not only a score. High and critical rows should have an owner, source reason, and mitigation plan.</div>
+    </div>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -25,7 +36,7 @@
     <div class="row g-3">
         <div class="col-lg-7">
             <div class="card shadow-sm">
-                <div class="card-header py-2 fw-semibold">Risk History</div>
+                <div class="card-header py-2"><div class="fw-semibold">Risk History</div><div class="small text-muted">Use trend movement to see whether program risk is improving, stable, or worsening.</div></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Dean risk history">
                         <thead>
@@ -66,7 +77,7 @@
         <div class="col-lg-5">
             <form method="POST" action="{{ route('academics.dean-os.risk-mitigation.store') }}" class="card shadow-sm">
                 @csrf
-                <div class="card-header py-2 fw-semibold">Mitigation Plan</div>
+                <div class="card-header py-2"><div class="fw-semibold">Mitigation Plan</div><div class="small text-muted">Capture the practical intervention, target date, and follow-up owner for risk review.</div></div>
                 <div class="card-body vstack gap-2">
                     <textarea class="form-control form-control-sm" name="plan" placeholder="Mitigation plan" required></textarea>
                     <input class="form-control form-control-sm" type="date" name="due_at">

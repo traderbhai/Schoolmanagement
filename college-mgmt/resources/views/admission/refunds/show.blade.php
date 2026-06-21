@@ -11,8 +11,8 @@
         </a>
         <h2 class="fw-bold mb-0 mt-1">Refund Request #{{ $refund->id }}</h2>
         <div class="text-muted small">
-            {{ $refund->applicant->user->name ?? '—' }} &middot;
-            <span class="font-monospace">{{ $refund->applicant->application_number ?? '' }}</span>
+            {{ $refund->applicant->user->name ?? 'Applicant name missing' }} -
+            <span class="font-monospace">{{ $refund->applicant->application_number ?? 'Application number missing' }}</span>
         </div>
     </div>
     <span class="{{ $refund->status_badge }} fs-5 px-3 py-2">{{ ucfirst($refund->status) }}</span>
@@ -38,16 +38,16 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-5 text-muted fw-normal">Name</dt>
-                    <dd class="col-7 fw-semibold">{{ $refund->applicant->user->name ?? '—' }}</dd>
+                    <dd class="col-7 fw-semibold">{{ $refund->applicant->user->name ?? 'Applicant name missing' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Email</dt>
-                    <dd class="col-7">{{ $refund->applicant->user->email ?? '—' }}</dd>
+                    <dd class="col-7">{{ $refund->applicant->user->email ?? 'Email not provided' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Application No.</dt>
-                    <dd class="col-7 font-monospace">{{ $refund->applicant->application_number ?? '—' }}</dd>
+                    <dd class="col-7 font-monospace">{{ $refund->applicant->application_number ?? 'Application number missing' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Program</dt>
-                    <dd class="col-7">{{ $refund->applicant->program->name ?? '—' }}</dd>
+                    <dd class="col-7">{{ $refund->applicant->program->name ?? 'Program not assigned' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Applicant Status</dt>
                     <dd class="col-7">
@@ -65,11 +65,11 @@
                     @endif
 
                     <dt class="col-5 text-muted fw-normal">Requested</dt>
-                    <dd class="col-7 fw-bold text-dark">₹{{ number_format($refund->requested_amount, 2) }}</dd>
+                    <dd class="col-7 fw-bold text-dark">Rs. {{ number_format($refund->requested_amount, 2) }}</dd>
 
                     @if($refund->approved_amount !== null)
                     <dt class="col-5 text-muted fw-normal">Approved</dt>
-                    <dd class="col-7 fw-bold text-success">₹{{ number_format($refund->approved_amount, 2) }}</dd>
+                    <dd class="col-7 fw-bold text-success">Rs. {{ number_format($refund->approved_amount, 2) }}</dd>
                     @endif
 
                     <dt class="col-5 text-muted fw-normal">Submitted On</dt>
@@ -95,22 +95,22 @@
                 @if($refund->payment)
                 <dl class="row mb-0">
                     <dt class="col-5 text-muted fw-normal">Reference No.</dt>
-                    <dd class="col-7 font-monospace">{{ $refund->payment->reference_number ?? '—' }}</dd>
+                    <dd class="col-7 font-monospace">{{ $refund->payment->reference_number ?? $refund->payment->transaction_reference ?? 'Payment reference not recorded' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Amount Paid</dt>
-                    <dd class="col-7 fw-bold">₹{{ number_format($refund->payment->amount_paid, 2) }}</dd>
+                    <dd class="col-7 fw-bold">Rs. {{ number_format($refund->payment->amount_paid, 2) }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Method</dt>
-                    <dd class="col-7">{{ ucfirst(str_replace('_', ' ', $refund->payment->payment_method ?? '—')) }}</dd>
+                    <dd class="col-7">{{ $refund->payment->payment_mode_label }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Payment Status</dt>
-                    <dd class="col-7">{{ ucfirst($refund->payment->status ?? '—') }}</dd>
+                    <dd class="col-7">{{ ucfirst($refund->payment->status ?? 'Status not recorded') }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Verified At</dt>
                     <dd class="col-7">
                         {{ $refund->payment->verified_at
                             ? $refund->payment->verified_at->format('d M Y, h:i A')
-                            : '—' }}
+                            : 'Verification time not recorded' }}
                     </dd>
 
                     @if($refund->payment->verification_notes)
@@ -145,10 +145,10 @@
                     @method('PATCH')
                     <div class="mb-3">
                         <label for="approved_amount" class="form-label fw-semibold">
-                            Approved Amount (₹) <span class="text-danger">*</span>
+                            Approved Amount (Rs.) <span class="text-danger">*</span>
                         </label>
                         <div class="input-group" style="max-width:280px">
-                            <span class="input-group-text">₹</span>
+                            <span class="input-group-text">Rs.</span>
                             <input type="number" name="approved_amount" id="approved_amount"
                                    class="form-control @error('approved_amount') is-invalid @enderror"
                                    value="{{ old('approved_amount', $refund->requested_amount) }}"
@@ -157,7 +157,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div class="form-text">Max: ₹{{ number_format($refund->requested_amount, 2) }} (requested amount)</div>
+                        <div class="form-text">Max: Rs. {{ number_format($refund->requested_amount, 2) }} (requested amount)</div>
                     </div>
                     <button type="submit" class="btn btn-success"
                             onclick="return confirm('Approve this refund for the entered amount?')">
@@ -182,7 +182,7 @@
                         <textarea name="rejection_reason" id="rejection_reason" rows="3"
                                   class="form-control @error('rejection_reason') is-invalid @enderror"
                                   maxlength="500" required
-                                  placeholder="Explain why this refund request is being rejected…">{{ old('rejection_reason') }}</textarea>
+                                  placeholder="Explain why this refund request is being rejected...">{{ old('rejection_reason') }}</textarea>
                         @error('rejection_reason')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -201,7 +201,7 @@
             <i class="bi bi-check-circle-fill fs-4"></i>
             <div>
                 <div class="fw-semibold">Refund Approved</div>
-                <div>Approved Amount: <strong>₹{{ number_format($refund->approved_amount, 2) }}</strong></div>
+                <div>Approved Amount: <strong>Rs. {{ number_format($refund->approved_amount, 2) }}</strong></div>
             </div>
         </div>
         <div class="card border-0 shadow-sm">
@@ -248,9 +248,9 @@
                 <dt class="col-4">UTR Number</dt>
                 <dd class="col-8 font-monospace fw-bold">{{ $refund->utr_number }}</dd>
                 <dt class="col-4">Processed At</dt>
-                <dd class="col-8">{{ $refund->processed_at?->format('d M Y, h:i A') ?? '—' }}</dd>
+                <dd class="col-8">{{ $refund->processed_at?->format('d M Y, h:i A') ?? 'Processing time not recorded' }}</dd>
                 <dt class="col-4">Approved Amount</dt>
-                <dd class="col-8 fw-bold">₹{{ number_format($refund->approved_amount, 2) }}</dd>
+                <dd class="col-8 fw-bold">Rs. {{ number_format($refund->approved_amount, 2) }}</dd>
             </dl>
         </div>
         @endif
@@ -268,7 +268,7 @@
             <div class="card-body">
                 <dl class="row mb-0 small">
                     <dt class="col-6 text-muted fw-normal">Bank Name</dt>
-                    <dd class="col-6 fw-semibold">{{ $refund->bank_name ?? '—' }}</dd>
+                    <dd class="col-6 fw-semibold">{{ $refund->bank_name ?? 'Bank not recorded' }}</dd>
 
                     <dt class="col-6 text-muted fw-normal">Account No.</dt>
                     <dd class="col-6 font-monospace">
@@ -279,15 +279,15 @@
                             @endphp
                             {{ $masked }}
                         @else
-                            —
+                            Account number not recorded
                         @endif
                     </dd>
 
                     <dt class="col-6 text-muted fw-normal">IFSC Code</dt>
-                    <dd class="col-6 font-monospace">{{ $refund->ifsc_code ?? '—' }}</dd>
+                    <dd class="col-6 font-monospace">{{ $refund->ifsc_code ?? 'IFSC not recorded' }}</dd>
 
                     <dt class="col-6 text-muted fw-normal">Account Holder</dt>
-                    <dd class="col-6">{{ $refund->account_holder_name ?? '—' }}</dd>
+                    <dd class="col-6">{{ $refund->account_holder_name ?? 'Account holder not recorded' }}</dd>
                 </dl>
             </div>
         </div>

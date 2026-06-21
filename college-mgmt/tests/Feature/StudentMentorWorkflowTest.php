@@ -58,6 +58,32 @@ class StudentMentorWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_student_mentor_empty_states_explain_assignment_message_and_meeting_next_steps(): void
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $student = Student::factory()->create(['status' => 'active', 'mentor_id' => null]);
+        $student->user->assignRole('student');
+
+        $this->actingAs($student->user)
+            ->get(route('student.mentor.index'))
+            ->assertOk()
+            ->assertSeeText('No faculty mentor is assigned yet')
+            ->assertSeeText('Your department or program office assigns mentors')
+            ->assertDontSeeText('No mentor assigned yet. Contact your department for assignment.');
+
+        $fixture = $this->studentWithMentor();
+
+        $this->actingAs($fixture['student']->user)
+            ->get(route('student.mentor.index'))
+            ->assertOk()
+            ->assertSeeText('No mentor messages are recorded yet')
+            ->assertSeeText('Start with a short update about attendance')
+            ->assertSeeText('No mentor meetings are scheduled or recorded yet')
+            ->assertSeeText('Request a meeting when you need academic guidance')
+            ->assertDontSeeText('No messages yet. Start the conversation below.')
+            ->assertDontSeeText('No meetings yet.');
+    }
+
     public function test_inactive_student_can_view_mentor_history_but_cannot_create_new_mentor_activity(): void
     {
         $fixture = $this->studentWithMentor('inactive');

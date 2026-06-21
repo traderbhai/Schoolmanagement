@@ -8,6 +8,7 @@ use App\Models\Applicant;
 use App\Models\Program;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\ActivityLog;
+use App\Models\User;
 use App\Services\AdmissionKpiDrilldownService;
 use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
@@ -191,12 +192,8 @@ class PaymentVerificationController extends Controller
 
     public function index(Request $r, Program $program)
     {
-        $query = AdmissionPayment::with(['applicant.user', 'installment'])
-            ->whereHas('applicant', fn($q) => $q->where('program_id', $program->id));
-
-        $query->whereHas('applicant', function ($q) use ($r) {
-            $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM');
-        });
+        $query = $this->visibleProgramPaymentQuery($program, $r->user())
+            ->with(['applicant.user', 'installment']);
 
         if ($r->filled('batch_id')) {
             $query->whereHas('applicant', fn($q) => $q->where('batch_id', $r->batch_id));
@@ -214,26 +211,32 @@ class PaymentVerificationController extends Controller
             ->orderBy('installment_number')
             ->get();
 
-        $summary = [
-            'total_expected'   => $installments->sum('amount'),
-            'total_verified'   => AdmissionPayment::whereHas('applicant', fn($q) => $q->where('program_id', $program->id))
-                ->where('status', 'verified')->sum('amount_paid'),
-            'total_pending'    => AdmissionPayment::whereHas('applicant', fn($q) => $q->where('program_id', $program->id))
-                ->where('status', 'pending')->sum('amount_paid'),
-            'total_rejected'   => AdmissionPayment::whereHas('applicant', fn($q) => $q->where('program_id', $program->id))
-                ->where('status', 'rejected')->count(),
-        ];
+        $visibleApplicants = Applicant::where('program_id', $program->id)
+            ->whereIn('status', ['shortlisted', 'selected'])
+            ->tap(fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM'));
 
-        $installmentBreakdown = $installments->map(function ($inst) use ($program) {
-            $paymentsForInst = $inst->payments()->whereHas('applicant', fn($q) => $q->where('program_id', $program->id));
+        $installmentBreakdown = $installments->map(function ($inst) use ($program, $r, $visibleApplicants) {
+            $paymentsForInst = $this->visibleProgramPaymentQuery($program, $r->user())
+                ->where('admission_fee_installment_id', $inst->id);
+            $totalApplicants = (clone $visibleApplicants)->count();
+
             return [
                 'installment'     => $inst,
-                'total_applicants'=> Applicant::where('program_id', $program->id)->whereIn('status', ['shortlisted','selected'])->count(),
+                'total_applicants'=> $totalApplicants,
                 'paid_count'      => (clone $paymentsForInst)->where('status', 'verified')->count(),
                 'pending_count'   => (clone $paymentsForInst)->where('status', 'pending')->count(),
                 'amount_collected'=> (clone $paymentsForInst)->where('status', 'verified')->sum('amount_paid'),
+                'amount_expected' => $totalApplicants * (float) $inst->amount,
             ];
         });
+
+        $visibleProgramPayments = $this->visibleProgramPaymentQuery($program, $r->user());
+        $summary = [
+            'total_expected'   => $installmentBreakdown->sum('amount_expected'),
+            'total_verified'   => (clone $visibleProgramPayments)->where('status', 'verified')->sum('amount_paid'),
+            'total_pending'    => (clone $visibleProgramPayments)->where('status', 'pending')->sum('amount_paid'),
+            'total_rejected'   => (clone $visibleProgramPayments)->where('status', 'rejected')->count(),
+        ];
 
         return view('admission.payments.index', compact('program', 'payments', 'installments', 'summary', 'installmentBreakdown'));
     }
@@ -266,6 +269,15 @@ class PaymentVerificationController extends Controller
         if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $payment->applicant?->assigned_to, false)) {
             abort(403);
         }
+    }
+
+    private function visibleProgramPaymentQuery(Program $program, User $user)
+    {
+        return AdmissionPayment::query()
+            ->whereHas('applicant', function ($q) use ($program, $user) {
+                $q->where('program_id', $program->id);
+                $this->hierarchy->applyApplicantVisibility($q, $user, 'ADM');
+            });
     }
 
     private function pendingPaymentQueueQuery(Request $r)

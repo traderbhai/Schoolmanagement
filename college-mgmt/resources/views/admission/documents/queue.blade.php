@@ -127,7 +127,14 @@
         @if($documents->isEmpty())
             <div class="card-body text-center py-5 text-muted">
                 <i class="bi bi-folder2-open fs-1"></i>
-                <p class="mt-2">No pending documents in the queue.</p>
+                <div class="fw-semibold text-dark mt-2">No pending documents in this queue</div>
+                <div class="small">
+                    Uploaded applicant documents appear here only when they are pending verification and inside your admission scope. Clear filters or open the applicant list if your team expects documents to review.
+                </div>
+                <div class="mt-3 d-flex flex-wrap justify-content-center gap-2">
+                    <a href="{{ route('admission.documents.queue') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                    <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary">Open Applicants</a>
+                </div>
             </div>
         @else
         <div class="table-responsive">
@@ -153,10 +160,10 @@
                                    class="form-check-input doc-checkbox" onchange="updateBulkBtn()">
                         </td>
                         <td>
-                            <div class="fw-semibold">{{ $doc->applicant->user->name ?? '—' }}</div>
+                            <div class="fw-semibold">{{ $doc->applicant->user->name ?? 'Applicant name missing' }}</div>
                             <div class="small text-muted">
                                 #{{ str_pad($doc->applicant_id, 5, '0', STR_PAD_LEFT) }}
-                                &bull; {{ $doc->applicant->program->name ?? '—' }}
+                                &bull; {{ $doc->applicant->program->name ?? 'Program not assigned' }}
                             </div>
                         </td>
                         <td>
@@ -172,7 +179,7 @@
                                     {{ $doc->uploaded_at->diffForHumans() }}
                                 </span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Upload time not captured</span>
                             @endif
                         </td>
                         <td>
@@ -201,7 +208,7 @@
                                         data-bs-toggle="modal" data-bs-target="#rejectModal"
                                         data-doc-id="{{ $doc->id }}"
                                         data-doc-name="{{ $doc->requiredDocument->name ?? $doc->original_name }}"
-                                        data-applicant="{{ $doc->applicant->user->name ?? '—' }}">
+                                        data-applicant="{{ $doc->applicant->user->name ?? 'Applicant name missing' }}">
                                     <i class="bi bi-x-circle"></i> Reject
                                 </button>
                                 <a href="{{ route('admission.applicants.show', $doc->applicant) }}"

@@ -173,12 +173,17 @@ class LeadTest extends TestCase
         $officer = User::factory()->create();
         $officer->assignRole('admission_officer');
 
-        Lead::factory()->create(['status' => 'new']);
-        Lead::factory()->create(['status' => 'contacted']);
+        Lead::factory()->create(['status' => 'new', 'name' => 'New Visible Lead']);
+        Lead::factory()->create(['status' => 'contacted', 'name' => 'Hidden Contacted Lead']);
         Lead::factory()->create(['status' => 'converted']);
 
         $response = $this->actingAs($officer)->get(route('admission.leads.index'));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('Leads & Enquiries')
+            ->assertSee('3 records after filters')
+            ->assertSee('Analytics')
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Whoops', false);
     }
 
     public function test_officer_can_filter_leads_by_status(): void
@@ -186,11 +191,16 @@ class LeadTest extends TestCase
         $officer = User::factory()->create();
         $officer->assignRole('admission_officer');
 
-        Lead::factory()->create(['status' => 'new']);
-        Lead::factory()->create(['status' => 'contacted']);
+        Lead::factory()->create(['status' => 'new', 'name' => 'New Visible Lead']);
+        Lead::factory()->create(['status' => 'contacted', 'name' => 'Hidden Contacted Lead']);
 
         $response = $this->actingAs($officer)->get(route('admission.leads.index', ['status' => 'new']));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('Status: New')
+            ->assertSee('1 records after filters')
+            ->assertSee('New Visible Lead')
+            ->assertDontSee('Hidden Contacted Lead')
+            ->assertDontSee('SERVICE ERROR', false);
     }
 
     public function test_officer_can_filter_leads_by_source(): void
@@ -198,11 +208,16 @@ class LeadTest extends TestCase
         $officer = User::factory()->create();
         $officer->assignRole('admission_officer');
 
-        Lead::factory()->create(['source' => 'web_form']);
-        Lead::factory()->create(['source' => 'referral']);
+        Lead::factory()->create(['source' => 'web_form', 'name' => 'Web Source Visible']);
+        Lead::factory()->create(['source' => 'referral', 'name' => 'Referral Source Hidden']);
 
         $response = $this->actingAs($officer)->get(route('admission.leads.index', ['source' => 'web_form']));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('Source: Web form')
+            ->assertSee('1 records after filters')
+            ->assertSee('Web Source Visible')
+            ->assertDontSee('Referral Source Hidden')
+            ->assertDontSee('SERVICE ERROR', false);
     }
 
     public function test_officer_can_mark_lead_contacted(): void
@@ -261,7 +276,30 @@ class LeadTest extends TestCase
         Lead::factory(2)->create(['status' => 'converted']);
 
         $response = $this->actingAs($officer)->get(route('admission.leads.analytics'));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('Lead Analytics')
+            ->assertSee('Total Leads')
+            ->assertSee('17')
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Whoops', false);
+    }
+
+    public function test_lead_analytics_empty_state_explains_missing_source_data(): void
+    {
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->get(route('admission.leads.analytics'))
+            ->assertOk()
+            ->assertSee('No lead source data is available yet')
+            ->assertSee('Capture or import leads with a source to compare channel performance')
+            ->assertSee('No program-linked leads are available yet')
+            ->assertSee('Link leads to programs to compare program demand and conversion')
+            ->assertSee('No lead activity has been captured in the last 30 days')
+            ->assertDontSee('No data')
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
     }
 
     public function test_lead_source_labels(): void

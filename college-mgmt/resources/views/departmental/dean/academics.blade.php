@@ -40,7 +40,11 @@
                             <td><span class="badge bg-success">{{ number_format($s->avg_marks,1) }}</span></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted">No data.</td></tr>
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">
+                                No published result data is available yet. Publish official exam results before using the top-performer view.
+                            </td>
+                        </tr>
                     @endforelse
                     </tbody>
                 </table>

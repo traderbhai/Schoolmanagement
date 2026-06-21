@@ -25,6 +25,22 @@
         </div>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">CoE exam operations sequence</div>
+                <div class="small text-muted">Use this as the CoE starting point. Each KPI opens the scoped source list behind the count.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Confirm exam readiness</span>
+                <span class="badge text-bg-light">2. Clear marks/result blockers</span>
+                <span class="badge text-bg-light">3. Release eligible hall tickets</span>
+                <span class="badge text-bg-light">4. Issue transcripts from published results</span>
+                <span class="badge text-bg-light">5. Resolve appeals and anomalies</span>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-2 mb-3">
         @foreach([
             ['label' => 'Upcoming Exams', 'value' => $kpis['upcoming_exams'], 'route' => route('academics.coe.exam-readiness', ['metric' => 'upcoming_exams'])],

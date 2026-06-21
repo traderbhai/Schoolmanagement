@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Applicant;
 use App\Models\ApplicantDocument;
+use App\Models\AdmissionFeeInstallment;
+use App\Models\AdmissionPayment;
 use App\Models\Lead;
+use App\Models\Program;
 use App\Models\User;
 use App\Services\AdmissionKpiDrilldownService;
 use App\Services\DepartmentHierarchyService;
@@ -150,6 +153,169 @@ class AdmissionManagerOfficerReadinessTest extends TestCase
         $this->actingAs($officer)
             ->get(route('admission.handoff.index', ['status' => 'blocked']))
             ->assertForbidden();
+    }
+
+    public function test_officer_document_and_payment_queues_explain_empty_scope(): void
+    {
+        $officer = User::where('email', 'officer@college.com')->firstOrFail();
+
+        ApplicantDocument::query()->update([
+            'status' => 'verified',
+            'verified_by' => $officer->id,
+            'verified_at' => now(),
+        ]);
+        AdmissionPayment::query()->update([
+            'status' => 'verified',
+            'verified_by' => $officer->id,
+            'verified_at' => now(),
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.documents.queue'))
+            ->assertOk()
+            ->assertSee('No pending documents in this queue')
+            ->assertSee('Uploaded applicant documents appear here only when they are pending verification')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Applicants')
+            ->assertDontSee('No pending documents in the queue')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.payments.queue'))
+            ->assertOk()
+            ->assertSee('No pending payments in this queue')
+            ->assertSee('Applicant payment submissions appear here only when they are pending verification')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Applicants')
+            ->assertDontSee('No pending payments found')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee(html_entity_decode('&#8377;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_applicant_list_uses_readable_missing_data_fallbacks(): void
+    {
+        $officer = User::where('email', 'officer@college.com')->firstOrFail();
+
+        $applicant = Applicant::factory()->create([
+            'user_id' => null,
+            'assigned_to' => $officer->id,
+            'status' => 'submitted',
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.applicants.index', ['search' => $applicant->application_number]))
+            ->assertOk()
+            ->assertSee('Applicant name missing')
+            ->assertSee('Email not provided')
+            ->assertSee('No interaction yet')
+            ->assertSee('No follow-up set')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_applicant_list_empty_state_explains_scope_and_next_step(): void
+    {
+        $officer = User::where('email', 'officer@college.com')->firstOrFail();
+
+        $this->actingAs($officer)
+            ->get(route('admission.applicants.index', ['search' => 'no-such-applicant-record']))
+            ->assertOk()
+            ->assertSee('No applicants are visible in this list')
+            ->assertSee('match your Admission role scope and the active filters')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Leads')
+            ->assertDontSee('No applicants match the current filters.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_payment_overview_summary_and_rows_use_same_admission_scope(): void
+    {
+        $officer = User::where('email', 'officer@college.com')->firstOrFail();
+        $counsellor = User::where('email', 'counsellor@college.com')->firstOrFail();
+        $program = Program::factory()->create(['name' => 'Scoped Payment Program']);
+        $installment = AdmissionFeeInstallment::create([
+            'program_id' => $program->id,
+            'name' => 'Scoped First Installment',
+            'amount' => 5000,
+            'installment_number' => 1,
+            'due_date' => now()->addWeek(),
+            'is_active' => true,
+        ]);
+        $visibleApplicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'assigned_to' => $officer->id,
+            'status' => 'selected',
+            'application_number' => 'ADM-SCOPE-VISIBLE',
+        ]);
+        $hiddenApplicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'assigned_to' => $counsellor->id,
+            'status' => 'selected',
+            'application_number' => 'ADM-SCOPE-HIDDEN',
+        ]);
+
+        AdmissionPayment::create([
+            'applicant_id' => $visibleApplicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 1000,
+            'payment_date' => now(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'VISIBLE-SCOPE-PAYMENT',
+            'status' => 'pending',
+            'submitted_by' => $visibleApplicant->user_id,
+        ]);
+        AdmissionPayment::create([
+            'applicant_id' => $hiddenApplicant->id,
+            'admission_fee_installment_id' => $installment->id,
+            'amount_paid' => 9000,
+            'payment_date' => now(),
+            'payment_mode' => 'upi',
+            'transaction_reference' => 'HIDDEN-SCOPE-PAYMENT',
+            'status' => 'pending',
+            'submitted_by' => $hiddenApplicant->user_id,
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.payments.index', $program))
+            ->assertOk()
+            ->assertSee('Scoped Payment Program')
+            ->assertSee('Rs. 5,000')
+            ->assertSee('Rs. 1,000')
+            ->assertSee('ADM-SCOPE-VISIBLE')
+            ->assertDontSee('ADM-SCOPE-HIDDEN')
+            ->assertDontSee('Rs. 9,000')
+            ->assertDontSee('Rs. 10,000')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee(html_entity_decode('&#8377;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.payments.index', ['program' => $program, 'status' => 'verified']))
+            ->assertOk()
+            ->assertSee('No payments are visible for this program')
+            ->assertSee('match your Admission role scope, this program')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Applicants')
+            ->assertSee('View Pending Queue')
+            ->assertDontSee('No payments found.');
     }
 
     public function test_counsellor_lead_and_officer_operational_actions_are_scoped(): void

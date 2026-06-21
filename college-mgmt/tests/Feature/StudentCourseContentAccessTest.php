@@ -274,6 +274,105 @@ class StudentCourseContentAccessTest extends TestCase
             ->assertSee('Legacy Operations');
     }
 
+    public function test_student_course_hub_empty_states_explain_published_content_next_steps(): void
+    {
+        $student = $this->student();
+        $term = Term::factory()->create(['term_number' => 1, 'name' => 'Term 1']);
+        $subject = Subject::factory()->create(['name' => 'Empty Course Hub']);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.courses.show', $subject))
+            ->assertOk()
+            ->assertSeeText('No course announcements are posted yet')
+            ->assertSeeText('after they publish them for this course')
+            ->assertSeeText('No study materials are available yet')
+            ->assertSeeText('after your faculty uploads them')
+            ->assertSeeText('No assignments are open for this course yet')
+            ->assertSeeText('it will appear here with its due date and submission status')
+            ->assertDontSeeText('No announcements yet.')
+            ->assertDontSeeText('No materials uploaded yet.')
+            ->assertDontSeeText('No assignments yet.');
+    }
+
+    public function test_student_assignment_list_empty_state_explains_published_assignment_visibility(): void
+    {
+        $student = $this->student();
+        $term = Term::factory()->create(['term_number' => 1, 'name' => 'Term 1']);
+        $subject = Subject::factory()->create(['name' => 'Assignment Empty State Subject']);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.assignments.index'))
+            ->assertOk()
+            ->assertSeeText('No assignments are published for this view yet')
+            ->assertSeeText('Assignments appear here only after faculty publish them for your enrolled subjects')
+            ->assertSeeText('clear dashboard filters if you opened a filtered assignment queue')
+            ->assertDontSeeText('No assignments found.');
+    }
+
+    public function test_student_course_material_and_announcement_empty_pages_explain_published_content_timing(): void
+    {
+        $student = $this->student();
+        $term = Term::factory()->create(['term_number' => 1, 'name' => 'Term 1']);
+        $subject = Subject::factory()->create(['name' => 'Empty Course Content Pages']);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.announcements.index', $subject))
+            ->assertOk()
+            ->assertSeeText('No course announcements are published yet')
+            ->assertSeeText('Faculty or the program office will post notices here')
+            ->assertDontSeeText('No announcements for this course yet.');
+
+        $this->actingAs($student->user)
+            ->get(route('student.materials.index', $subject))
+            ->assertOk()
+            ->assertSeeText('No published study materials are available yet')
+            ->assertSeeText('after your faculty publishes them for this enrolled course')
+            ->assertDontSeeText('No study materials uploaded yet for this course.');
+    }
+
+    public function test_student_discussion_empty_state_explains_when_to_start_thread(): void
+    {
+        $student = $this->student();
+        $term = Term::factory()->create(['term_number' => 1, 'name' => 'Term 1']);
+        $subject = Subject::factory()->create(['name' => 'Empty Discussion Subject']);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.discussions.index', $subject))
+            ->assertOk()
+            ->assertSeeText('No discussion threads are open for this subject yet')
+            ->assertSeeText('Ask a question when you need clarification on class topics')
+            ->assertSeeText('Ask a Question')
+            ->assertDontSeeText('No discussions yet. Be the first to ask a question!');
+    }
+
     public function test_student_discussions_require_active_enrollment_and_support_legacy_enrollment(): void
     {
         $student = $this->student();

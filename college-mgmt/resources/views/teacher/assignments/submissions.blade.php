@@ -74,7 +74,10 @@
         </div>
         <div class="card-body p-0">
             @if($submissions->isEmpty())
-                <div class="text-center py-4 text-muted">No submissions yet.</div>
+                <div class="text-center py-4 text-muted">
+                    <div class="fw-semibold text-dark mb-1">No students have submitted this assignment yet</div>
+                    <div class="small">Use the Not Yet Submitted list below to follow up with students, and return here after submissions arrive to enter marks and feedback.</div>
+                </div>
             @else
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">

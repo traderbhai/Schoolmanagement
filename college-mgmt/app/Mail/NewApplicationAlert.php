@@ -21,8 +21,8 @@ class NewApplicationAlert extends Mailable implements ShouldQueue
     {
         $applicant = $this->data['applicant'];
         $name      = $applicant->user?->name ?? 'Applicant';
-        $number    = $applicant->application_number ?? 'N/A';
-        return new Envelope(subject: "New Application: {$name} — {$number}");
+        $number    = $applicant->application_number ?? 'application number pending';
+        return new Envelope(subject: "New Application: {$name} - {$number}");
     }
 
     public function content(): Content

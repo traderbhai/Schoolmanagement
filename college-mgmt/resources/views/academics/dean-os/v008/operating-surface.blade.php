@@ -19,6 +19,17 @@
         ])->filter()->map(fn ($value, $key) => ucfirst($key).': '.$value)->join(' | ');
     @endphp
     <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><h1 class="h4 mb-1">{{ $config['title'] }}</h1><div class="small text-muted">{{ $config['description'] }}</div></div>@include('academics.dean-os.partials.nav')</div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Operating record workflow</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Filter by status or severity</span>
+            <span class="badge text-bg-light border">2. Sort by due date or score</span>
+            <span class="badge text-bg-light border">3. Open source owner context</span>
+            <span class="badge text-bg-light border">4. Save useful view</span>
+            <span class="badge text-bg-light border">5. Export current scope</span>
+        </div>
+        <div class="text-muted mt-2">Use these lists to manage faculty workload, student success, curriculum, exam readiness, quality, induction, and policy records without losing filter context.</div>
+    </div>
     <div class="row g-2 mb-3">
         @foreach(['Open'=>$data['open'],'Critical'=>$data['critical'],'Overdue'=>$data['overdue'],'Avg Score'=>$data['avg_score']] as $label=>$value)
             <div class="col-6 col-lg-3"><a class="card shadow-sm text-decoration-none text-reset h-100" href="{{ $metricLinks[$label] }}"><div class="card-body py-2"><div class="d-flex justify-content-between"><div class="small text-muted">{{ $label }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="h4 mb-0">{{ $value }}</div></div></a></div>

@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <form method="GET" class="card border-0 shadow-sm mb-4">
+    <form method="GET" action="{{ route('student.alumni.index') }}" class="card border-0 shadow-sm mb-4">
         <div class="card-body py-2 px-3">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
@@ -50,8 +50,14 @@
 
     @if($alumni->isEmpty())
     <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-people fs-1 d-block mb-2"></i>No verified alumni found matching your filters.
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people fs-1 d-block mb-2 text-muted"></i>
+            <div class="fw-semibold text-dark mb-1">No verified alumni match this view yet</div>
+            <div class="text-muted small mx-auto" style="max-width:640px">
+                Alumni appear here only after CMC verifies graduate career details. Try clearing filters,
+                enabling all programs, or checking again after more alumni profiles are verified for
+                mentoring, referrals, and career-path discovery.
+            </div>
         </div>
     </div>
     @else

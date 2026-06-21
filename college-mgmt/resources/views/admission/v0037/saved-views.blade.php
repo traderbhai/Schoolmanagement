@@ -4,10 +4,28 @@
 
 @section('content')
 <div class="container-fluid py-3">
+    @php
+        $surfaceRoutes = [
+            'assessment_control_room' => Route::has('admission.assessment-control-room.index') ? route('admission.assessment-control-room.index') : null,
+            'counsellor_desk' => Route::has('admission.counsellor-desk.index') ? route('admission.counsellor-desk.index') : null,
+            'calling_desk' => Route::has('admission.calling-desk.index') ? route('admission.calling-desk.index') : null,
+            'command_center' => Route::has('admission.command-center.index') ? route('admission.command-center.index') : null,
+            'communication_safety' => Route::has('admission.communication-safety.index') ? route('admission.communication-safety.index') : null,
+            'offer_seat_control' => Route::has('admission.offer-seat-control.index') ? route('admission.offer-seat-control.index') : null,
+            'automation_logs' => Route::has('admission.automation-simulation.index') ? route('admission.automation-simulation.index') : null,
+            'schedule_conflicts' => Route::has('admission.assessment-schedule-conflicts.index') ? route('admission.assessment-schedule-conflicts.index') : null,
+            'counsellor_performance' => Route::has('admission.counsellor-performance.index') ? route('admission.counsellor-performance.index') : null,
+            'handoff_queue' => Route::has('admission.handoff.index') ? route('admission.handoff.index') : null,
+            'assessment_day' => Route::has('admission.assessment-control-room.index') ? route('admission.assessment-control-room.index') : null,
+        ];
+        $selectedSurfaceLabel = $surfaces[$selectedSurface] ?? str_replace('_', ' ', $selectedSurface);
+        $selectedSurfaceRoute = $surfaceRoutes[$selectedSurface] ?? null;
+    @endphp
+
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
         <div>
             <h3 class="fw-bold mb-1">Admission Saved Views</h3>
-            <div class="text-muted small">Reusable filtered work queues for command center, counsellor desk, assessments, communications, offers, and handoff.</div>
+            <div class="text-muted small">Create reusable filtered work queues for command center, counsellor desk, assessments, communications, offers, and handoff.</div>
         </div>
         <form method="GET" action="{{ route('admission.saved-views.index') }}" class="d-flex gap-2 align-items-end">
             <div>
@@ -20,6 +38,13 @@
             </div>
             <button class="btn btn-sm btn-outline-primary">Show</button>
         </form>
+    </div>
+
+    <div class="alert alert-info py-2 small mb-3">
+        <strong>Saved-view workflow:</strong> pick the work surface, define status/priority/owner/date/sort filters, save a named view, then open the source surface and apply the same filter set during daily work.
+        @if($selectedSurfaceRoute)
+            <a href="{{ $selectedSurfaceRoute }}" class="ms-1">Open {{ $selectedSurfaceLabel }}</a>
+        @endif
     </div>
 
     @if(session('success'))
@@ -107,8 +132,8 @@
 
     <div class="card border-0 shadow-sm">
         <div class="card-header py-2 d-flex flex-wrap justify-content-between gap-2">
-            <span class="fw-semibold">{{ $surfaces[$selectedSurface] ?? str_replace('_', ' ', $selectedSurface) }} Views</span>
-            <span class="small text-muted">Visible filter summary: surface = {{ $surfaces[$selectedSurface] ?? $selectedSurface }}</span>
+            <span class="fw-semibold">{{ $selectedSurfaceLabel }} Views</span>
+            <span class="small text-muted">Visible filter summary: surface = {{ $selectedSurfaceLabel }}; {{ $views->count() }} saved view(s)</span>
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0" aria-label="Saved views">
@@ -140,13 +165,22 @@
                                         @endif
                                     </span>
                                 @empty
-                                    <span class="text-muted small">No filters</span>
+                                    <span class="text-muted small">No filters saved; this opens the full permitted surface scope.</span>
                                 @endforelse
+                                @if($surfaceRoutes[$view->surface] ?? null)
+                                    <div class="small mt-1"><a href="{{ $surfaceRoutes[$view->surface] }}">Open source surface</a></div>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">No saved views match this surface yet.</td>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No saved views exist for {{ $selectedSurfaceLabel }} yet</div>
+                                <div class="small">Create the first view after choosing the status, priority, owner scope, date range, and sort order that this role should reuse.</div>
+                                @if($selectedSurfaceRoute)
+                                    <a href="{{ $selectedSurfaceRoute }}" class="btn btn-sm btn-outline-primary mt-2">Open {{ $selectedSurfaceLabel }}</a>
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

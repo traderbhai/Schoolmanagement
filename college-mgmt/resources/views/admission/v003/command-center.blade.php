@@ -5,10 +5,10 @@
     @php
         $kpiCards = [
             [
-                'label' => 'Workload',
+                'label' => 'Lead Workload',
                 'value' => $dashboard['kpiSummary']['workload'] ?? 0,
-                'url' => route('admission.applicants.index'),
-                'hint' => 'Open scoped applicant workload',
+                'url' => route('admission.leads.index'),
+                'hint' => 'Open scoped lead workload',
             ],
             [
                 'label' => 'SLA Breaches',
@@ -30,16 +30,27 @@
             ],
         ];
     @endphp
-    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">Admission Command Center</h1>
-            <div class="text-muted">Live operating view across attention, calls, KPIs, forecast, and saved workflows.</div>
+    <x-ui.page-header
+        title="Admission Command Center"
+        subtitle="Control room for team workload, attention queues, calling progress, forecast gaps, and escalation decisions."
+        action-label="Open Workbench"
+        :action-route="route('admission.workbench')"
+        action-icon="bi-kanban"
+    />
+
+    <div class="alert alert-primary border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-4">
+        <div class="d-flex gap-3">
+            <div class="ui-kpi-tile-icon bg-white text-primary"><i class="bi bi-command"></i></div>
+            <div>
+                <div class="fw-bold">Supervisor control cycle</div>
+                <div class="small">1. Clear immediate attention &nbsp; 2. Assign or rebalance work &nbsp; 3. Unblock documents/payments/offers &nbsp; 4. Review forecast and automation.</div>
+            </div>
         </div>
-        <div class="btn-group flex-wrap">
-            <a class="btn btn-outline-primary" href="{{ route('admission.communication.index') }}">Communication</a>
-            <a class="btn btn-outline-primary" href="{{ route('admission.call-queue.index') }}">Call Queue</a>
-            <a class="btn btn-outline-primary" href="{{ route('admission.pipeline.index') }}">Pipeline</a>
-            <a class="btn btn-outline-primary" href="{{ route('admission.automations.index') }}">Automations</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-sm" href="{{ route('admission.attention.index') }}">Attention Queues</a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.manager-workspace.index') }}">Team Workspace</a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.forecasting.index') }}">Forecast</a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.automations.index') }}">Automations</a>
         </div>
     </div>
     <div class="row g-3 mb-4">
@@ -65,7 +76,7 @@
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Immediate Attention</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Immediate Attention</span><span class="small text-muted">Open the queue, assign an owner, close the blocker</span></div>
                 <div class="card-body row g-3">
                     @foreach($dashboard['attentionQueues'] as $name => $items)
                         <div class="col-md-4">
@@ -85,7 +96,7 @@
         </div>
         <div class="col-lg-5">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Next Calls</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Next Calls</span><span class="small text-muted">Monitor calling pressure</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($dashboard['callQueue'] as $lead)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.leads.show', $lead) }}"><strong>{{ $lead->name }}</strong><div class="small text-muted">{{ $lead->phone }} - {{ ucfirst($lead->priority ?? 'normal') }}</div></a>

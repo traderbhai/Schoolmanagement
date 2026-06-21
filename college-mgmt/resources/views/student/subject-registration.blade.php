@@ -48,7 +48,10 @@
             </div>
             <div class="card-body p-0">
                 @if($enrolledSubjects->isEmpty())
-                    <p class="text-muted p-3 mb-0">No subjects registered yet.</p>
+                    <div class="text-muted p-3">
+                        <div class="fw-semibold text-dark mb-1">No current-term subjects are registered yet</div>
+                        <div class="small">Core subjects normally appear after PMC completes term course allocation. If electives are listed on the right, add your choices here; otherwise contact the academic office.</div>
+                    </div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($enrolledSubjects as $enrollment)
@@ -87,7 +90,10 @@
             </div>
             <div class="card-body p-0">
                 @if($availableSubjects->isEmpty())
-                    <p class="text-muted p-3 mb-0">No additional subjects available for your current term.</p>
+                    <div class="text-muted p-3">
+                        <div class="fw-semibold text-dark mb-1">No addable subjects are available for this term</div>
+                        <div class="small">This usually means the elective window is closed, all eligible subjects are already registered, or PMC has not published additional choices yet.</div>
+                    </div>
                 @else
                     <ul class="list-group list-group-flush">
                         @foreach($availableSubjects as $subject)

@@ -6,6 +6,22 @@
     <h4 class="mb-0"><i class="bi bi-cash-stack me-2 text-primary"></i>Accounts Dashboard</h4>
 </div>
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Accounts operating sequence</div>
+            <div class="small text-muted">Use this dashboard to move from verification queues to outstanding follow-up, scholarships, reconciliation, and reports.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Verify payments</span>
+            <span class="badge text-bg-light">2. Review outstanding</span>
+            <span class="badge text-bg-light">3. Process scholarships</span>
+            <span class="badge text-bg-light">4. Reconcile receipts</span>
+            <span class="badge text-bg-light">5. Export reports</span>
+        </div>
+    </div>
+</div>
+
 {{-- Finance Priority --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-3 p-md-4">
@@ -32,7 +48,9 @@
             <div class="d-grid gap-2" style="min-width: 230px;">
                 @if($pendingAdmissionVerification > 0)
                     <a href="{{ route('accounts.admission-payments') }}" class="btn btn-warning btn-sm"><i class="bi bi-ui-checks me-1"></i> Verify Payments</a>
-                @elseif($overdueDemandsCount > 0 || $outstanding > 0)
+                @elseif($overdueDemandsCount > 0)
+                    <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="btn btn-danger btn-sm"><i class="bi bi-exclamation-circle me-1"></i> Review Overdue Demands</a>
+                @elseif($outstanding > 0)
                     <a href="{{ route('accounts.outstanding') }}" class="btn btn-danger btn-sm"><i class="bi bi-exclamation-circle me-1"></i> Review Outstanding</a>
                 @elseif($pendingScholarshipDisbursements > 0)
                     <a href="{{ route('admission.scholarship-disbursements.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-award me-1"></i> Open Scholarships</a>
@@ -48,57 +66,65 @@
 {{-- Primary Finance KPIs --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card kpi-blue">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
-                <div>
-                    <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalBilled, 0) }}</div>
-                    <div class="kpi-label">Total Billed</div>
+        <a href="{{ route('accounts.reports') }}" class="text-decoration-none">
+            <div class="kpi-card kpi-blue">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+                    <div>
+                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalBilled, 0) }}</div>
+                        <div class="kpi-label">Total Billed</div>
+                    </div>
                 </div>
+                <div class="kpi-trend"><i class="bi bi-file-earmark-text me-1"></i>Open demand report</div>
             </div>
-            <div class="kpi-trend"><i class="bi bi-file-earmark-text me-1"></i>Fee demands raised</div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card kpi-green">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-                <div>
-                    <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalCollected, 0) }}</div>
-                    <div class="kpi-label">Collected</div>
+        <a href="{{ route('accounts.fee-collections', ['status' => 'paid']) }}" class="text-decoration-none">
+            <div class="kpi-card kpi-green">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+                    <div>
+                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalCollected, 0) }}</div>
+                        <div class="kpi-label">Collected</div>
+                    </div>
                 </div>
+                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open paid collections</div>
             </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Payments received</div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card kpi-red">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
-                <div>
-                    <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($outstanding, 0) }}</div>
-                    <div class="kpi-label">Outstanding</div>
+        <a href="{{ route('accounts.outstanding') }}" class="text-decoration-none">
+            <div class="kpi-card kpi-red">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+                    <div>
+                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($outstanding, 0) }}</div>
+                        <div class="kpi-label">Outstanding</div>
+                    </div>
                 </div>
+                <div class="kpi-trend down"><i class="bi bi-arrow-down me-1"></i>Open outstanding list</div>
             </div>
-            <div class="kpi-trend down"><i class="bi bi-arrow-down me-1"></i>Pending collection</div>
-        </div>
+        </a>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="kpi-card {{ $overdue > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $overdue }}</div>
-                    <div class="kpi-label">Overdue Accounts</div>
+        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
+            <div class="kpi-card {{ $overdue > 0 ? 'kpi-amber' : 'kpi-blue' }}">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div>
+                        <div class="kpi-value">{{ $overdue }}</div>
+                        <div class="kpi-label">Overdue Accounts</div>
+                    </div>
+                </div>
+                <div class="kpi-trend {{ $overdue > 0 ? 'up' : '' }}">
+                    @if($overdue > 0)<i class="bi bi-exclamation-triangle me-1"></i>Open overdue queue
+                    @else
+                    <i class="bi bi-check me-1"></i>None overdue
+                    @endif
                 </div>
             </div>
-            <div class="kpi-trend {{ $overdue > 0 ? 'up' : '' }}">
-                @if($overdue > 0)<i class="bi bi-exclamation-triangle me-1"></i>Requires follow-up
-                @else
-                <i class="bi bi-check me-1"></i>None overdue
-                @endif
-            </div>
-        </div>
+        </a>
     </div>
 </div>
 

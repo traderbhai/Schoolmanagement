@@ -66,8 +66,56 @@ class AccountsDashboardGuidanceTest extends TestCase
             ->get(route('accounts.dashboard'))
             ->assertStatus(200)
             ->assertSee('Follow up on 1 overdue fee demand')
+            ->assertSee('Review Overdue Demands')
+            ->assertSee(route('accounts.outstanding', ['mode' => 'overdue_demands']), false)
             ->assertSee('Rs. 55,000')
             ->assertDontSee('999,999');
+    }
+
+    public function test_accounts_dashboard_primary_kpis_link_to_source_finance_lists(): void
+    {
+        $user = $this->accountsUser();
+        $student = Student::factory()->create();
+        $term = Term::factory()->create(['program_id' => $student->program_id]);
+        $feeStructure = FeeStructure::create([
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'academic_year_id' => \App\Models\AcademicYear::factory()->create()->id,
+            'fee_type' => 'Tuition',
+            'amount' => 25000,
+        ]);
+
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $feeStructure->id,
+            'amount_paid' => 12000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'ACC-DASH-LINK',
+            'payment_method' => 'cash',
+            'status' => 'paid',
+        ]);
+        FeeDemand::factory()->create([
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'total_amount' => 25000,
+            'scholarship_deduction' => 0,
+            'final_amount' => 25000,
+            'penalty_amount' => 500,
+            'due_date' => now()->subDays(2)->toDateString(),
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.dashboard'))
+            ->assertOk()
+            ->assertSee('Open demand report')
+            ->assertSee(route('accounts.reports'), false)
+            ->assertSee('Open paid collections')
+            ->assertSee(route('accounts.fee-collections', ['status' => 'paid']), false)
+            ->assertSee('Open outstanding list')
+            ->assertSee(route('accounts.outstanding'), false)
+            ->assertSee('Open overdue queue')
+            ->assertSee(route('accounts.outstanding', ['mode' => 'overdue_demands']), false);
     }
 
     public function test_accounts_dashboard_prioritizes_pending_admission_payment_verification(): void
@@ -469,5 +517,21 @@ class AccountsDashboardGuidanceTest extends TestCase
             ->assertSee('Rs. 32,500')
             ->assertSee('27%')
             ->assertDontSee('999,999');
+    }
+
+    public function test_accounts_reports_empty_state_explains_required_setup(): void
+    {
+        $user = $this->accountsUser();
+
+        $this->actingAs($user)
+            ->get(route('accounts.reports'))
+            ->assertStatus(200)
+            ->assertSee('No active programs are available for fee reporting yet')
+            ->assertSee('Create programs and fee demands before using the program-wise finance report')
+            ->assertSee('No batches are available for fee reporting yet')
+            ->assertSee('Add batches, active students, and fee demands before using the batch-wise finance report')
+            ->assertDontSee('No data.')
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
     }
 }

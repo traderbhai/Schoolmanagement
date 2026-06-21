@@ -7,8 +7,8 @@
 <p>We regret to inform you that after careful consideration, we are unable to offer you admission at this time for the program you applied to.</p>
 
 <div class="info-box">
-    <p><strong>Application Number:</strong> {{ $applicant->application_number }}</p>
-    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'N/A' }}</p>
+    <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}</p>
+    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}</p>
     <p><strong>Status:</strong> Not Selected</p>
 </div>
 

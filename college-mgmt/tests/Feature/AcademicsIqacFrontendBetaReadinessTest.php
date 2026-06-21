@@ -74,6 +74,17 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ->assertDontSee('href="#source-list"', false)
             ->assertDontSee('href="#"', false);
 
+        $metricResponse = $this->actingAs($iqac)->get(route('academics.iqac.attainment-monitoring', [
+            'metric' => 'co_target_missed',
+            'search' => $target->code,
+            'status' => 'CO target missed',
+        ]));
+
+        $metricResponse->assertOk()
+            ->assertSee('Visible filter summary: Metric: co_target_missed | Search: ' . $target->code . ' | Status: CO target missed')
+            ->assertSee('Reset queue')
+            ->assertSee(route('academics.iqac.attainment-monitoring', ['metric' => 'co_target_missed']), false);
+
         $csv = $this->actingAs($iqac)->get(route('academics.iqac.attainment-monitoring', [
             'search' => $target->code,
             'status' => 'CO target missed',

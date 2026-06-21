@@ -9,7 +9,7 @@
         <h4 class="mb-0">
             <i class="bi bi-star-half me-2 text-warning"></i>Course Feedback
             @if($currentTerm)
-                <span class="text-muted fs-5 fw-normal ms-2">— {{ $currentTerm->name }}</span>
+                <span class="text-muted fs-5 fw-normal ms-2">- {{ $currentTerm->name }}</span>
             @endif
         </h4>
     </div>
@@ -31,7 +31,8 @@
         <div class="card shadow-sm">
             <div class="card-body text-center py-5 text-muted">
                 <i class="bi bi-chat-square-dots fs-1 d-block mb-2 opacity-25"></i>
-                <p class="mb-0">No subjects found for the current term.</p>
+                <div class="fw-semibold text-dark mb-1">No published teaching subjects are linked for this term yet</div>
+                <p class="mb-0 small">Feedback summaries appear after your subject allocation is published in the timetable. If you are teaching this term, ask the academic office or PMC to verify your teacher profile and timetable assignment.</p>
             </div>
         </div>
     @else
@@ -54,7 +55,8 @@
                             @if(!$stats)
                                 <div class="text-center text-muted py-4">
                                     <i class="bi bi-hourglass-split fs-2 d-block mb-2 opacity-25"></i>
-                                    <small>No feedback collected yet for this subject.</small>
+                                    <div class="fw-semibold text-dark mb-1">No student feedback responses yet</div>
+                                    <small>Students will appear in this aggregate only after enrolled students submit feedback for the current term. Individual responses stay hidden to protect anonymity.</small>
                                 </div>
                             @else
                                 @php
@@ -98,7 +100,6 @@
                                     </div>
                                 @endforeach
 
-                                {{-- Anonymous comments --}}
                                 @if(!empty($stats->comments) && count($stats->comments) > 0)
                                     <hr class="my-2">
                                     <div class="small fw-semibold text-muted mb-2">

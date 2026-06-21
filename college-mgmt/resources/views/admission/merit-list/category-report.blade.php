@@ -1,10 +1,10 @@
-@extends('layouts.admin')
-@section('title', 'Category Report — ' . $program->name)
+﻿@extends('layouts.admin')
+@section('title', 'Category Report - ' . $program->name)
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <a href="{{ route('admission.merit-list.show', $program) }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Merit List</a>
-        <h2 class="fw-bold mb-0 mt-1"><i class="bi bi-bar-chart me-2"></i>Category-Wise Report — {{ $program->name }}</h2>
+        <h2 class="fw-bold mb-0 mt-1"><i class="bi bi-bar-chart me-2"></i>Category-Wise Report - {{ $program->name }}</h2>
     </div>
     <form method="GET" class="d-flex gap-2">
         <select name="batch_id" class="form-select form-select-sm" style="width:200px">
@@ -62,7 +62,7 @@
                                     {{ $row['vacant'] }}
                                 </span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Seat matrix not configured</span>
                             @endif
                         </td>
                         <td style="min-width:160px">
@@ -75,7 +75,7 @@
                                 <span class="small text-muted">{{ $row['fill_pct'] }}%</span>
                             </div>
                             @else
-                                <span class="text-muted small">N/A</span>
+                                <span class="text-muted small">Fill rate unavailable until seats are configured</span>
                             @endif
                         </td>
                     </tr>

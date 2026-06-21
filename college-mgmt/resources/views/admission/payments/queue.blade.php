@@ -46,7 +46,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center py-3">
-                <div class="fs-2 fw-bold text-danger">₹{{ number_format($stats['amount_pending'], 0) }}</div>
+                <div class="fs-2 fw-bold text-danger">Rs. {{ number_format($stats['amount_pending'], 0) }}</div>
                 <div class="small text-muted">Amount Pending</div>
             </div>
         </div>
@@ -116,7 +116,14 @@
         @if($payments->isEmpty())
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-check2-all fs-1"></i>
-                <p class="mt-2">No pending payments found.</p>
+                <div class="fw-semibold text-dark mt-2">No pending payments in this queue</div>
+                <div class="small">
+                    Applicant payment submissions appear here only when they are pending verification and inside your admission scope. Clear filters or open the applicant list if your team expects a payment to review.
+                </div>
+                <div class="mt-3 d-flex flex-wrap justify-content-center gap-2">
+                    <a href="{{ route('admission.payments.queue') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                    <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary">Open Applicants</a>
+                </div>
             </div>
         @else
         <div class="table-responsive">
@@ -137,20 +144,20 @@
                     @foreach($payments as $payment)
                     <tr>
                         <td>
-                            <div class="fw-semibold">{{ $payment->applicant->user->name ?? 'N/A' }}</div>
-                            <small class="text-muted">{{ $payment->applicant->application_number }}</small>
+                            <div class="fw-semibold">{{ $payment->applicant->user->name ?? 'Applicant name missing' }}</div>
+                            <small class="text-muted">{{ $payment->applicant->application_number ?? 'Application number missing' }}</small>
                         </td>
                         <td>
-                            <div class="fw-semibold">{{ $payment->installment->name ?? 'N/A' }}</div>
-                            <small class="text-muted">{{ $payment->applicant->program->name ?? '' }}</small>
+                            <div class="fw-semibold">{{ $payment->installment->name ?? 'Installment not linked' }}</div>
+                            <small class="text-muted">{{ $payment->applicant->program->name ?? 'Program not assigned' }}</small>
                         </td>
-                        <td class="fw-bold">₹{{ number_format($payment->amount_paid, 0) }}</td>
+                        <td class="fw-bold">Rs. {{ number_format($payment->amount_paid, 0) }}</td>
                         <td><span class="badge bg-info text-dark">{{ $payment->payment_mode_label }}</span></td>
                         <td>
                             @if($payment->transaction_reference)
                                 <code class="small">{{ $payment->transaction_reference }}</code>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Reference not captured</span>
                             @endif
                         </td>
                         <td>

@@ -86,7 +86,14 @@
                                     <td>{{ $req->remarks ?? '—' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center text-muted py-3">No outpass requests yet.</td></tr>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <div class="fw-semibold text-dark mb-1">No outpass requests yet</div>
+                                        <div class="small">
+                                            Submit an outpass before leaving campus or hostel. The warden team will approve, reject, or mark return status here.
+                                        </div>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>

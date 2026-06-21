@@ -12,6 +12,8 @@ use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ViewErrorBag;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -83,6 +85,67 @@ class AdmissionMeritDecisionIntegrityTest extends TestCase
         $entry->refresh();
         $this->assertSame('selected', $entry->decision);
         $this->assertNull($entry->notes);
+    }
+
+    public function test_merit_official_outputs_use_readable_missing_data_labels(): void
+    {
+        $this->actingAs($this->admissionHead());
+        View::share('errors', new ViewErrorBag);
+        $entry = $this->meritEntry('pending');
+        $entry->update([
+            'step_scores' => [],
+            'academic_score' => null,
+        ]);
+        $entry->load(['program', 'applicant.user']);
+        $entry->applicant->setRelation('user', null);
+        $entry->applicant->application_number = null;
+
+        $pdfHtml = view('admission.merit-list.pdf', [
+            'program' => $entry->program,
+            'batch' => null,
+            'entries' => collect([$entry]),
+            'steps' => collect([(object) ['id' => 1, 'name' => 'Personal Interview', 'typeLabel' => 'PI']]),
+        ])->render();
+
+        $this->assertStringContainsString('Merit List -', $pdfHtml);
+        $this->assertStringContainsString('Applicant name not recorded', $pdfHtml);
+        $this->assertStringContainsString('Application number pending', $pdfHtml);
+        $this->assertStringContainsString('Step score not recorded', $pdfHtml);
+        $this->assertStringContainsString('Academic score not recorded', $pdfHtml);
+        $this->assertStringNotContainsString('N/A', $pdfHtml);
+        $this->assertStringNotContainsString('â', $pdfHtml);
+        $this->assertStringNotContainsString('Ã', $pdfHtml);
+        $this->assertStringNotContainsString('Â', $pdfHtml);
+        $this->assertStringNotContainsString('&mdash;', $pdfHtml);
+        $this->assertStringNotContainsString('&bull;', $pdfHtml);
+
+        $categoryHtml = view('admission.merit-list.category-report', [
+            'program' => $entry->program,
+            'batches' => collect(),
+            'batchId' => null,
+            'seatMatrix' => null,
+            'report' => [
+                'general' => [
+                    'label' => 'General',
+                    'seats' => 0,
+                    'applied' => 1,
+                    'scored' => 0,
+                    'selected' => 0,
+                    'vacant' => 0,
+                    'fill_pct' => 0,
+                ],
+            ],
+        ])->render();
+
+        $this->assertStringContainsString('Category-Wise Report -', $categoryHtml);
+        $this->assertStringContainsString('Seat matrix not configured', $categoryHtml);
+        $this->assertStringContainsString('Fill rate unavailable until seats are configured', $categoryHtml);
+        $this->assertStringNotContainsString('N/A', $categoryHtml);
+        $this->assertStringNotContainsString('â', $categoryHtml);
+        $this->assertStringNotContainsString('Ã', $categoryHtml);
+        $this->assertStringNotContainsString('Â', $categoryHtml);
+        $this->assertStringNotContainsString('&mdash;', $categoryHtml);
+        $this->assertStringNotContainsString('&bull;', $categoryHtml);
     }
 
     public function test_final_merit_decision_without_offer_cannot_be_changed_to_another_outcome(): void
@@ -208,6 +271,122 @@ class AdmissionMeritDecisionIntegrityTest extends TestCase
 
         $this->assertSame(1, MeritListEntry::where('applicant_id', $entry->applicant_id)->count());
         $this->assertSame('selected', $entry->fresh()->decision);
+    }
+
+    public function test_merit_list_pages_explain_generation_decisions_and_filtered_empty_states(): void
+    {
+        $head = $this->admissionHead();
+        $program = Program::factory()->create([
+            'is_active' => true,
+            'name' => 'Merit UX Program',
+            'code' => 'MUX',
+        ]);
+        $batch = Batch::factory()->create([
+            'program_id' => $program->id,
+            'name' => 'Merit UX Batch',
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.merit-list.index', $program))
+            ->assertOk()
+            ->assertSeeText('Merit-list control sequence')
+            ->assertSeeText('Confirm seat matrix')
+            ->assertSeeText('No merit list is generated for this program yet')
+            ->assertSeeText('selected, waitlisted, rejected, offer-letter, and seat-control workflows')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $selectedUser = User::factory()->create(['name' => 'Selected Merit Candidate']);
+        $selectedApplicant = Applicant::factory()->create([
+            'user_id' => $selectedUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+        ]);
+        $pendingUser = User::factory()->create(['name' => 'Pending Merit Candidate']);
+        $pendingApplicant = Applicant::factory()->create([
+            'user_id' => $pendingUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'shortlisted',
+        ]);
+
+        MeritListEntry::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'applicant_id' => $selectedApplicant->id,
+            'rank' => 1,
+            'total_weighted_score' => 91,
+            'academic_score' => 91,
+            'composite_score' => 91,
+            'merit_list_version' => 1,
+            'decision' => 'selected',
+        ]);
+        MeritListEntry::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'applicant_id' => $pendingApplicant->id,
+            'rank' => 2,
+            'total_weighted_score' => 82,
+            'academic_score' => null,
+            'composite_score' => 82,
+            'merit_list_version' => 1,
+            'decision' => 'pending',
+        ]);
+
+        $selectedKpiUrl = route('admission.merit-list.show', [
+            'program' => $program->id,
+            'decision' => 'selected',
+        ]);
+        $selectedFilteredUrl = route('admission.merit-list.show', [
+            'program' => $program->id,
+            'batch_id' => $batch->id,
+            'decision' => 'selected',
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.merit-list.index', $program))
+            ->assertOk()
+            ->assertSeeText('Selected')
+            ->assertSee($selectedKpiUrl, false)
+            ->assertSeeText('Regeneration is blocked once active offer letters exist')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $this->actingAs($head)
+            ->get($selectedFilteredUrl)
+            ->assertOk()
+            ->assertSeeText('Decision workflow')
+            ->assertSeeText('Current view:')
+            ->assertSeeText('Batch: Merit UX Batch')
+            ->assertSeeText('Decision: Selected')
+            ->assertSeeText('Rows: 1')
+            ->assertSeeText('Selected Merit Candidate')
+            ->assertDontSeeText('Pending Merit Candidate')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $this->actingAs($head)
+            ->get(route('admission.merit-list.show', [
+                'program' => $program->id,
+                'batch_id' => $batch->id,
+                'decision' => 'rejected',
+            ]))
+            ->assertOk()
+            ->assertSeeText('No merit-list entries match this view')
+            ->assertSeeText('Check the selected batch and decision filters')
+            ->assertSeeText('Clear Filters')
+            ->assertSeeText('Review Merit Setup')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
     }
 
     public function test_merit_list_visibility_and_decision_routes_respect_assignment_scope_and_authority(): void

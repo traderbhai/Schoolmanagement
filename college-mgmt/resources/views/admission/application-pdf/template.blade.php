@@ -235,13 +235,13 @@
     <div class="form-subtitle">Application Form</div>
     <div class="header-meta">
         Application No: <strong>{{ $applicant->application_number }}</strong>
-        &nbsp;&bull;&nbsp;
+        &nbsp;|&nbsp;
         Status:
         @php
             $statusClass = 'status-' . str_replace(' ', '_', strtolower($applicant->status ?? 'draft'));
         @endphp
         <span class="{{ $statusClass }}">{{ ucwords(str_replace('_', ' ', $applicant->status ?? 'Draft')) }}</span>
-        &nbsp;&bull;&nbsp;
+        &nbsp;|&nbsp;
         Printed On: {{ now()->format('d M Y H:i') }}
     </div>
 </div>
@@ -253,11 +253,11 @@
             <table class="basic-info-table">
                 <tr>
                     <td class="bi-label">App. No.</td>
-                    <td class="bi-value">{{ $applicant->application_number ?? 'N/A' }}</td>
+                    <td class="bi-value">{{ $applicant->application_number ?? 'Application number pending' }}</td>
                     <td class="bi-label">Program</td>
-                    <td class="bi-value">{{ $applicant->program->name ?? 'N/A' }}</td>
+                    <td class="bi-value">{{ $applicant->program->name ?? 'Program not selected' }}</td>
                     <td class="bi-label">Batch</td>
-                    <td class="bi-value">{{ $applicant->batch->name ?? 'N/A' }}</td>
+                    <td class="bi-value">{{ $applicant->batch->name ?? 'Batch not selected' }}</td>
                 </tr>
                 <tr>
                     <td class="bi-label">Status</td>
@@ -285,7 +285,7 @@
         <td class="sd-label">Category</td>
         <td class="sd-value">{{ strtoupper($applicant->category) }}</td>
         <td class="sd-label">Sub-Category</td>
-        <td class="sd-value">{{ $applicant->sub_category ? strtoupper($applicant->sub_category) : 'N/A' }}</td>
+        <td class="sd-value">{{ $applicant->sub_category ? strtoupper($applicant->sub_category) : 'Sub-category not selected' }}</td>
     </tr>
     <tr>
         <td class="sd-label">PwD Status</td>
@@ -293,7 +293,7 @@
             @if ($applicant->is_pwd)
                 Yes
                 @if ($applicant->pwd_certificate_number)
-                    &mdash; Cert. No: {{ $applicant->pwd_certificate_number }}
+                    - Cert. No: {{ $applicant->pwd_certificate_number }}
                 @endif
             @else
                 No
@@ -311,18 +311,18 @@
         <td class="sd-label">Exam Name</td>
         <td class="sd-value">{{ $applicant->entrance_exam_name }}</td>
         <td class="sd-label">Roll No.</td>
-        <td class="sd-value">{{ $applicant->entrance_exam_roll_number ?? 'N/A' }}</td>
+        <td class="sd-value">{{ $applicant->entrance_exam_roll_number ?? 'Roll number not recorded' }}</td>
     </tr>
     <tr>
         <td class="sd-label">Score</td>
-        <td class="sd-value">{{ $applicant->entrance_exam_score ?? 'N/A' }}</td>
+        <td class="sd-value">{{ $applicant->entrance_exam_score ?? 'Score not recorded' }}</td>
         <td class="sd-label">Rank</td>
-        <td class="sd-value">{{ $applicant->entrance_exam_rank ?? 'N/A' }}</td>
+        <td class="sd-value">{{ $applicant->entrance_exam_rank ?? 'Rank not recorded' }}</td>
     </tr>
     <tr>
         <td class="sd-label">Exam Date</td>
         <td class="sd-value" colspan="3">
-            {{ $applicant->entrance_exam_date ? $applicant->entrance_exam_date->format('d M Y') : 'N/A' }}
+            {{ $applicant->entrance_exam_date ? $applicant->entrance_exam_date->format('d M Y') : 'Exam date not recorded' }}
         </td>
     </tr>
 </table>
@@ -351,7 +351,7 @@
                         @if ($displayVal !== '' && $displayVal !== null)
                             {{ $displayVal }}
                         @else
-                            <span class="empty-val">—</span>
+                            <span class="empty-val">Not provided</span>
                         @endif
                     </td>
                 @else
@@ -381,12 +381,12 @@
         @foreach ($applicant->documents as $index => $document)
         <tr>
             <td>{{ $index + 1 }}</td>
-            <td>{{ $document->requiredDocument->name ?? $document->original_name ?? 'N/A' }}</td>
+            <td>{{ $document->requiredDocument->name ?? $document->original_name ?? 'Document name not recorded' }}</td>
             <td class="doc-status-{{ $document->status ?? 'pending' }}">
                 {{ ucfirst($document->status ?? 'Pending') }}
             </td>
             <td>
-                {{ $document->uploaded_at ? $document->uploaded_at->format('d M Y H:i') : 'N/A' }}
+                {{ $document->uploaded_at ? $document->uploaded_at->format('d M Y H:i') : 'Upload time not recorded' }}
             </td>
         </tr>
         @endforeach

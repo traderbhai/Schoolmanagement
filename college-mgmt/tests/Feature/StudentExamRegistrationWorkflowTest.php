@@ -115,7 +115,9 @@ class StudentExamRegistrationWorkflowTest extends TestCase
             ->assertStatus(200)
             ->assertSee('End Term Economics')
             ->assertSee('Managerial Economics')
+            ->assertSee('Attendance not recorded yet; Exam Cell will verify eligibility.')
             ->assertSee('Clear')
+            ->assertDontSee('No records yet')
             ->assertDontSee('Dues Pending');
     }
 

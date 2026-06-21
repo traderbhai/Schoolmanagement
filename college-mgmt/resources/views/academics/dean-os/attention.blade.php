@@ -23,7 +23,16 @@
                         <td class="text-end"><a href="{{ $item['route'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">No records in this queue.</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <div class="fw-semibold text-body">No open Dean attention records</div>
+                            <div class="small">
+                                This queue has no unresolved items for
+                                <span class="fw-semibold">{{ $queue['label'] }}</span>.
+                                Continue from the Dean OS dashboard, review another queue, or create an action item when a new blocker is found.
+                            </div>
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>

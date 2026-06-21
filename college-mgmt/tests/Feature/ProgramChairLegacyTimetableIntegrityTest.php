@@ -146,6 +146,19 @@ class ProgramChairLegacyTimetableIntegrityTest extends TestCase
         ]);
     }
 
+    public function test_substitutions_page_uses_operational_empty_state_when_no_records_exist(): void
+    {
+        $set = $this->academicSet();
+
+        $this->actingAs($this->chair($set['program']))
+            ->get(route('chair.timetable.substitutions'))
+            ->assertOk()
+            ->assertSee('No substitution records yet')
+            ->assertSee('Faculty replacements, cancellations, and rescheduled sessions will appear here')
+            ->assertSee(route('chair.timetable.builder'), false)
+            ->assertDontSee('No records yet.');
+    }
+
     public function test_legacy_save_slot_is_blocked_after_timetable_is_published(): void
     {
         $set = $this->academicSet();

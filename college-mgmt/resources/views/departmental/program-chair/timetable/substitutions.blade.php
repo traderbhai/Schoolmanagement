@@ -85,7 +85,17 @@
                     <td class="small text-muted">{{ Str::limit($sub->reason,40) }}</td>
                   </tr>
                 @empty
-                  <tr><td colspan="5" class="text-center text-muted py-4">No records yet.</td></tr>
+                  <tr>
+                    <td colspan="5" class="text-center py-4">
+                      <div class="fw-semibold text-dark">No substitution records yet</div>
+                      <div class="small text-muted mx-auto mt-1" style="max-width: 540px;">
+                        Faculty replacements, cancellations, and rescheduled sessions will appear here after they are recorded for your scoped timetable. Start by selecting an active session on the left, or return to the builder to review available sessions.
+                      </div>
+                      <div class="mt-3">
+                        <a href="{{ route('chair.timetable.builder') }}" class="btn btn-outline-secondary btn-sm">Review timetable builder</a>
+                      </div>
+                    </td>
+                  </tr>
                 @endforelse
               </tbody>
             </table>

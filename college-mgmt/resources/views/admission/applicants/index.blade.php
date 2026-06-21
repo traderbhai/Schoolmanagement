@@ -136,11 +136,11 @@
                         <tr>
                             <td><input type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="form-check-input row-check"></td>
                             <td>
-                                <div class="fw-semibold">{{ $applicant->user->name ?? 'N/A' }}</div>
-                                <div class="text-muted small">{{ $applicant->user->email ?? '' }}</div>
+                                <div class="fw-semibold">{{ $applicant->user->name ?? 'Applicant name missing' }}</div>
+                                <div class="text-muted small">{{ $applicant->user->email ?? 'Email not provided' }}</div>
                             </td>
                             <td class="font-monospace small">{{ $applicant->application_number }}</td>
-                            <td class="small">{{ $applicant->program->abbreviation ?? 'N/A' }}</td>
+                            <td class="small">{{ $applicant->program->abbreviation ?? $applicant->program->name ?? 'Program not assigned' }}</td>
                             <td><span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span></td>
                             <td class="small">{{ $applicant->applied_at ? $applicant->applied_at->format('d M Y') : '-' }}</td>
                             <td class="small">
@@ -148,14 +148,14 @@
                                     <span class="badge bg-secondary">{{ ucfirst(str_replace('_',' ',$applicant->counsellingLogs->first()->outcome)) }}</span>
                                     <div class="text-muted" style="font-size:0.75rem">{{ $applicant->counsellingLogs->first()->created_at->diffForHumans() }}</div>
                                 @else
-                                    <span class="text-muted">-</span>
+                                    <span class="text-muted">No interaction yet</span>
                                 @endif
                             </td>
                             <td class="small">
                                 @if($applicant->counsellingLogs->first()?->next_followup_date)
                                     <span class="badge bg-warning text-dark">{{ $applicant->counsellingLogs->first()->next_followup_date->format('d M') }}</span>
                                 @else
-                                    -
+                                    <span class="text-muted">No follow-up set</span>
                                 @endif
                             </td>
                             @php $pct = $completenessMap[$applicant->id] ?? 0; @endphp
@@ -172,7 +172,21 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="10" class="text-center text-muted py-4">No applicants match the current filters.</td></tr>
+                        <tr>
+                            <td colspan="10" class="py-4">
+                                <div class="text-center text-muted">
+                                    <div class="fw-semibold text-dark mb-1">No applicants are visible in this list</div>
+                                    <div class="small mb-3">
+                                        Applicants appear here when they match your Admission role scope and the active filters above.
+                                        Clear filters if you expected records, or open Leads to convert new prospects into applicants.
+                                    </div>
+                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                        <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                        <a href="{{ route('admission.leads.index') }}" class="btn btn-sm btn-outline-primary">Open Leads</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>

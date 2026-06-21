@@ -38,7 +38,16 @@
                             <td>{{ $item['due'] ?? '-' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No records currently match this queue.</td></tr>
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-body">No open records for this queue</div>
+                                <div class="small">
+                                    This means your current Academics scope has no unresolved items for
+                                    <span class="fw-semibold">{{ $queueData['title'] }}</span>.
+                                    Review the Command Center for other branches, or create/update the source workflow when a new blocker appears.
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

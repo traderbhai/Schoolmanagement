@@ -33,6 +33,17 @@
     @endif
 
     @include('admission.partials.action-center', ['actionCenter' => $actionCenter])
+    <div class="alert alert-info border-0 shadow-sm small mb-4">
+        <div class="fw-semibold mb-1">Lead operating sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Confirm ownership</span>
+            <span class="badge text-bg-light border">2. Check source, program, and priority</span>
+            <span class="badge text-bg-light border">3. Log call or follow-up</span>
+            <span class="badge text-bg-light border">4. Resolve quality flags</span>
+            <span class="badge text-bg-light border">5. Convert only when ready</span>
+        </div>
+        <div class="text-muted mt-2">Use the action center first, then record every contact in follow-ups, calls, or communications so the next counsellor can continue without guessing.</div>
+    </div>
 
     <div class="row g-4">
         {{-- Left Column --}}
@@ -89,7 +100,10 @@
 
             @if(!$lead->isConverted())
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent fw-semibold">Quick Actions</div>
+                <div class="card-header bg-transparent">
+                    <div class="fw-semibold">Quick Actions</div>
+                    <div class="small text-muted">Use these only after the contact outcome is clear; status changes affect queues, SLAs, and conversion reporting.</div>
+                </div>
                 <div class="card-body">
                     <div class="row g-3">
                         @if($lead->status === 'new')
@@ -127,7 +141,10 @@
             {{-- Assignment Card --}}
             <div class="card border-0 shadow-sm mt-3" id="leadAssignmentCard">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <strong>Assigned Counsellor</strong>
+                    <div>
+                        <strong>Assigned Counsellor</strong>
+                        <div class="small text-muted">Ownership decides who must follow up and which manager sees the record in workload views.</div>
+                    </div>
                 </div>
                 <div class="card-body">
                     @if($lead->assignedTo)
@@ -154,7 +171,10 @@
             {{-- Follow-ups Card --}}
             <div class="card border-0 shadow-sm mt-3">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <strong>Follow-ups</strong>
+                    <div>
+                        <strong>Follow-ups</strong>
+                        <div class="small text-muted">Schedule the next callback before leaving the page when the lead is not ready to convert.</div>
+                    </div>
                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleFollowUpModal">
                         <i class="bi bi-plus"></i> Schedule
                     </button>
@@ -197,7 +217,10 @@
             </div>
 
             <div class="card border-0 shadow-sm mt-3">
-                <div class="card-header bg-transparent fw-semibold">Assignment Timeline</div>
+                <div class="card-header bg-transparent">
+                    <div class="fw-semibold">Assignment Timeline</div>
+                    <div class="small text-muted">Shows who owned the lead, who delegated it, and why ownership changed.</div>
+                </div>
                 <div class="list-group list-group-flush">
                     @forelse($lead->assignmentEvents as $event)
                         <div class="list-group-item">
@@ -211,7 +234,10 @@
             </div>
 
             <div class="card border-0 shadow-sm mt-3">
-                <div class="card-header bg-transparent fw-semibold">v0.03 Operating Timeline</div>
+                <div class="card-header bg-transparent">
+                    <div class="fw-semibold">Operating Timeline</div>
+                    <div class="small text-muted">Read communications, calls, and data-quality flags together before deciding the next action.</div>
+                </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">

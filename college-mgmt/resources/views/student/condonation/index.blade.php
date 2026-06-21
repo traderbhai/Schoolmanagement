@@ -24,7 +24,21 @@
         </div>
     @endunless
     @if($condonations->isEmpty())
-    <div class="alert alert-info">No condonation requests submitted yet.</div>
+    <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="fw-semibold mb-1">No condonation requests submitted yet.</div>
+            <div class="small mb-0">
+                Request condonation only for enrolled subjects below the attendance threshold. Your request will be reviewed by the academic/program office and the decision will appear here.
+            </div>
+        </div>
+        @if($canRequestCondonation)
+            <a href="{{ route('student.condonation.create') }}" class="btn btn-sm btn-primary align-self-start align-self-md-center">
+                Check Eligible Subjects
+            </a>
+        @else
+            <span class="badge bg-secondary align-self-start align-self-md-center">Active students only</span>
+        @endif
+    </div>
     @else
     <div class="table-responsive">
         <table class="table table-hover align-middle">

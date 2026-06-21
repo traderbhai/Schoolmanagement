@@ -6,14 +6,25 @@
 <div class="mb-3">
     <a href="{{ route('admission.applicants.show', $applicant) }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Back to Applicant</a>
     <h2 class="fw-bold mb-0 mt-1">Confirm Enrollment</h2>
-    <div class="text-muted small">{{ $applicant->application_number }} — {{ $applicant->program->name ?? '—' }}</div>
+    <div class="text-muted small">{{ $applicant->application_number }} - {{ $applicant->program->name ?? 'Program not assigned' }}</div>
 </div>
 
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 
-{{-- Pre-condition checklist --}}
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    <div class="fw-semibold mb-2"><i class="bi bi-diagram-3 me-1"></i>Enrollment confirmation sequence</div>
+    <div class="d-flex flex-wrap gap-2 small">
+        <span class="badge bg-light text-dark">1. Confirm selected status</span>
+        <span class="badge bg-light text-dark">2. Verify payment</span>
+        <span class="badge bg-light text-dark">3. Verify mandatory documents</span>
+        <span class="badge bg-light text-dark">4. Assign roll number</span>
+        <span class="badge bg-light text-dark">5. Create student profile</span>
+        <span class="badge bg-light text-dark">6. Trigger Academics handoff</span>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold bg-transparent d-flex justify-content-between align-items-center">
         <span>Enrollment Readiness</span>
@@ -90,15 +101,14 @@
     </div>
 </div>
 
-{{-- Applicant Summary --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold bg-transparent">Applicant Summary</div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-md-4"><div class="small text-muted">Name</div><div class="fw-medium">{{ $applicant->user->name ?? ($applicant->personal_data['name'] ?? '—') }}</div></div>
-            <div class="col-md-4"><div class="small text-muted">Email</div><div class="fw-medium">{{ $applicant->user->email ?? ($applicant->personal_data['email'] ?? '—') }}</div></div>
-            <div class="col-md-4"><div class="small text-muted">Program</div><div class="fw-medium">{{ $applicant->program->name ?? '—' }}</div></div>
-            <div class="col-md-4"><div class="small text-muted">Batch</div><div class="fw-medium">{{ $applicant->batch->name ?? '—' }}</div></div>
+            <div class="col-md-4"><div class="small text-muted">Name</div><div class="fw-medium">{{ $applicant->user->name ?? ($applicant->personal_data['name'] ?? 'Applicant name not recorded') }}</div></div>
+            <div class="col-md-4"><div class="small text-muted">Email</div><div class="fw-medium">{{ $applicant->user->email ?? ($applicant->personal_data['email'] ?? 'Applicant email not recorded') }}</div></div>
+            <div class="col-md-4"><div class="small text-muted">Program</div><div class="fw-medium">{{ $applicant->program->name ?? 'Program not assigned' }}</div></div>
+            <div class="col-md-4"><div class="small text-muted">Batch</div><div class="fw-medium">{{ $applicant->batch->name ?? 'Batch not assigned' }}</div></div>
             <div class="col-md-4"><div class="small text-muted">Application #</div><div class="fw-medium font-monospace">{{ $applicant->application_number }}</div></div>
             <div class="col-md-4"><div class="small text-muted">Status</div><div><span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span></div></div>
         </div>
@@ -106,9 +116,8 @@
 </div>
 
 @if($alreadyEnrolled)
-    <div class="alert alert-warning">This applicant is already enrolled.</div>
+    <div class="alert alert-warning">This applicant is already enrolled. Use the Enrollment Confirmation page or Academics student lifecycle for any next step.</div>
 @else
-{{-- Enrollment Form --}}
 <form action="{{ route('admission.enrollment.store', $applicant) }}" method="POST">
     @csrf
 
@@ -132,7 +141,7 @@
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Specialization</label>
                     <select name="specialization_id" class="form-select">
-                        <option value="">— None —</option>
+                        <option value="">No specialization</option>
                         @foreach($specializations as $s)
                             <option value="{{ $s->id }}" @selected(old('specialization_id') == $s->id)>{{ $s->name }}</option>
                         @endforeach
@@ -141,7 +150,7 @@
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Term</label>
                     <select name="term_id" class="form-select">
-                        <option value="">— None —</option>
+                        <option value="">Term not selected</option>
                         @foreach($terms as $t)
                             <option value="{{ $t->id }}" @selected(old('term_id') == $t->id)>{{ $t->name }}</option>
                         @endforeach
@@ -149,7 +158,7 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Notes</label>
-                    <textarea name="notes" rows="3" class="form-control" placeholder="Optional notes…">{{ old('notes') }}</textarea>
+                    <textarea name="notes" rows="3" class="form-control" placeholder="Optional enrollment handoff note">{{ old('notes') }}</textarea>
                 </div>
             </div>
         </div>

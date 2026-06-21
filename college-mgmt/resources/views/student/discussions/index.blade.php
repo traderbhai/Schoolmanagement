@@ -28,7 +28,10 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5 text-muted">
             <i class="bi bi-chat-square-text fs-1 d-block mb-2"></i>
-            No discussions yet. Be the first to ask a question!
+            <div class="fw-semibold text-dark mb-1">No discussion threads are open for this subject yet</div>
+            <div class="small">
+                Ask a question when you need clarification on class topics, assignments, assessments, or faculty instructions. Your classmates and faculty can reply in this subject thread.
+            </div>
         </div>
     </div>
     @else

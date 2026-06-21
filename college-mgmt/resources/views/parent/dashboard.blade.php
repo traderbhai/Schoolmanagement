@@ -11,6 +11,22 @@
     <div class="text-muted" style="font-size:.85rem">Track attendance, fees, results, and notices for your linked students.</div>
 </div>
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Parent monitoring sequence</div>
+            <div class="small text-muted">Start with the priority card, then open each child record only when a fee, attendance, result, or notice needs attention.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Check parent priority</span>
+            <span class="badge text-bg-light">2. Review child alerts</span>
+            <span class="badge text-bg-light">3. Open attendance/results/fees</span>
+            <span class="badge text-bg-light">4. Read notices</span>
+            <span class="badge text-bg-light">5. Contact institute if blocked</span>
+        </div>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
@@ -54,22 +70,22 @@
 
         <div class="row g-3">
             <div class="col-sm-4">
-                <div class="kpi-card kpi-blue">
+                <a href="{{ route('parent.children.attendance', $s) }}" class="kpi-card kpi-blue d-block text-decoration-none text-white" aria-label="Open attendance details for {{ $s->user->name }}">
                     <div class="kpi-label">Attendance</div>
                     <div class="kpi-value">{{ $item['attendancePct'] !== null ? $item['attendancePct'].'%' : 'N/A' }}</div>
-                </div>
+                </a>
             </div>
             <div class="col-sm-4">
-                <div class="kpi-card kpi-green">
+                <a href="{{ route('parent.children.results', $s) }}" class="kpi-card kpi-green d-block text-decoration-none text-white" aria-label="Open result details for {{ $s->user->name }}">
                     <div class="kpi-label">SGPA</div>
                     <div class="kpi-value">{{ $item['sgpa'] ?? 'N/A' }}</div>
-                </div>
+                </a>
             </div>
             <div class="col-sm-4">
-                <div class="kpi-card {{ $finance['balance'] > 0 ? 'kpi-red' : 'kpi-green' }}">
+                <a href="{{ route('parent.children.fees', $s) }}" class="kpi-card {{ $finance['balance'] > 0 ? 'kpi-red' : 'kpi-green' }} d-block text-decoration-none text-white" aria-label="Open fee details for {{ $s->user->name }}">
                     <div class="kpi-label">Fee Balance</div>
                     <div class="kpi-value">Rs. {{ number_format($finance['balance']) }}</div>
-                </div>
+                </a>
             </div>
         </div>
 

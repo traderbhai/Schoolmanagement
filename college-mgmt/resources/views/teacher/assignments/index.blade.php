@@ -57,9 +57,10 @@
             @if($assignments->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
-                    No assignments yet.
+                    <div class="fw-semibold text-dark mb-1">No assignments are published or drafted for this view yet</div>
+                    <div class="small mb-2">Create the first assignment for your assigned subject, or clear the subject filter if you expected to see existing work.</div>
                     @if($canManageAssignments)
-                        <a href="{{ route('teacher.assignments.create') }}">Create one.</a>
+                        <a href="{{ route('teacher.assignments.create') }}" class="btn btn-sm btn-outline-primary">Create assignment</a>
                     @endif
                 </div>
             @else

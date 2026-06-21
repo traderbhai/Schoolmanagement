@@ -20,7 +20,7 @@ class PaymentVerified extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $amount = $this->data['payment']->amount_paid ?? 0;
-        return new Envelope(subject: "Payment Confirmed — ₹{$amount}");
+        return new Envelope(subject: 'Payment Confirmed - Rs. ' . number_format((float) $amount, 2));
     }
 
     public function content(): Content

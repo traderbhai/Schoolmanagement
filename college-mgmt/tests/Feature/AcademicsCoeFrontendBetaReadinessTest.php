@@ -70,6 +70,17 @@ class AcademicsCoeFrontendBetaReadinessTest extends TestCase
             ->assertDontSee('href="#source-list"', false)
             ->assertDontSee('href="#"', false);
 
+        $metricResponse = $this->actingAs($examUser)->get(route('academics.coe.hall-ticket-readiness', [
+            'metric' => 'blocked_registrations',
+            'search' => $target->student->user->name,
+            'status' => 'Approval pending',
+        ]));
+
+        $metricResponse->assertOk()
+            ->assertSee('Visible filter summary: Metric: blocked_registrations | Search: ' . $target->student->user->name . ' | Status: Approval pending')
+            ->assertSee('Reset queue')
+            ->assertSee(route('academics.coe.hall-ticket-readiness', ['metric' => 'blocked_registrations']), false);
+
         $csv = $this->actingAs($examUser)->get(route('academics.coe.hall-ticket-readiness', [
             'search' => $target->student->user->name,
             'status' => 'Approval pending',

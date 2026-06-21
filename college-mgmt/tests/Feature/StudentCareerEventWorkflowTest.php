@@ -326,6 +326,21 @@ class StudentCareerEventWorkflowTest extends TestCase
             ->assertDontSee('Past Draft Hidden Event');
     }
 
+    public function test_student_career_events_empty_state_explains_cmc_next_step(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.career-events.index'))
+            ->assertOk()
+            ->assertSee('No upcoming career events are published right now')
+            ->assertSee('CMC publishes workshops, mock interviews, company visits, and career fairs')
+            ->assertSee('your registered')
+            ->assertSee('attended events will appear here once available')
+            ->assertDontSee('No upcoming career events.')
+            ->assertDontSee('SERVICE ERROR');
+    }
+
     public function test_cmc_can_mark_career_event_attendance_from_registration_list(): void
     {
         $student = $this->student();

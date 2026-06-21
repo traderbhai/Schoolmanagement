@@ -62,7 +62,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-3">No attendance records for this semester.</td>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark mb-1">No published attendance records are available for this semester yet</div>
+                        <div class="small">Attendance appears here after the timetable is published and faculty mark classes for your child's enrolled subjects. Draft timetable rows and out-of-scope subjects are not shown to parents.</div>
+                    </td>
                 </tr>
                 @endforelse
                 </tbody>

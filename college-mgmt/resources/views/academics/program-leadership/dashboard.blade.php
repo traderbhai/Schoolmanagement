@@ -24,32 +24,38 @@
         </div>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">Program leadership operating sequence</div>
+                <div class="small text-muted">Use this as the program owner desk. Each KPI opens the scoped source list behind the count.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Review portfolio scope</span>
+                <span class="badge text-bg-light">2. Clear course delivery gaps</span>
+                <span class="badge text-bg-light">3. Triage student risk</span>
+                <span class="badge text-bg-light">4. Check quality signals</span>
+                <span class="badge text-bg-light">5. Escalate through Chair workflows</span>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-2 mb-3">
         @foreach([
             ['label' => 'Programs', 'value' => $kpis['programs'], 'route' => route('academics.program-leadership.portfolio', ['metric' => 'active_programs'])],
-            ['label' => 'Active Students', 'value' => $kpis['active_students'], 'route' => null],
+            ['label' => 'Active Students', 'value' => $kpis['active_students'], 'route' => route('academics.program-leadership.student-success', ['metric' => 'active_students'])],
             ['label' => 'Delivery Gaps', 'value' => $kpis['delivery_gaps'], 'route' => route('academics.program-leadership.course-delivery', ['metric' => 'delivery_gaps'])],
             ['label' => 'Student Risk', 'value' => $kpis['student_risk'], 'route' => route('academics.program-leadership.student-success', ['metric' => 'student_risk'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
-                @if($metric['route'])
-                    <a class="text-decoration-none d-block h-100" href="{{ $metric['route'] }}">
-                        <div class="card shadow-sm h-100">
-                            <div class="card-body py-2">
-                                <div class="small text-muted">{{ $metric['label'] }}</div>
-                                <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                            </div>
-                        </div>
-                    </a>
-                @else
-                    <div class="card shadow-sm h-100" aria-label="{{ $metric['label'] }} summary">
+                <a class="text-decoration-none d-block h-100" href="{{ $metric['route'] }}">
+                    <div class="card shadow-sm h-100">
                         <div class="card-body py-2">
                             <div class="small text-muted">{{ $metric['label'] }}</div>
                             <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                            <div class="small text-muted">Summary only</div>
                         </div>
                     </div>
-                @endif
+                </a>
             </div>
         @endforeach
     </div>

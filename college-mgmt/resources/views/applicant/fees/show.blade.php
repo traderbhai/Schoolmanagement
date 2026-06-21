@@ -21,7 +21,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="text-muted small">Installment</label>
-                    <div class="fw-semibold">{{ $payment->installment->name ?? 'N/A' }}</div>
+                    <div class="fw-semibold">{{ $payment->installment->name ?? 'Installment not linked' }}</div>
                 </div>
                 <div class="col-md-6">
                     <label class="text-muted small">Amount Paid</label>

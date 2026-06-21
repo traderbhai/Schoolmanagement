@@ -57,15 +57,39 @@ class AcademicsDeanKpiDrilldownConsistencyTest extends TestCase
             ->assertSee('Visible filter summary: Status: blocking');
     }
 
-    public function test_dean_aggregate_attention_card_is_summary_only_not_fake_drilldown(): void
+    public function test_dean_critical_attention_card_opens_matching_aggregate_queue(): void
     {
         $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $criticalQueue = app(\App\Services\AcademicDeanAttentionService::class)->queue('critical_attention');
 
         $this->actingAs($dean)
             ->get(route('academics.dean-os.index'))
             ->assertOk()
             ->assertSee('Critical Attention')
-            ->assertSee('Summary only')
-            ->assertDontSee(route('academics.dean-os.attention', 'action_items_overdue') . '\"', false);
+            ->assertSee(route('academics.dean-os.attention', 'critical_attention'), false)
+            ->assertSee('Open Critical Attention source list', false)
+            ->assertDontSee('Summary only');
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.attention', 'critical_attention'))
+            ->assertOk()
+            ->assertSee('Critical Attention')
+            ->assertSee('Visible filter: queue = critical_attention | Records = ' . $criticalQueue['count']);
+    }
+
+    public function test_dean_empty_attention_queue_explains_next_steps(): void
+    {
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+
+        DB::table('approval_workflows')->delete();
+
+        $this->actingAs($dean)
+            ->get(route('academics.dean-os.attention', 'overdue_dean_approvals'))
+            ->assertOk()
+            ->assertSee('Overdue Dean Approvals')
+            ->assertSee('Visible filter: queue = overdue_dean_approvals | Records = 0')
+            ->assertSee('No open Dean attention records')
+            ->assertSee('Continue from the Dean OS dashboard, review another queue, or create an action item')
+            ->assertDontSee('No records in this queue.');
     }
 }

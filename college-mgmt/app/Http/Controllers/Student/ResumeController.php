@@ -40,10 +40,9 @@ class ResumeController extends Controller {
         $skills    = $request->skills    ? array_values(array_filter(array_map('trim', explode(',', $request->skills)))) : [];
         $languages = $request->languages ? array_values(array_filter(array_map('trim', explode(',', $request->languages)))) : [];
 
-        // Parse JSON blocks for structured sections
-        $projects       = $this->parseJsonArray($request->projects_json);
-        $certifications = $this->parseJsonArray($request->certifications_json);
-        $experience     = $this->parseJsonArray($request->experience_json);
+        $projects = $this->parseStructuredSection($request, 'projects', ['title', 'tech', 'description', 'url']);
+        $certifications = $this->parseStructuredSection($request, 'certifications', ['name', 'issuer', 'date']);
+        $experience = $this->parseStructuredSection($request, 'experience', ['company', 'role', 'from', 'to', 'description']);
 
         $resume = StudentResume::updateOrCreate(
             ['student_id' => $student->id],
@@ -69,5 +68,28 @@ class ResumeController extends Controller {
         if (!$json) return [];
         $decoded = json_decode($json, true);
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function parseStructuredSection(Request $request, string $key, array $fields): array
+    {
+        $rows = $request->input($key);
+
+        if (! is_array($rows)) {
+            return $this->parseJsonArray($request->input($key . '_json'));
+        }
+
+        return collect($rows)
+            ->map(function ($row) use ($fields) {
+                if (! is_array($row)) {
+                    return [];
+                }
+
+                return collect($fields)
+                    ->mapWithKeys(fn ($field) => [$field => trim((string) ($row[$field] ?? ''))])
+                    ->all();
+            })
+            ->filter(fn ($row) => collect($row)->filter(fn ($value) => $value !== '')->isNotEmpty())
+            ->values()
+            ->all();
     }
 }

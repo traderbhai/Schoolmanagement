@@ -140,14 +140,15 @@ class ReportingController extends Controller
         }
 
         $aicteNorms = ['SC' => 15, 'ST' => 7.5, 'OBC' => 27, 'EWS' => 10, 'General' => 40.5];
-        $totalIntake = SeatMatrix::whereIn('program_id', $visibleProgramIds)->sum('total_seats') ?: 1;
+        $totalIntake = (int) SeatMatrix::whereIn('program_id', $visibleProgramIds)->sum('total_seats');
+        $mandateIntake = max(1, $totalIntake);
         $categoryCompliance = [];
         foreach ($aicteNorms as $category => $mandatePct) {
             $filled = (clone $scopedApplicantQuery)
                 ->where('category', $category)
                 ->whereIn('status', ['selected', 'offer_accepted', 'enrolled'])
                 ->count();
-            $mandateSeats = round($totalIntake * $mandatePct / 100);
+            $mandateSeats = round($mandateIntake * $mandatePct / 100);
             $categoryCompliance[] = [
                 'category' => $category,
                 'mandate_pct' => $mandatePct,

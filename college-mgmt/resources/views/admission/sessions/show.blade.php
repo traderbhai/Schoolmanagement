@@ -33,13 +33,13 @@
                 <h3 class="fw-bold mt-2 mb-1">{{ $session->session_name }}</h3>
                 <div class="text-muted">
                     <i class="bi bi-calendar3 me-1"></i>{{ $session->scheduled_date->format('d M Y') }}
-                    &nbsp;<i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($session->start_time)->format('H:i') }} – {{ \Carbon\Carbon::parse($session->end_time)->format('H:i') }}
+                    &nbsp;<i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($session->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($session->end_time)->format('H:i') }}
                     @if($session->venue)
                         &nbsp;<i class="bi bi-geo-alt me-1"></i>{{ $session->venue }}
                     @endif
                 </div>
                 <div class="text-muted small mt-1">
-                    <i class="bi bi-mortarboard me-1"></i>{{ $session->program->name ?? 'N/A' }}
+                    <i class="bi bi-mortarboard me-1"></i>{{ $session->program->name ?? 'Program not assigned' }}
                     @if($session->batch)
                         &nbsp;|&nbsp;<i class="bi bi-collection me-1"></i>{{ $session->batch->name }}
                     @endif
@@ -124,10 +124,10 @@
             <tbody>
                 @foreach($panelSummary['panels'] as $panel)
                     <tr>
-                        <td class="fw-semibold">{{ $panel->name }}</td>
+                        <td class="fw-semibold">{{ $panel->name ?: 'Panel name pending' }}</td>
                         <td>{{ ucwords(str_replace('_', ' ', $panel->panel_type)) }}</td>
-                        <td class="small">{{ $panel->members->pluck('user.name')->filter()->join(', ') }}</td>
-                        <td>{{ $panel->capacity }}</td>
+                        <td class="small">{{ $panel->members->pluck('user.name')->filter()->join(', ') ?: 'Evaluators not assigned' }}</td>
+                        <td>{{ $panel->capacity ?: 'Capacity not set' }}</td>
                         <td>{{ $panel->assignments->count() }}</td>
                         <td>{{ $panel->assignments->whereIn('score_status', ['pending','draft'])->count() }}</td>
                         <td><span class="badge bg-secondary">{{ ucfirst($panel->status) }}</span></td>
@@ -170,9 +170,9 @@
                             <tr>
                                 <td class="text-muted small">{{ $i + 1 }}</td>
                                 <td>
-                                    <div class="fw-semibold">{{ $sa->applicant->user->name ?? 'N/A' }}</div>
+                                    <div class="fw-semibold">{{ $sa->applicant->user->name ?? 'Applicant name missing' }}</div>
                                 </td>
-                                <td><code class="small">{{ $sa->applicant->application_number ?? '—' }}</code></td>
+                                <td><code class="small">{{ $sa->applicant->application_number ?? 'Application number missing' }}</code></td>
                                 <td>
                                     <div class="d-flex gap-1 flex-wrap">
                                         @foreach(['present'=>'success','absent'=>'danger','excused'=>'warning','pending'=>'secondary'] as $val => $color)
@@ -191,7 +191,7 @@
                                 </td>
                                 <td style="width:80px">
                                     <input type="number" name="panel_number[{{ $sa->applicant_id }}]"
-                                           class="form-control form-control-sm" min="1" placeholder="—"
+                                           class="form-control form-control-sm" min="1" placeholder="Panel"
                                            value="{{ $sa->panel_number }}">
                                 </td>
                                 <td>
@@ -222,7 +222,20 @@
         @else
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body text-center text-muted py-5">
-                <i class="bi bi-people fs-2 d-block mb-2"></i>No candidates assigned yet.
+                <i class="bi bi-people fs-2 d-block mb-2"></i>
+                <div class="fw-semibold text-dark">No candidates are assigned to this session yet</div>
+                <p class="small mb-3">
+                    Assign shortlisted applicants before call letters, attendance, panel scoring, and assessment-day check-in can be used.
+                    If the candidate list is empty, confirm applicant status, program/batch filters, and selection-step eligibility.
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <a href="{{ route('admission.applicants.index', ['status' => 'shortlisted']) }}" class="btn btn-sm btn-outline-primary">
+                        Open shortlisted applicants
+                    </a>
+                    <a href="{{ route('admission.assessment-operations.index') }}" class="btn btn-sm btn-outline-secondary">
+                        Open assessment operations
+                    </a>
+                </div>
             </div>
         </div>
         @endif
@@ -250,9 +263,9 @@
                             @foreach($availableApplicants as $applicant)
                             <tr>
                                 <td><input type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="applicant-check"></td>
-                                <td>{{ $applicant->user->name ?? 'N/A' }}</td>
+                                <td>{{ $applicant->user->name ?? 'Applicant name missing' }}</td>
                                 <td><code class="small">{{ $applicant->application_number }}</code></td>
-                                <td class="small text-muted">{{ $applicant->program->abbreviation ?? '' }}</td>
+                                <td class="small text-muted">{{ $applicant->program->abbreviation ?? 'Program not assigned' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -301,9 +314,9 @@
                     <dt class="col-5 text-muted">Max Candidates</dt>
                     <dd class="col-7">{{ $session->max_candidates ?? 'Unlimited' }}</dd>
                     <dt class="col-5 text-muted">Conducted By</dt>
-                    <dd class="col-7">{{ $session->conductedBy->name ?? '—' }}</dd>
+                    <dd class="col-7">{{ $session->conductedBy->name ?? 'Coordinator not assigned' }}</dd>
                     <dt class="col-5 text-muted">Created By</dt>
-                    <dd class="col-7">{{ $session->createdBy->name ?? '—' }}</dd>
+                    <dd class="col-7">{{ $session->createdBy->name ?? 'Creator not recorded' }}</dd>
                     <dt class="col-5 text-muted">Created At</dt>
                     <dd class="col-7">{{ $session->created_at->format('d M Y') }}</dd>
                 </dl>

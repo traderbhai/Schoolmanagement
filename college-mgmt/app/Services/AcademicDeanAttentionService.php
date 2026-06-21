@@ -50,6 +50,10 @@ class AcademicDeanAttentionService
 
     public function queue(string $key): array
     {
+        if ($key === 'critical_attention') {
+            return $this->criticalQueue();
+        }
+
         $queues = $this->queues();
         abort_unless(isset($queues[$key]), 404);
 
@@ -63,6 +67,23 @@ class AcademicDeanAttentionService
             ->sortBy(fn ($item) => ['critical' => 0, 'high' => 1, 'medium' => 2, 'low' => 3][$item['severity']] ?? 4)
             ->take($limit)
             ->values();
+    }
+
+    private function criticalQueue(): array
+    {
+        $items = collect($this->queues())
+            ->flatMap(fn ($queue) => $queue['items'])
+            ->filter(fn ($item) => in_array($item['severity'], ['critical', 'high'], true))
+            ->sortBy(fn ($item) => ['critical' => 0, 'high' => 1][$item['severity']] ?? 2)
+            ->values();
+
+        return [
+            'key' => 'critical_attention',
+            'label' => 'Critical Attention',
+            'count' => $items->count(),
+            'items' => $items,
+            'route' => route('academics.dean-os.attention', 'critical_attention'),
+        ];
     }
 
     private function item(string $title, string $subtitle, string $severity, string $sourceType, ?string $owner, ?string $due, string $route, string $action): array

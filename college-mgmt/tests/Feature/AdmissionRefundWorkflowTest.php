@@ -403,4 +403,75 @@ class AdmissionRefundWorkflowTest extends TestCase
 
         $this->assertSame('approved', $visibleRefund->fresh()->status);
     }
+
+    public function test_refund_index_empty_state_explains_scope_filters_and_next_steps(): void
+    {
+        $staff = $this->admissionUser();
+
+        $this->actingAs($staff)
+            ->get(route('admission.refunds.index', ['status' => 'processed']))
+            ->assertOk()
+            ->assertSee('No refund requests are visible')
+            ->assertSee('match your Admission role scope')
+            ->assertSee('selected processed status filter')
+            ->assertSee('Clear Filters')
+            ->assertSee('Open Applicants')
+            ->assertSee('Payment Queue')
+            ->assertDontSee('No refund requests found')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee(html_entity_decode('&#8377;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_refund_create_and_detail_pages_use_readable_payment_labels(): void
+    {
+        $staff = $this->admissionUser();
+        $applicant = $this->applicant();
+        $payment = $this->payment($applicant, 'verified', 9000);
+
+        $this->actingAs($staff)
+            ->get(route('admission.refunds.create', $applicant))
+            ->assertOk()
+            ->assertSee('New Refund Request -', false)
+            ->assertSee('Total Paid (Verified)')
+            ->assertSee('Rs. 9,000.00')
+            ->assertSee('Select a payment (optional)')
+            ->assertSee($payment->transaction_reference)
+            ->assertSee('Requested Amount (Rs.)')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee(html_entity_decode('&#8377;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+
+        $refund = RefundRequest::create(array_merge($this->refundPayload([
+            'admission_payment_id' => $payment->id,
+            'requested_amount' => 3000,
+            'reason_detail' => 'Applicant withdrew before orientation.',
+        ]), [
+            'applicant_id' => $applicant->id,
+            'status' => 'pending',
+        ]));
+
+        $this->actingAs($staff)
+            ->get(route('admission.refunds.show', $refund))
+            ->assertOk()
+            ->assertSee('Refund Request #' . $refund->id)
+            ->assertSee('Requested')
+            ->assertSee('Rs. 3,000.00')
+            ->assertSee('Payment Reference')
+            ->assertSee($payment->transaction_reference)
+            ->assertSee('Approved Amount (Rs.)')
+            ->assertSee('Max: Rs. 3,000.00')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee(html_entity_decode('&#226;'), false)
+            ->assertDontSee(html_entity_decode('&#8377;'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
 }

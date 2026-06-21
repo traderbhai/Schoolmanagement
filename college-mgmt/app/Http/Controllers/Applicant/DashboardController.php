@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\AdmissionFormConfig;
 use App\Models\EnrollmentConfirmation;
 use App\Models\OfferLetter;
+use App\Services\AdmissionApplicantReadinessService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(AdmissionApplicantReadinessService $readiness)
     {
-        $applicant = auth()->user()->applicant()->with(['program', 'batch', 'documents'])->firstOrFail();
+        $applicant = auth()->user()->applicant()->with(['program', 'batch', 'documents', 'payments'])->firstOrFail();
         $formConfig = AdmissionFormConfig::where('program_id', $applicant->program_id)->first();
         $sections = $formConfig ? $formConfig->form_sections : AdmissionFormConfig::getDefaultSections();
 
@@ -26,7 +27,8 @@ class DashboardController extends Controller
 
         $offerLetter = OfferLetter::where('applicant_id', $applicant->id)->first();
         $enrollment  = EnrollmentConfirmation::where('applicant_id', $applicant->id)->first();
+        $checklist = $readiness->checklist($applicant);
 
-        return view('applicant.dashboard', compact('applicant', 'sections', 'completedSections', 'offerLetter', 'enrollment'));
+        return view('applicant.dashboard', compact('applicant', 'sections', 'completedSections', 'offerLetter', 'enrollment', 'checklist'));
     }
 }

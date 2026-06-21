@@ -4,6 +4,22 @@
 @section('content')
 <div class="container-fluid py-3 px-3 px-md-4">
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">Student daily sequence</div>
+                <div class="small text-muted">Start here to decide what needs your action today. Use each card link to open your own source records only.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Check priority</span>
+                <span class="badge text-bg-light">2. Attend classes</span>
+                <span class="badge text-bg-light">3. Submit due work</span>
+                <span class="badge text-bg-light">4. Clear fees or blockers</span>
+                <span class="badge text-bg-light">5. Ask for help if stuck</span>
+            </div>
+        </div>
+    </div>
+
     {{-- Low Attendance Banner --}}
     @if(count($lowAttendanceSubjects) > 0)
     <div class="alert alert-danger d-flex align-items-start gap-2 mb-3 py-2" role="alert">
@@ -73,7 +89,7 @@
     {{-- KPI Row --}}
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <a href="{{ route('student.attendance') }}" class="card border-0 shadow-sm h-100 text-decoration-none text-reset" aria-label="Open attendance details">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold {{ is_null($attendanceOverall) ? 'text-muted' : ($attendanceOverall < 75 ? 'text-danger' : 'text-success') }}">
                         {{ is_null($attendanceOverall) ? '-' : $attendanceOverall . '%' }}
@@ -85,33 +101,33 @@
                     </div>
                     @endif
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <a href="{{ route('student.results') }}" class="card border-0 shadow-sm h-100 text-decoration-none text-reset" aria-label="Open current SGPA and result details">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold text-primary">{{ $sgpa ?? '-' }}</div>
                     <div class="text-muted small mt-1">Current SGPA</div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <a href="{{ route('student.results') }}" class="card border-0 shadow-sm h-100 text-decoration-none text-reset" aria-label="Open CGPA and result details">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold text-info">{{ $cgpa ?? '-' }}</div>
                     <div class="text-muted small mt-1">Overall CGPA</div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100">
+            <a href="{{ route('student.fees') }}" class="card border-0 shadow-sm h-100 text-decoration-none text-reset" aria-label="Open fee outstanding details">
                 <div class="card-body py-3 text-center">
                     <div class="fs-2 fw-bold {{ $feeOutstanding > 0 ? 'text-danger' : 'text-success' }}">
                         Rs. {{ number_format($feeOutstanding, 0) }}
                     </div>
                     <div class="text-muted small mt-1">Fee Outstanding</div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 

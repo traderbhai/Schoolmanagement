@@ -67,6 +67,23 @@
         </div>
     </div>
 
+    @if($requiredDocs->isEmpty())
+        <div class="alert alert-info border">
+            <div class="fw-semibold mb-1">No document requirements are published yet</div>
+            <div class="small mb-3">
+                Admission staff have not published the required document checklist for {{ $applicant->program->name }} yet. When the checklist is configured for your program, each required document will appear here with upload format, size limit, verification status, and any rejection reason.
+            </div>
+            <div class="small mb-3">
+                Until then, keep your application and registration fee details complete, and use the checklist or status tracker to see whether any other admission step is pending.
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ route('applicant.checklist') }}" class="btn btn-sm btn-outline-primary">Checklist</a>
+                <a href="{{ route('applicant.status') }}" class="btn btn-sm btn-outline-secondary">Track status</a>
+                <a href="{{ route('applicant.dashboard') }}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+            </div>
+        </div>
+    @endif
+
     <div class="row g-3">
         @foreach($requiredDocs as $doc)
         @php $uploadedDoc = $uploaded->get($doc->id); @endphp

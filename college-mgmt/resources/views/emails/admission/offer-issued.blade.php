@@ -19,9 +19,9 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
         <p>Dear {{ $applicant->user->name }},</p>
         <p>We are pleased to inform you that an offer letter has been issued for your admission to <strong>{{ $offerLetter->program?->name }}</strong>.</p>
         <div class="info-box">
-            <strong>Offer Number:</strong> {{ $offerLetter->offer_number }}<br>
-            <strong>Program:</strong> {{ $offerLetter->program?->name ?? 'N/A' }}<br>
-            <strong>Batch:</strong> {{ $offerLetter->batch?->name ?? 'N/A' }}<br>
+            <strong>Offer Number:</strong> {{ $offerLetter->offer_number ?? 'Offer number pending' }}<br>
+            <strong>Program:</strong> {{ $offerLetter->program?->name ?? 'Program to be confirmed' }}<br>
+            <strong>Batch:</strong> {{ $offerLetter->batch?->name ?? 'Batch to be confirmed' }}<br>
             @if($offerLetter->acceptance_deadline)
             <strong>Accept by:</strong> {{ $offerLetter->acceptance_deadline->format('d M Y') }}<br>
             @endif

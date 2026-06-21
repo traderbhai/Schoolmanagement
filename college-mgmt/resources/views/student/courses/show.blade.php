@@ -28,7 +28,10 @@
                         <div class="text-muted" style="font-size:.8rem">{{ $ann->poster->name }} · {{ $ann->created_at->diffForHumans() }}</div>
                     </div>
                     @empty
-                    <p class="text-muted p-3 mb-0">No announcements yet.</p>
+                    <div class="p-3 text-muted">
+                        <div class="fw-semibold text-dark mb-1">No course announcements are posted yet</div>
+                        <div class="small">Your faculty or program office will post class notices here after they publish them for this course.</div>
+                    </div>
                     @endforelse
                 </div>
                 <div class="card-footer text-end">
@@ -64,7 +67,10 @@
                         @endforeach
                     </div>
                     @empty
-                    <p class="text-muted p-3 mb-0">No materials uploaded yet.</p>
+                    <div class="p-3 text-muted">
+                        <div class="fw-semibold text-dark mb-1">No study materials are available yet</div>
+                        <div class="small">Published notes, slides, readings, and reference links will appear here after your faculty uploads them.</div>
+                    </div>
                     @endforelse
                 </div>
                 <div class="card-footer text-end">
@@ -98,7 +104,10 @@
                         <div class="text-muted" style="font-size:.8rem">Due: {{ $assignment->due_at->format('d M Y') }}</div>
                     </div>
                     @empty
-                    <p class="text-muted p-3 mb-0">No assignments yet.</p>
+                    <div class="p-3 text-muted">
+                        <div class="fw-semibold text-dark mb-1">No assignments are open for this course yet</div>
+                        <div class="small">When your faculty publishes an assignment, it will appear here with its due date and submission status.</div>
+                    </div>
                     @endforelse
                 </div>
                 <div class="card-footer text-end">

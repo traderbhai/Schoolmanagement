@@ -27,6 +27,7 @@
                     <label class="form-label small fw-semibold">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">All statuses</option>
+                        <option value="active" @selected(request('status') === 'active')>Active (upcoming or ongoing)</option>
                         @foreach(['upcoming','ongoing','completed','cancelled'] as $status)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>
                         @endforeach

@@ -17,8 +17,11 @@
         </div>
     @elseif($entries->isEmpty())
         <div class="alert alert-info">
-            <i class="bi bi-info-circle me-1"></i>No timetable entries found for your enrolled subjects.
-            <a href="{{ route('student.subjects.index') }}">Register for subjects</a> first.
+            <div class="fw-semibold mb-1"><i class="bi bi-info-circle me-1"></i>No published timetable is available for your enrolled subjects yet</div>
+            <div class="small">
+                If your subject basket is still pending, review subject registration first. If subjects are already allocated, wait for the PMC/academic office to publish the official timetable or contact the academic office for a section/group allocation check.
+            </div>
+            <a class="btn btn-sm btn-outline-primary mt-2" href="{{ route('student.subjects.index') }}">Review subject registration</a>
         </div>
     @else
         @foreach($days as $day)
@@ -42,16 +45,16 @@
                                 @foreach($entries[$day] as $entry)
                                 <tr>
                                     <td class="font-monospace small fw-semibold">
-                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') : '—' }}
+                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') : 'Not set' }}
                                         &mdash;
-                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') : '—' }}
+                                        {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') : 'Not set' }}
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ $entry->subject->name ?? '—' }}</div>
+                                        <div class="fw-semibold">{{ $entry->subject->name ?? 'Subject not set' }}</div>
                                         <div class="small text-muted">{{ $entry->subject->code ?? '' }}</div>
                                     </td>
-                                    <td>{{ $entry->teacher->user->name ?? '—' }}</td>
-                                    <td>{{ $entry->classroom->name ?? '—' }}</td>
+                                    <td>{{ $entry->teacher->user->name ?? 'Teacher not assigned' }}</td>
+                                    <td>{{ $entry->classroom->name ?? 'Room not assigned' }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

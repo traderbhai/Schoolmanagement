@@ -10,6 +10,17 @@
         </div>
         @include('academics.dean-os.partials.nav')
     </div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Dean daily command sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Open today priority</span>
+            <span class="badge text-bg-light border">2. Clear overdue approvals</span>
+            <span class="badge text-bg-light border">3. Review critical risks</span>
+            <span class="badge text-bg-light border">4. Assign branch actions</span>
+            <span class="badge text-bg-light border">5. Check handoff blockers</span>
+        </div>
+        <div class="text-muted mt-2">Use this page as the Dean's starting point. Each linked metric opens the source list that explains the count and who owns the next action.</div>
+    </div>
 
     <div class="card shadow-sm mb-3 border-{{ $todayPriority['level'] === 'danger' ? 'danger' : ($todayPriority['level'] === 'warning' ? 'warning' : 'primary') }}">
         <div class="card-body py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -28,25 +39,15 @@
             ['label' => 'Open Actions', 'value' => $kpis['open_actions'], 'route' => route('academics.dean-os.reviews', ['status' => 'open'])],
             ['label' => 'Critical Program Risks', 'value' => $kpis['critical_program_risks'], 'route' => route('academics.dean-os.program-risk', ['band' => 'critical_high'])],
             ['label' => 'Handoff Blockers', 'value' => $kpis['handoff_blockers'], 'route' => route('academics.dean-os.handoff', ['status' => 'blocking'])],
-            ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => null],
+            ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => route('academics.dean-os.attention', 'critical_attention')],
         ] as $metric)
             <div class="col-6 col-xl">
-                @if($metric['route'])
-                    <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $metric['label'] }}</div>
-                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                        </div>
-                    </a>
-                @else
-                    <div class="card shadow-sm h-100" aria-label="{{ $metric['label'] }} summary">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $metric['label'] }}</div>
-                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                            <div class="small text-muted">Summary only</div>
-                        </div>
+                <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100" aria-label="Open {{ $metric['label'] }} source list">
+                    <div class="card-body py-2">
+                        <div class="small text-muted">{{ $metric['label'] }}</div>
+                        <div class="h4 mb-0">{{ $metric['value'] }}</div>
                     </div>
-                @endif
+                </a>
             </div>
         @endforeach
     </div>
@@ -94,7 +95,7 @@
         </div>
         <div class="col-xl-5">
             <div class="card shadow-sm h-100">
-                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Dean Attention</span><a href="{{ route('academics.dean-os.attention', 'overdue_dean_approvals') }}" class="btn btn-sm btn-outline-primary">Queues</a></div>
+                <div class="card-header py-2 d-flex justify-content-between"><div><span class="fw-semibold">Dean Attention</span><div class="small text-muted">Start with critical and overdue items before routine reports.</div></div><a href="{{ route('academics.dean-os.attention', 'overdue_dean_approvals') }}" class="btn btn-sm btn-outline-primary">Queues</a></div>
                 <div class="list-group list-group-flush">
                     @forelse($criticalItems as $item)
                         <a href="{{ $item['route'] }}" class="list-group-item list-group-item-action py-2">
@@ -109,7 +110,7 @@
         </div>
         <div class="col-xl-7">
             <div class="card shadow-sm">
-                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Program Risk Heatmap</span><a href="{{ route('academics.dean-os.program-risk') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
+                <div class="card-header py-2 d-flex justify-content-between"><div><span class="fw-semibold">Program Risk Heatmap</span><div class="small text-muted">Use reasons to decide whether the owner needs a mitigation plan or review meeting.</div></div><a href="{{ route('academics.dean-os.program-risk') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead><tr><th>Program</th><th>Band</th><th>Reasons</th></tr></thead>

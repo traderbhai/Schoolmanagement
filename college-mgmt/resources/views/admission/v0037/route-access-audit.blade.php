@@ -5,8 +5,15 @@
 @section('content')
 <div class="v037">
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div><h3 class="fw-bold mb-1">Admission Route Access Audit</h3><div class="text-muted small">Reviewed route scopes, write-route risks, and access-control notes for production hardening.</div></div>
+    <div>
+        <h3 class="fw-bold mb-1">Admission Route Access Audit</h3>
+        <div class="text-muted small">Review route scopes, write-route risks, middleware coverage, and missing enforcement before opening Admission features to staff roles.</div>
+    </div>
     <div class="d-flex gap-2"><a href="{{ route('admission.command-center.index') }}" class="btn btn-outline-primary btn-sm">Command Center</a><a href="{{ route('admission.v039.exports','route-policy') }}" class="btn btn-outline-secondary btn-sm">Export Policy Audit</a></div>
+</div>
+
+<div class="alert alert-info py-2 small mb-3">
+    <strong>Security review workflow:</strong> scan high-risk write routes first, confirm expected scope and middleware, export the audit, then fix any route marked missing enforcement before release.
 </div>
 
 <div class="row g-2 mb-3">
@@ -16,12 +23,15 @@
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent fw-bold">Route Scope Register</div>
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Route Scope Register</span>
+        <span class="small text-muted">{{ $dashboard['audits']->total() }} records</span>
+    </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light"><tr><th>Route</th><th>Method</th><th>URI</th><th>Scope</th><th>Risk</th><th>Status</th></tr></thead>
             <tbody>
-            @foreach($dashboard['audits'] as $audit)
+            @forelse($dashboard['audits'] as $audit)
                 <tr>
                     <td><strong>{{ $audit->route_name }}</strong></td>
                     <td>{{ $audit->method }}</td>
@@ -30,7 +40,14 @@
                     <td><span class="badge bg-{{ $audit->risk_level === 'high' ? 'danger' : ($audit->risk_level === 'medium' ? 'warning text-dark' : 'secondary') }}">{{ ucfirst($audit->risk_level) }}</span></td>
                     <td>{{ ucfirst($audit->status) }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark">No route scope audit records are available</div>
+                        <div class="small">Refresh the Admission route audit before using this page as release evidence.</div>
+                    </td>
+                </tr>
+            @endforelse
             </tbody>
         </table>
     </div>
@@ -38,12 +55,15 @@
 </div>
 
 <div class="card border-0 shadow-sm mt-3">
-    <div class="card-header bg-transparent fw-bold">v0.039 Enforcement Review</div>
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+        <span class="fw-bold">v0.039 Enforcement Review</span>
+        <span class="small text-muted">{{ count($enforcement) }} routes reviewed</span>
+    </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light"><tr><th>Route</th><th>Method</th><th>URI</th><th>Expected Scope</th><th>Middleware</th><th>Risk</th><th>Missing Enforcement</th></tr></thead>
             <tbody>
-            @foreach($enforcement as $route)
+            @forelse($enforcement as $route)
                 <tr>
                     <td><strong>{{ $route['route_name'] }}</strong></td>
                     <td>{{ $route['method'] }}</td>
@@ -53,7 +73,14 @@
                     <td><span class="badge bg-{{ $route['risk'] === 'write' ? 'warning text-dark' : 'secondary' }}">{{ $route['risk'] }}</span></td>
                     <td>{!! $route['missing_enforcement'] ? '<span class="badge bg-danger">Yes</span>' : '<span class="badge bg-success">No</span>' !!}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark">No enforcement review rows are available</div>
+                        <div class="small">Route inventory must run before Admission security reviewers can confirm middleware and policy coverage.</div>
+                    </td>
+                </tr>
+            @endforelse
             </tbody>
         </table>
     </div>

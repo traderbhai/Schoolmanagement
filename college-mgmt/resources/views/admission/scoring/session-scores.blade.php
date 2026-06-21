@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Score Sheet — ' . $session->session_name)
+@section('title', 'Score Sheet - ' . $session->session_name)
 
 @section('content')
 @if(session('success'))
@@ -10,7 +10,6 @@
     <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
-{{-- Header --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -18,12 +17,12 @@
                 <span class="{{ $session->statusBadge }} me-2">{{ $session->statusLabel }}</span>
                 <h3 class="fw-bold mt-2 mb-1"><i class="bi bi-clipboard2-data me-2"></i>Score Sheet</h3>
                 <div class="text-muted">
-                    <strong>{{ $session->session_name }}</strong> &mdash; {{ $session->step->typeLabel ?? $session->step->type }}
+                    <strong>{{ $session->session_name }}</strong> - {{ $session->step->typeLabel ?? $session->step->type }}
                 </div>
                 <div class="text-muted small mt-1">
                     <i class="bi bi-calendar3 me-1"></i>{{ $session->scheduled_date->format('d M Y') }}
-                    &nbsp;<i class="bi bi-geo-alt me-1"></i>{{ $session->venue ?? 'N/A' }}
-                    &nbsp;<i class="bi bi-mortarboard me-1"></i>{{ $session->program->name ?? 'N/A' }}
+                    &nbsp;<i class="bi bi-geo-alt me-1"></i>{{ $session->venue ?? 'Venue not assigned' }}
+                    &nbsp;<i class="bi bi-mortarboard me-1"></i>{{ $session->program->name ?? 'Program not assigned' }}
                 </div>
             </div>
             <div class="d-flex gap-2">
@@ -38,7 +37,16 @@
 @php $parameters = $session->step->scoringParameters; @endphp
 
 @if($presentApplicants->isEmpty())
-    <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No present applicants to score. Mark attendance first.</div>
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1"><i class="bi bi-info-circle me-2"></i>No present applicants are ready for scoring</div>
+        <div class="small">
+            Score entry opens after candidates are assigned to this session and marked Present on the session attendance page.
+            Use the session detail page to assign candidates, record attendance, or confirm that your Admission role scope includes the assigned applicants.
+        </div>
+        <a href="{{ route('admission.sessions.show', $session) }}" class="btn btn-sm btn-outline-primary mt-3">
+            Back to session attendance
+        </a>
+    </div>
 @else
 <form method="POST" action="{{ route('admission.sessions.scores.save', $session) }}">
     @csrf
@@ -52,8 +60,8 @@
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom">
             <div>
-                <strong>{{ $applicant->user?->name ?? $applicant->application_number ?? 'Unassigned applicant' }}</strong>
-                <span class="text-muted ms-2 small">{{ $applicant->application_number }}</span>
+                <strong>{{ $applicant->user?->name ?? $applicant->application_number ?? 'Applicant name missing' }}</strong>
+                <span class="text-muted ms-2 small">{{ $applicant->application_number ?? 'Application number missing' }}</span>
                 @if($sa->panel_number)
                     <span class="badge bg-secondary ms-2">Panel {{ $sa->panel_number }}</span>
                 @endif
@@ -76,7 +84,7 @@
                         data-max="{{ $param->max_score }}"
                         min="0" max="{{ $param->max_score }}" step="0.5"
                         value="{{ $paramScores[$param->id] ?? '' }}"
-                        placeholder="0–{{ $param->max_score }}">
+                        placeholder="0-{{ $param->max_score }}">
                 </div>
                 @endforeach
 
@@ -91,7 +99,7 @@
                 <div class="col-12">
                     <label class="form-label small fw-semibold">Remarks</label>
                     <textarea name="scores[{{ $applicant->id }}][remarks]" class="form-control" rows="2"
-                        placeholder="Optional remarks...">{{ $existing->remarks ?? '' }}</textarea>
+                        placeholder="Optional assessment remarks for the selection committee">{{ $existing->remarks ?? '' }}</textarea>
                 </div>
             </div>
         </div>
@@ -104,14 +112,13 @@
         </button>
         @if(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
         <button type="submit" name="mark_final" value="1" class="btn btn-success">
-            <i class="bi bi-lock me-1"></i>Save & Mark Final
+            <i class="bi bi-lock me-1"></i>Save and Mark Final
         </button>
         @endif
     </div>
 </form>
 @endif
 
-{{-- Absent Applicants --}}
 @if($absentApplicants->isNotEmpty())
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white border-bottom">
@@ -122,7 +129,7 @@
             @foreach($absentApplicants as $sa)
             <li class="list-group-item text-muted opacity-75 d-flex align-items-center gap-2">
                 <i class="bi bi-person-x"></i>
-                {{ $sa->applicant->user?->name ?? $sa->applicant->application_number ?? 'Unassigned applicant' }}
+                {{ $sa->applicant->user?->name ?? $sa->applicant->application_number ?? 'Applicant name missing' }}
                 <span class="badge bg-secondary ms-1">{{ ucfirst($sa->attendance_status) }}</span>
             </li>
             @endforeach

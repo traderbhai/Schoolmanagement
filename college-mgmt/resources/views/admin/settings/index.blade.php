@@ -6,6 +6,8 @@
     <li class="breadcrumb-item active">Settings</li>
 @endsection
 @section('content')
+@include('admin.partials.setup-sequence')
+
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card h-100 border-0" style="box-shadow:var(--shadow-sm)">

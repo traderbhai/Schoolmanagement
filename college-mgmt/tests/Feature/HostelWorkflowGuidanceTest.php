@@ -685,6 +685,37 @@ class HostelWorkflowGuidanceTest extends TestCase
         $this->assertSame(1, OutpassRequest::where('student_id', $student->id)->count());
     }
 
+    public function test_student_hostel_outpass_and_complaint_empty_states_explain_next_steps(): void
+    {
+        $student = $this->student('Hostel Empty State Student');
+        $room = $this->room();
+        HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.hostel.outpass'))
+            ->assertOk()
+            ->assertSee('No outpass requests yet')
+            ->assertSee('Submit an outpass before leaving campus or hostel.')
+            ->assertSee('warden team will approve, reject, or mark return status here')
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+
+        $this->actingAs($student->user)
+            ->get(route('student.hostel.complaints.index'))
+            ->assertOk()
+            ->assertSee('No hostel complaints submitted yet')
+            ->assertSee('Raise a complaint for room, hygiene, food, security, or maintenance issues.')
+            ->assertSee('warden team will update status and resolution notes here')
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     public function test_inactive_student_can_view_outpass_history_but_cannot_create_new_outpass(): void
     {
         $student = $this->student('Archived Outpass Student');

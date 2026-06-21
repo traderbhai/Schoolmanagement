@@ -39,7 +39,7 @@ class AdmissionApplicantReadinessTest extends TestCase
             ->assertSee('Admission Operations')
             ->assertSee('Offer Letters')
             ->assertSee('Status Tracker')
-            ->assertSee('Notifications')
+            ->assertSee('Notification Settings')
             ->assertSee(route('applicant.admission-operations.index'), false)
             ->assertSee(route('applicant.offer-letters.index'), false)
             ->assertSee(route('applicant.notifications.edit'), false)

@@ -56,7 +56,7 @@
                             @if($attPct !== null)
                                 <span class="badge {{ $attPct >= 75 ? 'bg-success' : 'bg-danger' }}">{{ round($attPct) }}%</span>
                             @else
-                                <span class="text-muted small">No records yet</span>
+                                <span class="text-muted small">Attendance not recorded yet; Exam Cell will verify eligibility.</span>
                             @endif
                         </td>
                         <td>

@@ -7,8 +7,8 @@
 
 <div class="info-box">
     <p><strong>Session Type:</strong> {{ $session->step?->type ? strtoupper($session->step->type) : 'Selection Session' }}</p>
-    <p><strong>Date:</strong> {{ $session->scheduled_date?->format('l, d M Y') ?? 'N/A' }}</p>
-    <p><strong>Time:</strong> {{ \Carbon\Carbon::parse($session->start_time)->format('h:i A') ?? 'N/A' }}</p>
+    <p><strong>Date:</strong> {{ $session->scheduled_date?->format('l, d M Y') ?? 'Date to be confirmed' }}</p>
+    <p><strong>Time:</strong> {{ $session->start_time ? \Carbon\Carbon::parse($session->start_time)->format('h:i A') : 'Time to be confirmed' }}</p>
     @if($session->venue)
     <p><strong>Venue:</strong> {{ $session->venue }}</p>
     @endif

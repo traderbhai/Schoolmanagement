@@ -456,6 +456,31 @@ class PortalFrontendBetaReadinessTest extends TestCase
         }
     }
 
+    public function test_student_document_and_payment_empty_states_explain_next_actions(): void
+    {
+        $student = User::where('email', 'arjun.k@demo.edu')->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('student.documents.index'))
+            ->assertOk()
+            ->assertSee('No document requests yet.')
+            ->assertSee('Use this page to request bonafide, fee, character, migration, NOC, or ID documents.')
+            ->assertSee('Once submitted, the request status and download action will appear here.')
+            ->assertSee(route('student.documents.create'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+
+        $this->actingAs($student)
+            ->get(route('student.fee-payment.index'))
+            ->assertOk()
+            ->assertSee('No payment submissions yet.')
+            ->assertSee('Submitted payment proofs will appear here for accounts verification.')
+            ->assertSee('otherwise review Fee Status for current balances.')
+            ->assertSee(route('student.fees'), false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     private function internalGetLinks(string $html): array
     {
         preg_match_all('/href=["\']([^"\']+)["\']/i', $html, $matches);

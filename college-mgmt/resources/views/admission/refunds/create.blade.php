@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'New Refund Request — ' . ($applicant->user->name ?? 'Applicant'))
+@section('title', 'New Refund Request - ' . ($applicant->user->name ?? 'Applicant'))
 
 @section('content')
 {{-- Header --}}
@@ -9,7 +9,7 @@
         <i class="bi bi-arrow-left"></i> Back to Applicant
     </a>
     <h2 class="fw-bold mb-0 mt-1">New Refund Request</h2>
-    <p class="text-muted mb-0">{{ $applicant->user->name ?? 'Applicant' }} &mdash; {{ $applicant->application_number }}</p>
+    <p class="text-muted mb-0">{{ $applicant->user->name ?? 'Applicant name missing' }} - {{ $applicant->application_number ?? 'Application number missing' }}</p>
 </div>
 
 {{-- Existing Refund Alert --}}
@@ -20,7 +20,7 @@
         <div class="fw-semibold">A refund request already exists for this applicant.</div>
         <div class="small mt-1">
             Status: <span class="{{ $existingRefund->status_badge }} ms-1">{{ ucfirst($existingRefund->status) }}</span>
-            &nbsp;&mdash;&nbsp;
+            &nbsp;-&nbsp;
             <a href="{{ route('admission.refunds.show', $existingRefund) }}" class="alert-link">View Refund #{{ $existingRefund->id }}</a>
         </div>
     </div>
@@ -36,19 +36,19 @@
         <div class="row g-3">
             <div class="col-md-3">
                 <div class="small text-muted">Name</div>
-                <div class="fw-semibold">{{ $applicant->user->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $applicant->user->name ?? 'Applicant name missing' }}</div>
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Application Number</div>
-                <div class="font-monospace fw-semibold">{{ $applicant->application_number }}</div>
+                <div class="font-monospace fw-semibold">{{ $applicant->application_number ?? 'Application number missing' }}</div>
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Program</div>
-                <div class="fw-semibold">{{ $applicant->program->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $applicant->program->name ?? 'Program not assigned' }}</div>
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Batch</div>
-                <div class="fw-semibold">{{ $applicant->batch->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $applicant->batch->name ?? 'Batch not assigned' }}</div>
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Status</div>
@@ -56,7 +56,7 @@
             </div>
             <div class="col-md-3">
                 <div class="small text-muted">Total Paid (Verified)</div>
-                <div class="fw-bold text-success fs-5">₹{{ number_format($applicant->total_paid, 2) }}</div>
+                <div class="fw-bold text-success fs-5">Rs. {{ number_format($applicant->total_paid, 2) }}</div>
             </div>
         </div>
 
@@ -68,7 +68,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th>Reference No.</th>
-                            <th class="text-end">Amount (₹)</th>
+                            <th class="text-end">Amount (Rs.)</th>
                             <th>Method</th>
                             <th>Verified At</th>
                         </tr>
@@ -76,10 +76,10 @@
                     <tbody>
                         @foreach($payments as $pmt)
                         <tr>
-                            <td class="font-monospace small">{{ $pmt->reference_number ?? '—' }}</td>
-                            <td class="text-end fw-semibold">₹{{ number_format($pmt->amount_paid, 2) }}</td>
-                            <td>{{ ucfirst(str_replace('_', ' ', $pmt->payment_method ?? '—')) }}</td>
-                            <td>{{ $pmt->verified_at ? $pmt->verified_at->format('d M Y, h:i A') : '—' }}</td>
+                            <td class="font-monospace small">{{ $pmt->reference_number ?? $pmt->transaction_reference ?? 'Payment reference not recorded' }}</td>
+                            <td class="text-end fw-semibold">Rs. {{ number_format($pmt->amount_paid, 2) }}</td>
+                            <td>{{ $pmt->payment_mode_label }}</td>
+                            <td>{{ $pmt->verified_at ? $pmt->verified_at->format('d M Y, h:i A') : 'Verification time not recorded' }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -113,14 +113,14 @@
                     <select name="admission_payment_id" id="admission_payment_id"
                             class="form-select @error('admission_payment_id') is-invalid @enderror"
                             onchange="prefillAmount(this)">
-                        <option value="">— Select a payment (optional) —</option>
+                        <option value="">Select a payment (optional)</option>
                         @foreach($payments as $pmt)
                         <option value="{{ $pmt->id }}"
                                 data-amount="{{ $pmt->amount_paid }}"
                                 {{ old('admission_payment_id') == $pmt->id ? 'selected' : '' }}>
-                            {{ $pmt->reference_number ?? 'Ref #' . $pmt->id }}
-                            — ₹{{ number_format($pmt->amount_paid, 2) }}
-                            ({{ ucfirst(str_replace('_', ' ', $pmt->payment_method ?? '')) }})
+                            {{ $pmt->reference_number ?? $pmt->transaction_reference ?? 'Payment #' . $pmt->id }}
+                            - Rs. {{ number_format($pmt->amount_paid, 2) }}
+                            ({{ $pmt->payment_mode_label }})
                         </option>
                         @endforeach
                     </select>
@@ -131,9 +131,9 @@
 
                 {{-- Requested Amount --}}
                 <div class="col-md-6">
-                    <label for="requested_amount" class="form-label fw-semibold">Requested Amount (₹) <span class="text-danger">*</span></label>
+                    <label for="requested_amount" class="form-label fw-semibold">Requested Amount (Rs.) <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text">₹</span>
+                        <span class="input-group-text">Rs.</span>
                         <input type="number" name="requested_amount" id="requested_amount"
                                class="form-control @error('requested_amount') is-invalid @enderror"
                                value="{{ old('requested_amount', $payments->first()?->amount_paid ?? '') }}"
@@ -149,7 +149,7 @@
                     <label for="reason" class="form-label fw-semibold">Reason for Refund <span class="text-danger">*</span></label>
                     <select name="reason" id="reason"
                             class="form-select @error('reason') is-invalid @enderror" required>
-                        <option value="">— Select reason —</option>
+                        <option value="">Select reason</option>
                         <option value="withdrawal"     {{ old('reason') === 'withdrawal'     ? 'selected' : '' }}>Candidate Withdrawal</option>
                         <option value="rejection"      {{ old('reason') === 'rejection'      ? 'selected' : '' }}>Application Rejected</option>
                         <option value="excess_payment" {{ old('reason') === 'excess_payment' ? 'selected' : '' }}>Excess Payment</option>
@@ -167,7 +167,7 @@
                     </label>
                     <textarea name="reason_detail" id="reason_detail" rows="3"
                               class="form-control @error('reason_detail') is-invalid @enderror"
-                              maxlength="500" placeholder="Provide any additional context for this refund request…">{{ old('reason_detail') }}</textarea>
+                              maxlength="500" placeholder="Provide any additional context for this refund request...">{{ old('reason_detail') }}</textarea>
                     @error('reason_detail')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

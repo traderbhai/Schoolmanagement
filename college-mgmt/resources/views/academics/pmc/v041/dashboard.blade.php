@@ -9,6 +9,17 @@
         </div>
         @include('academics.pmc.v041.partials.nav')
     </div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Timetable build sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Allocate student course baskets</span>
+            <span class="badge text-bg-light border">2. Build sections and elective groups</span>
+            <span class="badge text-bg-light border">3. Assign faculty to exact groups</span>
+            <span class="badge text-bg-light border">4. Lock fixed slots and rooms</span>
+            <span class="badge text-bg-light border">5. Generate, validate, approve, freeze</span>
+        </div>
+        <div class="text-muted mt-2">Do not start generation until baskets, groups, faculty, availability, rooms, and locked slots are ready. Hard conflicts block publish; soft warnings need review and approval.</div>
+    </div>
 
     <div class="row g-2 mb-3">
         @foreach([
@@ -19,11 +30,11 @@
             ['Locked Slots', $kpis['locked_slots'], route('academics.pmc.locked-slots.index'), true],
             ['Hard Conflicts', $kpis['hard_conflicts'], route('academics.pmc.timetable-planner.index', ['severity' => 'hard']), true],
             ['Soft Warnings', $kpis['soft_warnings'], route('academics.pmc.timetable-planner.index', ['severity' => 'soft']), true],
-            ['Quality Score', $kpis['quality_score'] . '%', null, false],
+            ['Quality Score', $kpis['quality_score'] . '%', route('academics.pmc.timetable-quality.index'), true],
         ] as [$label, $value, $url, $clickable])
             <div class="col-6 col-md-3 col-xl">
                 @if($clickable)
-                    <a href="{{ $url }}" class="card h-100 shadow-sm text-decoration-none">
+                    <a href="{{ $url }}" class="card h-100 shadow-sm text-decoration-none" aria-label="Open {{ $label }} source list">
                         <div class="card-body py-2">
                             <div class="small text-muted">{{ $label }}</div>
                             <div class="h4 mb-0">{{ $value }}</div>

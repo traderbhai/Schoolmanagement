@@ -5,8 +5,15 @@
 @section('content')
 <div class="v037">
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div><h3 class="fw-bold mb-1">Counsellor Performance</h3><div class="text-muted small">Targets, completion rates, coaching notes, and productivity hardening.</div></div>
+    <div>
+        <h3 class="fw-bold mb-1">Counsellor Performance</h3>
+        <div class="text-muted small">Review targets, script compliance, conversion output, and coaching actions before the daily manager huddle.</div>
+    </div>
     <a href="{{ route('admission.counsellor-desk.index') }}" class="btn btn-outline-primary btn-sm">Counsellor Desk</a>
+</div>
+
+<div class="alert alert-info py-2 small mb-3">
+    <strong>Manager workflow:</strong> check scorecards first, add coaching notes for weak bands, then open the Counsellor Desk to review the same user's leads, reminders, and applicant blockers.
 </div>
 
 <div class="row g-2 mb-3">
@@ -40,7 +47,13 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="text-center text-muted py-4">No counsellor targets configured.</td></tr>
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark">No active counsellor targets are configured</div>
+                        <div class="small">Create current-period targets before comparing calls, follow-ups, applications, enrollments, script compliance, and coaching bands.</div>
+                        <a href="{{ route('admission.counsellor-desk.index') }}" class="btn btn-sm btn-outline-primary mt-2">Open Counsellor Desk</a>
+                    </td>
+                </tr>
             @endforelse
             </tbody>
         </table>
@@ -62,7 +75,12 @@
                     <td><span class="badge bg-secondary">{{ ucfirst($note->status) }}</span></td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted py-4">No coaching notes yet.</td></tr>
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark">No coaching notes are open yet</div>
+                        <div class="small">Use the scorecard action after reviewing low completion, low script compliance, stale follow-ups, or weak conversion.</div>
+                    </td>
+                </tr>
             @endforelse
             </tbody>
         </table>

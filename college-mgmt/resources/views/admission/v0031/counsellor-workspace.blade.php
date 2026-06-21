@@ -53,15 +53,22 @@
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Name</th><th>Program</th><th>Priority</th><th>Next Action</th><th></th></tr></thead>
                     <tbody>
-                    @foreach($assignedLeads as $lead)
+                    @forelse($assignedLeads as $lead)
                         <tr>
                             <td class="fw-semibold">{{ $lead->name }}</td>
-                            <td>{{ $lead->program->name ?? 'N/A' }}</td>
+                            <td>{{ $lead->program->name ?? 'Program not assigned' }}</td>
                             <td><span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span></td>
-                            <td class="small">{{ $lead->next_action }}</td>
+                            <td class="small">{{ $lead->next_action ?: 'Next action not set' }}</td>
                             <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.leads.show', $lead) }}">Open</a></td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-3">
+                                <div class="fw-semibold text-dark">No assigned leads in your queue</div>
+                                <div class="small text-muted">New leads appear here after an Admission Manager or Head assigns them to you. Use the Call Queue for due callbacks or ask your manager to assign unowned leads.</div>
+                            </td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
@@ -76,15 +83,22 @@
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light"><tr><th>Applicant</th><th>Status</th><th>Program</th><th>Next Action</th><th></th></tr></thead>
                     <tbody>
-                    @foreach($assignedApplicants as $applicant)
+                    @forelse($assignedApplicants as $applicant)
                         <tr>
                             <td class="fw-semibold">{{ $applicant->user->name ?? $applicant->application_number }}</td>
                             <td><span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span></td>
-                            <td>{{ $applicant->program->name ?? 'N/A' }}</td>
-                            <td class="small">{{ $applicant->next_action }}</td>
+                            <td>{{ $applicant->program->name ?? 'Program not assigned' }}</td>
+                            <td class="small">{{ $applicant->next_action ?: 'Next action not set' }}</td>
                             <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.applicants.show', $applicant) }}">Open</a></td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-3">
+                                <div class="fw-semibold text-dark">No assigned applicants in your queue</div>
+                                <div class="small text-muted">Applicant records appear here after ownership is assigned. Check the Workbench for unassigned applicants, document blockers, or payment queues if your team expects new work.</div>
+                            </td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
@@ -98,7 +112,7 @@
                 <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-primary py-0">All</a>
             </div>
             <div class="list-group list-group-flush">
-                @foreach($reminders as $reminder)
+                @forelse($reminders as $reminder)
                     <div class="list-group-item d-flex justify-content-between gap-3">
                         <div>
                             <div class="fw-semibold">{{ ucfirst(str_replace('_', ' ', $reminder->reason)) }}</div>
@@ -106,20 +120,30 @@
                         </div>
                         <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
                     </div>
-                @endforeach
+                @empty
+                    <div class="list-group-item py-3">
+                        <div class="fw-semibold text-dark">No reminders are due now</div>
+                        <div class="small text-muted">Scheduled reminder work is clear for your current scope. New reminders appear after callbacks, document blockers, payments, sessions, or offer deadlines are scheduled.</div>
+                    </div>
+                @endforelse
             </div>
         </div>
 
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent fw-bold">Immediate Attention</div>
             <div class="list-group list-group-flush">
-                @foreach(collect($attentionQueues)->flatten(1)->take(10) as $item)
+                @forelse(collect($attentionQueues)->flatten(1)->take(10) as $item)
                     <a class="list-group-item list-group-item-action" href="{{ $item['route'] }}">
                         <span class="badge bg-{{ $item['severity'] }} me-2">{{ $item['reason'] }}</span>
                         <span class="fw-semibold">{{ $item['title'] }}</span>
                         <div class="small text-muted">{{ $item['recommended_action'] }}</div>
                     </a>
-                @endforeach
+                @empty
+                    <div class="list-group-item py-3">
+                        <div class="fw-semibold text-dark">No immediate attention items</div>
+                        <div class="small text-muted">There are no overdue, blocked, stale, or high-priority items in your visible scope right now. Continue from Call Queue, Reminders, or My Day Desk.</div>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>

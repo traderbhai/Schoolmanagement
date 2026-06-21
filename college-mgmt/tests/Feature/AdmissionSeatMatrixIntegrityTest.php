@@ -112,6 +112,56 @@ class AdmissionSeatMatrixIntegrityTest extends TestCase
         $this->assertDatabaseHas('enrollment_confirmations', ['applicant_id' => $enrolled->id]);
     }
 
+    public function test_seat_matrix_index_explains_offer_waitlist_and_enrollment_impact(): void
+    {
+        $admin = $this->admin();
+        $program = Program::factory()->create(['is_active' => true, 'name' => 'Seat UX Program']);
+
+        $this->actingAs($admin)
+            ->get(route('admission.seat-matrices.index', $program))
+            ->assertOk()
+            ->assertSeeText('Seat-control setup sequence')
+            ->assertSeeText('Publish offers and waitlist')
+            ->assertSeeText('Monitor enrollment usage')
+            ->assertSeeText('No seat matrix is configured for this program yet')
+            ->assertSeeText('Configure total, reservation, and quota seats before offer rounds, waitlist promotions, or manual seat holds are published for this program.')
+            ->assertSee(route('admission.seat-matrices.create', $program), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $matrixProgram = Program::factory()->create([
+            'is_active' => true,
+            'name' => 'Seat UX Configured Program',
+        ]);
+        $matrix = SeatMatrix::create([
+            'program_id' => $matrixProgram->id,
+            'batch_id' => null,
+            'total_seats' => 30,
+            'general_seats' => 15,
+            'obc_seats' => 6,
+            'sc_seats' => 3,
+            'st_seats' => 2,
+            'ews_seats' => 2,
+            'management_quota' => 1,
+            'nri_quota' => 1,
+            'defence_quota' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.seat-matrices.index', $matrixProgram))
+            ->assertOk()
+            ->assertSeeText('Seat matrices with selections, offers, waitlist movement, or enrollment history are protected from deletion')
+            ->assertSeeText('Batch Scope')
+            ->assertSeeText('All Batches')
+            ->assertSeeText((string) $matrix->total_seats)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+    }
+
     public function test_seat_matrix_capacity_cannot_be_reduced_below_committed_applicants(): void
     {
         $admin = $this->admin();

@@ -13,9 +13,9 @@
 <div class="card" style="box-shadow:var(--shadow-sm)">
     <div class="card-body text-center py-5">
         <i class="bi bi-journal-x" style="font-size:3rem;color:var(--clr-text-muted)"></i>
-        <h5 class="mt-3" style="color:var(--clr-text-muted)">No Upcoming Exams</h5>
-        <p class="mb-0" style="color:var(--clr-text-muted);font-size:.88rem">
-            Admit cards will appear here once exams are scheduled for your program.
+        <h5 class="mt-3" style="color:var(--clr-text-muted)">No admit cards available yet</h5>
+        <p class="mb-0 mx-auto" style="color:var(--clr-text-muted);font-size:.88rem;max-width:620px">
+            Admit cards appear after CoE schedules a future exam, your exam registration is approved, attendance and fee clearance are verified, and the exam is still unpublished. If you expected a card, check exam registration or contact the Exam Cell.
         </p>
     </div>
 </div>
@@ -54,7 +54,7 @@
                     <dd class="col-7 mb-1">
                         @if($exam->start_time && $exam->end_time)
                             {{ \Carbon\Carbon::parse($exam->start_time)->format('h:i A') }}
-                            &mdash;
+                            to
                             {{ \Carbon\Carbon::parse($exam->end_time)->format('h:i A') }}
                         @else
                             <span class="text-muted">TBA</span>
@@ -65,7 +65,7 @@
                     <dd class="col-7 mb-1">{{ $exam->classroom->name ?? 'TBA' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Max Marks</dt>
-                    <dd class="col-7 mb-0">{{ $exam->total_marks ?? '—' }}</dd>
+                    <dd class="col-7 mb-0">{{ $exam->total_marks ?? 'Not set' }}</dd>
                 </dl>
             </div>
             <div class="card-footer bg-transparent border-0 pt-0 pb-3">

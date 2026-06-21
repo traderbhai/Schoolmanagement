@@ -34,7 +34,7 @@ class ApplicantScholarshipController extends Controller
 
         // Validate amount does not exceed scheme max
         if ($validated['awarded_amount'] > $scheme->max_amount) {
-            return back()->withErrors(['awarded_amount' => 'Amount exceeds scheme maximum of ₹' . number_format($scheme->max_amount, 2)]);
+            return back()->withErrors(['awarded_amount' => 'Amount exceeds scheme maximum of Rs. ' . number_format($scheme->max_amount, 2)]);
         }
 
         // Check seats remaining
@@ -66,11 +66,11 @@ class ApplicantScholarshipController extends Controller
         Notification::create([
             'user_id' => $applicant->user_id,
             'title'   => 'Scholarship Awarded',
-            'message' => 'You have been awarded the ' . $scheme->name . ' scholarship of ₹' . number_format($validated['awarded_amount'], 2) . '.',
+            'message' => 'You have been awarded the ' . $scheme->name . ' scholarship of Rs. ' . number_format($validated['awarded_amount'], 2) . '.',
             'type'    => 'info',
         ]);
 
-        return back()->with('success', 'Scholarship awarded: ' . $scheme->name . ' (₹' . number_format($validated['awarded_amount'], 2) . ')');
+        return back()->with('success', 'Scholarship awarded: ' . $scheme->name . ' (Rs. ' . number_format($validated['awarded_amount'], 2) . ')');
     }
 
     // Cancel/revoke a scholarship
@@ -130,7 +130,7 @@ class ApplicantScholarshipController extends Controller
         Notification::create([
             'user_id' => $scholarship->applicant->user_id,
             'title'   => 'Scholarship Disbursed',
-            'message' => 'Your scholarship amount of ₹' . number_format($scholarship->awarded_amount, 2) . ' has been disbursed. Ref: ' . $request->disbursement_ref,
+            'message' => 'Your scholarship amount of Rs. ' . number_format($scholarship->awarded_amount, 2) . ' has been disbursed. Ref: ' . $request->disbursement_ref,
             'type'    => 'success',
         ]);
 

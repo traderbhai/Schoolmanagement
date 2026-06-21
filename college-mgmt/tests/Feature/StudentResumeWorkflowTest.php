@@ -47,6 +47,69 @@ class StudentResumeWorkflowTest extends TestCase
         $this->assertTrue($resume->is_complete);
     }
 
+    public function test_resume_saves_structured_sections_from_visible_form_fields(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->post(route('student.resume.save'), [
+                'headline' => 'Final year product student',
+                'objective' => 'Looking for product analyst roles.',
+                'skills' => 'SQL, Excel',
+                'languages' => 'English, Hindi',
+                'projects' => [
+                    [
+                        'title' => 'Admissions Dashboard',
+                        'tech' => 'Laravel, SQL',
+                        'description' => 'Built a KPI dashboard for admission conversion tracking.',
+                        'url' => 'https://example.com/project',
+                    ],
+                ],
+                'experience' => [
+                    [
+                        'company' => 'Campus Incubation Cell',
+                        'role' => 'Intern',
+                        'from' => '2026-01',
+                        'to' => '2026-03',
+                        'description' => 'Supported market research and reporting.',
+                    ],
+                ],
+                'certifications' => [
+                    [
+                        'name' => 'Business Analytics Foundation',
+                        'issuer' => 'Demo Academy',
+                        'date' => '2026-02',
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Resume saved successfully.');
+
+        $resume = StudentResume::where('student_id', $student->id)->firstOrFail();
+
+        $this->assertSame('Admissions Dashboard', $resume->projects[0]['title']);
+        $this->assertSame('Campus Incubation Cell', $resume->experience[0]['company']);
+        $this->assertSame('Business Analytics Foundation', $resume->certifications[0]['name']);
+    }
+
+    public function test_resume_page_guides_empty_career_readiness_sections(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.resume.index'))
+            ->assertOk()
+            ->assertSee('Build the resume CMC and placement teams will use')
+            ->assertSee('No projects added yet')
+            ->assertSee('Add academic, capstone, lab, competition, or self-learning projects')
+            ->assertSee('No internship or work experience added yet')
+            ->assertSee('Freshers can leave this empty and strengthen projects/certifications instead')
+            ->assertSee('No certifications added yet')
+            ->assertDontSee('No projects added yet.')
+            ->assertDontSee('No experience added yet.')
+            ->assertDontSee('No certifications added yet.');
+    }
+
     public function test_inactive_student_can_view_resume_but_cannot_update_it(): void
     {
         $student = $this->student('inactive');

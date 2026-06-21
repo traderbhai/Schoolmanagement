@@ -14,14 +14,19 @@ class WalkInController extends Controller
     public function index(Request $request, AdmissionWalkInService $service)
     {
         $perPage = min(100, max(10, (int) $request->input('per_page', 25)));
+        $filters = $request->only(['program_id', 'status', 'search', 'sort', 'direction']);
+        $sort = $request->input('sort', 'visited_at');
+        $direction = strtolower((string) $request->input('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         return view('admission.v0031.walk-ins', [
-            'walkIns' => $service->queryFor($request->user(), $request->only(['program_id', 'status', 'search']))
+            'walkIns' => $service->queryFor($request->user(), $filters)
                 ->paginate($perPage)
                 ->withQueryString(),
             'programs' => Program::orderBy('name')->get(),
             'counsellors' => User::role(['admission_counsellor', 'admission_officer', 'admission_manager', 'admin'])->orderBy('name')->get(),
-            'report' => $service->report(),
+            'report' => $service->report($request->user(), $filters),
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 

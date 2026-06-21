@@ -131,6 +131,7 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
         Route::post('reviews', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeReview'])->name('reviews.store');
         Route::post('saved-views', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'storeSavedView'])->name('saved-views.store');
         Route::get('export/{report}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'export'])->name('export');
+        Route::get('programs', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'programs'])->name('programs');
         Route::get('curriculum-readiness', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'curriculumReadiness'])->name('curriculum-readiness');
         Route::get('faculty-allocation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'facultyAllocation'])->name('faculty-allocation');
         Route::get('timetable-readiness', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'timetableReadiness'])->name('timetable-readiness');

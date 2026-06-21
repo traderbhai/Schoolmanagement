@@ -525,7 +525,7 @@ class FrontendNavigation
                         ['label' => 'Academic Summary', 'route' => 'student.summary.index'],
                         ['label' => 'Promotion Status', 'route' => 'student.promotion.index'],
                         ['label' => 'My Profile', 'route' => 'student.profile'],
-                        ['label' => 'Notifications', 'route' => 'student.notifications.edit'],
+                        ['label' => 'Notification Settings', 'route' => 'student.notifications.edit'],
                     ],
                 ],
             ],
@@ -563,7 +563,7 @@ class FrontendNavigation
                         ['label' => 'Status Tracker', 'route' => 'applicant.status'],
                     ],
                     'Settings' => [
-                        ['label' => 'Notifications', 'route' => 'applicant.notifications.edit', 'active' => 'applicant.notifications.*'],
+                        ['label' => 'Notification Settings', 'route' => 'applicant.notifications.edit', 'active' => 'applicant.notifications.*'],
                     ],
                 ],
             ],

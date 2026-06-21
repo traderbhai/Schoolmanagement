@@ -61,12 +61,11 @@ class AdmissionWalkInService
         return $lead;
     }
 
-    public function report(array $filters = []): Collection
+    public function report(User $viewer, array $filters = []): Collection
     {
-        return AdmissionWalkIn::query()
-            ->with(['program', 'counsellor', 'lead'])
-            ->when($filters['program_id'] ?? null, fn ($q, $programId) => $q->where('program_id', $programId))
-            ->latest('visited_at')
+        $reportFilters = array_intersect_key($filters, array_flip(['program_id', 'search']));
+
+        return $this->queryFor($viewer, $reportFilters)
             ->get()
             ->groupBy('assigned_counsellor_id')
             ->map(fn ($rows) => [
@@ -80,6 +79,15 @@ class AdmissionWalkInService
 
     public function queryFor(User $viewer, array $filters = []): Builder
     {
+        $sort = $filters['sort'] ?? 'visited_at';
+        $direction = strtolower((string) ($filters['direction'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'visitor_name' => 'visitor_name',
+            'status' => 'status',
+            'visited_at' => 'visited_at',
+            'next_followup_at' => 'next_followup_at',
+        ];
+
         $query = AdmissionWalkIn::with(['program', 'counsellor', 'lead'])
             ->when($filters['program_id'] ?? null, fn ($q, $programId) => $q->where('program_id', $programId))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
@@ -90,7 +98,8 @@ class AdmissionWalkInService
                         ->orWhere('visitor_email', 'like', "%{$search}%");
                 });
             })
-            ->latest('visited_at');
+            ->orderBy($sortMap[$sort] ?? 'visited_at', $direction)
+            ->orderBy('id', 'desc');
 
         if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
             $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();

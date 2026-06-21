@@ -4,17 +4,28 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
-        <div>
-            <h3 class="fw-bold mb-1">Assessment Scheduling</h3>
-            <div class="text-muted small">Slots, evaluator readiness, room conflicts, GD groups, submissions, check-in, and reschedule control.</div>
-            @unless($canManageAssessmentScheduling)
-                <div class="small text-warning">Read-only view for your Admission scope. Scheduling, assignment, check-in, and evaluator changes require Admission leadership approval.</div>
-            @endunless
+    <x-ui.page-header
+        title="Assessment Scheduling"
+        subtitle="Create slots, assign candidates, confirm evaluators/resources, build groups, track submissions, and run check-in."
+        action-label="Control Room"
+        :action-route="route('admission.assessment-control-room.index')"
+        action-icon="bi-display"
+    />
+
+    <div class="alert alert-primary border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-3">
+        <div class="d-flex gap-3">
+            <div class="ui-kpi-tile-icon bg-white text-primary"><i class="bi bi-calendar2-check"></i></div>
+            <div>
+                <div class="fw-bold">Scheduling workflow</div>
+                <div class="small">1. Create slots/resources &nbsp; 2. Assign candidates &nbsp; 3. Confirm evaluators &nbsp; 4. Build GD/submission queues &nbsp; 5. Run check-in and resolve conflicts.</div>
+                @unless($canManageAssessmentScheduling)
+                    <div class="small text-warning mt-1">Read-only view for your Admission scope. Scheduling, assignment, check-in, and evaluator changes require Admission leadership approval.</div>
+                @endunless
+            </div>
         </div>
-        <div class="d-flex gap-2">
-            <a class="btn btn-sm btn-outline-primary" href="{{ route('admission.assessment-control-room.index') }}">Control Room</a>
-            <a class="btn btn-sm btn-outline-secondary" href="{{ route('admission.v039.exports','assessment-scheduling') }}">Export</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.v039.exports','assessment-scheduling') }}">Export</a>
+            <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.assessment-schedule-conflicts.index') }}">Conflict Queue</a>
         </div>
     </div>
 
@@ -23,7 +34,7 @@
     <div class="row g-3">
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold">Create Slot</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Create Slot</span><span class="small text-muted">Start assessment logistics here</span></div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admission.assessment-slots.store') }}" class="row g-2" onsubmit="return confirm('Create this assessment slot?')">
                         @csrf
@@ -52,7 +63,7 @@
 
         <div class="col-xl-8">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold">Slots</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Slots</span><span class="small text-muted">Assign candidates or bulk-fill capacity</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Assessment slots">
                         <thead><tr><th>Code</th><th>Starts</th><th>Capacity</th><th>Status</th><th>Assign</th><th>Bulk Assign</th></tr></thead>
@@ -96,7 +107,7 @@
     <div class="row g-3 mt-1">
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold">Evaluator Invitations</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Evaluator Invitations</span><span class="small text-muted">Accept, replace, and clear readiness warnings</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Evaluator invitations">
                         <thead><tr><th>Panel</th><th>User</th><th>Status</th><th>Actions</th></tr></thead>
@@ -132,7 +143,7 @@
 
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold">GD Builder</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">GD Builder</span><span class="small text-muted">Build groups after slot assignment</span></div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admission.gd-groups.build') }}" class="row g-2" onsubmit="return confirm('Build GD groups for this panel?')">
                         @csrf
@@ -149,7 +160,7 @@
 
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold">Submissions</div>
+                <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Submissions</span><span class="small text-muted">Mark WAT/case/presentation evidence</span></div>
                 <div class="card-body">
                     <form method="POST" action="{{ route('admission.assessment-submissions.store') }}" class="row g-2" onsubmit="return confirm('Update this assessment submission status?')">
                         @csrf
@@ -165,7 +176,7 @@
     </div>
 
     <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-white fw-bold">Candidate Check-In Desk</div>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Candidate Check-In Desk</span><span class="small text-muted">Move candidates through invited, confirmed, checked-in, waiting, in-progress, completed, no-show, rescheduled</span></div>
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Assessment check-in desk">
                 <thead><tr><th>Assignment</th><th>Applicant</th><th>Status</th><th>Change Status</th></tr></thead>
@@ -195,7 +206,7 @@
     </div>
 
     <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-white fw-bold">Resource Conflicts</div>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Resource Conflicts</span><span class="small text-muted">Resolve room/evaluator overlaps before assessment day</span></div>
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Assessment resource conflicts">
                 <thead><tr><th>Resource</th><th>Starts</th><th>Ends</th><th>Status</th></tr></thead>

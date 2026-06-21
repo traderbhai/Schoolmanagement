@@ -19,6 +19,22 @@
         </div>
     </div>
 
+    <div class="alert alert-light border shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">IQAC source-list workflow</div>
+                <div class="small text-muted">Use this list to move from quality signal to owner, evidence, action, and closure.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Filter program/term/status</span>
+                <span class="badge text-bg-light">2. Review quality gap</span>
+                <span class="badge text-bg-light">3. Open source workflow</span>
+                <span class="badge text-bg-light">4. Check evidence/action owner</span>
+                <span class="badge text-bg-light">5. Export current view</span>
+            </div>
+        </div>
+    </div>
+
     @if(! empty($section['metrics']))
         <div class="row g-2 mb-3">
             @foreach($section['metrics'] as $label => $value)
@@ -67,7 +83,9 @@
                 </div>
                 <div class="col-12 col-md-3 d-flex gap-2">
                     <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
-                    <a href="{{ request()->url() }}" class="btn btn-sm btn-outline-secondary flex-fill">Reset</a>
+                    <a href="{{ ! empty($filters['metric']) ? request()->url() . '?' . http_build_query(['metric' => $filters['metric']]) : request()->url() }}" class="btn btn-sm btn-outline-secondary flex-fill">
+                        {{ ! empty($filters['metric']) ? 'Reset queue' : 'Reset' }}
+                    </a>
                 </div>
             </form>
             <div class="small text-muted mt-2">Visible filter summary: {{ $section['filter_summary'] ?? 'Showing all scoped IQAC records.' }}</div>

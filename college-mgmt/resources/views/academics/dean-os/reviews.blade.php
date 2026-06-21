@@ -9,10 +9,21 @@
 @endphp
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><h1 class="h4 mb-1">Dean Reviews And Actions</h1><div class="small text-muted">Structured review meetings, action ownership, due dates, closure, and escalation tracking.</div></div>@include('academics.dean-os.partials.nav')</div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Review-to-action sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Create review meeting</span>
+            <span class="badge text-bg-light border">2. Record agenda or summary</span>
+            <span class="badge text-bg-light border">3. Assign action owner</span>
+            <span class="badge text-bg-light border">4. Track due date and priority</span>
+            <span class="badge text-bg-light border">5. Close with note/evidence</span>
+        </div>
+        <div class="text-muted mt-2">Use this page when a risk, blocker, or approval needs a formal Dean review and accountable follow-up.</div>
+    </div>
     <div class="row g-3 mb-3">
         <div class="col-xl-5">
             <form method="POST" action="{{ route('academics.dean-os.reviews.store') }}" class="card shadow-sm">@csrf
-                <div class="card-header py-2 fw-semibold">Create Review Meeting</div>
+                <div class="card-header py-2"><div class="fw-semibold">Create Review Meeting</div><div class="small text-muted">Start here for weekly academic, exam, IQAC, handoff, or emergency reviews.</div></div>
                 <div class="card-body row g-2">
                     <div class="col-12"><input name="title" class="form-control form-control-sm" placeholder="Review title" required></div>
                     <div class="col-md-6"><select name="review_type" class="form-select form-select-sm" required>@foreach(['weekly_academic','program_review','attendance_review','exam_review','iqac_review','handoff_review','emergency_review'] as $type)<option value="{{ $type }}">{{ str_replace('_',' ', $type) }}</option>@endforeach</select></div>
@@ -26,7 +37,7 @@
         </div>
         <div class="col-xl-7">
             <form method="POST" action="{{ route('academics.dean-os.actions.store') }}" class="card shadow-sm">@csrf
-                <div class="card-header py-2 fw-semibold">Create Action Item</div>
+                <div class="card-header py-2"><div class="fw-semibold">Create Action Item</div><div class="small text-muted">Action items should have a clear source, owner, priority, and due date.</div></div>
                 <div class="card-body row g-2">
                     <div class="col-md-6"><input name="title" class="form-control form-control-sm" placeholder="Action title" required></div>
                     <div class="col-md-3"><select name="priority" class="form-select form-select-sm">@foreach(['normal','low','high','critical'] as $p)<option value="{{ $p }}">{{ ucfirst($p) }}</option>@endforeach</select></div>

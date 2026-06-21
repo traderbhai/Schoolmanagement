@@ -17,8 +17,8 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
     <div class="body">
         <p>Dear {{ $applicant->user->name }},</p>
         <p>{{ $message }}</p>
-        <p><strong>Application Number:</strong> {{ $applicant->application_number }}<br>
-        <strong>Program:</strong> {{ $applicant->program?->name ?? 'N/A' }}<br>
+        <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}<br>
+        <strong>Program:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}<br>
         <strong>Status:</strong> {{ ucfirst(str_replace('_', ' ', $newStatus)) }}</p>
         @if(in_array($newStatus, ['shortlisted','selected']))
             <a href="{{ config('app.url') }}/applicant/status" class="btn">View Application Status</a>

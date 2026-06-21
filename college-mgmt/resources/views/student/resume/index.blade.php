@@ -15,6 +15,10 @@
             <i class="bi bi-lock me-1"></i>Resume updates are locked because your student profile is not active. Your saved resume remains visible for history.
         </div>
     @endunless
+    <div class="alert alert-info border-0 shadow-sm small">
+        <div class="fw-semibold mb-1"><i class="bi bi-info-circle me-1"></i>Build the resume CMC and placement teams will use for shortlisting support.</div>
+        <div class="text-muted">Add your headline, skills, projects, internships, certifications, and profile links. Empty sections are normal at the start; save updates as your placement profile improves.</div>
+    </div>
 
     <form method="POST" action="{{ route('student.resume.save') }}" id="resumeForm">
         @csrf
@@ -105,7 +109,10 @@
                     </div>
                 </div>
                 @empty
-                <p class="text-muted small mb-0" id="noProjects">No projects added yet.</p>
+                <div class="text-muted small" id="noProjects">
+                    <div class="fw-semibold text-dark mb-1">No projects added yet</div>
+                    <div>Add academic, capstone, lab, competition, or self-learning projects that show the skills you want recruiters to notice.</div>
+                </div>
                 @endforelse
             </div>
         </div>
@@ -130,7 +137,10 @@
                     </div>
                 </div>
                 @empty
-                <p class="text-muted small mb-0" id="noExp">No experience added yet.</p>
+                <div class="text-muted small" id="noExp">
+                    <div class="fw-semibold text-dark mb-1">No internship or work experience added yet</div>
+                    <div>Add internships, live projects, volunteering, campus roles, or training experience when available. Freshers can leave this empty and strengthen projects/certifications instead.</div>
+                </div>
                 @endforelse
             </div>
         </div>
@@ -151,7 +161,10 @@
                     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.closest('.cert-item').remove()">x</button>
                 </div>
                 @empty
-                <p class="text-muted small mb-0">No certifications added yet.</p>
+                <div class="text-muted small" id="noCerts">
+                    <div class="fw-semibold text-dark mb-1">No certifications added yet</div>
+                    <div>Add verified courses, technical certificates, workshops, or industry badges that support your placement profile.</div>
+                </div>
                 @endforelse
             </div>
         </div>
@@ -201,6 +214,7 @@ function addExperience() {
 }
 
 function addCert() {
+    document.getElementById('noCerts')?.remove();
     const html = `<div class="border rounded p-2 mb-2 cert-item d-flex gap-2 align-items-center">
         <input type="text" name="certifications[${certCount}][name]" class="form-control form-control-sm" placeholder="Certification name">
         <input type="text" name="certifications[${certCount}][issuer]" class="form-control form-control-sm" placeholder="Issuer">

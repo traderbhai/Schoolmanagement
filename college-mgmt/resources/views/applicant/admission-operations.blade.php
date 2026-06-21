@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h4 mb-1">Admission Operations</h1>
-            <div class="text-muted small">{{ $applicant->application_number }} · {{ $applicant->program?->name }} · {{ ucfirst(str_replace('_', ' ', $applicant->status)) }}</div>
+            <div class="text-muted small">{{ $applicant->application_number }} - {{ $applicant->program?->name }} - {{ ucfirst(str_replace('_', ' ', $applicant->status)) }}</div>
         </div>
         <a class="btn btn-outline-primary btn-sm" href="{{ route('applicant.checklist') }}">Checklist</a>
     </div>
@@ -42,7 +42,7 @@
                                         <select name="requested_slot_id" class="form-select form-select-sm" aria-label="Requested slot">
                                             <option value="">Staff suggested slot</option>
                                             @foreach($availableSlots as $available)
-                                                <option value="{{ $available->id }}">{{ $available->slot_code }} · {{ \Illuminate\Support\Carbon::parse($available->starts_at)->format('d M h:i A') }}</option>
+                                                <option value="{{ $available->id }}">{{ $available->slot_code }} - {{ \Illuminate\Support\Carbon::parse($available->starts_at)->format('d M h:i A') }}</option>
                                             @endforeach
                                         </select>
                                         <input name="reason" class="form-control form-control-sm" placeholder="Reason" required>
@@ -54,7 +54,18 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="text-muted">No assessment slot assigned yet.</td></tr>
+                            <tr>
+                                <td colspan="5" class="py-3">
+                                    <div class="fw-semibold text-dark">No assessment slot has been assigned yet</div>
+                                    <div class="small text-muted mt-1">
+                                        Admission staff will publish your interview, GD, case, WAT, or other assessment slot after your application is ready for that stage. Keep checking your checklist and status tracker; reschedule requests open only after a slot is assigned.
+                                    </div>
+                                    <div class="mt-2 d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('applicant.checklist') }}" class="btn btn-sm btn-outline-primary">Review checklist</a>
+                                        <a href="{{ route('applicant.status') }}" class="btn btn-sm btn-outline-secondary">Track status</a>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -67,7 +78,7 @@
                     <div class="col-md-6 border-end p-3">
                         <h2 class="h6">Assessment Submissions</h2>
                         @forelse($submissions as $submission)
-                            <div class="small mb-2">{{ ucfirst($submission->submission_type) }} · <span class="badge text-bg-secondary">{{ $submission->status }}</span></div>
+                            <div class="small mb-2">{{ ucfirst($submission->submission_type) }} - <span class="badge text-bg-secondary">{{ $submission->status }}</span></div>
                         @empty
                             <div class="text-muted small">No submission requirement is pending.</div>
                         @endforelse
@@ -75,12 +86,20 @@
                     <div class="col-md-6 p-3">
                         <h2 class="h6">Seat And Waitlist</h2>
                         @foreach($seatHolds as $hold)
-                            <div class="small mb-2">Seat {{ $hold->status }} @if($hold->expires_at) · expires {{ \Illuminate\Support\Carbon::parse($hold->expires_at)->format('d M') }} @endif</div>
+                            <div class="small mb-2">Seat {{ $hold->status }} @if($hold->expires_at) - expires {{ \Illuminate\Support\Carbon::parse($hold->expires_at)->format('d M') }} @endif</div>
                         @endforeach
                         @foreach($waitlist as $entry)
-                            <div class="small mb-2">Waitlist rank {{ $entry->rank }} · {{ $entry->status }}</div>
+                            <div class="small mb-2">Waitlist rank {{ $entry->rank }} - {{ $entry->status }}</div>
                         @endforeach
-                        @if($seatHolds->isEmpty() && $waitlist->isEmpty())<div class="text-muted small">No seat or waitlist record yet.</div>@endif
+                        @if($seatHolds->isEmpty() && $waitlist->isEmpty())
+                            <div class="border rounded p-2 bg-light small">
+                                <div class="fw-semibold text-dark">No seat or waitlist record yet</div>
+                                <div class="text-muted mt-1">
+                                    Seat holds and waitlist ranks appear only after selection, offer-round, or seat-control decisions are published by the Admission team.
+                                </div>
+                                <a href="{{ route('applicant.offer-letters.index') }}" class="btn btn-sm btn-outline-primary mt-2">Check offers</a>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="table-responsive border-top">
@@ -134,7 +153,7 @@
                         <div class="text-muted small">Handoff will be generated when enrollment is ready.</div>
                     @endif
                     @foreach($deferrals as $deferral)
-                        <div class="border-top mt-3 pt-2 small">Deferral: {{ $deferral->status }} · {{ $deferral->reason }}</div>
+                        <div class="border-top mt-3 pt-2 small">Deferral: {{ $deferral->status }} - {{ $deferral->reason }}</div>
                     @endforeach
                 </div>
             </div>

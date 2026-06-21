@@ -14,10 +14,29 @@
 
 @section('content')
 
+@include('admin.partials.setup-sequence')
+
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Admin operating sequence</div>
+            <div class="small text-muted">Start with institute health, then use quick actions for setup, governance, finance, academics, and operations.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Check institute KPIs</span>
+            <span class="badge text-bg-light">2. Review attendance/fees</span>
+            <span class="badge text-bg-light">3. Open quick action</span>
+            <span class="badge text-bg-light">4. Verify audit/security</span>
+            <span class="badge text-bg-light">5. Export or report</span>
+        </div>
+    </div>
+</div>
+
 {{-- A) KPI Cards Row --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-blue">
+        <a href="{{ route('admin.students.index') }}" class="text-decoration-none d-block h-100" aria-label="Open active students source list">
+        <div class="kpi-card kpi-blue h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Active Students</div>
@@ -27,9 +46,11 @@
                 <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-green">
+        <a href="{{ route('admin.teachers.index') }}" class="text-decoration-none d-block h-100" aria-label="Open teachers source list">
+        <div class="kpi-card kpi-green h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Teachers</div>
@@ -39,9 +60,11 @@
                 <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-amber">
+        <a href="{{ route('admin.departments.index') }}" class="text-decoration-none d-block h-100" aria-label="Open departments source list">
+        <div class="kpi-card kpi-amber h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Departments</div>
@@ -51,9 +74,11 @@
                 <div class="kpi-icon"><i class="bi bi-building-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-purple">
+        <a href="{{ route('admin.programs.index') }}" class="text-decoration-none d-block h-100" aria-label="Open programs source list">
+        <div class="kpi-card kpi-purple h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Courses</div>
@@ -63,13 +88,15 @@
                 <div class="kpi-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
 </div>
 
 {{-- A2) Extra KPI Row: Attendance, Fees --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-cyan">
+        <a href="{{ route('admin.attendance.index') }}" class="text-decoration-none d-block h-100" aria-label="Open attendance source list">
+        <div class="kpi-card kpi-cyan h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Today's Attendance</div>
@@ -79,9 +106,11 @@
                 <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-green">
+        <a href="{{ route('admin.fees.index') }}" class="text-decoration-none d-block h-100" aria-label="Open fees source list">
+        <div class="kpi-card kpi-green h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Fee Collected</div>
@@ -97,9 +126,11 @@
                 <div class="text-xs mt-1 opacity-85">{{ $feeCollectionRate }}% collection rate</div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-amber">
+        <a href="{{ route('admin.notices.index') }}" class="text-decoration-none d-block h-100" aria-label="Open notices source list">
+        <div class="kpi-card kpi-amber h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Active Notices</div>
@@ -109,9 +140,11 @@
                 <div class="kpi-icon"><i class="bi bi-megaphone-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <div class="kpi-card kpi-purple">
+        <a href="{{ route('admin.exams.index') }}" class="text-decoration-none d-block h-100" aria-label="Open exams source list">
+        <div class="kpi-card kpi-purple h-100">
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Upcoming Exams</div>
@@ -121,6 +154,7 @@
                 <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
             </div>
         </div>
+        </a>
     </div>
 </div>
 

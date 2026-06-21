@@ -13,6 +13,7 @@ class PipelineController extends Controller
     public function index(Request $request, AdmissionPipelineService $service)
     {
         $objectType = $request->get('object_type', 'lead');
+        abort_unless(in_array($objectType, ['lead', 'applicant'], true), 404);
 
         return view('admission.v003.pipeline', [
             'objectType' => $objectType,

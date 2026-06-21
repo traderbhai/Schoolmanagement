@@ -6,10 +6,10 @@
 <p>Congratulations! Your enrollment at <strong>{{ env('INSTITUTE_NAME', config('app.name')) }}</strong> has been successfully confirmed. Welcome to our institution!</p>
 
 <div class="info-box">
-    <p><strong>Enrollment Number:</strong> {{ $enrollment->enrollment_number }}</p>
-    <p><strong>Roll Number:</strong> {{ $enrollment->roll_number }}</p>
-    <p><strong>Program:</strong> {{ $enrollment->student?->program?->name ?? 'N/A' }}</p>
-    <p><strong>Batch:</strong> {{ $enrollment->student?->batch?->name ?? 'N/A' }}</p>
+    <p><strong>Enrollment Number:</strong> {{ $enrollment->enrollment_number ?? 'Enrollment number pending' }}</p>
+    <p><strong>Roll Number:</strong> {{ $enrollment->roll_number ?? 'Roll number pending' }}</p>
+    <p><strong>Program:</strong> {{ $enrollment->student?->program?->name ?? 'Program to be confirmed' }}</p>
+    <p><strong>Batch:</strong> {{ $enrollment->student?->batch?->name ?? 'Batch to be confirmed' }}</p>
     <p><strong>Enrollment Date:</strong> {{ $enrollment->confirmed_at?->format('d M Y') ?? now()->format('d M Y') }}</p>
 </div>
 

@@ -6,8 +6,8 @@
 <p>We are pleased to inform you that your application has been reviewed and you have been <strong>shortlisted</strong> for the next stage of the admission process.</p>
 
 <div class="info-box">
-    <p><strong>Application Number:</strong> {{ $applicant->application_number }}</p>
-    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'N/A' }}</p>
+    <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}</p>
+    <p><strong>Program:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}</p>
     <p><strong>Status:</strong> Shortlisted</p>
 </div>
 

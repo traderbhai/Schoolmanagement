@@ -73,7 +73,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">No data</td>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        No lead source data is available yet. Capture or import leads with a source to compare channel performance.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -112,7 +114,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">No data</td>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        No program-linked leads are available yet. Link leads to programs to compare program demand and conversion.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -153,7 +157,9 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">No data for last 30 days</td>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        No lead activity has been captured in the last 30 days. Add new leads or widen the reporting period from the lead list.
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>

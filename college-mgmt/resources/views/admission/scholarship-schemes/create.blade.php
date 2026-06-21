@@ -6,6 +6,7 @@
 <div class="mb-4">
     <a href="{{ route('admission.scholarship-schemes.index') }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Back to Schemes</a>
     <h2 class="fw-bold mb-0 mt-1">New Scholarship Scheme</h2>
+    <p class="text-muted mb-0">Define the eligibility, award limit, proof requirement, and capacity before staff can award this scheme.</p>
 </div>
 
 <form action="{{ route('admission.scholarship-schemes.store') }}" method="POST">
@@ -28,7 +29,7 @@
                 <div class="col-md-3">
                     <label for="type" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
                     <select name="type" id="type" class="form-select @error('type') is-invalid @enderror" required>
-                        <option value="">— Select —</option>
+                        <option value="">Select type</option>
                         <option value="merit"       {{ old('type') === 'merit'       ? 'selected' : '' }}>Merit</option>
                         <option value="need_based"  {{ old('type') === 'need_based'  ? 'selected' : '' }}>Need Based</option>
                         <option value="government"  {{ old('type') === 'government'  ? 'selected' : '' }}>Government</option>
@@ -48,9 +49,9 @@
                     @error('program_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
-                    <label for="max_amount" class="form-label fw-semibold">Maximum Amount (₹) <span class="text-danger">*</span></label>
+                    <label for="max_amount" class="form-label fw-semibold">Maximum Amount (Rs.) <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text">₹</span>
+                        <span class="input-group-text">Rs.</span>
                         <input type="number" name="max_amount" id="max_amount" class="form-control @error('max_amount') is-invalid @enderror"
                                value="{{ old('max_amount', 0) }}" min="0" step="100" required>
                     </div>
@@ -65,7 +66,7 @@
                 <div class="col-12">
                     <label for="criteria" class="form-label fw-semibold">Eligibility Criteria</label>
                     <textarea name="criteria" id="criteria" class="form-control @error('criteria') is-invalid @enderror"
-                              rows="4" maxlength="2000" placeholder="Describe the eligibility criteria…">{{ old('criteria') }}</textarea>
+                              rows="4" maxlength="2000" placeholder="Describe the eligibility criteria...">{{ old('criteria') }}</textarea>
                     @error('criteria')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
@@ -91,7 +92,7 @@
                     <div class="form-check form-switch">
                         <input type="hidden" name="is_active" value="0">
                         <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', '1') ? 'checked' : '' }}>
-                        <label class="form-check-label fw-semibold" for="is_active">Active (available for awarding)</label>
+                        <label class="form-check-label fw-semibold" for="is_active">Active and available for awarding</label>
                     </div>
                 </div>
             </div>

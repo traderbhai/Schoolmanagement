@@ -6,8 +6,8 @@
 <p>Thank you for submitting your application. We have successfully received your application and it is now under review.</p>
 
 <div class="info-box">
-    <p><strong>Application Number:</strong> {{ $applicant->application_number }}</p>
-    <p><strong>Program Applied:</strong> {{ $applicant->program?->name ?? 'N/A' }}</p>
+    <p><strong>Application Number:</strong> {{ $applicant->application_number ?? 'Application number pending' }}</p>
+    <p><strong>Program Applied:</strong> {{ $applicant->program?->name ?? 'Program to be confirmed' }}</p>
     <p><strong>Submitted On:</strong> {{ $applicant->applied_at?->format('d M Y, h:i A') ?? now()->format('d M Y') }}</p>
     <p><strong>Status:</strong> Submitted</p>
 </div>

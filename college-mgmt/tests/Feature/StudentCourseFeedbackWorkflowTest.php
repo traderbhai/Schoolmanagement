@@ -361,4 +361,70 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
             ->assertSee('Legitimate enrolled feedback.')
             ->assertDontSee('Rogue feedback should be ignored.');
     }
+
+    public function test_teacher_feedback_empty_state_explains_timetable_assignment_source(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+
+        $teacher = Teacher::factory()->create();
+        $teacher->user->assignRole('teacher');
+        Term::factory()->create(['name' => 'Feedback Empty Term', 'start_date' => now(), 'is_current' => true]);
+
+        $this->actingAs($teacher->user)
+            ->get(route('teacher.feedback.index'))
+            ->assertOk()
+            ->assertSee('Course Feedback')
+            ->assertSee('- Feedback Empty Term')
+            ->assertSee('No published teaching subjects are linked for this term yet')
+            ->assertSee('subject allocation is published in the timetable')
+            ->assertSee('verify your teacher profile and timetable assignment')
+            ->assertDontSee('No subjects found for the current term.')
+            ->assertDontSee('â€”');
+    }
+
+    public function test_teacher_feedback_subject_without_responses_explains_anonymous_submission_boundary(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+
+        $program = Program::factory()->create();
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Feedback Waiting Term',
+            'start_date' => now(),
+            'is_current' => true,
+        ]);
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Feedback Waiting Term', 'is_current' => true]);
+        $course = Course::factory()->create();
+        $batch = Batch::factory()->create();
+        $teacher = Teacher::factory()->create();
+        $teacher->user->assignRole('teacher');
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Feedback Pending Subject',
+            'code' => 'FPS101',
+        ]);
+        TimetableEntry::factory()->create([
+            'teacher_id' => $teacher->id,
+            'course_id' => $course->id,
+            'batch_id' => $batch->id,
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($teacher->user)
+            ->get(route('teacher.feedback.index'))
+            ->assertOk()
+            ->assertSee('Feedback Pending Subject')
+            ->assertSee('No student feedback responses yet')
+            ->assertSee('only after enrolled students submit feedback for the current term')
+            ->assertSee('Individual responses stay hidden to protect anonymity')
+            ->assertDontSee('No feedback collected yet for this subject.')
+            ->assertDontSee('â€”');
+    }
 }

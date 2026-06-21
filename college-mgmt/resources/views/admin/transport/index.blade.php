@@ -19,6 +19,22 @@
     <div class="alert alert-danger">{{ $errors->first() }}</div>
 @endif
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Transport operating sequence</div>
+            <div class="small text-muted">Set up routes, stops, vehicles, and assignments in order so billing and student transport visibility stay consistent.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Create route</span>
+            <span class="badge text-bg-light">2. Add stops</span>
+            <span class="badge text-bg-light">3. Add vehicle</span>
+            <span class="badge text-bg-light">4. Assign students</span>
+            <span class="badge text-bg-light">5. Export/review fleet</span>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Active Routes</div><div class="fs-3 fw-bold">{{ $stats['routes'] }}</div></div></div></div>
     <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Active Vehicles</div><div class="fs-3 fw-bold">{{ $stats['vehicles'] }}</div></div></div></div>

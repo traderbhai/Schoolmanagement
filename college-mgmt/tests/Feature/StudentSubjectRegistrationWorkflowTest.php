@@ -65,6 +65,21 @@ class StudentSubjectRegistrationWorkflowTest extends TestCase
             ->assertDontSee($otherProgram->name);
     }
 
+    public function test_subject_registration_empty_states_explain_allocation_and_elective_next_steps(): void
+    {
+        $ctx = $this->makeStudentContext();
+
+        $this->actingAs($ctx['user'])
+            ->get(route('student.subjects.index'))
+            ->assertOk()
+            ->assertSeeText('No current-term subjects are registered yet')
+            ->assertSeeText('Core subjects normally appear after PMC completes term course allocation')
+            ->assertSeeText('No addable subjects are available for this term')
+            ->assertSeeText('PMC has not published additional choices yet')
+            ->assertDontSeeText('No subjects registered yet.')
+            ->assertDontSeeText('No additional subjects available for your current term.');
+    }
+
     public function test_subject_registration_creates_canonical_and_legacy_enrollment_rows(): void
     {
         $ctx = $this->makeStudentContext();

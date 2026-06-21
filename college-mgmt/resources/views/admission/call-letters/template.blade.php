@@ -24,7 +24,7 @@
             padding: 36px 48px;
         }
 
-        /* ── Header ── */
+        /* Header */
         .header {
             text-align: center;
             margin-bottom: 6px !important;
@@ -59,7 +59,7 @@
             margin: 20px 0 10px 0 !important;
         }
 
-        /* ── Reference line ── */
+        /* Reference line */
         .ref-line {
             width: 100%;
             margin-bottom: 16px !important;
@@ -76,7 +76,7 @@
             text-align: right;
         }
 
-        /* ── Body text ── */
+        /* Body text */
         .salutation {
             margin-bottom: 10px !important;
         }
@@ -85,7 +85,7 @@
             margin-bottom: 14px !important;
         }
 
-        /* ── Schedule box ── */
+        /* Schedule box */
         .schedule-box {
             border: 1px solid #ccc;
             padding: 12px !important;
@@ -133,7 +133,7 @@
             border-top: 1px solid #e0e0e0;
         }
 
-        /* ── Document list ── */
+        /* Document list */
         .section-title {
             font-size: 13px;
             font-weight: bold;
@@ -161,7 +161,7 @@
             margin-bottom: 4px !important;
         }
 
-        /* ── Signature block ── */
+        /* Signature block */
         .signature-block {
             text-align: right;
             margin-top: 30px !important;
@@ -177,7 +177,7 @@
             margin-bottom: 2px !important;
         }
 
-        /* ── Footer ── */
+        /* Footer */
         .footer {
             text-align: center;
             font-size: 11px;
@@ -224,12 +224,12 @@
             <tr>
                 <td class="label">Program</td>
                 <td class="colon">:</td>
-                <td class="value">{{ $applicant->program->name ?? '&mdash;' }}</td>
+                <td class="value">{{ $applicant->program->name ?? 'Program not assigned' }}</td>
             </tr>
             <tr>
                 <td class="label">Batch</td>
                 <td class="colon">:</td>
-                <td class="value">{{ $applicant->batch->name ?? '&mdash;' }}</td>
+                <td class="value">{{ $applicant->batch->name ?? 'Batch not assigned' }}</td>
             </tr>
             <tr>
                 <td class="label">Date</td>
@@ -248,10 +248,10 @@
                 <td class="value">
                     @if($session && $session->start_time && $session->end_time)
                         {{ \Carbon\Carbon::parse($session->start_time)->format('h:i A') }}
-                        &ndash;
+                        -
                         {{ \Carbon\Carbon::parse($session->end_time)->format('h:i A') }}
                     @else
-                        &mdash;
+                        Time not announced
                     @endif
                 </td>
             </tr>
@@ -262,7 +262,7 @@
                     @if($session && $session->venue)
                         {{ $session->venue }}
                     @else
-                        &mdash;
+                        Venue not announced
                     @endif
                 </td>
             </tr>
@@ -274,7 +274,7 @@
                         {{ \Carbon\Carbon::parse($session->start_time)->subMinutes(30)->format('h:i A') }}
                         (30 minutes before start)
                     @else
-                        &mdash;
+                        Reporting time not announced
                     @endif
                 </td>
             </tr>

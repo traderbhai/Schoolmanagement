@@ -115,6 +115,7 @@ class ApplicantRegistrationFeeTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Registration Fee Not Recorded')
             ->assertSee('Your application has already been submitted')
+            ->assertSee('Track Status')
             ->assertDontSee('Your application cannot be submitted until the registration fee details are saved.')
             ->assertDontSee('Submit Fee Details')
             ->assertDontSee('Submit Details');
@@ -140,6 +141,31 @@ class ApplicantRegistrationFeeTest extends TestCase
             'registration_fee_amount' => 2500,
             'registration_fee_receipt' => 'STAFF-REG-FEE-001',
         ]);
+    }
+
+    public function test_admission_staff_registration_fee_page_uses_readable_financial_guidance(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_officer', 'guard_name' => 'web']);
+        $applicant = $this->makeApplicant();
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->get(route('admission.applicants.registration-fee.show', $applicant))
+            ->assertOk()
+            ->assertSeeText('Staff registration-fee recording sequence')
+            ->assertSeeText('Confirm applicant identity')
+            ->assertSeeText('Verify payment reference')
+            ->assertSeeText('Duplicate references are blocked to protect financial records.')
+            ->assertSeeText('Amount Paid (Rs.)')
+            ->assertSeeText('Select Method')
+            ->assertSeeText('Once the registration fee is recorded, the applicant can continue application submission from their portal.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false)
+            ->assertDontSee('Registration Fee â€”', false)
+            ->assertDontSee('Amount Paid (&#8377;)', false);
     }
 
     public function test_admission_staff_registration_fee_reference_must_be_unique_case_insensitively(): void

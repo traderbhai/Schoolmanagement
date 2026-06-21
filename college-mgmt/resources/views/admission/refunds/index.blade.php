@@ -88,7 +88,7 @@
                     <th class="ps-4">Applicant</th>
                     <th>Application No.</th>
                     <th>Program</th>
-                    <th class="text-end">Requested (₹)</th>
+                    <th class="text-end">Requested (Rs.)</th>
                     <th>Reason</th>
                     <th>Status</th>
                     <th>Submitted</th>
@@ -99,14 +99,14 @@
                 @forelse($refunds as $refund)
                 <tr>
                     <td class="ps-4">
-                        <div class="fw-semibold">{{ $refund->applicant->user->name ?? '—' }}</div>
-                        <div class="small text-muted">{{ $refund->applicant->user->email ?? '' }}</div>
+                        <div class="fw-semibold">{{ $refund->applicant->user->name ?? 'Applicant name missing' }}</div>
+                        <div class="small text-muted">{{ $refund->applicant->user->email ?? 'Email not provided' }}</div>
                     </td>
                     <td>
-                        <span class="font-monospace small">{{ $refund->applicant->application_number ?? '—' }}</span>
+                        <span class="font-monospace small">{{ $refund->applicant->application_number ?? 'Application number missing' }}</span>
                     </td>
-                    <td>{{ $refund->applicant->program->name ?? '—' }}</td>
-                    <td class="text-end fw-semibold">₹{{ number_format($refund->requested_amount, 2) }}</td>
+                    <td>{{ $refund->applicant->program->name ?? 'Program not assigned' }}</td>
+                    <td class="text-end fw-semibold">Rs. {{ number_format($refund->requested_amount, 2) }}</td>
                     <td>{{ $refund->reason_label }}</td>
                     <td>
                         <span class="{{ $refund->status_badge }}">{{ ucfirst($refund->status) }}</span>
@@ -125,9 +125,18 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                        No refund requests found{{ $status ? ' with status "' . $status . '"' : '' }}.
+                    <td colspan="8" class="text-center py-5 px-3">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-muted"></i>
+                        <h6 class="fw-semibold mb-1">No refund requests are visible</h6>
+                        <p class="text-muted small mb-3">
+                            Refund requests appear here only when they match your Admission role scope{{ $status ? ', the selected ' . $status . ' status filter' : '' }},
+                            and an applicant has a verified refundable payment or an approved refund workflow.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                            <a href="{{ route('admission.refunds.index') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                            <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary">Open Applicants</a>
+                            <a href="{{ route('admission.payments.queue') }}" class="btn btn-sm btn-warning">Payment Queue</a>
+                        </div>
                     </td>
                 </tr>
                 @endforelse

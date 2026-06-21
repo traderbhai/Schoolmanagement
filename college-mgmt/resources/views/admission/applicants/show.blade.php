@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Applicant — ' . ($applicant->user->name ?? 'N/A'))
+@section('title', 'Applicant - ' . ($applicant->user->name ?? 'Applicant name missing'))
 
 @section('content')
 {{-- Header --}}
@@ -9,9 +9,9 @@
         <a href="{{ route('admission.applicants.index') }}" class="text-muted small"><i class="bi bi-arrow-left"></i> All Applicants</a>
         <h2 class="fw-bold mb-0 mt-1">{{ $applicant->user->name ?? 'Unknown' }}</h2>
         <div class="text-muted small">
-            <span class="font-monospace">{{ $applicant->application_number }}</span> &middot;
-            {{ $applicant->program->name ?? 'N/A' }}
-            @if($applicant->batch) &middot; {{ $applicant->batch->name }} @endif
+            <span class="font-monospace">{{ $applicant->application_number }}</span> -
+            {{ $applicant->program->name ?? 'Program not assigned' }}
+            @if($applicant->batch) - {{ $applicant->batch->name }} @endif
         </div>
         <div class="mt-1 d-flex gap-2 flex-wrap align-items-center">
             <span class="badge bg-light text-dark border">{{ $applicant->category_label }}</span>
@@ -41,7 +41,7 @@
             @csrf
             <select name="status" class="form-select form-select-sm" style="width:auto">
                 @foreach($allowedTransitions as $s)
-                    <option value="{{ $s }}">→ {{ ucfirst(str_replace('_',' ',$s)) }}</option>
+                    <option value="{{ $s }}">To {{ ucfirst(str_replace('_',' ',$s)) }}</option>
                 @endforeach
             </select>
             <button type="submit" class="btn btn-sm btn-primary">Update</button>
@@ -79,6 +79,17 @@
 @endif
 
 @include('admission.partials.action-center', ['actionCenter' => $actionCenter])
+<div class="alert alert-info border-0 shadow-sm small mb-4">
+    <div class="fw-semibold mb-1">Applicant review sequence</div>
+    <div class="d-flex flex-wrap gap-2">
+        <span class="badge text-bg-light border">1. Check action center blockers</span>
+        <span class="badge text-bg-light border">2. Verify application profile</span>
+        <span class="badge text-bg-light border">3. Clear documents and payments</span>
+        <span class="badge text-bg-light border">4. Log counselling and notes</span>
+        <span class="badge text-bg-light border">5. Move status only when ready</span>
+    </div>
+    <div class="text-muted mt-2">Use tabs left to right when reviewing a case. Staff-only notes and counselling history explain why the applicant is blocked, ready, selected, or enrolled.</div>
+</div>
 
 {{-- Tabs --}}
 <ul class="nav nav-tabs mb-4" id="crmTabs">
@@ -92,12 +103,21 @@
 <div class="tab-content">
     {{-- APPLICATION TAB --}}
     <div class="tab-pane fade show active" id="application">
+        <div class="alert alert-light border small">
+            <strong>Application tab:</strong> confirm personal, academic, family, and additional details before changing status or creating an approval action.
+        </div>
         @php
             $sections = [
                 'Personal Details' => $applicant->personal_data,
                 'Academic Details' => $applicant->academic_data,
                 'Family Details'   => $applicant->family_data,
                 'Additional Info'  => $applicant->additional_data,
+            ];
+            $emptySectionGuidance = [
+                'Personal Details' => 'Ask the applicant to complete profile basics such as phone, address, identity, and contact preferences before document or payment follow-up.',
+                'Academic Details' => 'Collect qualification, institution, score, and entrance details before assessment, shortlist, or offer decisions.',
+                'Family Details' => 'Capture parent or guardian decision-maker details so counsellors can plan parent calls and escalation reminders.',
+                'Additional Info' => 'Use counselling notes or applicant follow-up to capture hostel, transport, scholarship, objection, or special-support needs.',
             ];
         @endphp
         @foreach($sections as $title => $data)
@@ -109,12 +129,15 @@
                     @foreach($data as $key => $value)
                     <div class="col-sm-6 col-md-4">
                         <div class="small text-muted text-uppercase" style="font-size:0.72rem">{{ str_replace('_',' ',$key) }}</div>
-                        <div class="fw-medium">{{ $value ?: '—' }}</div>
+                        <div class="fw-medium">{{ $value ?: 'Not provided' }}</div>
                     </div>
                     @endforeach
                 </div>
                 @else
-                <p class="text-muted mb-0">No data submitted.</p>
+                <div class="border rounded bg-light-subtle p-3 small text-muted">
+                    <div class="fw-semibold text-dark mb-1">{{ $title }} not submitted yet</div>
+                    <div>{{ $emptySectionGuidance[$title] ?? 'Capture this section before advancing the applicant to the next admission stage.' }}</div>
+                </div>
                 @endif
             </div>
         </div>
@@ -124,13 +147,19 @@
     {{-- DOCUMENTS TAB --}}
     <div class="tab-pane fade" id="documents">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="fw-semibold">Documents ({{ $applicant->documents->count() }})</span>
+            <div>
+                <span class="fw-semibold">Documents ({{ $applicant->documents->count() }})</span>
+                <div class="small text-muted">Rejected documents need a clear reason; verified documents support selection and enrollment readiness.</div>
+            </div>
             <a href="{{ route('admission.documents.queue') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-folder-check me-1"></i>View All Pending Docs
             </a>
         </div>
         @if($applicant->documents->isEmpty())
-            <div class="text-center text-muted py-5"><i class="bi bi-folder2-open fs-1"></i><p class="mt-2">No documents uploaded yet.</p></div>
+            <div class="border rounded bg-light-subtle p-3 text-muted small">
+                <div class="fw-semibold text-dark mb-1">No applicant documents are uploaded yet</div>
+                <div>Ask the applicant to upload mandatory documents from the checklist, then return here to preview, verify, or reject with a clear reason.</div>
+            </div>
         @else
         <div class="row g-3">
             @foreach($applicant->documents as $doc)
@@ -142,8 +171,8 @@
                                 <div class="fw-semibold">{{ $doc->requiredDocument->name ?? $doc->original_name }}</div>
                                 <div class="small text-muted">
                                     <i class="bi {{ $doc->file_icon }} me-1"></i>
-                                    {{ $doc->original_name }} &bull; {{ $doc->formatted_file_size }}
-                                    @if($doc->uploaded_at) &bull; {{ $doc->uploaded_at->diffForHumans() }} @endif
+                                    {{ $doc->original_name }} - {{ $doc->formatted_file_size }}
+                                    @if($doc->uploaded_at) - {{ $doc->uploaded_at->diffForHumans() }} @endif
                                 </div>
                             </div>
                             {!! $doc->status_badge !!}
@@ -174,7 +203,7 @@
                                 data-bs-toggle="modal" data-bs-target="#rejectModal"
                                 data-doc-id="{{ $doc->id }}"
                                 data-doc-name="{{ $doc->requiredDocument->name ?? $doc->original_name }}"
-                                data-applicant="{{ $applicant->user->name ?? '—' }}">
+                                data-applicant="{{ $applicant->user->name ?? 'Applicant name missing' }}">
                                 <i class="bi bi-x-circle"></i> Reject
                             </button>
                             @endif
@@ -192,11 +221,17 @@
 
     {{-- COUNSELLING LOG TAB --}}
     <div class="tab-pane fade" id="counselling">
+        <div class="alert alert-light border small">
+            <strong>Counselling tab:</strong> log the outcome, next follow-up date, and useful notes so the next staff member understands the conversation history.
+        </div>
         <div class="row g-4">
             <div class="col-md-7">
                 <h6 class="fw-semibold mb-3">Interaction History</h6>
                 @if($applicant->counsellingLogs->isEmpty())
-                    <div class="text-muted">No interactions logged yet.</div>
+                    <div class="border rounded bg-light-subtle p-3 text-muted small">
+                        <div class="fw-semibold text-dark mb-1">No counselling interactions are logged yet</div>
+                        <div>Log the first call, email, WhatsApp, or walk-in outcome so the next staff member knows the applicant's interest, objection, and follow-up date.</div>
+                    </div>
                 @else
                 <div class="timeline">
                     @php
@@ -219,7 +254,7 @@
                                     </div>
                                     <p class="mb-1 small">{{ $log->notes }}</p>
                                     <div class="d-flex gap-3 text-muted" style="font-size:0.75rem">
-                                        <span>By: {{ $log->loggedBy->name ?? 'N/A' }}</span>
+                                        <span>By: {{ $log->loggedBy->name ?? 'Staff user not recorded' }}</span>
                                         <span>{{ $log->created_at->diffForHumans() }}</span>
                                         @if($log->duration_minutes)<span>{{ $log->duration_minutes }} min</span>@endif
                                         @if($log->next_followup_date)<span class="text-warning"><i class="bi bi-calendar2"></i> Follow-up: {{ $log->next_followup_date->format('d M Y') }}</span>@endif
@@ -241,10 +276,10 @@
                             <div class="mb-3">
                                 <label class="form-label small">Type</label>
                                 <select name="interaction_type" class="form-select form-select-sm" required>
-                                    <option value="call">📞 Call</option>
-                                    <option value="email">📧 Email</option>
-                                    <option value="whatsapp">💬 WhatsApp</option>
-                                    <option value="walk_in">🚶 Walk-in</option>
+                                    <option value="call">Call</option>
+                                    <option value="email">Email</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="walk_in">Walk-in</option>
                                     <option value="other">Other</option>
                                 </select>
                             </div>
@@ -281,7 +316,10 @@
 
     <div class="tab-pane fade" id="assignment">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-semibold">Assignment Timeline</div>
+            <div class="card-header bg-transparent">
+                <div class="fw-semibold">Assignment Timeline</div>
+                <div class="small text-muted">Shows who owned the applicant, who delegated it, and why the handoff happened.</div>
+            </div>
             <div class="list-group list-group-flush">
                 @forelse($applicant->assignmentEvents as $event)
                     <div class="list-group-item">
@@ -300,13 +338,16 @@
         <div class="row g-4">
             <div class="col-md-8">
                 @if($applicant->teamNotes->isEmpty())
-                    <div class="text-muted">No internal notes yet.</div>
+                    <div class="border rounded bg-light-subtle p-3 text-muted small">
+                        <div class="fw-semibold text-dark mb-1">No internal team notes are recorded yet</div>
+                        <div>Add a concise staff-only note for exceptions, manager guidance, payment/document context, or a decision reason before changing sensitive statuses.</div>
+                    </div>
                 @else
                     @foreach($applicant->teamNotes->sortByDesc('created_at') as $note)
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-1">
-                                <span class="fw-semibold small">{{ $note->user->name ?? 'N/A' }}</span>
+                                <span class="fw-semibold small">{{ $note->user->name ?? 'Staff user not recorded' }}</span>
                                 <span class="text-muted small">{{ $note->created_at->diffForHumans() }}</span>
                             </div>
                             <p class="mb-0">{{ $note->note }}</p>
@@ -352,7 +393,7 @@
                         <label for="scheme_id" class="form-label fw-semibold">Scholarship Scheme <span class="text-danger">*</span></label>
                         <select name="scheme_id" id="scheme_id" class="form-select @error('scheme_id') is-invalid @enderror"
                                 onchange="prefillAmount(this)" required>
-                            <option value="">— Select Scheme —</option>
+                            <option value="">Select Scheme</option>
                             @foreach(\App\Models\ScholarshipScheme::where('is_active', true)
                                 ->where(function($q) use ($applicant) {
                                     $q->whereNull('program_id')->orWhere('program_id', $applicant->program_id);
@@ -362,17 +403,17 @@
                                         data-seats="{{ $scheme->seatsRemaining() }}">
                                     {{ $scheme->name }}
                                     ({{ $scheme->type_label }})
-                                    — Max ₹{{ number_format($scheme->max_amount, 0) }}
-                                    @if($scheme->available_seats) — {{ $scheme->seatsRemaining() }} seats left @endif
+                                    - Max Rs. {{ number_format($scheme->max_amount, 0) }}
+                                    @if($scheme->available_seats) - {{ $scheme->seatsRemaining() }} seats left @endif
                                 </option>
                             @endforeach
                         </select>
                         @error('scheme_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-3">
-                        <label for="awarded_amount" class="form-label fw-semibold">Award Amount (₹) <span class="text-danger">*</span></label>
+                        <label for="awarded_amount" class="form-label fw-semibold">Award Amount (Rs.) <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <span class="input-group-text">₹</span>
+                            <span class="input-group-text">Rs.</span>
                             <input type="number" name="awarded_amount" id="awarded_amount"
                                    class="form-control @error('awarded_amount') is-invalid @enderror"
                                    min="0" step="100" required>
@@ -383,7 +424,7 @@
                         <label for="notes" class="form-label fw-semibold">Notes</label>
                         <input type="text" name="notes" id="notes"
                                class="form-control @error('notes') is-invalid @enderror"
-                               placeholder="Optional notes…">
+                               placeholder="Optional notes">
                         @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-12">
@@ -408,7 +449,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th>Scheme</th>
-                            <th class="text-end">Amount (₹)</th>
+                            <th class="text-end">Amount (Rs.)</th>
                             <th>Status</th>
                             <th>Awarded By</th>
                             <th>Awarded On</th>
@@ -422,9 +463,9 @@
                                 <div class="fw-semibold">{{ $award->scheme->name }}</div>
                                 <div class="small text-muted font-monospace">{{ $award->scheme->scheme_code }}</div>
                             </td>
-                            <td class="text-end fw-bold text-success">₹{{ number_format($award->awarded_amount, 2) }}</td>
+                            <td class="text-end fw-bold text-success">Rs. {{ number_format($award->awarded_amount, 2) }}</td>
                             <td><span class="{{ $award->status_badge }}">{{ ucfirst($award->status) }}</span></td>
-                            <td class="small">{{ $award->awardedBy->name ?? '—' }}</td>
+                            <td class="small">{{ $award->awardedBy->name ?? 'Staff user not recorded' }}</td>
                             <td class="small text-muted">{{ $award->awarded_at?->format('d M Y') }}</td>
                             <td>
                                 @if($award->status === 'awarded')
@@ -519,6 +560,7 @@
 <div class="card border-0 shadow-sm mt-4">
     <div class="card-header bg-white border-bottom py-3">
         <h5 class="mb-0 fw-semibold"><i class="bi bi-command me-2"></i>v0.03 Operating Timeline</h5>
+        <div class="small text-muted mt-1">Read communications, calls, journey version, and quality flags together before changing status or enrollment readiness.</div>
     </div>
     <div class="card-body">
         <div class="row g-3">

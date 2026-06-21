@@ -36,6 +36,10 @@ class CommandCenterController extends Controller
     public function queue(Request $request, string $queue)
     {
         $this->policy->authorizeRead($request->user());
+        abort_unless(
+            collect($this->attention->queuesFor($request->user()))->contains('key', $queue),
+            404
+        );
 
         $queueData = $this->attention->queue($request->user(), $queue);
 

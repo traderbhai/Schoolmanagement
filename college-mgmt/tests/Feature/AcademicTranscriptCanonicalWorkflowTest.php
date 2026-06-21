@@ -108,6 +108,22 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             ->assertDontSee('5</td>', false);
     }
 
+    public function test_transcript_index_explains_empty_filtered_candidate_view(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['dean'])
+            ->get(route('academic.transcripts.index', ['search' => 'No Matching Transcript Candidate']))
+            ->assertOk()
+            ->assertSee('Visible filters')
+            ->assertSee('Search: No Matching Transcript Candidate')
+            ->assertSee('No transcript candidates match this view')
+            ->assertSee('Transcripts are prepared for active students only')
+            ->assertSee(route('academic.transcripts.index'), false)
+            ->assertSee(route('admin.students.index'), false)
+            ->assertDontSee('No students found.');
+    }
+
     public function test_academic_transcript_excludes_unpublished_draft_exam_results(): void
     {
         $fixture = $this->fixture();

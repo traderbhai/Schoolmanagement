@@ -296,6 +296,8 @@ class TeacherStudentListTest extends TestCase
             ->assertSee($student->user->name)
             ->assertSee('50%')
             ->assertSee('1/2')
+            ->assertSee('No attendance marked yet')
+            ->assertDontSee('No records')
             ->assertSee(route('teacher.students.index'), false)
             ->assertSee(route('notifications.index'), false);
 

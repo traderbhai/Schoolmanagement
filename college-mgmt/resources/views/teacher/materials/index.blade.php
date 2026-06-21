@@ -90,9 +90,10 @@
             @if($materials->isEmpty())
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
-                    No materials found.
+                    <div class="fw-semibold text-dark mb-1">No study materials match this view yet</div>
+                    <div class="small mb-2">Upload notes, slides, readings, or links for your assigned subject, or clear filters if you expected existing materials.</div>
                     @if($canManageMaterials)
-                        <a href="{{ route('teacher.materials.create') }}">Upload the first one.</a>
+                        <a href="{{ route('teacher.materials.create') }}" class="btn btn-sm btn-outline-primary">Upload material</a>
                     @endif
                 </div>
             @else

@@ -14,9 +14,14 @@
 
     @if($internships->isEmpty())
     <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5 text-muted">
-            <i class="bi bi-building fs-1 d-block mb-2"></i>
-            No internship records found. Internships are assigned by the placement cell.
+        <div class="card-body text-center py-5">
+            <i class="bi bi-building fs-1 d-block mb-2 text-muted"></i>
+            <div class="fw-semibold text-dark mb-1">No internship records are linked to your profile yet</div>
+            <div class="text-muted small mx-auto" style="max-width:640px">
+                CMC adds internships, industrial training, and live projects after the company,
+                role, dates, supervisor, and approval are confirmed. Once added, this page will
+                show current status, duration, stipend, supervisor contact, completion feedback, and rating.
+            </div>
         </div>
     </div>
     @else

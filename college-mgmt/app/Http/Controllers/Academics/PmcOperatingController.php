@@ -65,6 +65,11 @@ class PmcOperatingController extends Controller
         return $this->section($request, 'curriculum-readiness');
     }
 
+    public function programs(Request $request)
+    {
+        return $this->section($request, 'programs');
+    }
+
     public function facultyAllocation(Request $request)
     {
         return $this->section($request, 'faculty-allocation');

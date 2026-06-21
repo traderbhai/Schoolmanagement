@@ -82,6 +82,7 @@ class AcademicOperatingKpiDrilldownConsistencyTest extends TestCase
 
         $cases = [
             ['kpi' => 'programs', 'section' => 'portfolio', 'metric' => 'active_programs', 'route' => 'academics.program-leadership.portfolio'],
+            ['kpi' => 'active_students', 'section' => 'student-success', 'metric' => 'active_students', 'route' => 'academics.program-leadership.student-success'],
             ['kpi' => 'delivery_gaps', 'section' => 'course-delivery', 'metric' => 'delivery_gaps', 'route' => 'academics.program-leadership.course-delivery'],
             ['kpi' => 'student_risk', 'section' => 'student-success', 'metric' => 'student_risk', 'route' => 'academics.program-leadership.student-success'],
         ];
@@ -102,8 +103,8 @@ class AcademicOperatingKpiDrilldownConsistencyTest extends TestCase
             ->get(route('academics.program-leadership.index'))
             ->assertOk()
             ->assertSee('Active Students')
-            ->assertSee('Summary only')
-            ->assertDontSee(route('academics.program-leadership.student-success', ['metric' => 'active_students']), false);
+            ->assertSee(route('academics.program-leadership.student-success', ['metric' => 'active_students']), false)
+            ->assertDontSee('Summary only');
     }
 
     public function test_course_delivery_dashboard_kpis_match_filtered_drilldowns(): void

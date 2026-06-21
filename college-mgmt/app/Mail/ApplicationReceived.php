@@ -19,8 +19,8 @@ class ApplicationReceived extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $appNumber = $this->data['applicant']->application_number ?? 'N/A';
-        return new Envelope(subject: "Application Received — {$appNumber}");
+        $appNumber = $this->data['applicant']->application_number ?? 'application number pending';
+        return new Envelope(subject: "Application Received - {$appNumber}");
     }
 
     public function content(): Content

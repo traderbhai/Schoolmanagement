@@ -16,6 +16,22 @@
     <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Hostel operating sequence</div>
+            <div class="small text-muted">Use this page to monitor capacity first, then handle allocations, fees, outpasses, complaints, and block setup.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Check capacity</span>
+            <span class="badge text-bg-light">2. Review allocations</span>
+            <span class="badge text-bg-light">3. Check fees</span>
+            <span class="badge text-bg-light">4. Handle outpasses/complaints</span>
+            <span class="badge text-bg-light">5. Update blocks/rooms</span>
+        </div>
+    </div>
+</div>
+
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-3">

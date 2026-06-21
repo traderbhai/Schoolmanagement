@@ -90,7 +90,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-3">No fee demands recorded yet.</td>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark mb-1">No active fee demands have been raised yet</div>
+                        <div class="small">When the accounts office raises tuition, exam, hostel, or other dues for this child, each demand will appear here with due date, penalty, open balance, and payment status.</div>
+                    </td>
                 </tr>
                 @endforelse
                 </tbody>
@@ -167,7 +170,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-3">No payments recorded yet.</td>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark mb-1">No paid receipts are available yet</div>
+                        <div class="small">Verified payments will appear here after accounts confirms the receipt. Pending proofs are not shown as paid history until verification is complete.</div>
+                    </td>
                 </tr>
                 @endforelse
                 </tbody>

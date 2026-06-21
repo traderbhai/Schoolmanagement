@@ -2,15 +2,25 @@
 @section('title', 'Admission Workbench')
 @section('content')
 <div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div>
-            <h1 class="h3 mb-1">Admission Workbench</h1>
-            <div class="text-muted">Priority queues across leads, applicants, documents, payments, sessions, offers, and enrollment readiness.</div>
+    <x-ui.page-header
+        title="Admission Workbench"
+        subtitle="Operational queue board for leads, applicants, documents, payments, sessions, offers, and enrollment readiness."
+        action-label="Attention"
+        :action-route="route('admission.attention.index')"
+        action-icon="bi-exclamation-triangle"
+    />
+
+    <div class="alert alert-warning border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-4">
+        <div class="d-flex gap-3">
+            <div class="ui-kpi-tile-icon bg-white text-warning"><i class="bi bi-list-task"></i></div>
+            <div>
+                <div class="fw-bold">Workbench operating order</div>
+                <div class="small">1. Apply program/counsellor filters &nbsp; 2. Clear overdue follow-ups/unassigned leads &nbsp; 3. Verify documents/payments &nbsp; 4. Move enrollment-ready applicants.</div>
+            </div>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{{ route('admission.attention.index') }}" class="btn btn-outline-danger"><i class="bi bi-exclamation-triangle me-1"></i> Attention</a>
-            <a href="{{ route('admission.assignment-rules.index') }}" class="btn btn-outline-primary"><i class="bi bi-shuffle me-1"></i> Assignment Rules</a>
-            <a href="{{ route('admission.process-templates.index') }}" class="btn btn-outline-primary"><i class="bi bi-diagram-3 me-1"></i> Process Templates</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('admission.assignment-rules.index') }}" class="btn btn-outline-warning btn-sm">Assignment Rules</a>
+            <a href="{{ route('admission.process-templates.index') }}" class="btn btn-outline-warning btn-sm">Process Templates</a>
         </div>
     </div>
 
@@ -74,7 +84,7 @@
 
     @isset($attentionQueues)
     <div class="card mb-4">
-        <div class="card-header fw-semibold">Immediate Attention</div>
+        <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Immediate Attention</span><span class="small text-muted">Each card opens the queue that caused the count</span></div>
         <div class="card-body">
             <div class="row g-3">
                 @foreach($attentionQueues as $queueName => $items)
@@ -118,7 +128,7 @@
     <div class="row g-4">
         <div class="col-xl-6">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Hot Leads And Assignment</div>
+            <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Hot Leads And Assignment</span><span class="small text-muted">Open, assign, or set next action</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead><tr><th>Lead</th><th>Program</th><th>Owner</th><th>Next Action</th><th></th></tr></thead>
@@ -145,7 +155,7 @@
 
         <div class="col-xl-6">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Enrollment-Ready Applicants</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Enrollment-Ready Applicants</span><span class="small text-muted">Verify blockers before enrolling</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead><tr><th>Applicant</th><th>Program</th><th>Priority</th><th>Next Action</th><th></th></tr></thead>
@@ -172,7 +182,7 @@
 
         <div class="col-xl-4">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Document Queue</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Document Queue</span><span class="small text-muted">Preview and verify</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($pendingDocuments->take(8) as $document)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.documents.preview', $document) }}">
@@ -188,7 +198,7 @@
 
         <div class="col-xl-4">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Payment Queue</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Payment Queue</span><span class="small text-muted">Verify proof or gateway state</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($pendingPayments->take(8) as $payment)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.applicants.payments', $payment->applicant) }}">
@@ -204,7 +214,7 @@
 
         <div class="col-xl-4">
             <div class="card h-100">
-                <div class="card-header fw-semibold">Calendar And Offer Risk</div>
+                <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Calendar And Offer Risk</span><span class="small text-muted">Sessions today and expiring offers</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($sessionsToday as $session)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.sessions.show', $session) }}">

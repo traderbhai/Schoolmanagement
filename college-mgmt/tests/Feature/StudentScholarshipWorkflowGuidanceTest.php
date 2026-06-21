@@ -126,6 +126,23 @@ class StudentScholarshipWorkflowGuidanceTest extends TestCase
         ]);
     }
 
+    public function test_student_scholarship_empty_states_explain_tracking_and_scheme_publication(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.scholarships.index'))
+            ->assertOk()
+            ->assertSee('No scholarship applications submitted yet')
+            ->assertSee('Submitted applications will appear here with')
+            ->assertSee('pending, shortlisted, approved, rejected, or disbursed status')
+            ->assertSee('No active scholarships are open for your program right now')
+            ->assertSee('Scholarship schemes appear here only after the office publishes an active scheme')
+            ->assertSee('program, CGPA')
+            ->assertSee('guardian income, and required proof documents are up to date')
+            ->assertDontSee('No active scholarships at this time.');
+    }
+
     public function test_student_cannot_apply_to_another_programs_scheme(): void
     {
         $student = $this->student(Program::factory()->create());

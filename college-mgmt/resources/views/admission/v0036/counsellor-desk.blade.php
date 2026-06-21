@@ -14,9 +14,27 @@
 
 @section('content')
 <div class="desk">
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div><h3 class="fw-bold mb-1">Counsellor Operating Desk</h3><div class="text-muted small">My Day queues, applicant blockers, conversation timeline, and playbooks.</div></div>
-    <div class="d-flex flex-wrap gap-2"><a href="{{ route('admission.call-queue.index') }}" class="btn btn-primary btn-sm">Call Queue</a><a href="{{ route('admission.counsellor-performance.index') }}" class="btn btn-outline-success btn-sm">Performance</a><a href="{{ route('admission.script-compliance.index') }}" class="btn btn-outline-dark btn-sm">Scripts</a><a href="{{ route('admission.objection-analytics.index') }}" class="btn btn-outline-warning btn-sm">Objections</a><a href="{{ route('admission.parent-journeys.index') }}" class="btn btn-outline-info btn-sm">Parents</a><a href="{{ route('admission.counsellor-playbooks.index') }}" class="btn btn-outline-primary btn-sm">Playbooks</a></div>
+<x-ui.page-header
+    title="Counsellor Operating Desk"
+    subtitle="Start with the highest-priority call, clear applicant blockers, then close reminders and parent follow-ups."
+    action-label="Start Calling"
+    :action-route="route('admission.calling-desk.index')"
+    action-icon="bi-telephone-outbound"
+/>
+
+<div class="alert alert-primary border-0 shadow-sm d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 py-3">
+    <div class="d-flex gap-3">
+        <div class="ui-kpi-tile-icon bg-white text-primary"><i class="bi bi-compass"></i></div>
+        <div>
+            <div class="fw-bold">Recommended workflow for today</div>
+            <div class="small">1. Start Calling &nbsp; 2. Resolve applicant blockers &nbsp; 3. Send due reminders &nbsp; 4. Use playbooks for objections and parents.</div>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ route('admission.calling-desk.index') }}" class="btn btn-primary btn-sm">Start Calling</a>
+        <a href="{{ route('admission.reminders.index') }}" class="btn btn-outline-primary btn-sm">Due Reminders</a>
+        <a href="{{ route('admission.counsellor-playbooks.index') }}" class="btn btn-outline-primary btn-sm">Playbooks</a>
+    </div>
 </div>
 
 @php
@@ -29,14 +47,14 @@
 @endphp
 <div class="row g-2 mb-3">
 @foreach($desk['stats'] as $label => $value)
-    <div class="col-6 col-lg-3"><a class="metric-link" href="{{ $statLinks[$label] ?? route('admission.counsellor-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body"><div class="d-flex justify-content-between"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="fs-4 fw-bold">{{ $value }}</div></div></div></a></div>
+    <div class="col-6 col-lg-3"><a class="metric-link" href="{{ $statLinks[$label] ?? route('admission.counsellor-desk.index') }}"><div class="card border-0 shadow-sm"><div class="card-body"><div class="d-flex justify-content-between"><div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $label)) }}</div><i class="bi bi-arrow-up-right small text-muted"></i></div><div class="fs-4 fw-bold">{{ $value }}</div><div class="small text-muted mt-1">Open matching work queue</div></div></div></a></div>
 @endforeach
 </div>
 
 <div class="row g-3">
     <div class="col-xl-7">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Next Best Calls</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Next Best Calls</span><span class="small text-muted">Call top to bottom</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['nextBestCalls'] as $lead)
                     <a class="list-group-item list-group-item-action d-flex justify-content-between gap-2" href="{{ route('admission.leads.show', $lead) }}">
@@ -50,7 +68,7 @@
         </div>
 
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Applicant Blockers</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Applicant Blockers</span><span class="small text-muted">Fix before enrollment</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['applicantBlockers'] as $applicant)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.applicants.show', $applicant) }}">
@@ -64,7 +82,7 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Assessment Follow-ups</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Assessment Follow-ups</span><span class="small text-muted">Confirm attendance and scores</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['assessmentFollowups'] as $assignment)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.assessment-control-room.index') }}">
@@ -80,7 +98,7 @@
 
     <div class="col-xl-5">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Due Reminders</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Due Reminders</span><span class="small text-muted">Queue messages, do not send manually</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['reminders'] as $reminder)
                     <div class="list-group-item d-flex justify-content-between gap-2">
@@ -94,7 +112,7 @@
         </div>
 
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent fw-bold">Conversation Timeline</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Conversation Timeline</span><span class="small text-muted">Recent calls, reminders, notes</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['timeline'] as $event)
                     <div class="list-group-item small"><i class="bi bi-{{ $event['icon'] }} me-1"></i><strong>{{ $event['title'] }}</strong><div class="text-muted">{{ Str::limit($event['body'], 90) }}</div><div class="text-muted">{{ optional($event['at'])->diffForHumans() }}</div></div>
@@ -105,7 +123,7 @@
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Playbooks</div>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Playbooks</span><span class="small text-muted">Use during objections</span></div>
             <div class="list-group list-group-flush">
                 @forelse($desk['playbooks'] as $playbook)
                     <div class="list-group-item">

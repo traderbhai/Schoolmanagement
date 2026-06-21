@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Enrollment Confirmation Letter — {{ $confirmation->enrollment_number }}</title>
+    <title>Enrollment Confirmation Letter - {{ $confirmation->enrollment_number }}</title>
     <style>
         body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; color: #222; margin: 40px; }
         .letterhead { text-align: center; border-bottom: 3px double #2c4a8f; padding-bottom: 15px; margin-bottom: 25px; }
@@ -22,7 +22,7 @@
 <body>
     <div class="letterhead">
         <h1>College Management System</h1>
-        <p>Admissions Office &bull; Accredited Institute of Management &bull; enrollment@college.edu</p>
+        <p>Admissions Office | Accredited Institute of Management | enrollment@college.edu</p>
     </div>
 
     <div class="title-row">
@@ -42,19 +42,19 @@
 
     <table class="details">
         <tr><th>Enrollment Number</th><td><strong>{{ $confirmation->enrollment_number }}</strong></td></tr>
-        <tr><th>Roll Number</th><td>{{ $confirmation->roll_number }}</td></tr>
-        <tr><th>Student Name</th><td>{{ $confirmation->student->user->name ?? ($confirmation->applicant->user->name ?? '—') }}</td></tr>
-        <tr><th>Email</th><td>{{ $confirmation->student->user->email ?? '—' }}</td></tr>
-        <tr><th>Program</th><td>{{ $confirmation->applicant->program->name ?? '—' }}</td></tr>
-        <tr><th>Batch</th><td>{{ $confirmation->batch->name ?? '—' }}</td></tr>
+        <tr><th>Roll Number</th><td>{{ $confirmation->roll_number ?: 'Roll number not assigned' }}</td></tr>
+        <tr><th>Student Name</th><td>{{ $confirmation->student->user->name ?? ($confirmation->applicant->user->name ?? 'Student name not linked') }}</td></tr>
+        <tr><th>Email</th><td>{{ $confirmation->student->user->email ?? 'Student email not linked' }}</td></tr>
+        <tr><th>Program</th><td>{{ $confirmation->applicant->program->name ?? 'Program not linked' }}</td></tr>
+        <tr><th>Batch</th><td>{{ $confirmation->batch->name ?? 'Batch not linked' }}</td></tr>
         <tr><th>Term / Semester</th><td>{{ $confirmation->term->name ?? 'Semester I' }}</td></tr>
-        <tr><th>Admission Date</th><td>{{ $confirmation->confirmed_at?->format('d F Y') ?? '—' }}</td></tr>
+        <tr><th>Admission Date</th><td>{{ $confirmation->confirmed_at?->format('d F Y') ?? 'Admission date pending' }}</td></tr>
         <tr><th>Application Number</th><td>{{ $confirmation->applicant->application_number }}</td></tr>
     </table>
 
     <p><strong>Fee Payment Summary</strong></p>
     <table class="details">
-        <tr><th>Total Verified Payments</th><td>₹ {{ number_format($confirmation->applicant->payments->where('status','verified')->sum('amount_paid'), 2) }}</td></tr>
+        <tr><th>Total Verified Payments</th><td>Rs. {{ number_format($confirmation->applicant->payments->where('status','verified')->sum('amount_paid'), 2) }}</td></tr>
     </table>
 
     @if($confirmation->notes)

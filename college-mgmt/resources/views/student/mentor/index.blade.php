@@ -9,7 +9,8 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5 text-muted">
             <i class="bi bi-person-badge fs-1 d-block mb-2"></i>
-            No mentor assigned yet. Contact your department for assignment.
+            <div class="fw-semibold text-dark mb-1">No faculty mentor is assigned yet</div>
+            <div class="small">Your department or program office assigns mentors. Until then, use your course pages, notices, or department office for academic support.</div>
         </div>
     </div>
     @else
@@ -52,7 +53,10 @@
                         <p class="mb-0 small">{!! nl2br(e($msg->message)) !!}</p>
                     </div>
                     @empty
-                    <p class="p-3 text-muted small mb-0">No messages yet. Start the conversation below.</p>
+                    <div class="p-3 text-muted small">
+                        <div class="fw-semibold text-dark mb-1">No mentor messages are recorded yet</div>
+                        <div>Start with a short update about attendance, course progress, blockers, or support you need.</div>
+                    </div>
                     @endforelse
                 </div>
                 <div class="card-footer">
@@ -117,7 +121,10 @@
                         @endif
                     </div>
                     @empty
-                    <div class="list-group-item text-muted small py-3 text-center">No meetings yet.</div>
+                    <div class="list-group-item text-muted small py-3 text-center">
+                        <div class="fw-semibold text-dark mb-1">No mentor meetings are scheduled or recorded yet</div>
+                        <div>Request a meeting when you need academic guidance, intervention support, or career/course advice.</div>
+                    </div>
                     @endforelse
                 </div>
                 @if($meetings->hasPages())

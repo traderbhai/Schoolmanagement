@@ -117,7 +117,7 @@ class RefundController extends Controller
             'reviewed_at'     => now(),
         ]);
 
-        return back()->with('success', 'Refund approved for ₹' . number_format($request->approved_amount, 2));
+        return back()->with('success', 'Refund approved for Rs. ' . number_format($request->approved_amount, 2));
     }
 
     // Reject a refund request

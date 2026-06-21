@@ -130,10 +130,14 @@ class AcademicProgramLeadershipService
         ];
     }
 
-    public function studentSuccess(User $user): array
+    public function studentSuccess(User $user, bool $includeActiveStudentRows = false): array
     {
         $programIds = $this->visibleProgramIds($user);
-        $studentIds = $this->applyProgramScope(Student::query(), $programIds)->pluck('id');
+        $activeStudents = $this->applyProgramScope(
+            Student::with(['user', 'program', 'batch'])->where('status', 'active'),
+            $programIds
+        )->orderBy('enrollment_number')->get();
+        $studentIds = $activeStudents->pluck('id');
 
         $attendanceRisk = Attendance::with('student.user')
             ->selectRaw('student_id, count(*) as exception_count')
@@ -163,12 +167,19 @@ class AcademicProgramLeadershipService
             'title' => 'Student Success',
             'description' => 'At-risk students, weak performance, leave reviews, mentor needs, and intervention queues.',
             'metrics' => [
+                'active_students' => $activeStudents->count(),
                 'attendance_risk' => $attendanceRisk->count(),
                 'weak_performance' => $weakPerformance->count(),
                 'pending_leaves' => $pendingLeaves->count(),
                 'mentor_gaps' => $this->applyProgramScope(Student::whereNull('mentor_id'), $programIds)->count(),
             ],
-            'items' => collect($attendanceRisk->map(fn ($row) => [
+            'items' => collect($includeActiveStudentRows ? $activeStudents->map(fn (Student $student) => [
+                'title' => $this->studentLabel($student, $student->id),
+                'subtitle' => trim(($student->program?->code ?? 'Program') . ' - ' . ($student->batch?->name ?? 'No batch') . ' - ' . ($student->enrollment_number ?? 'No enrollment')),
+                'status' => 'Active student',
+                'metric_keys' => ['active_students'],
+                'action' => route('academics.program-leadership.student-success', ['metric' => 'active_students', 'student_id' => $student->id]),
+            ])->values() : [])->concat($attendanceRisk->map(fn ($row) => [
                 'title' => $this->studentLabel($row->student, $row->student_id),
                 'subtitle' => $row->exception_count . ' attendance exceptions',
                 'status' => 'Intervention due',
@@ -258,7 +269,7 @@ class AcademicProgramLeadershipService
         $data = match ($section) {
             'portfolio' => $this->programPortfolio($user),
             'course-delivery' => $this->courseDelivery($user),
-            'student-success' => $this->studentSuccess($user),
+            'student-success' => $this->studentSuccess($user, ($filters['metric'] ?? null) === 'active_students'),
             'quality-signals' => $this->qualitySignals($user),
             default => abort(404),
         };

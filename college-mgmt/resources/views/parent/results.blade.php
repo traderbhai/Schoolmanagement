@@ -68,7 +68,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-3">No results for this semester.</td>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <div class="fw-semibold text-dark mb-1">No published results are available for this semester yet</div>
+                        <div class="small">Results appear here only after the examination office publishes official marks for your child's enrolled subjects. Draft marks, internal review data, and unpublished exams are not shown to parents.</div>
+                    </td>
                 </tr>
                 @endforelse
                 </tbody>

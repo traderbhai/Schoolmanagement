@@ -102,7 +102,12 @@
             <div class="card-body p-0">
                 @if($followups->isEmpty())
                     <div class="text-center text-muted py-4">
-                        <i class="bi bi-check-circle fs-3"></i><br>No follow-ups due
+                        <i class="bi bi-check-circle fs-3"></i>
+                        <div class="fw-semibold text-dark mt-2">No follow-ups are due in the next 7 days</div>
+                        <div class="small px-3 mt-1">Follow-ups appear here after staff log a counselling interaction and set a next follow-up date for an applicant visible to your Admission role.</div>
+                        <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary mt-3">
+                            <i class="bi bi-people me-1"></i>Open applicants
+                        </a>
                     </div>
                 @else
                 <div class="list-group list-group-flush">
@@ -110,8 +115,8 @@
                     <div class="list-group-item px-3 py-2">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <div class="fw-semibold small">{{ $log->applicant->user->name ?? 'N/A' }}</div>
-                                <div class="text-muted" style="font-size:0.78rem">{{ $log->applicant->application_number ?? '' }}</div>
+                                <div class="fw-semibold small">{{ $log->applicant->user->name ?? 'Applicant name missing' }}</div>
+                                <div class="text-muted" style="font-size:0.78rem">{{ $log->applicant->application_number ?? 'Application number missing' }}</div>
                             </div>
                             <div class="text-end">
                                 <div class="badge bg-warning text-dark small">{{ $log->next_followup_date->format('d M') }}</div>
@@ -176,7 +181,13 @@
         <i class="bi bi-chat-dots me-1 text-info"></i> Recent Interactions
     </div>
     @if($recentLogs->isEmpty())
-        <div class="card-body text-center text-muted py-4">No interactions logged yet.</div>
+        <div class="card-body text-center text-muted py-4">
+            <div class="fw-semibold text-dark mb-1">No counselling interactions are logged yet</div>
+            <div class="small mb-3">Open an applicant record, log the first call, email, WhatsApp, or walk-in outcome, and set the next follow-up date so this dashboard starts showing live activity.</div>
+            <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-people me-1"></i>Open applicants
+            </a>
+        </div>
     @else
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -199,13 +210,13 @@
                 <tr>
                     <td>
                         <a href="{{ route('admission.applicants.show', $log->applicant_id) }}" class="text-decoration-none fw-semibold">
-                            {{ $log->applicant->user->name ?? 'N/A' }}
+                            {{ $log->applicant->user->name ?? 'Applicant name missing' }}
                         </a>
                     </td>
                     <td><i class="bi bi-{{ $typeIcons[$log->interaction_type] ?? 'chat' }} me-1"></i>{{ ucfirst(str_replace('_',' ',$log->interaction_type)) }}</td>
                     <td><span class="badge bg-{{ $outcomeColors[$log->outcome] ?? 'secondary' }}">{{ ucfirst(str_replace('_',' ',$log->outcome)) }}</span></td>
-                    <td class="text-truncate" style="max-width:200px">{{ $log->notes }}</td>
-                    <td class="small">{{ $log->loggedBy->name ?? 'N/A' }}</td>
+                    <td class="text-truncate" style="max-width:200px">{{ $log->notes ?: 'No notes recorded' }}</td>
+                    <td class="small">{{ $log->loggedBy->name ?? 'Staff user missing' }}</td>
                     <td class="small text-muted">{{ $log->created_at->diffForHumans() }}</td>
                 </tr>
                 @endforeach

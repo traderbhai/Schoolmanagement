@@ -3,6 +3,17 @@
 @section('content')
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-start gap-2 mb-3"><div><h1 class="h4 mb-1">{{ $title }}</h1><div class="small text-muted">{{ $description }}</div></div>@include('academics.pmc.v004.partials.nav')</div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">PMC record workflow</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Filter scope</span>
+            <span class="badge text-bg-light border">2. Review open/critical/overdue</span>
+            <span class="badge text-bg-light border">3. Create action for blocker</span>
+            <span class="badge text-bg-light border">4. Update owner and evidence</span>
+            <span class="badge text-bg-light border">5. Export current view</span>
+        </div>
+        <div class="text-muted mt-2">Use this list as the source-backed operating register for the selected PMC workflow; keep filters visible before making decisions.</div>
+    </div>
     @php
         $summaryLinks = [
             'Total' => url()->current(),
@@ -18,7 +29,7 @@
         <div class="row g-3 mb-3">
             <div class="col-xl-8">
                 <div class="card shadow-sm">
-                    <div class="card-header py-2 d-flex justify-content-between align-items-center"><span class="fw-semibold">PMC Planning Cycle Control</span><span class="badge text-bg-warning">{{ $readinessBlockers ?? 0 }} readiness blockers</span></div>
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center"><div><span class="fw-semibold">PMC Planning Cycle Control</span><div class="small text-muted">Move plans through review only after readiness evidence and blockers are clear.</div></div><span class="badge text-bg-warning">{{ $readinessBlockers ?? 0 }} readiness blockers</span></div>
                     <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Plan</th><th>Scope</th><th>Status</th><th>Ready</th><th>Decision</th></tr></thead><tbody>
                         @forelse($planningCycles as $cycle)
                             <tr>
@@ -37,7 +48,7 @@
             </div>
             <div class="col-xl-4">
                 <form method="POST" action="{{ route('academics.pmc.planning.store') }}" class="card shadow-sm h-100">@csrf
-                    <div class="card-header py-2 fw-semibold">Create Planning Cycle</div>
+                    <div class="card-header py-2"><div class="fw-semibold">Create Planning Cycle</div><div class="small text-muted">Start a plan for annual, semester, term, elective, assessment, or resource readiness work.</div></div>
                     <div class="card-body vstack gap-2">
                         <input class="form-control form-control-sm" name="title" placeholder="Annual / semester / term plan title" required>
                         <select class="form-select form-select-sm" name="cycle_type"><option value="annual_plan">Annual Plan</option><option value="semester_readiness">Semester Readiness</option><option value="program_term_plan">Program-Term Execution</option><option value="academic_calendar">Academic Calendar</option><option value="elective_plan">Elective Plan</option><option value="assessment_calendar">Assessment Calendar</option><option value="resource_readiness">Resource Readiness</option></select>
@@ -54,7 +65,7 @@
     @endif
     @if(!empty($readinessItems))
         <div class="card shadow-sm mb-3">
-            <div class="card-header py-2 fw-semibold">Semester Readiness Checklist</div>
+            <div class="card-header py-2"><div class="fw-semibold">Semester Readiness Checklist</div><div class="small text-muted">Blockers should become owned work items before publication or Dean escalation.</div></div>
             <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Readiness Item</th><th>Owner</th><th>Status</th><th>Completion</th><th>Blocker Action</th></tr></thead><tbody>
                 @foreach($readinessItems as $item)
                     <tr>

@@ -16,6 +16,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ViewErrorBag;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -38,7 +40,69 @@ class OfferLetterTest extends TestCase
         $officer->assignRole('admission_officer');
 
         $response = $this->actingAs($officer)->get(route('admission.offer-letters.index', $program));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500])); // 500 due to Vite, but shouldn't be 403
+        $response->assertOk()
+            ->assertSee('Offer Letters')
+            ->assertSee($program->name)
+            ->assertSee('Generate Offer Letters')
+            ->assertSee('Total Offers')
+            ->assertSee('No offer letters match the current program or filters.')
+            ->assertSee('Generate offers from selected merit-list applicants')
+            ->assertSee('Open Merit List')
+            ->assertDontSee('No offer letters found.')
+            ->assertDontSee('Offer Letters —', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Whoops', false);
+    }
+
+    public function test_staff_offer_letter_detail_uses_readable_missing_data_labels(): void
+    {
+        $officer = User::factory()->create(['password' => Hash::make('password')]);
+        $officer->assignRole('admission_officer');
+        $this->actingAs($officer);
+        View::share('errors', new ViewErrorBag);
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $applicant = Applicant::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+        ]);
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(7)->toDateString(),
+            'issued_by' => null,
+            'issued_at' => now(),
+        ]);
+
+        $offer->load(['applicant.user', 'program', 'batch', 'issuedBy']);
+        $offer->applicant->setRelation('user', null);
+        $offer->applicant->application_number = null;
+        $offer->applicant->applied_at = null;
+        $offer->issued_at = null;
+        $offer->acceptance_deadline = null;
+
+        $html = view('admission.offer-letters.show', [
+            'offerLetter' => $offer,
+            'locked' => false,
+        ])->render();
+
+        $this->assertStringContainsString($program->name, $html);
+        $this->assertStringContainsString($batch->name, $html);
+        $this->assertStringContainsString('Issuing staff not recorded', $html);
+        $this->assertStringContainsString('Issue time not recorded', $html);
+        $this->assertStringContainsString('Applicant name not recorded', $html);
+        $this->assertStringContainsString('Email not recorded', $html);
+        $this->assertStringContainsString('Application number pending', $html);
+        $this->assertStringContainsString('Application date not recorded', $html);
+        $this->assertStringContainsString('Acceptance deadline not published', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('â', $html);
+        $this->assertStringNotContainsString('Ã', $html);
+        $this->assertStringNotContainsString('Â', $html);
     }
 
     public function test_non_officer_cannot_access_offer_letters(): void
@@ -638,8 +702,63 @@ class OfferLetterTest extends TestCase
         ]);
 
         $response = $this->actingAs($applicantUser)->get(route('applicant.offer-letters.index'));
-        // 200 or 500 (view issue), but not 403
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk()
+            ->assertSee('My Offer Letters')
+            ->assertSee($program->name)
+            ->assertSee('Offer Number')
+            ->assertSee('Download PDF')
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Whoops', false);
+    }
+
+    public function test_applicant_offer_detail_uses_plain_text_response_guidance(): void
+    {
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'selected',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => User::factory()->create()->id,
+        ]);
+
+        $pendingResponse = $this->actingAs($applicantUser)
+            ->get(route('applicant.offer-letters.show', $offer))
+            ->assertOk()
+            ->assertSee('Accept Offer')
+            ->assertSee('Decline Offer')
+            ->assertSee('Important:')
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+        $this->assertStringNotContainsString("\u{2713}", $pendingResponse->getContent());
+        $this->assertStringNotContainsString("\u{2717}", $pendingResponse->getContent());
+        $this->assertStringNotContainsString("\u{26A0}", $pendingResponse->getContent());
+        $this->assertStringNotContainsString("\xC3\xA2", $pendingResponse->getContent());
+
+        $offer->update([
+            'status' => 'accepted',
+            'accepted_at' => now(),
+        ]);
+
+        $acceptedResponse = $this->actingAs($applicantUser)
+            ->get(route('applicant.offer-letters.show', $offer))
+            ->assertOk()
+            ->assertSee('Offer Accepted');
+        $this->assertStringNotContainsString("\u{2713}", $acceptedResponse->getContent());
+        $this->assertStringNotContainsString("\xC3\xA2", $acceptedResponse->getContent());
     }
 
     public function test_offer_letter_pdf_download(): void
@@ -666,7 +785,8 @@ class OfferLetterTest extends TestCase
         ]);
 
         $response = $this->actingAs($applicantUser)->get(route('applicant.offer-letters.pdf', $offer));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $response->headers->get('content-type'));
     }
 
     public function test_admin_can_download_offer_letter_pdf(): void
@@ -694,7 +814,8 @@ class OfferLetterTest extends TestCase
         ]);
 
         $response = $this->actingAs($officer)->get(route('admission.offer-letters.export', $offer));
-        $this->assertTrue(in_array($response->getStatusCode(), [200, 500]));
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $response->headers->get('content-type'));
     }
 
     public function test_staff_offer_letters_respect_assignment_scope(): void

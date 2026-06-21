@@ -103,7 +103,14 @@
                                     <td class="small text-muted">{{ $complaint->updated_at->format('d M Y') }}</td>
                                 </tr>
                                 @empty
-                                <tr><td colspan="4" class="text-center text-muted py-4">No hostel complaints submitted yet.</td></tr>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <div class="fw-semibold text-dark mb-1">No hostel complaints submitted yet</div>
+                                        <div class="small">
+                                            Raise a complaint for room, hygiene, food, security, or maintenance issues. The warden team will update status and resolution notes here.
+                                        </div>
+                                    </td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>

@@ -294,4 +294,18 @@ class InternshipWorkflowGuidanceTest extends TestCase
             ->assertSee('Strong performance.')
             ->assertSee('Rating: 5/5');
     }
+
+    public function test_student_internship_empty_state_explains_cmc_record_source(): void
+    {
+        $student = $this->student();
+
+        $this->actingAs($student->user)
+            ->get(route('student.internships.index'))
+            ->assertOk()
+            ->assertSee('No internship records are linked to your profile yet')
+            ->assertSee('CMC adds internships, industrial training, and live projects')
+            ->assertSee('role, dates, supervisor, and approval are confirmed')
+            ->assertSee('completion feedback, and rating')
+            ->assertDontSee('No internship records found. Internships are assigned by the placement cell.');
+    }
 }

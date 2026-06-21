@@ -607,6 +607,21 @@ class TransportWorkflowTest extends TestCase
             ->assertSee('Carry transport ID card.');
     }
 
+    public function test_student_transport_empty_states_explain_assignment_source_and_next_step(): void
+    {
+        $student = $this->student('Transport Empty State Student');
+
+        $this->actingAs($student->user)
+            ->get(route('student.transport.index'))
+            ->assertOk()
+            ->assertSee('No Active Transport Assignment')
+            ->assertSee('Contact the transport office if you need campus bus pickup, route allocation, stop changes, or fee clarification.')
+            ->assertSee('No transport history yet')
+            ->assertSee('after the transport office assigns you to a route, stop, and vehicle')
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     public function test_student_current_transport_hides_inactive_route_vehicle_or_inactive_profile(): void
     {
         [$route, $stop] = $this->routeWithStop();

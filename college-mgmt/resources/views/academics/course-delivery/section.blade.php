@@ -19,6 +19,22 @@
         </div>
     </div>
 
+    <div class="alert alert-light border shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">Delivery source-list workflow</div>
+                <div class="small text-muted">Use this list to move from teaching signal to source record, student/faculty follow-up, and closure evidence.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Filter subject/status</span>
+                <span class="badge text-bg-light">2. Review delivery signal</span>
+                <span class="badge text-bg-light">3. Open source workflow</span>
+                <span class="badge text-bg-light">4. Update follow-up or material</span>
+                <span class="badge text-bg-light">5. Export current view</span>
+            </div>
+        </div>
+    </div>
+
     @if(! empty($section['metrics']))
         <div class="row g-2 mb-3">
             @foreach($section['metrics'] as $label => $value)

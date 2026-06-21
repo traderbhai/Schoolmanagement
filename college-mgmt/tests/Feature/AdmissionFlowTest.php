@@ -145,7 +145,7 @@ class AdmissionFlowTest extends TestCase
 
     public function test_admission_officer_can_view_applicant_detail(): void
     {
-        [, $applicant] = $this->makeApplicant();
+        [, $applicant, $program] = $this->makeApplicant();
         $officer = $this->admissionOfficer();
         $this->actingAs($officer)->get(route('admission.applicants.show', $applicant))->assertStatus(200);
     }
@@ -281,11 +281,16 @@ class AdmissionFlowTest extends TestCase
             ->assertStatus(200)
             ->assertSee('<h1 class="h6 mb-0">Enroll Applicant</h1>', false)
             ->assertDontSee('<h1 class="h6 mb-0">Dashboard</h1>', false)
+            ->assertSee('Enrollment confirmation sequence')
+            ->assertSee('Trigger Academics handoff')
             ->assertSee('Enrollment is locked until every required check is complete')
             ->assertSee('Missing verified mandatory documents')
             ->assertSee('12th Marksheet')
             ->assertSee('Confirm Enrollment')
-            ->assertSee('disabled', false);
+            ->assertSee('disabled', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false);
 
         $this->actingAs($officer)
             ->post(route('admission.enrollment.store', $applicant), [
@@ -306,7 +311,12 @@ class AdmissionFlowTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Priya Sharma')
             ->assertSee('Ready for enrollment')
-            ->assertSee('Mandatory documents verified');
+            ->assertSee('Mandatory documents verified')
+            ->assertSee('No specialization')
+            ->assertSee('Term not selected')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false);
 
         $this->actingAs($officer)
             ->post(route('admission.enrollment.store', $applicant), [
@@ -339,6 +349,37 @@ class AdmissionFlowTest extends TestCase
             'model_id' => $confirmation->id,
         ]);
 
+        $this->actingAs($officer)
+            ->get(route('admission.enrollment.index'))
+            ->assertOk()
+            ->assertSee('Enrollment-to-student control sequence')
+            ->assertSee('Academics handoff reviewed')
+            ->assertSee('Current view:')
+            ->assertSee('No completed enrollments match this view')
+            ->assertSee('Open Selected Applicants')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.enrollment.index', ['program_id' => 999999]))
+            ->assertOk()
+            ->assertSee('No completed enrollments match this view')
+            ->assertSee('Open Selected Applicants')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false);
+
+        $this->actingAs($officer)
+            ->get(route('admission.enrollment.show', $confirmation))
+            ->assertOk()
+            ->assertSee('Enrollment handoff context')
+            ->assertSee('View Student Profile')
+            ->assertSee('Print Enrollment Letter')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false);
+
         Mail::assertQueued(EnrollmentConfirmed::class);
     }
 
@@ -362,6 +403,79 @@ class AdmissionFlowTest extends TestCase
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_application_pdf_template_uses_readable_missing_data_labels(): void
+    {
+        [, $applicant, $program] = $this->makeApplicant();
+        $applicant->update([
+            'status' => 'submitted',
+            'category' => 'general',
+            'sub_category' => null,
+            'entrance_exam_name' => 'CAT',
+            'entrance_exam_roll_number' => null,
+            'entrance_exam_score' => null,
+            'entrance_exam_rank' => null,
+            'entrance_exam_date' => null,
+            'personal_data' => ['name' => '', 'email' => 'readable-pdf@example.test'],
+            'academic_data' => ['qualification' => null],
+        ]);
+
+        $requiredDocument = RequiredDocument::create([
+            'program_id' => $program->id,
+            'name' => 'Placeholder Document',
+            'description' => 'Temporary required document for PDF rendering',
+            'is_mandatory' => true,
+            'accepted_formats' => 'pdf',
+            'max_size_kb' => 2048,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $document = ApplicantDocument::create([
+            'applicant_id' => $applicant->id,
+            'required_document_id' => $requiredDocument->id,
+            'file_path' => 'admission-documents/missing-name.pdf',
+            'original_name' => 'temporary-name.pdf',
+            'file_size_kb' => 25,
+            'status' => 'pending',
+            'uploaded_at' => null,
+        ]);
+
+        $applicant->load(['user', 'program', 'batch', 'documents.requiredDocument']);
+        $applicant->setRelation('program', null);
+        $applicant->setRelation('batch', null);
+        $document->original_name = null;
+        $document->setRelation('requiredDocument', null);
+        $applicant->setRelation('documents', collect([$document]));
+
+        $html = view('admission.application-pdf.template', [
+            'applicant' => $applicant,
+            'sections' => [
+                'Personal Details' => $applicant->personal_data ?? [],
+                'Academic Details' => $applicant->academic_data ?? [],
+                'Family Details' => [],
+                'Additional Info' => [],
+            ],
+            'collegeName' => 'Demo Institute',
+        ])->render();
+
+        $this->assertStringContainsString('Program not selected', $html);
+        $this->assertStringContainsString('Batch not selected', $html);
+        $this->assertStringContainsString('Sub-category not selected', $html);
+        $this->assertStringContainsString('Roll number not recorded', $html);
+        $this->assertStringContainsString('Score not recorded', $html);
+        $this->assertStringContainsString('Rank not recorded', $html);
+        $this->assertStringContainsString('Exam date not recorded', $html);
+        $this->assertStringContainsString('Document name not recorded', $html);
+        $this->assertStringContainsString('Upload time not recorded', $html);
+        $this->assertStringContainsString('Not provided', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('â', $html);
+        $this->assertStringNotContainsString('Ã', $html);
+        $this->assertStringNotContainsString('Â', $html);
+        $this->assertStringNotContainsString('&bull;', $html);
+        $this->assertStringNotContainsString('&mdash;', $html);
     }
 
     public function test_application_pdf_respects_assignment_scope(): void
@@ -541,6 +655,39 @@ class AdmissionFlowTest extends TestCase
         $this->assertSame('application/pdf', $response->headers->get('content-type'));
     }
 
+    public function test_call_letter_template_uses_readable_missing_schedule_labels(): void
+    {
+        [, $applicant] = $this->makeApplicant();
+        $applicant->application_number = 'APP-CALL-READABLE';
+        $applicant->setRelation('program', null);
+        $applicant->setRelation('batch', null);
+        $applicant->setRelation('user', User::factory()->make(['name' => 'Call Letter Applicant']));
+
+        $session = new SelectionSession([
+            'scheduled_date' => null,
+            'start_time' => null,
+            'end_time' => null,
+            'venue' => null,
+        ]);
+
+        $html = view('admission.call-letters.template', [
+            'applicant' => $applicant,
+            'session' => $session,
+            'collegeName' => 'Demo Institute',
+        ])->render();
+
+        $this->assertStringContainsString('Program not assigned', $html);
+        $this->assertStringContainsString('Batch not assigned', $html);
+        $this->assertStringContainsString('To be announced', $html);
+        $this->assertStringContainsString('Time not announced', $html);
+        $this->assertStringContainsString('Venue not announced', $html);
+        $this->assertStringContainsString('Reporting time not announced', $html);
+        $this->assertStringNotContainsString('&mdash;', $html);
+        $this->assertStringNotContainsString('&ndash;', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('â', $html);
+    }
+
     public function test_completed_enrollment_cannot_be_created_twice(): void
     {
         Mail::fake();
@@ -689,6 +836,15 @@ class AdmissionFlowTest extends TestCase
             ->assertRedirect();
 
         $confirmation = EnrollmentConfirmation::firstOrFail();
+
+        $letterHtml = view('admission.enrollment.letter', compact('confirmation'))->render();
+        $this->assertStringContainsString('Enrollment Confirmation Letter', $letterHtml);
+        $this->assertStringContainsString('Admissions Office | Accredited Institute of Management | enrollment@college.edu', $letterHtml);
+        $this->assertStringContainsString('Rs.', $letterHtml);
+        $this->assertStringContainsString('Enrollment letter verification.', $letterHtml);
+        $this->assertStringNotContainsString('N/A', $letterHtml);
+        $this->assertStringNotContainsString('Ã', $letterHtml);
+        $this->assertStringNotContainsString('â', $letterHtml);
 
         $response = $this->actingAs($officer)
             ->get(route('admission.enrollment.letter', $confirmation));

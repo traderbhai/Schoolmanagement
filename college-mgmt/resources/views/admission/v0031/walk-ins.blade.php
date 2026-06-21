@@ -3,10 +3,25 @@
 @section('title', 'Walk-ins')
 
 @section('content')
+@php
+    $nextDirection = fn (string $field) => ($sort === $field && $direction === 'asc') ? 'desc' : 'asc';
+    $sortIcon = fn (string $field) => $sort === $field ? ($direction === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
+    $sortUrl = fn (string $field) => request()->fullUrlWithQuery(['sort' => $field, 'direction' => $nextDirection($field)]);
+    $filterSummary = collect([
+        request('search') ? 'Search: '.request('search') : null,
+        request('status') ? 'Status: '.ucfirst(request('status')) : null,
+        request('program_id') ? 'Program filtered' : null,
+        'Sort: '.str_replace('_', ' ', $sort).' '.$direction,
+    ])->filter()->implode(' | ');
+@endphp
 <div class="admission-compact">
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div><h3 class="fw-bold mb-1">Walk-in And Campus Visit Desk</h3><div class="text-muted small">{{ $walkIns->total() }} visits after filters. Create walk-in leads, assign counsellors, and track visit conversion.</div></div>
+</div>
+<div class="alert alert-info small">
+    <strong>Walk-in workflow:</strong> record the campus visit, assign the counsellor, schedule the next follow-up, then convert to a lead when the enquiry is qualified.
+    <span class="d-block mt-1">Visible filter summary: {{ $filterSummary }}</span>
 </div>
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
@@ -24,14 +39,23 @@
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Visitor</th><th>Program</th><th>Counsellor</th><th>Visit</th><th>Status</th><th></th></tr></thead>
+                    <thead class="table-light">
+                        <tr>
+                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('visitor_name') }}">Visitor <i class="bi {{ $sortIcon('visitor_name') }}"></i></a></th>
+                            <th>Program</th>
+                            <th>Counsellor</th>
+                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('visited_at') }}">Visit <i class="bi {{ $sortIcon('visited_at') }}"></i></a></th>
+                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
+                            <th></th>
+                        </tr>
+                    </thead>
                     <tbody>
                     @foreach($walkIns as $walkIn)
                         <tr>
-                            <td><div class="fw-semibold">{{ $walkIn->visitor_name }}</div><div class="small text-muted">{{ $walkIn->visitor_phone }}</div></td>
-                            <td>{{ $walkIn->program->name ?? 'N/A' }}</td>
+                            <td><div class="fw-semibold">{{ $walkIn->visitor_name }}</div><div class="small text-muted">{{ $walkIn->visitor_phone ?: 'Phone not captured' }}</div></td>
+                            <td>{{ $walkIn->program->name ?? 'Program not selected' }}</td>
                             <td>{{ $walkIn->counsellor->name ?? 'Unassigned' }}</td>
-                            <td>{{ optional($walkIn->visited_at)->format('d M Y H:i') }}</td>
+                            <td>{{ optional($walkIn->visited_at)->format('d M Y H:i') ?? 'Visit time not recorded' }}</td>
                             <td><span class="badge bg-secondary">{{ ucfirst($walkIn->status) }}</span></td>
                             <td>
                                 @if(!$walkIn->lead_id)
@@ -42,6 +66,15 @@
                             </td>
                         </tr>
                     @endforeach
+                    @if($walkIns->isEmpty())
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No walk-in visits match the current scope or filters.</div>
+                                <div class="small">Clear filters, record a quick walk-in, or confirm that the visitor is assigned to a counsellor visible to your Admission role.</div>
+                                <a href="{{ route('admission.walk-ins.index') }}" class="btn btn-sm btn-outline-primary mt-2">Clear Filters</a>
+                            </td>
+                        </tr>
+                    @endif
                     </tbody>
                 </table>
             </div>
@@ -71,8 +104,18 @@
             </div>
         </div>
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent fw-bold">Conversion Report</div>
-            <div class="list-group list-group-flush">@foreach($report as $row)<div class="list-group-item d-flex justify-content-between"><span>{{ $row['counsellor'] }}</span><strong>{{ $row['conversion_pct'] }}%</strong></div>@endforeach</div>
+            <div class="card-header bg-transparent">
+                <div class="fw-bold">Conversion Report</div>
+                <div class="small text-muted">Uses the same Admission visibility scope and current program/search filters.</div>
+            </div>
+            <div class="list-group list-group-flush">
+                @foreach($report as $row)
+                    <div class="list-group-item d-flex justify-content-between"><span>{{ $row['counsellor'] }}</span><strong>{{ $row['conversion_pct'] }}%</strong></div>
+                @endforeach
+                @if($report->isEmpty())
+                    <div class="list-group-item text-muted small">No scoped walk-in visits are available for conversion reporting yet.</div>
+                @endif
+            </div>
         </div>
     </div>
 </div>

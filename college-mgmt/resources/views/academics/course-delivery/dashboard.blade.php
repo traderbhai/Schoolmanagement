@@ -24,6 +24,22 @@
         </div>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">Course delivery daily sequence</div>
+                <div class="small text-muted">Use this as the faculty delivery desk. Each KPI opens the scoped source list behind the count.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Confirm assigned course load</span>
+                <span class="badge text-bg-light">2. Review today sessions</span>
+                <span class="badge text-bg-light">3. Follow up attendance risk</span>
+                <span class="badge text-bg-light">4. Update engagement/material gaps</span>
+                <span class="badge text-bg-light">5. Close mentor actions</span>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-2 mb-3">
         @foreach([
             ['label' => 'Assigned Courses', 'value' => $kpis['assigned_courses'], 'route' => route('academics.course-delivery.course-load', ['metric' => 'assigned_subjects'])],

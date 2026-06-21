@@ -20,6 +20,17 @@
             <a class="btn btn-sm btn-outline-secondary" href="{{ route('admission.v039.exports','consent') }}">Export Consent</a>
         </div>
     </div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Safety gate sequence</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Capture consent</span>
+            <span class="badge text-bg-light border">2. Approve template</span>
+            <span class="badge text-bg-light border">3. Preview audience</span>
+            <span class="badge text-bg-light border">4. Block opt-outs and duplicates</span>
+            <span class="badge text-bg-light border">5. Delay quiet-hour sends</span>
+        </div>
+        <div class="text-muted mt-2">Use this page before campaigns, reminders, automations, assessment messages, offers, and parent journeys so no send path bypasses consent or approval rules.</div>
+    </div>
 
     <div class="row g-3">
         <div class="col-xl-4">

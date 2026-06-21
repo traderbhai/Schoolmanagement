@@ -934,6 +934,79 @@ class AdmissionConfigurationIntegrityTest extends TestCase
         $this->assertDatabaseHas('scoring_parameters', ['id' => $parameter->id]);
     }
 
+    public function test_selection_process_setup_pages_explain_scoring_and_merit_list_readiness(): void
+    {
+        $admin = $this->admin();
+        $program = Program::factory()->create([
+            'is_active' => true,
+            'name' => 'Selection UX Program',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.selection-process.steps', $program))
+            ->assertOk()
+            ->assertSeeText('Selection process setup sequence')
+            ->assertSeeText('Add scoring parameters')
+            ->assertSeeText('Generate merit list')
+            ->assertSeeText('No selection steps are configured for this program yet')
+            ->assertSeeText('Add assessment steps such as PI, GD, written test, or case analysis')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $step = SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'Personal Interview',
+            'type' => 'pi',
+            'step_order' => 1,
+            'max_score' => 100,
+            'weightage' => 60,
+            'instructions' => null,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.selection-process.steps', $program))
+            ->assertOk()
+            ->assertSeeText('Personal Interview')
+            ->assertSeeText('Evaluator instructions not published yet')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $this->actingAs($admin)
+            ->get(route('admission.selection-process.parameters', $step))
+            ->assertOk()
+            ->assertSeeText('Scoring parameter setup')
+            ->assertSeeText('No scoring parameters are defined for this step yet')
+            ->assertSeeText('Add rubric items such as communication, subject knowledge, analytical ability, confidence, or writing quality')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        ScoringParameter::create([
+            'selection_process_step_id' => $step->id,
+            'name' => 'Communication',
+            'max_score' => 50,
+            'description' => null,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.selection-process.parameters', $step))
+            ->assertOk()
+            ->assertSeeText('Communication')
+            ->assertSeeText('Description not provided')
+            ->assertSeeText('Parameter max scores sum to')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+    }
+
     public function test_admission_fee_installment_with_payment_history_cannot_be_deleted_or_financially_changed(): void
     {
         $admin = $this->admin();
@@ -1005,6 +1078,51 @@ class AdmissionConfigurationIntegrityTest extends TestCase
             ->assertSessionHasErrors('admission_fee_installment');
 
         $this->assertSame('15000.00', number_format((float) $installment->fresh()->amount, 2, '.', ''));
+    }
+
+    public function test_admission_fee_installment_index_explains_setup_and_uses_readable_financial_labels(): void
+    {
+        $admin = $this->admin();
+        $program = Program::factory()->create(['is_active' => true, 'name' => 'Installment UX Program']);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'name' => 'Installment UX Batch']);
+
+        $this->actingAs($admin)
+            ->get(route('admission.fee-installments.index', $program))
+            ->assertOk()
+            ->assertSeeText('Admission fee setup sequence')
+            ->assertSeeText('Add milestones')
+            ->assertSeeText('Applicants pay from their portal')
+            ->assertSeeText('No admission fee installments are configured for this scope')
+            ->assertSeeText('Add the registration/admission payment milestones that applicants must pay after selection or offer.')
+            ->assertSee(route('admission.fee-installments.create', $program), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        AdmissionFeeInstallment::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'name' => 'Admission Confirmation Fee',
+            'amount' => 12500,
+            'installment_number' => 1,
+            'due_date' => null,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admission.fee-installments.index', [$program, 'batch_id' => $batch->id]))
+            ->assertOk()
+            ->assertSeeText('Admission Confirmation Fee')
+            ->assertSeeText('Installment UX Batch')
+            ->assertSeeText('Amount (Rs.)')
+            ->assertSeeText('Rs. 12,500.00')
+            ->assertSeeText('Due date not published')
+            ->assertSeeText('Clear batch filter')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
     }
 
     public function test_admission_fee_installment_batch_must_belong_to_selected_program(): void

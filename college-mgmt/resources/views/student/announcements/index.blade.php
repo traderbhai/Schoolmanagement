@@ -13,7 +13,12 @@
     <h4 class="fw-semibold mb-4">Announcements — {{ $subject->name }}</h4>
 
     @if($announcements->isEmpty())
-    <div class="alert alert-info">No announcements for this course yet.</div>
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1">No course announcements are published yet</div>
+        <div class="small">
+            Faculty or the program office will post notices here when there is a class update, deadline, room change, or academic instruction for this course.
+        </div>
+    </div>
     @else
     <div class="d-flex flex-column gap-3">
         @foreach($announcements as $ann)

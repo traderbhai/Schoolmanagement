@@ -73,7 +73,7 @@
     <div class="card-body text-center py-5">
         <i class="bi bi-bus-front fs-1 text-muted d-block mb-2"></i>
         <h5>No Active Transport Assignment</h5>
-        <p class="text-muted mb-0">Contact the transport office if you need campus bus pickup or route details.</p>
+        <p class="text-muted mb-0">Contact the transport office if you need campus bus pickup, route allocation, stop changes, or fee clarification.</p>
     </div>
 </div>
 @endif
@@ -108,7 +108,14 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">No transport history yet.</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark mb-1">No transport history yet</div>
+                                <div class="small">
+                                    Active and past bus assignments will appear here after the transport office assigns you to a route, stop, and vehicle.
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

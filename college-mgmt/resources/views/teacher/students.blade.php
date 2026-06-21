@@ -95,7 +95,7 @@
                     <td class="text-muted small">{{ $s->department->name ?? '-' }}</td>
                     <td>
                         @if($s->teacher_attendance_percentage === null)
-                            <span class="text-muted small">No records</span>
+                            <span class="text-muted small">No attendance marked yet</span>
                         @else
                             @php
                                 $attendanceClass = $s->teacher_attendance_percentage >= 85

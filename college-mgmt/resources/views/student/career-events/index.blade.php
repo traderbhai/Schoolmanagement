@@ -9,8 +9,14 @@
     <h6 class="fw-semibold mb-3">Upcoming Events</h6>
     @if($upcoming->isEmpty())
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body text-center py-4 text-muted">
-            <i class="bi bi-calendar-event fs-1 d-block mb-2"></i>No upcoming career events.
+        <div class="card-body text-center py-4">
+            <i class="bi bi-calendar-event fs-1 d-block mb-2 text-muted"></i>
+            <div class="fw-semibold text-dark mb-1">No upcoming career events are published right now</div>
+            <div class="text-muted small mx-auto" style="max-width:620px">
+                CMC publishes workshops, mock interviews, company visits, and career fairs after the date,
+                registration deadline, and seats are confirmed. Check this page again later; your registered
+                and attended events will appear here once available.
+            </div>
         </div>
     </div>
     @else
@@ -47,7 +53,7 @@
                     <h6 class="fw-semibold mb-1">{{ $event->title }}</h6>
                     <div class="text-muted small mb-2">
                         <i class="bi bi-calendar3 me-1"></i>{{ \Carbon\Carbon::parse($event->event_date)->format('d M Y') }}
-                        @if($event->venue) · <i class="bi bi-geo-alt me-1"></i>{{ $event->venue }} @endif
+                        @if($event->venue) <span class="mx-1">|</span><i class="bi bi-geo-alt me-1"></i>{{ $event->venue }} @endif
                     </div>
                     @if($event->description)
                     <p class="small text-muted mb-1">{{ Str::limit($event->description, 120) }}</p>

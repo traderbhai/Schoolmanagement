@@ -1,4 +1,4 @@
-{{-- Reject Modal — pass $payment variable --}}
+{{-- Reject Modal - pass $payment variable --}}
 <div class="modal fade" id="rejectModal-{{ $payment->id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -11,10 +11,10 @@
                 <div class="modal-body">
                     <p class="text-muted small">
                         Rejecting payment from
-                        <strong>{{ $payment->applicant->user->name ?? 'N/A' }}</strong>
+                        <strong>{{ $payment->applicant->user->name ?? 'Applicant name missing' }}</strong>
                         ({{ $payment->applicant->application_number }}) for
-                        <strong>{{ $payment->installment->name ?? 'N/A' }}</strong> —
-                        ₹{{ number_format($payment->amount_paid, 0) }}.
+                        <strong>{{ $payment->installment->name ?? 'Installment not linked' }}</strong> -
+                        Rs. {{ number_format($payment->amount_paid, 0) }}.
                     </p>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>

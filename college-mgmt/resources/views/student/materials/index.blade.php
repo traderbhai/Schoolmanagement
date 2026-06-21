@@ -25,7 +25,12 @@
     @endphp
 
     @if($materials->isEmpty())
-        <div class="alert alert-info">No study materials uploaded yet for this course.</div>
+        <div class="alert alert-info">
+            <div class="fw-semibold mb-1">No published study materials are available yet</div>
+            <div class="small">
+                Notes, slides, readings, videos, and reference links will appear here after your faculty publishes them for this enrolled course.
+            </div>
+        </div>
     @else
         @foreach($materials as $type => $items)
         @php $meta = $typeLabels[$type] ?? ['label' => ucfirst($type), 'icon' => 'bi-file', 'color' => 'secondary']; @endphp

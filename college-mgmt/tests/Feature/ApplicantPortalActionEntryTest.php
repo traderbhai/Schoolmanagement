@@ -61,6 +61,37 @@ class ApplicantPortalActionEntryTest extends TestCase
             ->assertDontSee('Admission fee proof submission is closed because your application is in a final state.');
     }
 
+    public function test_applicant_fee_page_explains_missing_installments(): void
+    {
+        $applicant = $this->applicant('submitted');
+
+        $this->actingAs($applicant->user)
+            ->get(route('applicant.fees.index'))
+            ->assertOk()
+            ->assertSee('No admission fee installments are available yet')
+            ->assertSee('Admission or Accounts staff will publish program fee milestones')
+            ->assertSee('admission-fee proof submission opens only after you are shortlisted or selected')
+            ->assertSee(route('applicant.status'), false)
+            ->assertSee(route('applicant.registration-fee.show'), false)
+            ->assertSee(route('applicant.checklist'), false)
+            ->assertDontSee('No fee installments configured for your program yet.');
+    }
+
+    public function test_applicant_fee_page_explains_unpublished_due_date(): void
+    {
+        $applicant = $this->applicant('selected');
+        $this->installmentFor($applicant, ['due_date' => null]);
+
+        $this->actingAs($applicant->user)
+            ->get(route('applicant.fees.index'))
+            ->assertOk()
+            ->assertSee('Due date not published')
+            ->assertDontSee('Due: N/A')
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
     private function applicant(string $status): Applicant
     {
         Role::firstOrCreate(['name' => 'applicant', 'guard_name' => 'web']);
@@ -83,9 +114,9 @@ class ApplicantPortalActionEntryTest extends TestCase
         ]);
     }
 
-    private function installmentFor(Applicant $applicant): AdmissionFeeInstallment
+    private function installmentFor(Applicant $applicant, array $overrides = []): AdmissionFeeInstallment
     {
-        return AdmissionFeeInstallment::create([
+        return AdmissionFeeInstallment::create(array_merge([
             'program_id' => $applicant->program_id,
             'batch_id' => $applicant->batch_id,
             'name' => 'Admission Confirmation Fee',
@@ -93,6 +124,6 @@ class ApplicantPortalActionEntryTest extends TestCase
             'installment_number' => 1,
             'due_date' => now()->addDays(5)->toDateString(),
             'is_active' => true,
-        ]);
+        ], $overrides));
     }
 }

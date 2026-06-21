@@ -81,7 +81,13 @@
     @endif
 
     @if($upcoming->isEmpty() && $past->isEmpty())
-    <div class="alert alert-info">No assignments found.</div>
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1">No assignments are published for this view yet</div>
+        <div class="small">
+            Assignments appear here only after faculty publish them for your enrolled subjects.
+            Check your course hub for materials and announcements, or clear dashboard filters if you opened a filtered assignment queue.
+        </div>
+    </div>
     @endif
 </div>
 @endsection

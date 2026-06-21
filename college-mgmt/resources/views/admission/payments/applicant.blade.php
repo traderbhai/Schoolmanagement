@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Payment History — ' . ($applicant->user->name ?? 'Applicant'))
+@section('title', 'Payment History - ' . ($applicant->user->name ?? 'Applicant'))
 
 @section('content')
 <div class="mb-3">
@@ -10,8 +10,8 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h3 class="mb-0 fw-bold">{{ $applicant->user->name ?? 'N/A' }}</h3>
-        <small class="text-muted">{{ $applicant->application_number }} — {{ $applicant->program->name ?? '' }}</small>
+        <h3 class="mb-0 fw-bold">{{ $applicant->user->name ?? 'Applicant name missing' }}</h3>
+        <small class="text-muted">{{ $applicant->application_number ?? 'Application number missing' }} - {{ $applicant->program->name ?? 'Program not assigned' }}</small>
     </div>
     <div>
         <span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span>
@@ -23,7 +23,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center py-3">
-                <div class="fs-3 fw-bold text-dark">₹{{ number_format($installments->sum('amount'), 0) }}</div>
+                <div class="fs-3 fw-bold text-dark">Rs. {{ number_format($installments->sum('amount'), 0) }}</div>
                 <div class="small text-muted">Total Fee</div>
             </div>
         </div>
@@ -31,7 +31,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center py-3">
-                <div class="fs-3 fw-bold text-success">₹{{ number_format($applicant->total_paid, 0) }}</div>
+                <div class="fs-3 fw-bold text-success">Rs. {{ number_format($applicant->total_paid, 0) }}</div>
                 <div class="small text-muted">Paid & Verified</div>
             </div>
         </div>
@@ -39,7 +39,7 @@
     <div class="col-md-4">
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center py-3">
-                <div class="fs-3 fw-bold text-warning">₹{{ number_format($applicant->outstanding_amount, 0) }}</div>
+                <div class="fs-3 fw-bold text-warning">Rs. {{ number_format($applicant->outstanding_amount, 0) }}</div>
                 <div class="small text-muted">Outstanding</div>
             </div>
         </div>
@@ -54,10 +54,10 @@
         <div class="d-flex justify-content-between align-items-start">
             <div>
                 <h6 class="fw-bold mb-1">{{ $installment->name }}</h6>
-                <small class="text-muted">Due: {{ $installment->due_date?->format('d M Y') ?? 'N/A' }}</small>
+                <small class="text-muted">Due: {{ $installment->due_date?->format('d M Y') ?? 'Due date not set' }}</small>
             </div>
             <div class="text-end">
-                <div class="fw-bold fs-5">₹{{ number_format($installment->amount, 0) }}</div>
+                <div class="fw-bold fs-5">Rs. {{ number_format($installment->amount, 0) }}</div>
                 @if($payment)
                     <span class="{{ $payment->status_badge }}">{{ ucfirst($payment->status) }}</span>
                 @else
@@ -69,7 +69,7 @@
         @if($payment)
         <hr class="my-2">
         <div class="row g-2 small">
-            <div class="col-md-3"><span class="text-muted">Amount Paid:</span> <strong>₹{{ number_format($payment->amount_paid, 0) }}</strong></div>
+            <div class="col-md-3"><span class="text-muted">Amount Paid:</span> <strong>Rs. {{ number_format($payment->amount_paid, 0) }}</strong></div>
             <div class="col-md-3"><span class="text-muted">Mode:</span> <strong>{{ $payment->payment_mode_label }}</strong></div>
             <div class="col-md-3"><span class="text-muted">Date:</span> <strong>{{ $payment->payment_date->format('d M Y') }}</strong></div>
             <div class="col-md-3">
@@ -109,6 +109,6 @@
     </div>
 </div>
 @empty
-<div class="alert alert-info">No installments configured for this program.</div>
+<div class="alert alert-info">No active installments are configured for this applicant program and batch.</div>
 @endforelse
 @endsection

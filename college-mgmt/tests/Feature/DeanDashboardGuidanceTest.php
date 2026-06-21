@@ -125,6 +125,21 @@ class DeanDashboardGuidanceTest extends TestCase
             ->assertDontSee('10.0%');
     }
 
+    public function test_dean_academics_empty_top_performer_state_explains_published_result_requirement(): void
+    {
+        $user = $this->deanUser();
+        Program::factory()->create(['name' => 'No Result Program', 'is_active' => true]);
+
+        $this->actingAs($user)
+            ->get(route('dean.academics'))
+            ->assertStatus(200)
+            ->assertSee('No published result data is available yet')
+            ->assertSee('Publish official exam results before using the top-performer view')
+            ->assertDontSee('No data.')
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
     public function test_dean_attendance_views_ignore_draft_timetable_history(): void
     {
         $user = $this->deanUser();

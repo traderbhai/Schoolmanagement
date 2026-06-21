@@ -32,7 +32,7 @@
                         class="form-select @error($field['key']) is-invalid @enderror"
                         {{ $required ? 'required' : '' }}
                         {{ $isLocked ? 'disabled' : '' }}>
-                        <option value="">— Select —</option>
+                        <option value="">Select an option</option>
                         @foreach($field['options'] ?? [] as $opt)
                             <option value="{{ $opt }}" {{ $val === $opt ? 'selected' : '' }}>{{ $opt }}</option>
                         @endforeach

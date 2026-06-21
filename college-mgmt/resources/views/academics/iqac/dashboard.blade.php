@@ -24,6 +24,22 @@
         </div>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">IQAC quality operating sequence</div>
+                <div class="small text-muted">Use this as the quality control room. Each KPI opens the scoped source list behind the count.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Close OBE readiness gaps</span>
+                <span class="badge text-bg-light">2. Review CO/PO attainment misses</span>
+                <span class="badge text-bg-light">3. Track feedback closure</span>
+                <span class="badge text-bg-light">4. Collect audit evidence</span>
+                <span class="badge text-bg-light">5. Create corrective actions</span>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-2 mb-3">
         @foreach([
             ['label' => 'OBE Gaps', 'value' => $kpis['obe_gaps'], 'route' => route('academics.iqac.obe-readiness', ['metric' => 'obe_gaps'])],

@@ -76,9 +76,46 @@ class CmcDashboardGuidanceTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Review 1 open placement application')
             ->assertSee('Review Applications')
+            ->assertSee(route('cmc.drives', ['status' => 'active']), false)
+            ->assertSee(route('cmc.placements'), false)
+            ->assertSee(route('cmc.analytics'), false)
             ->assertSee('Graduate Engineer Trainee')
             ->assertSee('Ongoing')
             ->assertSee('0%');
+    }
+
+    public function test_cmc_active_drives_kpi_opens_matching_active_drive_list_and_export(): void
+    {
+        $company = $this->company(['name' => 'Active Recruiter']);
+        $upcoming = $this->drive($company, ['title' => 'Upcoming Active Drive', 'status' => 'upcoming']);
+        $ongoing = $this->drive($company, ['title' => 'Ongoing Active Drive', 'status' => 'ongoing']);
+        $completed = $this->drive($company, ['title' => 'Completed Historical Drive', 'status' => 'completed']);
+        $cmc = $this->cmcUser();
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.dashboard'))
+            ->assertOk()
+            ->assertSee('Active Drives')
+            ->assertSee('Open active drives')
+            ->assertSee(route('cmc.drives', ['status' => 'active']), false);
+
+        $this->actingAs($cmc)
+            ->get(route('cmc.drives', ['status' => 'active']))
+            ->assertOk()
+            ->assertSee('Active (upcoming or ongoing)')
+            ->assertSee('Showing 2 drive(s)')
+            ->assertSee($upcoming->title)
+            ->assertSee($ongoing->title)
+            ->assertDontSee($completed->title);
+
+        $csv = $this->actingAs($cmc)
+            ->get(route('cmc.drives.export', ['status' => 'active']))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('Upcoming Active Drive', $csv);
+        $this->assertStringContainsString('Ongoing Active Drive', $csv);
+        $this->assertStringNotContainsString('Completed Historical Drive', $csv);
     }
 
     public function test_cmc_can_move_application_to_interview_status(): void
@@ -282,6 +319,8 @@ class CmcDashboardGuidanceTest extends TestCase
         $this->actingAs($this->cmcUser())
             ->get(route('cmc.events.registrations', $event))
             ->assertStatus(200)
+            ->assertSee('Venue pending')
+            ->assertDontSee('TBD')
             ->assertSee(route('cmc.events.registrations.export', $event), false);
 
         $registrationsCsv = $this->actingAs($this->cmcUser())

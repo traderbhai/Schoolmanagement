@@ -22,7 +22,15 @@
     @endif
 
     @if($leaves->isEmpty())
-    <div class="alert alert-info">No leave applications yet.</div>
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1">No leave applications submitted yet</div>
+        <div class="small">
+            Apply before planned absence, medical leave, or urgent family leave. After submission, your request stays pending until the program office or academic reviewer approves or rejects it.
+        </div>
+        @if($canApplyForLeave)
+            <a href="{{ route('student.leave.create') }}" class="btn btn-sm btn-outline-primary mt-2">Apply for Leave</a>
+        @endif
+    </div>
     @else
     <div class="table-responsive">
         <table class="table table-hover align-middle">
@@ -53,7 +61,7 @@
                             <span class="badge bg-danger">Rejected</span>
                         @endif
                     </td>
-                    <td class="text-muted small">{{ $leave->review_remarks ?? '—' }}</td>
+                    <td class="text-muted small">{{ $leave->review_remarks ?? 'No reviewer remarks yet' }}</td>
                     <td class="text-muted small">{{ $leave->created_at->format('d M Y') }}</td>
                 </tr>
                 @endforeach

@@ -3,6 +3,22 @@
 @section('page-title','Teacher Dashboard')
 @section('content')
 
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Teacher daily sequence</div>
+            <div class="small text-muted">Use this dashboard to move from class readiness to attendance, assignments, materials, marks, and mentoring.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Review timetable</span>
+            <span class="badge text-bg-light">2. Mark attendance</span>
+            <span class="badge text-bg-light">3. Grade submissions</span>
+            <span class="badge text-bg-light">4. Upload materials</span>
+            <span class="badge text-bg-light">5. Follow up mentees</span>
+        </div>
+    </div>
+</div>
+
 {{-- Teacher Info Banner --}}
 <div class="card border-0 mb-4 overflow-hidden" style="background:linear-gradient(135deg,#0d9488,#0284c7);min-height:110px">
     <div class="card-body d-flex align-items-center justify-content-between py-4">
@@ -63,7 +79,7 @@
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-md-4">
-        <div class="kpi-card kpi-cyan">
+        <a href="{{ route('teacher.timetable.index') }}" class="kpi-card kpi-cyan d-block text-decoration-none text-white" aria-label="Open weekly load timetable">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="kpi-label">Weekly Load</div>
@@ -72,10 +88,10 @@
                 </div>
                 <div class="kpi-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-4">
-        <div class="kpi-card kpi-blue">
+        <a href="{{ route('teacher.timetable.index') }}" class="kpi-card kpi-blue d-block text-decoration-none text-white" aria-label="Open today's classes timetable">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="kpi-label">My Classes Today</div>
@@ -86,23 +102,23 @@
                 </div>
                 <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-md-4">
-        <div class="kpi-card kpi-amber">
+        <a href="{{ route('teacher.attendance.mark') }}" class="kpi-card kpi-amber d-block text-decoration-none text-white" aria-label="Open attendance marking">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="kpi-label">Mark Attendance</div>
                     <div class="kpi-value" style="font-size:1.3rem">Today's Classes</div>
                     <div class="kpi-trend">
-                        <a href="{{ route('teacher.attendance.mark') }}" class="text-white opacity-75 text-decoration-none" style="font-size:.78rem">
+                        <span class="text-white opacity-75" style="font-size:.78rem">
                             <i class="bi bi-arrow-right-circle me-1"></i>Go mark now
-                        </a>
+                        </span>
                     </div>
                 </div>
                 <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 

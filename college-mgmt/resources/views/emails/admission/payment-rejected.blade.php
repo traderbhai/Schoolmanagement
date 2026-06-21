@@ -13,9 +13,9 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0}
 <div class="container">
     <div class="header"><h1 style="margin:0;font-size:22px">Payment Not Verified</h1></div>
     <div class="body">
-        <p>Dear {{ $applicant->user->name }},</p>
-        <p>We were unable to verify your payment of <strong>₹{{ number_format($payment->amount_paid, 2) }}</strong> for <strong>{{ $installmentName }}</strong>.</p>
-        <div class="reason-box"><strong>Reason:</strong> {{ $reason }}</div>
+        <p>Dear {{ $applicant->user?->name ?? ($applicant->personal_data['name'] ?? 'Applicant') }},</p>
+        <p>We were unable to verify your payment of <strong>Rs. {{ number_format((float) $payment->amount_paid, 2) }}</strong> for <strong>{{ $installmentName ?? 'Admission fee installment' }}</strong>.</p>
+        <div class="reason-box"><strong>Reason:</strong> {{ $reason ?? 'Verification reason not provided' }}</div>
         <p>Please re-upload your payment proof in the applicant portal.</p>
         <a href="{{ config('app.url') }}/applicant/fees" class="btn">Upload Payment Proof</a>
         <p style="margin-top:16px;color:#6c757d;font-size:13px">Contact the admission office if you need assistance.</p>

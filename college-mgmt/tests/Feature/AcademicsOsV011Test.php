@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\ApprovalWorkflow;
 use App\Models\Attendance;
 use App\Models\Course;
+use App\Models\CourseOutcome;
 use App\Models\CurriculumChange;
 use App\Models\Department;
 use App\Models\Exam;
 use App\Models\ExamResult;
 use App\Models\Program;
+use App\Models\ProgramOutcome;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
@@ -125,6 +127,39 @@ class AcademicsOsV011Test extends TestCase
             ->assertSee('Curriculum changes pending')
             ->assertSee('Filtered Source List')
             ->assertSee('Add applied case lab');
+    }
+
+    public function test_attention_queue_empty_state_guides_staff_and_invalid_queue_is_blocked(): void
+    {
+        $this->academicFixture();
+        ProgramOutcome::query()->delete();
+        CourseOutcome::query()->delete();
+        Program::where('is_active', true)->get()->each(fn (Program $program) => ProgramOutcome::create([
+            'program_id' => $program->id,
+            'code' => 'PO1',
+            'description' => 'Program outcome coverage for empty-queue UX test.',
+            'category' => 'management',
+        ]));
+        Subject::where('is_active', true)->get()->each(fn (Subject $subject) => CourseOutcome::create([
+            'subject_id' => $subject->id,
+            'code' => 'CO1',
+            'description' => 'Course outcome coverage for empty-queue UX test.',
+            'bloom_level' => 'understand',
+        ]));
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+
+        $this->actingAs($dean)
+            ->get(route('academics.attention.queue', 'obe_mapping_gaps'))
+            ->assertOk()
+            ->assertSee('OBE mapping gaps')
+            ->assertSee('No open records for this queue')
+            ->assertSee('This means your current Academics scope has no unresolved items for')
+            ->assertSee('Review the Command Center for other branches')
+            ->assertDontSee('No records currently match this queue.');
+
+        $this->actingAs($dean)
+            ->get(route('academics.attention.queue', 'not_a_real_queue'))
+            ->assertNotFound();
     }
 
     public function test_attention_queues_show_people_names_instead_of_raw_ids(): void

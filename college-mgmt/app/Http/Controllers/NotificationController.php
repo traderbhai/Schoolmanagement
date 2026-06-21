@@ -13,8 +13,12 @@ class NotificationController extends Controller
         $notifications = auth()->user()->notifications()
             ->orderBy('created_at', 'desc')
             ->paginate(20);
+        $unreadCount = auth()->user()->notifications()
+            ->where('is_read', false)
+            ->count();
+        $layout = $this->layoutFor(auth()->user());
 
-        return view('notifications.index', compact('notifications'));
+        return view('notifications.index', compact('notifications', 'unreadCount', 'layout'));
     }
 
     public function show(Notification $notification)
@@ -25,7 +29,9 @@ class NotificationController extends Controller
             $notification->markAsRead();
         }
 
-        return view('notifications.show', compact('notification'));
+        $layout = $this->layoutFor(auth()->user());
+
+        return view('notifications.show', compact('notification', 'layout'));
     }
 
     public function markAsRead(Notification $notification)
@@ -62,5 +68,26 @@ class NotificationController extends Controller
             ->count();
 
         return response()->json(['unread_count' => $count]);
+    }
+
+    private function layoutFor($user): string
+    {
+        if ($user?->hasRole('student')) {
+            return 'layouts.student';
+        }
+
+        if ($user?->hasRole('teacher')) {
+            return 'layouts.teacher';
+        }
+
+        if ($user?->hasRole('parent')) {
+            return 'layouts.parent';
+        }
+
+        if ($user?->hasRole('applicant')) {
+            return 'layouts.applicant';
+        }
+
+        return 'layouts.admin';
     }
 }

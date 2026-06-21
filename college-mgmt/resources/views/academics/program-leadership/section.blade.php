@@ -19,6 +19,22 @@
         </div>
     </div>
 
+    <div class="alert alert-light border shadow-sm py-2 mb-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <div class="fw-semibold">Program source-list workflow</div>
+                <div class="small text-muted">Use this list to move from scoped program signal to source record, owner action, and report evidence.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+                <span class="badge text-bg-light">1. Filter program/status</span>
+                <span class="badge text-bg-light">2. Review risk or blocker</span>
+                <span class="badge text-bg-light">3. Open source workflow</span>
+                <span class="badge text-bg-light">4. Assign or escalate action</span>
+                <span class="badge text-bg-light">5. Export current view</span>
+            </div>
+        </div>
+    </div>
+
     @if(! empty($section['metrics']))
         <div class="row g-2 mb-3">
             @foreach($section['metrics'] as $label => $value)

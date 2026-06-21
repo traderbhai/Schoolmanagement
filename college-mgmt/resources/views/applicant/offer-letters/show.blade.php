@@ -131,12 +131,12 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <button class="btn btn-success btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptModal">
-                                    ✓ Accept Offer
+                                    Accept Offer
                                 </button>
                             </div>
                             <div class="col-md-6">
                                 <button class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#declineModal">
-                                    ✗ Decline Offer
+                                    Decline Offer
                                 </button>
                             </div>
                         </div>
@@ -187,7 +187,7 @@
                                     </div>
                                     <div class="alert alert-danger">
                                         <small>
-                                            <strong>⚠️ Warning:</strong> Declining this offer cannot be reversed. If there are other offers in your portal, you may be considered for other programs.
+                                            <strong>Important:</strong> Declining this offer cannot be reversed. If there are other offers in your portal, you may be considered for other programs.
                                         </small>
                                     </div>
                                 </div>
@@ -206,13 +206,13 @@
                 </div>
             @elseif($offerLetter->isAccepted())
                 <div class="alert alert-success">
-                    <h5>✓ Offer Accepted</h5>
+                    <h5>Offer Accepted</h5>
                     <p>Accepted on <strong>{{ $offerLetter->accepted_at->format('d M Y H:i') }}</strong></p>
                     <p>You can now proceed with your enrollment and fee payment. Check your status page for next steps.</p>
                 </div>
             @elseif($offerLetter->isDeclined())
                 <div class="alert alert-danger">
-                    <h5>✗ Offer Declined</h5>
+                    <h5>Offer Declined</h5>
                     <p>Declined on <strong>{{ $offerLetter->declined_at->format('d M Y H:i') }}</strong></p>
                     @if($offerLetter->declined_reason)
                         <p><strong>Reason:</strong> {{ $offerLetter->declined_reason }}</p>

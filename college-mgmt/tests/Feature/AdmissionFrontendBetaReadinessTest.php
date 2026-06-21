@@ -7,6 +7,7 @@ use App\Models\AdmissionPartner;
 use App\Models\AdmissionPayment;
 use App\Models\ApplicantDocument;
 use App\Models\Applicant;
+use App\Models\CounsellingLog;
 use App\Models\Lead;
 use App\Services\AdmissionKpiDrilldownService;
 use Database\Seeders\MasterDemoSeeder;
@@ -114,6 +115,187 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee('Department Hierarchy')
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+    }
+
+    public function test_admission_dashboard_recent_interactions_empty_state_guides_next_staff_action(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        CounsellingLog::query()->delete();
+
+        $this->actingAs($head)
+            ->get(route('admission.dashboard'))
+            ->assertOk()
+            ->assertSeeText('No follow-ups are due in the next 7 days')
+            ->assertSeeText('Follow-ups appear here after staff log a counselling interaction')
+            ->assertSeeText('No counselling interactions are logged yet')
+            ->assertSeeText('log the first call, email, WhatsApp, or walk-in outcome')
+            ->assertSeeText('Open applicants')
+            ->assertSee(route('admission.applicants.index'), false)
+            ->assertDontSeeText('No interactions logged yet.')
+            ->assertDontSeeText('No follow-ups due')
+            ->assertDontSee('N/A', false);
+    }
+
+    public function test_admission_dashboard_activity_panels_use_readable_fallbacks(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.dashboard'))
+            ->assertOk()
+            ->assertSee('Admission CRM Dashboard')
+            ->assertSee('Follow-ups Due (Next 7 Days)')
+            ->assertSee('Recent Interactions')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('₹', false);
+    }
+
+    public function test_admission_selection_session_detail_uses_readable_assessment_workflow_guidance(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        $seededSession = \App\Models\SelectionSession::where('session_name', 'PGDM Case Analysis Panel A')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.sessions.show', $seededSession))
+            ->assertOk()
+            ->assertSeeText('Assessment Panels')
+            ->assertSeeText('Assigned Candidates')
+            ->assertSeeText('10:00 - 12:00')
+            ->assertSeeText('Open Assessment Operations')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã¢', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false)
+            ->assertDontSeeText('No candidates assigned yet.');
+
+        $program = \App\Models\Program::firstOrFail();
+        $nextStepOrder = ((int) \App\Models\SelectionProcessStep::where('program_id', $program->id)->max('step_order')) + 1;
+        $step = \App\Models\SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'UX Empty Session Check',
+            'type' => 'pi',
+            'step_order' => $nextStepOrder,
+            'max_score' => 100,
+            'weightage' => 10,
+            'instructions' => 'Use this test-only step to verify empty session guidance.',
+            'is_active' => true,
+        ]);
+        $emptySession = \App\Models\SelectionSession::create([
+            'selection_process_step_id' => $step->id,
+            'program_id' => $program->id,
+            'session_name' => 'UX Empty Candidate Session',
+            'scheduled_date' => now()->addDays(3)->toDateString(),
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+            'status' => 'scheduled',
+            'created_by' => $head->id,
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.sessions.show', $emptySession))
+            ->assertOk()
+            ->assertSeeText('No candidates are assigned to this session yet')
+            ->assertSeeText('Assign shortlisted applicants before call letters, attendance, panel scoring, and assessment-day check-in can be used.')
+            ->assertSeeText('Coordinator not assigned')
+            ->assertSeeText('Unlimited')
+            ->assertSee(route('admission.applicants.index', ['status' => 'shortlisted']), false)
+            ->assertSee(route('admission.assessment-operations.index'), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã¢', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false)
+            ->assertDontSeeText('No candidates assigned yet.');
+    }
+
+    public function test_admission_scoring_pages_explain_attendance_and_scorecard_prerequisites(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $program = \App\Models\Program::firstOrFail();
+        $nextStepOrder = ((int) \App\Models\SelectionProcessStep::where('program_id', $program->id)->max('step_order')) + 1;
+        $step = \App\Models\SelectionProcessStep::create([
+            'program_id' => $program->id,
+            'name' => 'UX Score Sheet Empty Check',
+            'type' => 'pi',
+            'step_order' => $nextStepOrder,
+            'max_score' => 100,
+            'weightage' => 10,
+            'instructions' => 'Use this test-only step to verify score sheet guidance.',
+            'is_active' => true,
+        ]);
+        $session = \App\Models\SelectionSession::create([
+            'selection_process_step_id' => $step->id,
+            'program_id' => $program->id,
+            'session_name' => 'UX Empty Score Sheet Session',
+            'scheduled_date' => now()->addDays(3)->toDateString(),
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+            'status' => 'scheduled',
+            'created_by' => $head->id,
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.sessions.scores', $session))
+            ->assertOk()
+            ->assertSeeText('No present applicants are ready for scoring')
+            ->assertSeeText('Score entry opens after candidates are assigned to this session and marked Present')
+            ->assertSeeText('Venue not assigned')
+            ->assertSee(route('admission.sessions.show', $session), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã¢', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false)
+            ->assertDontSeeText('No present applicants to score. Mark attendance first.');
+
+        $applicantUser = User::create([
+            'name' => 'UX Scorecard Candidate',
+            'email' => 'ux.scorecard.candidate@example.test',
+            'password' => bcrypt('password'),
+            'role' => 'applicant',
+        ]);
+        $applicant = \App\Models\Applicant::create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'application_number' => 'UX-SCORECARD-EMPTY',
+            'status' => 'shortlisted',
+            'assigned_to' => $head->id,
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.applicants.scorecard', $applicant))
+            ->assertOk()
+            ->assertSeeText('No assessment scores are recorded for this applicant yet')
+            ->assertSeeText('Scores appear here after the applicant is assigned to a selection session, marked Present, and scored from the session score sheet.')
+            ->assertSee(route('admission.sessions.index'), false)
+            ->assertSee(route('admission.assessment-operations.index'), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Ã¢', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false)
+            ->assertDontSeeText('No scores recorded for this applicant yet.');
+    }
+
+    public function test_admission_pipeline_empty_stage_guides_staff_and_blocks_invalid_board_type(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.pipeline.index', ['object_type' => 'lead', 'program_id' => 999999]))
+            ->assertOk()
+            ->assertSeeText('Admission Pipeline')
+            ->assertSeeText('Scope: Leads visible to your Admission role and hierarchy.')
+            ->assertSeeText('No leads in this stage')
+            ->assertSeeText('Check the other stages or open the lead list for the full source view')
+            ->assertDontSeeText('No records.');
+
+        $this->actingAs($head)
+            ->get(route('admission.pipeline.index', ['object_type' => 'invalid']))
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('admission_pipeline_boards', [
+            'object_type' => 'invalid',
+        ]);
     }
 
     public function test_admission_handoff_sidebar_link_matches_policy_visibility(): void

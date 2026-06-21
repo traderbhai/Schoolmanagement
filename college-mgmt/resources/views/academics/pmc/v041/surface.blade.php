@@ -7,6 +7,17 @@
         <div><h1 class="h4 mb-1">{{ $title }}</h1><div class="small text-muted">{{ $description }}</div></div>
         @include('academics.pmc.v041.partials.nav')
     </div>
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">PMC timetable source workflow</div>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-light border">1. Filter program/batch/term</span>
+            <span class="badge text-bg-light border">2. Resolve diagnostics</span>
+            <span class="badge text-bg-light border">3. Update source records</span>
+            <span class="badge text-bg-light border">4. Recheck readiness</span>
+            <span class="badge text-bg-light border">5. Export or continue to generator</span>
+        </div>
+        <div class="text-muted mt-2">These pages are the source lists behind the timetable dashboard. Fix records here before generating, publishing, freezing, or notifying students and faculty.</div>
+    </div>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body py-2">

@@ -89,7 +89,16 @@
                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No records match the current PMC scope.</td></tr>
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-body">No PMC records match this view</div>
+                                <div class="small">
+                                    The current PMC scope and filters returned no records for
+                                    <span class="fw-semibold">{{ $section['title'] }}</span>.
+                                    Clear filters, check your assigned program/batch scope, or create/update the source workflow when a new blocker appears.
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

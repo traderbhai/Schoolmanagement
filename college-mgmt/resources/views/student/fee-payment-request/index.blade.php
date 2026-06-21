@@ -31,7 +31,23 @@
     @endif
 
     @if($requests->isEmpty())
-    <div class="alert alert-info">No payment submissions yet.</div>
+    <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="fw-semibold mb-1">No payment submissions yet.</div>
+            <div class="small mb-0">
+                Submitted payment proofs will appear here for accounts verification. If a fee demand is open, submit proof from this page; otherwise review Fee Status for current balances.
+            </div>
+        </div>
+        @if($canSubmitPaymentProof)
+            <a href="{{ route('student.fee-payment.create') }}" class="btn btn-sm btn-primary align-self-start align-self-md-center">
+                Submit Payment Proof
+            </a>
+        @else
+            <a href="{{ route('student.fees') }}" class="btn btn-sm btn-outline-primary align-self-start align-self-md-center">
+                Review Fee Status
+            </a>
+        @endif
+    </div>
     @else
     <div class="table-responsive">
         <table class="table table-hover align-middle">

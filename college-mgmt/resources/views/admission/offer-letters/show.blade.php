@@ -34,22 +34,22 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Program</h6>
-                    <p class="mb-0"><strong>{{ $offerLetter->program->name }}</strong></p>
+                    <p class="mb-0"><strong>{{ $offerLetter->program->name ?? 'Program not selected' }}</strong></p>
                 </div>
             </div>
 
             <div class="card mb-4">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Batch</h6>
-                    <p class="mb-0">{{ $offerLetter->batch->name }}</p>
+                    <p class="mb-0">{{ $offerLetter->batch->name ?? 'Batch not selected' }}</p>
                 </div>
             </div>
 
             <div class="card mb-4">
                 <div class="card-body">
                     <h6 class="card-title text-muted">Issued By</h6>
-                    <p class="mb-0">{{ $offerLetter->issuedBy?->name ?? 'N/A' }}</p>
-                    <small class="text-muted">{{ $offerLetter->issued_at->format('d M Y H:i') }}</small>
+                    <p class="mb-0">{{ $offerLetter->issuedBy?->name ?? 'Issuing staff not recorded' }}</p>
+                    <small class="text-muted">{{ $offerLetter->issued_at ? $offerLetter->issued_at->format('d M Y H:i') : 'Issue time not recorded' }}</small>
                 </div>
             </div>
         </div>
@@ -62,12 +62,12 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Name:</strong> {{ $offerLetter->applicant->user->name }}</p>
-                            <p><strong>Email:</strong> {{ $offerLetter->applicant->user->email }}</p>
+                            <p><strong>Name:</strong> {{ $offerLetter->applicant->user->name ?? 'Applicant name not recorded' }}</p>
+                            <p><strong>Email:</strong> {{ $offerLetter->applicant->user->email ?? 'Email not recorded' }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Application #:</strong> {{ $offerLetter->applicant->application_number }}</p>
-                            <p><strong>Applied At:</strong> {{ $offerLetter->applicant->applied_at->format('d M Y') }}</p>
+                            <p><strong>Application #:</strong> {{ $offerLetter->applicant->application_number ?? 'Application number pending' }}</p>
+                            <p><strong>Applied At:</strong> {{ $offerLetter->applicant->applied_at ? $offerLetter->applicant->applied_at->format('d M Y') : 'Application date not recorded' }}</p>
                         </div>
                     </div>
                 </div>
@@ -81,10 +81,10 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Offer Number:</strong> {{ $offerLetter->offer_number }}</p>
-                            <p><strong>Acceptance Deadline:</strong> {{ $offerLetter->acceptance_deadline->format('d M Y') }}</p>
+                            <p><strong>Acceptance Deadline:</strong> {{ $offerLetter->acceptance_deadline ? $offerLetter->acceptance_deadline->format('d M Y') : 'Acceptance deadline not published' }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Issued At:</strong> {{ $offerLetter->issued_at->format('d M Y H:i') }}</p>
+                            <p><strong>Issued At:</strong> {{ $offerLetter->issued_at ? $offerLetter->issued_at->format('d M Y H:i') : 'Issue time not recorded' }}</p>
                             @if($offerLetter->accepted_at)
                                 <p><strong>Accepted At:</strong> <span class="text-success">{{ $offerLetter->accepted_at->format('d M Y H:i') }}</span></p>
                             @elseif($offerLetter->declined_at)

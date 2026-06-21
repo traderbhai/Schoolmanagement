@@ -19,8 +19,8 @@ class ApplicationSelected extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $program = $this->data['applicant']->program->name ?? 'Program';
-        return new Envelope(subject: "Selected! — Admission Offer for {$program}");
+        $program = $this->data['applicant']->program->name ?? 'program to be confirmed';
+        return new Envelope(subject: "Selected - Admission Offer for {$program}");
     }
 
     public function content(): Content

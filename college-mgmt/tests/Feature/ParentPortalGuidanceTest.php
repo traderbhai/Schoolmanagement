@@ -159,6 +159,23 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertDontSee('PARENT-PENDING-001');
     }
 
+    public function test_parent_fee_page_empty_state_explains_accounts_demand_and_verified_receipts(): void
+    {
+        [$user, $student] = $this->parentWithStudent();
+
+        $this->actingAs($user)
+            ->get(route('parent.children.fees', $student))
+            ->assertOk()
+            ->assertSee('No open fee balance')
+            ->assertSee('No active fee demands have been raised yet')
+            ->assertSee('accounts office raises tuition, exam, hostel, or other dues')
+            ->assertSee('due date, penalty, open balance, and payment status')
+            ->assertSee('No paid receipts are available yet')
+            ->assertSee('Verified payments will appear here after accounts confirms the receipt')
+            ->assertDontSee('No fee demands recorded yet.')
+            ->assertDontSee('No payments recorded yet.');
+    }
+
     public function test_parent_dashboard_and_fee_page_include_hostel_fee_dues(): void
     {
         [$user, $student] = $this->parentWithStudent();
@@ -228,6 +245,32 @@ class ParentPortalGuidanceTest extends TestCase
             ->assertSee('Parent Enrolled Subject')
             ->assertSee('88')
             ->assertDontSee('Parent Unenrolled Subject');
+    }
+
+    public function test_parent_attendance_and_results_empty_states_explain_publication_boundaries(): void
+    {
+        [$user, $student] = $this->parentWithStudent();
+        $semester = Semester::factory()->create([
+            'number' => 1,
+            'name' => 'Parent Empty Term',
+            'is_current' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parent.children.attendance', ['student' => $student, 'semester_id' => $semester->id]))
+            ->assertOk()
+            ->assertSee('No published attendance records are available for this semester yet')
+            ->assertSee('after the timetable is published and faculty mark classes')
+            ->assertSee('Draft timetable rows and out-of-scope subjects are not shown to parents')
+            ->assertDontSee('No attendance records for this semester.');
+
+        $this->actingAs($user)
+            ->get(route('parent.children.results', ['student' => $student, 'semester_id' => $semester->id]))
+            ->assertOk()
+            ->assertSee('No published results are available for this semester yet')
+            ->assertSee('after the examination office publishes official marks')
+            ->assertSee('Draft marks, internal review data, and unpublished exams are not shown to parents')
+            ->assertDontSee('No results for this semester.');
     }
 
     public function test_parent_results_hide_unpublished_draft_marks(): void

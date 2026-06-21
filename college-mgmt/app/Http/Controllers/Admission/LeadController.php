@@ -152,7 +152,7 @@ class LeadController extends Controller
         $conversionRate = $totalLeads > 0 ? round((Lead::where('status', 'converted')->count() / $totalLeads) * 100, 2) : 0;
 
         $leadsBySource = DB::table('leads')
-            ->selectRaw('source, COUNT(*) as total, SUM(CASE WHEN status = "converted" THEN 1 ELSE 0 END) as converted')
+            ->selectRaw("source, COUNT(*) as total, SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as converted")
             ->groupBy('source')
             ->get()
             ->map(function ($item) {
@@ -162,7 +162,7 @@ class LeadController extends Controller
 
         $leadsByProgram = DB::table('leads')
             ->leftJoin('programs', 'leads.program_id', '=', 'programs.id')
-            ->selectRaw('programs.name, COUNT(leads.id) as total, SUM(CASE WHEN leads.status = "converted" THEN 1 ELSE 0 END) as converted')
+            ->selectRaw("programs.name, COUNT(leads.id) as total, SUM(CASE WHEN leads.status = 'converted' THEN 1 ELSE 0 END) as converted")
             ->groupBy('programs.id', 'programs.name')
             ->get()
             ->map(function ($item) {
@@ -171,7 +171,7 @@ class LeadController extends Controller
             });
 
         $leadsOverTime = DB::table('leads')
-            ->selectRaw('DATE(created_at) as date, COUNT(*) as total, SUM(CASE WHEN status = "converted" THEN 1 ELSE 0 END) as converted')
+            ->selectRaw("DATE(created_at) as date, COUNT(*) as total, SUM(CASE WHEN status = 'converted' THEN 1 ELSE 0 END) as converted")
             ->where('created_at', '>=', now()->subDays(30))
             ->groupBy('date')
             ->orderBy('date')

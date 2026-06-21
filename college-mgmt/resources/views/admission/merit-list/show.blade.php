@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Merit List — ' . $program->name)
+@section('title', 'Merit List - ' . $program->name)
 
 @section('content')
 @php($canApproveAdmission = app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
@@ -12,7 +12,8 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
-                <h3 class="fw-bold mb-1"><i class="bi bi-list-ol me-2"></i>{{ $program->name }} — Merit List</h3>
+                <h3 class="fw-bold mb-1"><i class="bi bi-list-ol me-2"></i>{{ $program->name }} - Merit List</h3>
+                <div class="text-muted small">Ranked applicants for selection, waitlist movement, offer generation, and seat-control decisions.</div>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ route('admission.merit-list.export', array_merge(['program' => $program->id], request()->only('batch_id'))) }}" class="btn btn-outline-secondary btn-sm">
@@ -26,8 +27,12 @@
     </div>
 </div>
 
-{{-- Filters --}}
-<form method="GET" class="mb-4">
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    <div class="fw-semibold mb-1"><i class="bi bi-check2-square me-1"></i>Decision workflow</div>
+    <div class="small text-muted">Review the filtered rank list, confirm batch and decision scope, apply selected/waitlisted/rejected decisions, then generate offer letters only for finalized selected applicants. Entries connected to active offers are protected by the integrity workflow.</div>
+</div>
+
+<form method="GET" class="mb-3">
     <div class="row g-2 align-items-end">
         <div class="col-sm-3">
             <label class="form-label small">Batch</label>
@@ -41,7 +46,7 @@
         <div class="col-sm-3">
             <label class="form-label small">Decision</label>
             <select name="decision" class="form-select form-select-sm">
-                <option value="">All</option>
+                <option value="">All Decisions</option>
                 <option value="pending" @selected($decision == 'pending')>Pending</option>
                 <option value="selected" @selected($decision == 'selected')>Selected</option>
                 <option value="waitlisted" @selected($decision == 'waitlisted')>Waitlisted</option>
@@ -51,10 +56,26 @@
         <div class="col-sm-2">
             <button type="submit" class="btn btn-sm btn-primary">Filter</button>
         </div>
+        @if($batchId || $decision)
+        <div class="col-sm-2">
+            <a href="{{ route('admission.merit-list.show', $program) }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+        </div>
+        @endif
     </div>
 </form>
 
-{{-- Bulk Decide (head only) --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center small">
+            <span class="fw-semibold text-dark">Current view:</span>
+            <span class="badge bg-light text-dark">Program: {{ $program->name }}</span>
+            <span class="badge bg-light text-dark">Batch: {{ optional($batches->firstWhere('id', (int) $batchId))->name ?? 'All Batches' }}</span>
+            <span class="badge bg-light text-dark">Decision: {{ $decision ? ucfirst($decision) : 'All Decisions' }}</span>
+            <span class="badge bg-light text-dark">Rows: {{ $entries->total() }}</span>
+        </div>
+    </div>
+</div>
+
 @if($canApproveAdmission)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
@@ -74,14 +95,14 @@
                     <i class="bi bi-people-fill me-1"></i>Apply Bulk Decision
                 </button>
             </div>
+            <div class="col-sm-3 small text-muted">Bulk decision uses current rank and batch scope. Locked/final applicants are skipped by the integrity guard.</div>
         </form>
     </div>
 </div>
 @endif
 
-{{-- Bulk Generate Offer Letters --}}
 @if($canApproveAdmission)
-<form method="POST" action="{{ route('admission.offer-letters.bulk-generate') }}" id="bulkOfferForm">
+<form method="POST" action="{{ route('admission.offer-letters.bulk-generate', $program) }}" id="bulkOfferForm">
     @csrf
     <input type="hidden" name="program_id" value="{{ $program->id }}">
     <div class="d-flex gap-2 mb-3">
@@ -92,7 +113,6 @@
     </div>
 @endif
 
-{{-- Merit List Table --}}
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -125,21 +145,21 @@
                         <td><strong>#{{ $entry->rank }}</strong></td>
                         <td>
                             <a href="{{ route('admission.applicants.show', $entry->applicant) }}">
-                                {{ $entry->applicant->user->name ?? 'N/A' }}
+                                {{ $entry->applicant->user->name ?? 'Applicant name not recorded' }}
                             </a>
                         </td>
-                        <td class="small text-muted">{{ $entry->applicant->application_number }}</td>
+                        <td class="small text-muted">{{ $entry->applicant->application_number ?? 'Application number not assigned' }}</td>
                         @foreach($steps as $stepId => $step)
                         <td class="text-center small">
                             @php($ss = ($entry->step_scores ?? [])[$stepId] ?? null)
                             @if($ss)
                                 {{ number_format($ss['percentage'] ?? 0, 1) }}%
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Score not recorded</span>
                             @endif
                         </td>
                         @endforeach
-                        <td class="text-center">{{ $entry->academic_score !== null ? number_format($entry->academic_score, 1).'%' : '—' }}</td>
+                        <td class="text-center">{{ $entry->academic_score !== null ? number_format($entry->academic_score, 1).'%' : 'Academic score pending' }}</td>
                         <td class="text-center fw-bold">{{ number_format($entry->composite_score, 2) }}</td>
                         <td class="text-center"><span class="{{ $entry->decisionBadge }}">{{ $entry->decisionLabel }}</span></td>
                         @if($canApproveAdmission)
@@ -157,7 +177,18 @@
                         @endif
                     </tr>
                     @empty
-                    <tr><td colspan="20" class="text-center text-muted py-4">No entries found.</td></tr>
+                    <tr>
+                        <td colspan="20" class="text-center py-5">
+                            <div class="fw-semibold text-dark mb-1">No merit-list entries match this view</div>
+                            <div class="text-muted small mb-3">Check the selected batch and decision filters, then confirm that the merit list was generated after shortlisted applicants and assessment scores were available.</div>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                @if($batchId || $decision)
+                                    <a href="{{ route('admission.merit-list.show', $program) }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                @endif
+                                <a href="{{ route('admission.merit-list.index', $program) }}" class="btn btn-sm btn-primary">Review Merit Setup</a>
+                            </div>
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>

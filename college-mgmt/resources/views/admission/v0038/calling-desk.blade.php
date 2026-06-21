@@ -2,9 +2,23 @@
 @section('title', 'Admission Calling Desk')
 @section('content')
 <div class="container-fluid py-3">
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div><h3 class="fw-bold mb-1">Admission Calling Desk</h3><div class="text-muted small">One-screen speed mode for telecallers and counsellors.</div></div>
-    <div class="d-flex gap-2"><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.counsellor-desk.index') }}">Counsellor Desk</a><a class="btn btn-sm btn-outline-success" href="{{ route('admission.objection-analytics.index') }}">Objections</a></div>
+<x-ui.page-header
+    title="Admission Calling Desk"
+    subtitle="Work one candidate at a time: call, record disposition, script coverage, next action, then move to the next queue item."
+    action-label="Counsellor Desk"
+    :action-route="route('admission.counsellor-desk.index')"
+    action-icon="bi-speedometer2"
+/>
+
+<div class="alert alert-info border-0 shadow-sm d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 py-3">
+    <div class="d-flex gap-3">
+        <div class="ui-kpi-tile-icon bg-white text-info"><i class="bi bi-telephone-forward"></i></div>
+        <div>
+            <div class="fw-bold">Call sequence</div>
+            <div class="small">1. Review profile and last action &nbsp; 2. Follow the script checklist &nbsp; 3. Save disposition/outcome &nbsp; 4. Set retry or next action.</div>
+        </div>
+    </div>
+    <a class="btn btn-outline-info btn-sm" href="{{ route('admission.objection-analytics.index') }}">Review Objections</a>
 </div>
 @php
     $metricLinks = [
@@ -22,7 +36,10 @@
 <div class="row g-3">
     <div class="col-xl-7">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">Active Call</div>
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Active Call</span>
+                <span class="small text-muted">Save outcome before moving on</span>
+            </div>
             <div class="card-body">
                 @if($active)
                     @php($isLead = $active instanceof \App\Models\Lead)
@@ -34,6 +51,10 @@
                         </div>
                         <div class="text-end"><span class="{{ $active->status_badge ?? 'badge bg-secondary' }}">{{ $active->status_label ?? ucfirst($active->status) }}</span></div>
                     </div>
+                    <div class="alert alert-light border py-2 small mt-3 mb-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Use <strong>Disposition</strong> for call result, <strong>Outcome</strong> for admission intent, and <strong>Next Action</strong> for the next owner-visible task.
+                    </div>
                     <form method="POST" action="{{ route('admission.calling-desk.outcome') }}" class="row g-2 mt-3">
                         @csrf
                         <input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}">
@@ -44,11 +65,21 @@
                         <div class="col-md-3"><label class="form-label small">Retry Due</label><input type="datetime-local" name="retry_due_at" class="form-control form-control-sm"></div>
                         <div class="col-md-3"><label class="form-label small">Duration Seconds</label><input type="number" name="duration_seconds" value="180" class="form-control form-control-sm"></div>
                         @if($script)
-                            <div class="col-12"><div class="small fw-bold mb-1">{{ $script->name }}</div><div class="row g-1">@foreach($script->steps ?? [] as $idx => $step)<div class="col-md-6 col-xl-4"><label class="form-label small mb-0">{{ $step }}</label><select name="script_results[]" class="form-select form-select-sm"><option value="covered">Covered</option><option value="missed">Missed</option><option value="na">Not applicable</option></select></div>@endforeach</div></div>
+                            <div class="col-12">
+                                <div class="card bg-light border">
+                                    <div class="card-body p-2">
+                                        <div class="small fw-bold mb-1"><i class="bi bi-card-checklist me-1"></i>{{ $script->name }}</div>
+                                        <div class="row g-1">@foreach($script->steps ?? [] as $idx => $step)<div class="col-md-6 col-xl-4"><label class="form-label small mb-0">{{ $step }}</label><select name="script_results[]" class="form-select form-select-sm"><option value="covered">Covered</option><option value="missed">Missed</option><option value="na">Not applicable</option></select></div>@endforeach</div>
+                                    </div>
+                                </div>
+                            </div>
                         @endif
                         <div class="col-md-8"><label class="form-label small">Notes</label><input name="notes" class="form-control form-control-sm" value="Discussed program fit, parent decision, and next action."></div>
                         <div class="col-md-4"><label class="form-label small">Next Action</label><input name="next_action" class="form-control form-control-sm" value="Send checklist and schedule follow-up"></div>
-                        <div class="col-12"><button class="btn btn-sm btn-primary">Save Call Outcome</button></div>
+                        <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
+                            <button class="btn btn-sm btn-primary">Save Call Outcome</button>
+                            <span class="small text-muted">This updates the timeline, script compliance, retry queue, and next action.</span>
+                        </div>
                     </form>
                     <form method="POST" action="{{ route('admission.call-attempts.skip') }}" class="mt-2">
                         @csrf
@@ -58,14 +89,51 @@
                         <button class="btn btn-sm btn-outline-secondary">Skip This Record</button>
                     </form>
                 @else
-                    <div class="text-muted">No eligible calling records found for your current scope.</div>
+                    <x-ui.empty-state
+                        icon="bi-telephone-x"
+                        title="No eligible calls in your scope"
+                        message="Your assigned callbacks, retries, hot leads, and parent follow-ups are clear for now."
+                    />
                 @endif
             </div>
         </div>
     </div>
     <div class="col-xl-5">
-        <div class="card border-0 shadow-sm mb-3"><div class="card-header bg-white fw-bold">Next Call Queue</div><div class="table-responsive"><table class="table table-sm mb-0" aria-label="Next call queue"><thead><tr><th>Candidate</th><th>Type</th><th>Score</th><th>Action</th></tr></thead><tbody>@foreach($queue->take(12) as $item)<tr><td>{{ $item->record instanceof \App\Models\Lead ? $item->record->name : ($item->record->user?->name ?? $item->record->application_number) }}</td><td>{{ $item->type }}</td><td>{{ $item->queue_score }}</td><td class="small">{{ $item->recommended_action }}</td></tr>@endforeach</tbody></table></div></div>
-        <div class="card border-0 shadow-sm"><div class="card-header bg-white fw-bold">Recent Objections</div><div class="table-responsive"><table class="table table-sm mb-0" aria-label="Recent objections"><thead><tr><th>Subject</th><th>Stage</th><th>Status</th></tr></thead><tbody>@forelse($objections as $objection)<tr><td>@php($subject = $objection->subject)<div class="fw-semibold">{{ $subject instanceof \App\Models\Lead ? $subject->name : ($subject?->user?->name ?? $subject?->application_number ?? 'Admission record') }}</div><div class="small text-muted">{{ $objection->type?->name ?? class_basename($objection->subject_type) }}</div></td><td>{{ $objection->stage }}</td><td>{{ $objection->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted text-center">No objection trends.</td></tr>@endforelse</tbody></table></div></div>
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Next Call Queue</span>
+                <span class="small text-muted">Why each item is next</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0" aria-label="Next call queue">
+                    <thead>
+                        <tr><th>Candidate</th><th>Type</th><th>Score</th><th>Recommended action</th></tr>
+                    </thead>
+                    <tbody>
+                        @forelse($queue->take(12) as $item)
+                            <tr>
+                                <td>{{ $item->record instanceof \App\Models\Lead ? $item->record->name : ($item->record->user?->name ?? $item->record->application_number ?? 'Admission record') }}</td>
+                                <td>{{ ucfirst(str_replace('_', ' ', $item->type)) }}</td>
+                                <td>{{ $item->queue_score }}</td>
+                                <td class="small">{{ $item->recommended_action ?: 'Review profile and set next action' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <div class="fw-semibold text-dark">No eligible next-call records</div>
+                                    <div class="small">Your scoped callbacks, no-response retries, hot leads, and parent follow-ups are clear. Check reminders or lead filters if new calls are expected.</div>
+                                    <div class="mt-3 d-flex flex-wrap justify-content-center gap-2">
+                                        <a href="{{ route('admission.reminders.index', ['reason' => 'callback_retry']) }}" class="btn btn-sm btn-outline-primary">Open Callback Reminders</a>
+                                        <a href="{{ route('admission.leads.index') }}" class="btn btn-sm btn-outline-secondary">Open Leads</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm"><div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Recent Objections</span><span class="small text-muted">Use before calling similar leads</span></div><div class="table-responsive"><table class="table table-sm mb-0" aria-label="Recent objections"><thead><tr><th>Subject</th><th>Stage</th><th>Status</th></tr></thead><tbody>@forelse($objections as $objection)<tr><td>@php($subject = $objection->subject)<div class="fw-semibold">{{ $subject instanceof \App\Models\Lead ? $subject->name : ($subject?->user?->name ?? $subject?->application_number ?? 'Admission record') }}</div><div class="small text-muted">{{ $objection->type?->name ?? class_basename($objection->subject_type) }}</div></td><td>{{ $objection->stage }}</td><td>{{ $objection->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted text-center py-3"><div class="fw-semibold text-dark">No objection trends in this scope</div><div class="small">Objection patterns appear after calls are logged with structured objections.</div></td></tr>@endforelse</tbody></table></div></div>
     </div>
 </div>
 </div>

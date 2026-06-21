@@ -16,9 +16,21 @@
 
     @if($appeals->isEmpty())
     <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5 text-muted">
+        <div class="card-body py-5 text-center text-muted">
             <i class="bi bi-chat-square-text fs-1 d-block mb-2"></i>
-            No appeals submitted yet.
+            <div class="fw-semibold text-dark mb-1">No marks appeals submitted yet</div>
+            <p class="mb-3">
+                Submit an appeal only after official results are published and you need the Exam Cell to review a mark entry, totaling issue, or evaluation concern.
+            </p>
+            @if($canCreateAppeal)
+                <a href="{{ route('student.appeals.create') }}" class="btn btn-sm btn-primary">
+                    Check Eligible Results
+                </a>
+            @else
+                <span class="badge bg-secondary-subtle text-secondary border">
+                    Appeal creation is locked for inactive student profiles
+                </span>
+            @endif
         </div>
     </div>
     @else

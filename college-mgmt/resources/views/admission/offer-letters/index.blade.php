@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Offer Letters — ' . $program->name)
+@section('title', 'Offer Letters - ' . $program->name)
 @section('page-title', 'Offer Letters')
 
 @section('content')
@@ -157,7 +157,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No offer letters found.</td>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No offer letters match the current program or filters.</div>
+                                <div class="small">Generate offers from selected merit-list applicants after confirming seat availability, offer-round timing, and applicant readiness.</div>
+                                <a href="{{ route('admission.merit-list.show', $program) }}" class="btn btn-sm btn-outline-primary mt-2">Open Merit List</a>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

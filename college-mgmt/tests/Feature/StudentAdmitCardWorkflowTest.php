@@ -72,6 +72,66 @@ class StudentAdmitCardWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_student_admit_card_empty_state_explains_release_and_eligibility_conditions(): void
+    {
+        [$user] = $this->makeStudent();
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.index'))
+            ->assertOk()
+            ->assertSee('No admit cards available yet')
+            ->assertSee('CoE schedules a future exam')
+            ->assertSee('exam registration is approved')
+            ->assertSee('attendance and fee clearance are verified')
+            ->assertSee('exam is still unpublished')
+            ->assertSee('contact the Exam Cell')
+            ->assertDontSee('No Upcoming Exams')
+            ->assertDontSee('Admit cards will appear here once exams are scheduled for your program.')
+            ->assertDontSee('â');
+    }
+
+    public function test_student_admit_card_renders_eligible_exam_without_corrupted_fallback_text(): void
+    {
+        [$user, $student, $program] = $this->makeStudent();
+        $term = Term::factory()->create();
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Readable Fallback Subject']);
+        $exam = Exam::factory()->create([
+            'program_id' => $program->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'name' => 'Readable Fallback Final',
+            'exam_date' => now()->addWeek(),
+            'start_time' => '10:00:00',
+            'end_time' => '12:00:00',
+            'total_marks' => 100,
+        ]);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        ExamRegistration::create([
+            'student_id' => $student->id,
+            'exam_id' => $exam->id,
+            'status' => 'approved',
+            'attendance_eligible' => true,
+            'fee_cleared' => true,
+            'approved_by' => User::factory()->create()->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('student.admit-cards.index'))
+            ->assertOk()
+            ->assertSee('Readable Fallback Final')
+            ->assertSee('10:00 AM')
+            ->assertSee('12:00 PM')
+            ->assertSee('100')
+            ->assertDontSee('â');
+    }
+
     public function test_student_admit_card_requires_approved_registration_fee_and_attendance_clearance(): void
     {
         [$user, $student, $program] = $this->makeStudent();
