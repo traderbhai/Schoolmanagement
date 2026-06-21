@@ -49,15 +49,15 @@
                         $canMarkReturned = $op->status === 'approved' && (! $op->out_datetime || now()->greaterThanOrEqualTo($op->out_datetime));
                     @endphp
                     <tr>
-                        <td>{{ $op->student?->user?->name ?? '—' }}</td>
+                        <td>{{ $op->student?->user?->name ?? 'Student not linked' }}</td>
                         <td>
-                            {{ $op->allocation?->room?->block?->name ?? '' }}
-                            {{ $op->allocation?->room?->room_number ? '/ '.$op->allocation->room->room_number : '—' }}
+                            {{ $op->allocation?->room?->block?->name ?? 'Block not linked' }}
+                            {{ $op->allocation?->room?->room_number ? '/ '.$op->allocation->room->room_number : '/ Room not linked' }}
                         </td>
                         <td><span title="{{ $op->reason }}">{{ Str::limit($op->reason, 40) }}</span></td>
                         <td>{{ $op->out_datetime?->format('d M Y H:i') }}</td>
                         <td>{{ $op->expected_return?->format('d M Y H:i') }}</td>
-                        <td>{{ $op->actual_return?->format('d M Y H:i') ?? '—' }}</td>
+                        <td>{{ $op->actual_return?->format('d M Y H:i') ?? 'Return not marked' }}</td>
                         <td><span class="badge bg-{{ $statusColors[$op->status] ?? 'secondary' }}">{{ ucfirst($op->status) }}</span></td>
                         <td>
                             @if($op->status === 'pending')
@@ -103,7 +103,11 @@
                         </div>
                     </div>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted py-4">No outpass requests found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No outpass requests match this view. Clear the status tab or wait for hostel students to submit leave, visit, medical, or interview outpass requests.
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>

@@ -429,7 +429,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// ── Dark mode ──────────────────────────────────────────────
+// Dark mode
 (function () {
     var saved = localStorage.getItem('edumTheme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
@@ -450,7 +450,7 @@
     }
 })();
 
-// ── Auto-dismiss success/info alerts ──────────────────────
+// Auto-dismiss success/info alerts
 (function () {
     setTimeout(function () {
         document.querySelectorAll('.js-auto-dismiss').forEach(function (el) {
@@ -460,7 +460,7 @@
     }, 4000);
 })();
 
-// ── Delete modal ───────────────────────────────────────────
+// Delete modal
 (function () {
     var deleteModal = document.getElementById('deleteModal');
     if (!deleteModal) return;
@@ -489,7 +489,7 @@
     });
 })();
 
-// ── Notification bell unread count (polls every 60s) ────────
+// Notification bell unread count (polls every 60s)
 (function () {
     var badge = document.getElementById('notifBadge');
     if (!badge) return;

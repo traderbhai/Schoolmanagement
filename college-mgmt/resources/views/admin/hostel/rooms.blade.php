@@ -1,6 +1,6 @@
 @extends('layouts.admin')
-@section('title', 'Rooms — ' . $block->name)
-@section('page-title', $block->name . ' — Rooms')
+@section('title', 'Rooms - ' . $block->name)
+@section('page-title', $block->name . ' - Rooms')
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
     <li class="breadcrumb-item"><a href="{{ route('admin.hostel.index') }}">Hostel</a></li>
@@ -57,7 +57,7 @@
                             @php $statusColors = ['available'=>'success','occupied'=>'danger','maintenance'=>'warning','reserved'=>'info']; @endphp
                             <span class="badge bg-{{ $statusColors[$room->status] ?? 'secondary' }}">{{ ucfirst($room->status) }}</span>
                         </td>
-                        <td>₹{{ number_format($room->monthly_fee, 0) }}</td>
+                        <td>Rs. {{ number_format($room->monthly_fee, 0) }}</td>
                         <td>
                             @if($room->status === 'available')
                                 <a href="{{ route('admin.hostel.allocations') }}?room={{ $room->id }}" class="btn btn-sm btn-outline-success">Allocate</a>
@@ -99,7 +99,7 @@
                                                 <input type="number" name="capacity" class="form-control" value="{{ $room->capacity }}" min="1" max="20" required>
                                             </div>
                                             <div class="col-6">
-                                                <label class="form-label">Monthly Fee (₹)</label>
+                                                <label class="form-label">Monthly Fee (Rs.)</label>
                                                 <input type="number" name="monthly_fee" class="form-control" value="{{ $room->monthly_fee }}" min="0" step="0.01">
                                             </div>
                                             <div class="col-6">
@@ -121,7 +121,11 @@
                         </div>
                     </div>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted py-4">No rooms in this block yet.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No rooms are configured in this block yet. Add rooms before allocating beds, creating hostel fee demands, or reviewing occupancy.
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -162,7 +166,7 @@
                             <input type="number" name="capacity" class="form-control" min="1" max="20" value="2" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Monthly Fee (₹)</label>
+                            <label class="form-label">Monthly Fee (Rs.)</label>
                             <input type="number" name="monthly_fee" class="form-control" min="0" step="0.01" value="0">
                         </div>
                     </div>

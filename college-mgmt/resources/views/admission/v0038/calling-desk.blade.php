@@ -46,7 +46,11 @@
                     <div class="d-flex flex-wrap justify-content-between gap-2">
                         <div>
                             <h5 class="mb-1">{{ $isLead ? $active->name : ($active->user?->name ?? $active->application_number) }}</h5>
-                            <div class="small text-muted">{{ $isLead ? $active->phone : ($active->personal_data['phone'] ?? '') }} | {{ $active->program?->name }} | {{ ucfirst($active->priority ?? 'normal') }}</div>
+                            <div class="small text-muted">
+                                {{ $isLead ? ($active->phone ?: 'Phone not recorded') : ($active->personal_data['phone'] ?? 'Phone not recorded') }} |
+                                {{ $active->program?->name ?? 'Program not assigned' }} |
+                                {{ ucfirst($active->priority ?? 'normal') }}
+                            </div>
                             <div class="mt-2">{{ $active->next_action ?: 'Call and confirm next step.' }}</div>
                         </div>
                         <div class="text-end"><span class="{{ $active->status_badge ?? 'badge bg-secondary' }}">{{ $active->status_label ?? ucfirst($active->status) }}</span></div>
@@ -107,19 +111,31 @@
             <div class="table-responsive">
                 <table class="table table-sm mb-0" aria-label="Next call queue">
                     <thead>
-                        <tr><th>Candidate</th><th>Type</th><th>Score</th><th>Recommended action</th></tr>
+                        <tr><th>Candidate</th><th>Type</th><th>Score</th><th>Recommended action</th><th class="text-end">Open</th></tr>
                     </thead>
                     <tbody>
                         @forelse($queue->take(12) as $item)
+                            @php($record = $item->record)
+                            @php($isLeadRecord = $record instanceof \App\Models\Lead)
                             <tr>
-                                <td>{{ $item->record instanceof \App\Models\Lead ? $item->record->name : ($item->record->user?->name ?? $item->record->application_number ?? 'Admission record') }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $isLeadRecord ? $record->name : ($record->user?->name ?? $record->application_number ?? 'Admission record') }}</div>
+                                    <div class="small text-muted">{{ $record->program?->name ?? 'Program not assigned' }}</div>
+                                </td>
                                 <td>{{ ucfirst(str_replace('_', ' ', $item->type)) }}</td>
                                 <td>{{ $item->queue_score }}</td>
                                 <td class="small">{{ $item->recommended_action ?: 'Review profile and set next action' }}</td>
+                                <td class="text-end">
+                                    @if($isLeadRecord)
+                                        <a href="{{ route('admission.leads.show', $record) }}" class="btn btn-sm btn-outline-primary">Open record</a>
+                                    @else
+                                        <a href="{{ route('admission.applicants.show', $record) }}" class="btn btn-sm btn-outline-primary">Open record</a>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">
+                                <td colspan="5" class="text-center text-muted py-4">
                                     <div class="fw-semibold text-dark">No eligible next-call records</div>
                                     <div class="small">Your scoped callbacks, no-response retries, hot leads, and parent follow-ups are clear. Check reminders or lead filters if new calls are expected.</div>
                                     <div class="mt-3 d-flex flex-wrap justify-content-center gap-2">

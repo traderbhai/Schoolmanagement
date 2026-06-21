@@ -23,7 +23,14 @@
         </div>
     @endif
 
-    {{-- Filters --}}
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Material workflow:</strong>
+            upload notes, readings, slides, videos, or reference links only for subjects assigned to you in a published timetable. Published materials become visible to students in their course content area.
+        </div>
+    </div>
+
     <div class="card shadow-sm mb-3">
         <div class="card-body py-2">
             <form method="GET" action="{{ route('teacher.materials.index') }}" id="filter-form">
@@ -120,8 +127,8 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <span class="text-muted small">{{ $material->subject->code ?? '' }}</span><br>
-                                        {{ $material->subject->name ?? '—' }}
+                                        <span class="text-muted small">{{ $material->subject->code ?? 'Subject code not linked' }}</span><br>
+                                        {{ $material->subject->name ?? 'Subject not linked' }}
                                     </td>
                                     <td>
                                         <span class="badge {{ $typeBadges[$material->type] ?? 'bg-secondary' }}">
@@ -141,7 +148,7 @@
                                         @elseif($material->external_url)
                                             <span class="text-info"><i class="bi bi-link-45deg"></i> URL</span>
                                         @else
-                                            —
+                                            File or link not attached
                                         @endif
                                     </td>
                                     <td class="text-muted small text-nowrap">

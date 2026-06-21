@@ -21,8 +21,9 @@ class FeeDueReminder extends Mailable implements ShouldQueue
     {
         $dueDate = isset($this->data['feeStructure']) && $this->data['feeStructure']->due_date
             ? \Carbon\Carbon::parse($this->data['feeStructure']->due_date)->format('d M Y')
-            : 'Soon';
-        return new Envelope(subject: "Fee Payment Reminder — Due {$dueDate}");
+            : 'soon';
+
+        return new Envelope(subject: "Fee Payment Reminder - Due {$dueDate}");
     }
 
     public function content(): Content

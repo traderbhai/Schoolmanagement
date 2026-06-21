@@ -1,6 +1,6 @@
 @extends('layouts.teacher')
 
-@section('title', 'Submissions — ' . $assignment->title)
+@section('title', 'Submissions - ' . $assignment->title)
 
 @section('content')
 <div class="container-fluid px-4">
@@ -13,10 +13,10 @@
         <div>
             <h4 class="mb-0">{{ $assignment->title }}</h4>
             <div class="text-muted small">
-                <span class="me-3"><i class="bi bi-book me-1"></i>{{ $assignment->subject->name ?? '—' }}</span>
+                <span class="me-3"><i class="bi bi-book me-1"></i>{{ $assignment->subject->name ?? 'Subject not linked' }}</span>
                 <span class="me-3">
                     <i class="bi bi-calendar-event me-1"></i>
-                    Due: {{ $assignment->due_at ? \Carbon\Carbon::parse($assignment->due_at)->format('d M Y, H:i') : '—' }}
+                    Due: {{ $assignment->due_at ? \Carbon\Carbon::parse($assignment->due_at)->format('d M Y, H:i') : 'Due date not set' }}
                 </span>
                 <span><i class="bi bi-trophy me-1"></i>Max Marks: {{ $assignment->max_marks }}</span>
             </div>
@@ -67,6 +67,14 @@
         </div>
     @endif
 
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Submission workflow:</strong>
+            this page uses the active roster for the assignment subject. Follow up with students in Not Yet Submitted, then enter marks and feedback for received submissions.
+        </div>
+    </div>
+
     {{-- Submissions table --}}
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-semibold bg-white">
@@ -101,19 +109,19 @@
                                 @endphp
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $submission->student->user->name ?? '—' }}</div>
+                                        <div class="fw-semibold">{{ $submission->student->user->name ?? 'Student not linked' }}</div>
                                         <div class="text-muted small">{{ $submission->student->enrollment_number ?? '' }}</div>
                                     </td>
                                     <td class="small text-nowrap">
                                         {{ $submission->submitted_at
                                             ? \Carbon\Carbon::parse($submission->submitted_at)->format('d M Y, H:i')
-                                            : '—' }}
+                                            : 'Submission time not recorded' }}
                                     </td>
                                     <td class="text-center">
                                         @if($isLate)
                                             <span class="badge bg-warning text-dark">Late</span>
                                         @else
-                                            <span class="text-muted small">—</span>
+                                            <span class="text-muted small">On time</span>
                                         @endif
                                     </td>
                                     <td class="text-center">
@@ -145,8 +153,8 @@
                                             </form>
                                         </td>
                                     @else
-                                        <td>{{ $submission->marks_obtained ?? '-' }}</td>
-                                        <td class="small text-muted">{{ $submission->feedback ?: '-' }}</td>
+                                        <td>{{ $submission->marks_obtained ?? 'Marks not entered' }}</td>
+                                        <td class="small text-muted">{{ $submission->feedback ?: 'Feedback not entered' }}</td>
                                         <td class="text-center"><span class="badge bg-secondary">Locked</span></td>
                                     @endif
                                 </tr>
@@ -170,7 +178,7 @@
                     @foreach($notSubmitted as $student)
                         <li class="list-group-item d-flex align-items-center justify-content-between py-2">
                             <div>
-                                <span class="fw-semibold">{{ $student->user->name ?? '—' }}</span>
+                                <span class="fw-semibold">{{ $student->user->name ?? 'Student not linked' }}</span>
                                 <span class="text-muted small ms-2">{{ $student->enrollment_number ?? '' }}</span>
                             </div>
                             <span class="badge bg-secondary">Not Submitted</span>

@@ -58,6 +58,59 @@ class AdmissionReportingScopeTest extends TestCase
         $this->assertFalse($capturedReportData['sourceStats']->pluck('source')->contains('Hidden Source'));
     }
 
+    public function test_admission_reporting_filters_counts_and_drilldown_links_to_current_scope(): void
+    {
+        [$counsellor, $peer] = $this->admissionCounsellors();
+        [$visibleProgram] = $this->seedScopedAdmissionRecords($counsellor, $peer);
+
+        $otherVisibleProgram = Program::factory()->create(['name' => 'Other Visible Admission Program', 'code' => 'OVAP']);
+        $otherVisibleBatch = Batch::factory()->create(['program_id' => $otherVisibleProgram->id]);
+        SeatMatrix::create(['program_id' => $otherVisibleProgram->id, 'batch_id' => $otherVisibleBatch->id, 'total_seats' => 40]);
+
+        Lead::factory()->create([
+            'program_id' => $otherVisibleProgram->id,
+            'source' => 'other_visible_source',
+            'status' => 'converted',
+            'assigned_to' => $counsellor->id,
+        ]);
+        Applicant::factory()->create([
+            'program_id' => $otherVisibleProgram->id,
+            'batch_id' => $otherVisibleBatch->id,
+            'status' => 'submitted',
+            'assigned_to' => $counsellor->id,
+        ]);
+
+        $response = $this->actingAs($counsellor)->get(route('admission.reports.index', [
+            'program_id' => $visibleProgram->id,
+        ]));
+
+        $response->assertOk()
+            ->assertSee('Current report scope:')
+            ->assertSee('Program Id: ' . $visibleProgram->id)
+            ->assertSee($visibleProgram->name)
+            ->assertDontSee($otherVisibleProgram->name)
+            ->assertSee(route('admission.leads.index', ['program_id' => $visibleProgram->id]), false)
+            ->assertSee(route('admission.applicants.index', ['program_id' => $visibleProgram->id]), false)
+            ->assertSee('/admission/applicants?program_id=' . $visibleProgram->id . '&amp;status=selected', false)
+            ->assertSee(route('admission.enrollment.index', ['program_id' => $visibleProgram->id]), false)
+            ->assertSee(route('admission.reports.export-pdf', ['program_id' => $visibleProgram->id]), false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+
+        $request = Request::create(route('admission.reports.index', ['program_id' => $visibleProgram->id]), 'GET');
+        $request->setUserResolver(fn () => $counsellor);
+        $controller = app(\App\Http\Controllers\Admission\ReportingController::class);
+        $method = new \ReflectionMethod($controller, 'buildReportData');
+        $method->setAccessible(true);
+        $capturedReportData = $method->invoke($controller, $request);
+
+        $this->assertSame(1, $capturedReportData['totalLeads']);
+        $this->assertSame(1, $capturedReportData['totalApplicants']);
+        $this->assertTrue($capturedReportData['programStats']->pluck('name')->contains($visibleProgram->name));
+        $this->assertFalse($capturedReportData['programStats']->pluck('name')->contains($otherVisibleProgram->name));
+    }
+
     private function admissionCounsellors(): array
     {
         Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);

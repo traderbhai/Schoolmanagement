@@ -10,7 +10,7 @@
             <i class="bi bi-calendar3 me-2 text-primary"></i>
             My Timetable
             @if($currentTerm)
-                <span class="text-muted fs-5 fw-normal ms-2">— {{ $currentTerm->name }}</span>
+                <span class="text-muted fs-5 fw-normal ms-2">- {{ $currentTerm->name }}</span>
             @endif
         </h4>
     </div>
@@ -20,6 +20,11 @@
             <strong>Teacher profile not linked.</strong>
             Your timetable cannot be loaded until administration links your login to a teacher profile.
         </div>
+    @elseif($entries->isEmpty())
+        <div class="alert alert-info border-0 shadow-sm">
+            <div class="fw-semibold">No published teaching timetable is assigned to you yet.</div>
+            <div class="small mb-0">PMC or the academic office must publish your subject allocation in the official timetable before classes appear here. Draft timetable entries and unpublished timetable versions stay hidden from teacher self-service.</div>
+        </div>
     @endif
 
     @if($todaySubstitutions->isNotEmpty())
@@ -28,8 +33,8 @@
             <ul class="mb-0 mt-1">
                 @foreach($todaySubstitutions as $sub)
                     <li>
-                        Today: <strong>{{ $sub->entry->subject->name ?? 'N/A' }}</strong>
-                        &mdash; {{ $sub->action }}
+                        Today: <strong>{{ $sub->entry->subject->name ?? 'Subject not linked' }}</strong>
+                        - {{ $sub->action }}
                         @if($sub->reason)
                             <span class="text-muted small">({{ $sub->reason }})</span>
                         @endif
@@ -52,7 +57,7 @@
                                     <div class="fw-semibold small">{{ $slot->name }}</div>
                                     <div class="fw-normal" style="font-size:0.72rem;">
                                         {{ \Carbon\Carbon::parse($slot->start_time)->format('H:i') }}
-                                        &ndash;
+                                        -
                                         {{ \Carbon\Carbon::parse($slot->end_time)->format('H:i') }}
                                     </div>
                                 </th>
@@ -76,19 +81,19 @@
                                     @elseif($entry)
                                         <td class="text-center py-2">
                                             <div class="fw-bold text-primary" style="font-size:0.8rem;">
-                                                {{ $entry->subject->code ?? '' }}
+                                                {{ $entry->subject->code ?? 'Subject code pending' }}
                                             </div>
-                                            <div class="small">{{ $entry->subject->name ?? '' }}</div>
+                                            <div class="small">{{ $entry->subject->name ?? 'Subject not linked' }}</div>
                                             <div class="text-muted" style="font-size:0.72rem;">
-                                                {{ $entry->batch->name ?? '' }}
+                                                {{ $entry->batch->name ?? 'Batch not linked' }}
                                             </div>
                                             <div class="text-muted" style="font-size:0.72rem;">
                                                 <i class="bi bi-door-open"></i>
-                                                {{ $entry->classroom->name ?? '—' }}
+                                                {{ $entry->classroom->name ?? 'Room not assigned' }}
                                             </div>
                                         </td>
                                     @else
-                                        <td class="text-center bg-light text-muted">—</td>
+                                        <td class="text-center bg-light text-muted small">Free</td>
                                     @endif
                                 @endforeach
                             </tr>

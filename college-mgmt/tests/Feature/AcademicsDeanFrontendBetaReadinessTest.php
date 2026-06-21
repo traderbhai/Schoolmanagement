@@ -7,6 +7,7 @@ use App\Models\AcademicDeanApprovalItem;
 use App\Models\AcademicDeanExportLog;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -210,6 +211,11 @@ class AcademicsDeanFrontendBetaReadinessTest extends TestCase
         $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
 
         $this->assertStringContainsString('<x-ui.manifest-sidebar role="dean"', $layout);
+
+        $deanGroups = FrontendNavigation::manifest()['dean']['groups'];
+
+        $this->assertNotContains('Approval Cockpit', collect($deanGroups['Governance'])->pluck('label')->all());
+        $this->assertContains('Approval Cockpit', collect($deanGroups['Approvals'])->pluck('label')->all());
     }
 
     public function test_dean_dashboard_kpis_and_mobile_sidebar_have_usable_targets(): void

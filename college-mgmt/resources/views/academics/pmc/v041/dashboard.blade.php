@@ -11,14 +11,19 @@
     </div>
     <div class="alert alert-info border-0 shadow-sm small mb-3">
         <div class="fw-semibold mb-1">Timetable build sequence</div>
-        <div class="d-flex flex-wrap gap-2">
-            <span class="badge text-bg-light border">1. Allocate student course baskets</span>
-            <span class="badge text-bg-light border">2. Build sections and elective groups</span>
-            <span class="badge text-bg-light border">3. Assign faculty to exact groups</span>
-            <span class="badge text-bg-light border">4. Lock fixed slots and rooms</span>
-            <span class="badge text-bg-light border">5. Generate, validate, approve, freeze</span>
+        <div class="d-flex flex-wrap gap-2" aria-label="PMC timetable build workflow links">
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.student-course-baskets.index') }}">1. Allocate student course baskets</a>
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.course-groups.index') }}">2. Build sections and elective groups</a>
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.section-faculty-allocation.index') }}">3. Assign faculty to exact groups</a>
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.locked-slots.index') }}">4. Lock fixed slots and rooms</a>
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.timetable-generator.index') }}">5. Generate and validate</a>
+            <a class="badge text-bg-light border text-decoration-none" href="{{ route('academics.pmc.timetable-versions-v041.index') }}">6. Approve, publish, freeze</a>
         </div>
         <div class="text-muted mt-2">Do not start generation until baskets, groups, faculty, availability, rooms, and locked slots are ready. Hard conflicts block publish; soft warnings need review and approval.</div>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            <span class="badge text-bg-primary">Owner: PMC with Dean override</span>
+            <span class="badge text-bg-secondary">Source: Course baskets, groups, faculty allocations, locked slots, generator runs</span>
+        </div>
     </div>
 
     <div class="row g-2 mb-3">
@@ -449,7 +454,8 @@
                             <div class="col"><div class="border rounded p-2"><div class="small text-muted">Score</div><div class="fw-semibold">{{ $latestRun->quality_score }}%</div></div></div>
                         </div>
                     @else
-                        <div class="text-muted">No generation run yet.</div>
+                        <div class="text-muted">No generation run yet. Complete course baskets, sections/groups, faculty assignments, availability, rooms, and locked slots, then open the generator.</div>
+                        <a class="btn btn-sm btn-outline-primary mt-2" href="{{ route('academics.pmc.timetable-generator.index') }}">Open generator source</a>
                     @endif
                 </div>
             </div>
@@ -464,7 +470,7 @@
                             <div class="small text-muted">{{ $notification->notification_type }} | {{ $notification->recipient_type }} | {{ $notification->status }}</div>
                         </a>
                     @empty
-                        <div class="list-group-item text-muted">No notifications logged.</div>
+                        <div class="list-group-item text-muted">No timetable notifications logged yet. Publish, revise, substitute, or change a class to create student/faculty notification records.</div>
                     @endforelse
                 </div>
             </div>
@@ -488,7 +494,7 @@
                             <td>{{ $constraint->recommended_fix }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="text-muted">No constraints found.</td></tr>
+                        <tr><td colspan="4" class="text-muted p-3">No timetable constraints found for the current scope. Run generation or open the planner after baskets, groups, faculty allocation, rooms, and locked slots are ready.</td></tr>
                     @endforelse
                 </tbody>
             </table>

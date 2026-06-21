@@ -58,11 +58,21 @@
             <div class="list-group list-group-flush">
                 @forelse($desk['nextBestCalls'] as $lead)
                     <a class="list-group-item list-group-item-action d-flex justify-content-between gap-2" href="{{ route('admission.leads.show', $lead) }}">
-                        <span><strong>{{ $lead->name }}</strong><div class="small text-muted">{{ $lead->phone }} | {{ $lead->program?->name }} | {{ $lead->next_action }}</div></span>
+                        <span>
+                            <strong>{{ $lead->name }}</strong>
+                            <div class="small text-muted">
+                                {{ $lead->phone ?: 'Phone not recorded' }} |
+                                {{ $lead->program?->name ?? 'Program not assigned' }} |
+                                {{ $lead->next_action ?: 'Next action not set' }}
+                            </div>
+                        </span>
                         <span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span>
                     </a>
                 @empty
-                    <div class="list-group-item text-muted">No calls due.</div>
+                    <div class="list-group-item text-muted">
+                        <div class="fw-semibold text-dark">No calls due in your scope</div>
+                        <div class="small">Assigned callbacks, hot leads, and no-response follow-ups are clear. Use Calling Desk if you need to pull the next eligible record.</div>
+                    </div>
                 @endforelse
             </div>
         </div>
@@ -73,10 +83,17 @@
                 @forelse($desk['applicantBlockers'] as $applicant)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.applicants.show', $applicant) }}">
                         <strong>{{ $applicant->user?->name ?? $applicant->application_number }}</strong>
-                        <div class="small text-muted">{{ $applicant->status_label }} | {{ $applicant->program?->name }} | {{ $applicant->next_action }}</div>
+                        <div class="small text-muted">
+                            {{ $applicant->status_label }} |
+                            {{ $applicant->program?->name ?? 'Program not assigned' }} |
+                            {{ $applicant->next_action ?: 'Next action not set' }}
+                        </div>
                     </a>
                 @empty
-                    <div class="list-group-item text-muted">No applicant blockers.</div>
+                    <div class="list-group-item text-muted">
+                        <div class="fw-semibold text-dark">No applicant blockers in your scope</div>
+                        <div class="small">Document, payment, and review blockers appear here after assigned applicants need counsellor follow-up.</div>
+                    </div>
                 @endforelse
             </div>
         </div>
@@ -86,11 +103,14 @@
             <div class="list-group list-group-flush">
                 @forelse($desk['assessmentFollowups'] as $assignment)
                     <a class="list-group-item list-group-item-action" href="{{ route('admission.assessment-control-room.index') }}">
-                        <strong>{{ $assignment->applicant?->user?->name }}</strong>
-                        <div class="small text-muted">{{ $assignment->panel?->name }} | {{ ucwords(str_replace('_', ' ', $assignment->lifecycle_status)) }}</div>
+                        <strong>{{ $assignment->applicant?->user?->name ?? $assignment->applicant?->application_number ?? 'Applicant not linked' }}</strong>
+                        <div class="small text-muted">{{ $assignment->panel?->name ?? 'Panel not assigned' }} | {{ ucwords(str_replace('_', ' ', $assignment->lifecycle_status)) }}</div>
                     </a>
                 @empty
-                    <div class="list-group-item text-muted">No assessment follow-ups.</div>
+                    <div class="list-group-item text-muted">
+                        <div class="fw-semibold text-dark">No assessment follow-ups in your scope</div>
+                        <div class="small">Invited, rescheduled, and no-show candidates appear here when your assigned applicants need assessment follow-up.</div>
+                    </div>
                 @endforelse
             </div>
         </div>

@@ -24,6 +24,10 @@
             <div>
                 <div class="fw-semibold">IQAC source-list workflow</div>
                 <div class="small text-muted">Use this list to move from quality signal to owner, evidence, action, and closure.</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge text-bg-primary">Owner: IQAC quality team</span>
+                    <span class="badge text-bg-secondary">Source: {{ $section['title'] }}</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Filter program/term/status</span>
@@ -93,7 +97,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">{{ $section['title'] }} source records</caption>
-                <thead><tr><th>Record</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th>Record</th><th>Owner / Source</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse($section['items'] as $item)
                         <tr>
@@ -101,11 +105,21 @@
                                 <div class="fw-semibold">{{ $item['title'] }}</div>
                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                             </td>
+                            <td>
+                                <span class="badge text-bg-light border">Owner: IQAC</span>
+                                <span class="badge text-bg-light border">Source: {{ $section['title'] }}</span>
+                            </td>
                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No IQAC records match the current scope and filters.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-body">No IQAC records match this source list.</div>
+                                <div class="small">This usually means the current program/term/status filters have no quality gaps, or source workflows have not yet created OBE mapping, attainment, feedback, audit evidence, or corrective-action records.</div>
+                                <div class="small mt-1">Before closing a quality review, recheck owner assignment, evidence availability, action status, and target/threshold boundaries.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

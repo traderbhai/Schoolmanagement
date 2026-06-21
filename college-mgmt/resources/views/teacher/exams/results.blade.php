@@ -1,5 +1,5 @@
 @extends('layouts.teacher')
-@section('title','Enter Results — '.$exam->name)
+@section('title','Enter Results - '.$exam->name)
 @section('page-title','Enter Exam Results')
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('teacher.dashboard') }}">Dashboard</a></li>
@@ -19,20 +19,27 @@
     </div>
 @endif
 
-{{-- Exam Info Header --}}
+<div class="alert alert-info border-0 shadow-sm">
+    <div class="fw-semibold mb-1"><i class="bi bi-table me-1"></i>Result entry sequence</div>
+    <div class="small mb-0">
+        Confirm this is the correct exam and subject, review the official roster, enter marks or mark absentees, then save.
+        Once Exam Cell publishes the result, teacher edits are locked and corrections must use the appeal/correction workflow.
+    </div>
+</div>
+
 <div class="card mb-4 border-0 border-start border-4 border-primary" style="box-shadow:var(--shadow-sm)">
     <div class="card-body py-3">
         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between">
             <div class="d-flex align-items-center flex-wrap gap-2">
                 <span class="fw-bold fs-6 text-primary">{{ $exam->name }}</span>
-                <span class="text-muted">·</span>
-                <span class="text-muted">{{ $exam->subject->name ?? '—' }}</span>
+                <span class="text-muted">-</span>
+                <span class="text-muted">{{ $exam->subject?->name ?? 'Subject not linked' }}</span>
                 <span class="badge bg-secondary">{{ ucfirst($exam->type) }}</span>
-                <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : '—' }}</span>
+                <span class="text-muted small"><i class="bi bi-calendar3 me-1"></i>{{ $exam->exam_date ? $exam->exam_date->format('d M Y') : 'Exam date not set' }}</span>
             </div>
             <div>
                 <span class="badge bg-light text-dark border fs-6 fw-semibold px-3 py-2">
-                    Max: <strong>{{ $exam->total_marks }}</strong> &nbsp;|&nbsp; Pass: <strong>{{ $exam->passing_marks }}</strong>
+                    Max: <strong>{{ $exam->total_marks }}</strong> | Pass: <strong>{{ $exam->passing_marks }}</strong>
                 </span>
             </div>
         </div>
@@ -54,8 +61,11 @@
         <div class="card-body">
             <div class="empty-state py-5">
                 <div class="empty-icon"><i class="bi bi-people" style="font-size:3rem;color:var(--clr-text-muted)"></i></div>
-                <h6 class="mt-3 text-muted">No Students Enrolled</h6>
-                <p class="text-muted small mb-0">No students enrolled in this subject for the exam semester.</p>
+                <h6 class="mt-3 text-muted">No students are available for this exam roster</h6>
+                <p class="text-muted small mb-0">
+                    Result entry requires students to be allocated to this subject for the exam semester or term.
+                    Ask PMC/Academics to verify student course allocation and Exam Cell roster setup before entering marks.
+                </p>
             </div>
         </div>
     </div>
@@ -85,7 +95,7 @@
                     @php $existingResult = $s->examResults->first(); @endphp
                     <tr class="result-row" data-student="{{ $s->id }}">
                         <td class="text-muted">{{ $loop->iteration }}</td>
-                        <td><code class="small">{{ $s->roll_number }}</code></td>
+                        <td><code class="small">{{ $s->roll_number ?? 'Roll pending' }}</code></td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
@@ -94,7 +104,7 @@
                                 </div>
                                 <div>
                                     <div class="fw-semibold" style="font-size:.88rem">{{ $s->user->name }}</div>
-                                    <div class="text-muted" style="font-size:.73rem">{{ $s->enrollment_number }}</div>
+                                    <div class="text-muted" style="font-size:.73rem">{{ $s->enrollment_number ?? 'Enrollment pending' }}</div>
                                 </div>
                             </div>
                         </td>
@@ -118,7 +128,7 @@
                                    min="0"
                                    max="{{ $exam->total_marks }}"
                                    step="0.5"
-                                   placeholder="0 – {{ $exam->total_marks }}"
+                                   placeholder="0 - {{ $exam->total_marks }}"
                                    value="{{ $existingResult && !$existingResult->is_absent ? $existingResult->marks_obtained : '' }}"
                                    @disabled($exam->published_at || !$canSaveResults || ($existingResult && $existingResult->is_absent))>
                             <div class="form-text" style="font-size:.68rem">Out of {{ $exam->total_marks }} | Pass: {{ $exam->passing_marks }}</div>
@@ -127,7 +137,7 @@
                             <input type="text"
                                    name="results[{{ $s->id }}][remarks]"
                                    class="form-control form-control-sm"
-                                   placeholder="Optional"
+                                   placeholder="Optional note for Exam Cell"
                                    value="{{ $existingResult ? $existingResult->remarks : '' }}"
                                    @disabled($exam->published_at || !$canSaveResults)>
                         </td>
@@ -157,12 +167,11 @@
 
 @push('scripts')
 <script>
-// Absent checkbox disables marks input
 document.querySelectorAll('.absent-cb').forEach(cb => {
     cb.addEventListener('change', function() {
-        const sid   = this.dataset.student;
+        const sid = this.dataset.student;
         const input = document.querySelector(`.marks-input-${sid}`);
-        const row   = this.closest('tr');
+        const row = this.closest('tr');
         if (input) {
             input.disabled = this.checked;
             if (this.checked) {
@@ -173,14 +182,12 @@ document.querySelectorAll('.absent-cb').forEach(cb => {
             }
         }
     });
-    // Init state
     if (cb.checked) {
         const row = cb.closest('tr');
         if (row) row.classList.add('table-warning');
     }
 });
 
-// Highlight row red if marks out of range
 document.querySelectorAll('.marks-input').forEach(input => {
     input.addEventListener('input', function() {
         const max = parseFloat(this.getAttribute('max'));

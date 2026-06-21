@@ -8,10 +8,14 @@
 
 <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
-        <div>
-            <div class="fw-semibold">Accounts operating sequence</div>
-            <div class="small text-muted">Use this dashboard to move from verification queues to outstanding follow-up, scholarships, reconciliation, and reports.</div>
-        </div>
+            <div>
+                <div class="fw-semibold">Accounts operating sequence</div>
+                <div class="small text-muted">Use this dashboard to move from verification queues to outstanding follow-up, scholarships, reconciliation, and reports.</div>
+                <div class="small text-muted mt-1">
+                    <span class="badge text-bg-light me-1">Owner: Accounts office</span>
+                    <span class="badge text-bg-light">Source: fee demands, verified payments, Admission receipts, and scholarship awards</span>
+                </div>
+            </div>
         <div class="d-flex flex-wrap gap-1">
             <span class="badge text-bg-light">1. Verify payments</span>
             <span class="badge text-bg-light">2. Review outstanding</span>
@@ -131,16 +135,18 @@
 {{-- Admission-side stats row --}}
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="kpi-card kpi-green">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
-                <div>
+            <a href="{{ route('accounts.reconciliation') }}" class="text-decoration-none">
+            <div class="kpi-card kpi-green">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                    <div>
                     <div class="kpi-value" style="font-size:1.3rem">Rs. {{ number_format($totalAdmissionCollected, 0) }}</div>
                     <div class="kpi-label">Admission Fees Collected</div>
                 </div>
+                </div>
+            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open reconciliation</div>
             </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>New intakes</div>
-        </div>
+            </a>
     </div>
     <div class="col-md-3">
         <a href="{{ route('accounts.admission-payments') }}" class="text-decoration-none">
@@ -171,11 +177,12 @@
                         <div class="kpi-label">Scholarships to Disburse</div>
                     </div>
                 </div>
-                <div class="kpi-trend"><i class="bi bi-currency-rupee me-1"></i>Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending</div>
+                <div class="kpi-trend"><i class="bi bi-cash-stack me-1"></i>Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending</div>
             </div>
         </a>
     </div>
     <div class="col-md-3">
+        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
         <div class="kpi-card {{ $overdueDemandsCount > 0 ? 'kpi-red' : 'kpi-blue' }}">
             <div class="d-flex align-items-center gap-3">
                 <div class="kpi-icon"><i class="bi bi-calendar-x-fill"></i></div>
@@ -185,9 +192,10 @@
                 </div>
             </div>
             <div class="kpi-trend {{ $overdueDemandsCount > 0 ? 'down' : '' }}">
-                <i class="bi bi-currency-rupee me-1"></i>Rs. {{ number_format($overdueDemandsAmount, 0) }} at risk
+                <i class="bi bi-eye me-1"></i>Rs. {{ number_format($overdueDemandsAmount, 0) }} at risk
             </div>
         </div>
+        </a>
     </div>
 </div>
 
@@ -282,13 +290,17 @@
                         <tbody>
                         @forelse($recentPayments as $p)
                             <tr>
-                                <td>{{ $p->student?->user?->name ?? '-' }}</td>
+                                <td>{{ $p->student?->user?->name ?? 'Student not linked' }}</td>
                                 <td>Rs. {{ number_format($p->amount_paid, 0) }}</td>
-                                <td>{{ $p->payment_date?->format('d M Y') }}</td>
-                                <td>{{ ucfirst($p->payment_method ?? '-') }}</td>
+                                <td>{{ $p->payment_date?->format('d M Y') ?? 'Payment date not recorded' }}</td>
+                                <td>{{ ucfirst($p->payment_method ?? 'Method not recorded') }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-center text-muted">No payments yet.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    No recent verified payments yet. Post or verify fee payments before using this recent collection list.
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>

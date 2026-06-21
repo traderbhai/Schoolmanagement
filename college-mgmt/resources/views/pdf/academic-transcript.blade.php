@@ -19,17 +19,17 @@ table.results td { padding:3px 6px; border-bottom:1px solid #e5e7eb; }
 </head>
 <body>
 <h1>ACADEMIC TRANSCRIPT</h1>
-<h2>{{ $student->program->name ?? '' }}</h2>
+<h2>{{ $student->program->name ?? 'Program not linked' }}</h2>
 <hr>
 <div class="info">
 <table>
 <tr>
-  <td><strong>Student Name:</strong> {{ $student->user->name }}</td>
-  <td><strong>Enrollment No:</strong> {{ $student->enrollment_number }}</td>
+  <td><strong>Student Name:</strong> {{ $student->user?->name ?? 'Student name missing' }}</td>
+  <td><strong>Enrollment No:</strong> {{ $student->enrollment_number ?? 'Enrollment number pending' }}</td>
 </tr>
 <tr>
-  <td><strong>Program:</strong> {{ $student->program->name ?? '-' }}</td>
-  <td><strong>Batch:</strong> {{ $student->batch->name ?? '-' }}</td>
+  <td><strong>Program:</strong> {{ $student->program?->name ?? 'Program not linked' }}</td>
+  <td><strong>Batch:</strong> {{ $student->batch?->name ?? 'Batch not linked' }}</td>
 </tr>
 <tr>
   <td><strong>Issued On:</strong> {{ ($issuedAt ?? now())->format('d M Y') }}</td>
@@ -39,18 +39,18 @@ table.results td { padding:3px 6px; border-bottom:1px solid #e5e7eb; }
 </div>
 
 @foreach($semesterReports as $report)
-<div class="term-header">{{ data_get($report, 'term.name', '-') }} - SGPA: {{ $report['sgpa'] }} | Credits: {{ $report['earned_credits'] }}/{{ $report['total_credits'] }}</div>
+<div class="term-header">{{ data_get($report, 'term.name', 'Term not linked') }} - SGPA: {{ $report['sgpa'] }} | Credits: {{ $report['earned_credits'] }}/{{ $report['total_credits'] }}</div>
 <table class="results">
 <thead><tr><th>Subject</th><th>Credits</th><th>Marks</th><th>%</th><th>Grade</th><th>Result</th></tr></thead>
 <tbody>
 @foreach($report['subjects'] as $s)
 <tr>
-  <td>{{ data_get($s, 'subject.name', '-') }}</td>
+  <td>{{ data_get($s, 'subject.name', 'Subject not linked') }}</td>
   <td>{{ $s['credits'] }}</td>
   <td>{{ $s['obtained'] !== null ? $s['obtained'].'/'.$s['total'] : 'Pending' }}</td>
-  <td>{{ $s['pct'] !== null ? $s['pct'].'%' : '-' }}</td>
-  <td><strong>{{ $s['grade']['letter'] ?? '-' }}</strong></td>
-  <td class="{{ ($s['status'] ?? null) === 'pass' ? 'pass' : 'fail' }}">{{ ucfirst($s['status'] ?? '-') }}</td>
+  <td>{{ $s['pct'] !== null ? $s['pct'].'%' : 'Result pending' }}</td>
+  <td><strong>{{ $s['grade']['letter'] ?? 'Grade pending' }}</strong></td>
+  <td class="{{ ($s['status'] ?? null) === 'pass' ? 'pass' : 'fail' }}">{{ ucfirst($s['status'] ?? 'pending') }}</td>
 </tr>
 @endforeach
 </tbody>

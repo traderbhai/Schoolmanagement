@@ -22,7 +22,7 @@
             <div class="col-md-4">
                 <label class="form-label">Student</label>
                 <select name="student_id" class="form-select form-select-sm">
-                    <option value="">Select student…</option>
+                    <option value="">Select student</option>
                     @foreach($students as $s)
                         <option value="{{ $s->id }}" @selected(request('student_id')==$s->id)>{{ $s->user->name }} ({{ $s->enrollment_number }})</option>
                     @endforeach
@@ -31,7 +31,7 @@
             <div class="col-md-4">
                 <label class="form-label">Semester</label>
                 <select name="semester_id" class="form-select form-select-sm">
-                    <option value="">Select semester…</option>
+                    <option value="">Select semester</option>
                     @foreach($semesters as $s)
                         <option value="{{ $s->id }}" @selected(request('semester_id')==$s->id)>{{ $s->name }}</option>
                     @endforeach
@@ -45,7 +45,6 @@
 </div>
 
 @if($report && $student)
-{{-- Summary KPI cards --}}
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card text-center">
@@ -81,7 +80,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Subject-wise Results — {{ $semester->name }}</span>
+        <span class="fw-semibold">Subject-wise Results - {{ $semester->name }}</span>
         <a href="{{ route('admin.reports.grade-card', [$student->id, $semester->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download grade card PDF">
             <i class="bi bi-file-earmark-pdf me-1"></i>Download Grade Card
         </a>
@@ -109,7 +108,7 @@
                 <td>{{ $row['credits'] }}</td>
                 <td>
                     @if($row['pct'] === null)
-                        <span class="text-muted">–</span>
+                        <span class="text-muted">Marks not published</span>
                     @else
                         {{ $row['obtained'] }}/{{ $row['total'] }}
                     @endif
@@ -129,9 +128,9 @@
                     <span class="badge fs-6 bg-{{ $row['grade']['letter'] === 'F' ? 'danger' : ($row['grade']['points'] >= 8 ? 'success' : ($row['grade']['points'] >= 6 ? 'primary' : 'warning text-dark')) }}">
                         {{ $row['grade']['letter'] }}
                     </span>
-                    @else <span class="text-muted">–</span> @endif
+                    @else <span class="text-muted">Grade pending</span> @endif
                 </td>
-                <td>{{ $row['grade'] ? $row['grade']['points'] : '–' }}</td>
+                <td>{{ $row['grade'] ? $row['grade']['points'] : 'Points pending' }}</td>
                 <td>
                     @if($row['status'] === 'pending')<span class="badge bg-secondary">Pending</span>
                     @elseif($row['status'] === 'pass')<span class="badge badge-active">Pass</span>
@@ -159,7 +158,7 @@
         <div class="empty-state py-4">
             <div class="empty-icon"><i class="bi bi-search"></i></div>
             <div class="mt-2 fw-semibold">No results found</div>
-            <div class="text-muted" style="font-size:.85rem">No attendance records found for the selected criteria.</div>
+            <div class="text-muted" style="font-size:.85rem">No published result records match the selected student and semester. Confirm that the Exam Cell has published marks for this roster, or choose another semester.</div>
         </div>
     </div>
 </div>

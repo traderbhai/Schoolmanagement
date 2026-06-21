@@ -1,9 +1,28 @@
 @extends('layouts.admin')
-@section('title', 'Accounts — Fee Collections')
+@section('title', 'Accounts - Fee Collections')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-receipt me-2 text-primary"></i>Fee Collections</h4>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">Collection source-list workflow</div>
+            <div class="small text-muted">Use this list to verify posted student payments, review filters, and export the exact collection view currently on screen.</div>
+            <div class="small text-muted mt-1">
+                <span class="badge text-bg-light me-1">Owner: Accounts office</span>
+                <span class="badge text-bg-light">Source: verified fee payment records</span>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+            <span class="badge text-bg-light">1. Filter program/batch/status</span>
+            <span class="badge text-bg-light">2. Check receipt and student</span>
+            <span class="badge text-bg-light">3. Review paid/pending state</span>
+            <span class="badge text-bg-light">4. Export current view</span>
+        </div>
+    </div>
 </div>
 
 <form method="GET" class="row g-2 mb-3">
@@ -38,25 +57,37 @@
 </form>
 
 <div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <div class="fw-semibold">Filtered Source List ({{ $payments->total() }})</div>
+        <div class="small text-muted">Visible filter summary: {{ collect(request()->only(['program_id', 'batch_id', 'status', 'date_from', 'date_to']))->filter(fn ($value) => $value !== null && $value !== '')->map(fn ($value, $key) => str($key)->headline() . ': ' . $value)->join(' | ') ?: 'Showing all scoped fee collections.' }}</div>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Receipt</th><th>Student</th><th>Program</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th></tr>
+                    <tr><th>Receipt</th><th>Student</th><th>Program</th><th>Owner / Source</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                 @forelse($payments as $pay)
                     <tr>
-                        <td><code>{{ $pay->receipt_number }}</code></td>
-                        <td>{{ $pay->student?->user?->name ?? '—' }}</td>
-                        <td>{{ $pay->student?->program?->name ?? '—' }}</td>
-                        <td>₹{{ number_format($pay->amount_paid, 2) }}</td>
-                        <td>{{ $pay->payment_date?->format('d M Y') }}</td>
-                        <td>{{ ucfirst($pay->payment_method ?? '—') }}</td>
+                        <td><code>{{ $pay->receipt_number ?: 'Receipt not issued' }}</code></td>
+                        <td>{{ $pay->student?->user?->name ?? 'Student not linked' }}</td>
+                        <td>{{ $pay->student?->program?->name ?? 'Program not assigned' }}</td>
+                        <td>
+                            <div class="small text-muted">Owner: Accounts office</div>
+                            <div class="small text-muted">Source: Fee payment</div>
+                        </td>
+                        <td>Rs. {{ number_format($pay->amount_paid, 2) }}</td>
+                        <td>{{ $pay->payment_date?->format('d M Y') ?? 'Payment date not recorded' }}</td>
+                        <td>{{ ucfirst($pay->payment_method ?? 'Method not recorded') }}</td>
                         <td><span class="badge bg-{{ $pay->status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($pay->status) }}</span></td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted">No payments found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No fee collections match this source list. Check program, batch, status, and date filters, or confirm that fee payments have been posted before exporting.
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>

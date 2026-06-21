@@ -67,6 +67,24 @@
                         <h5 class="fw-bold mb-1">No urgent academic action due today</h5>
                         <p class="text-muted mb-0">Use the time to review course materials, check notices, or plan upcoming academic events.</p>
                     @endif
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        @if(count($lowAttendanceSubjects) > 0)
+                            <span class="badge text-bg-danger">Owner: You + mentor/faculty</span>
+                            <span class="badge text-bg-light">Source: Attendance</span>
+                        @elseif($feeOutstanding > 0)
+                            <span class="badge text-bg-warning">Owner: You + Accounts</span>
+                            <span class="badge text-bg-light">Source: Fee demands</span>
+                        @elseif($pendingAssignmentCount > 0)
+                            <span class="badge text-bg-primary">Owner: You</span>
+                            <span class="badge text-bg-light">Source: Published assignments</span>
+                        @elseif(count($todayClasses) > 0)
+                            <span class="badge text-bg-primary">Owner: You</span>
+                            <span class="badge text-bg-light">Source: Published timetable</span>
+                        @else
+                            <span class="badge text-bg-light">Owner: You</span>
+                            <span class="badge text-bg-light">Source: Your student records</span>
+                        @endif
+                    </div>
                 </div>
                 <div class="d-grid gap-2" style="min-width: 210px;">
                     @if(count($lowAttendanceSubjects) > 0)
@@ -154,9 +172,9 @@
                                     @php $entry = $todayClasses[$slot->id]; @endphp
                                     <tr>
                                         <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
-                                        <td class="fw-semibold small">{{ $entry->subject->name ?? '-' }}</td>
-                                        <td class="text-muted small">{{ $entry->teacher?->user?->name ?? '-' }}</td>
-                                        <td class="text-muted small">{{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? '-' }}</td>
+                                        <td class="fw-semibold small">{{ $entry->subject->name ?? 'Subject not assigned' }}</td>
+                                        <td class="text-muted small">{{ $entry->teacher?->user?->name ?? 'Faculty not assigned' }}</td>
+                                        <td class="text-muted small">{{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? 'Room not assigned' }}</td>
                                     </tr>
                                     @endif
                                 @endforeach
@@ -164,7 +182,10 @@
                         </table>
                     </div>
                     @else
-                    <p class="text-muted p-3 mb-0"><i class="bi bi-sun me-2"></i>No classes scheduled for today.</p>
+                    <div class="p-3">
+                        <p class="text-muted mb-2"><i class="bi bi-sun me-2"></i>No classes scheduled for today.</p>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ route('student.subjects.index') }}">Review subject registration</a>
+                    </div>
                     @endif
                 </div>
             </div>
@@ -183,7 +204,7 @@
                         <div>
                             <span class="badge bg-primary-subtle text-primary me-2">Assignment</span>
                             <span class="small fw-semibold">{{ $assignment->title }}</span>
-                            <span class="text-muted small ms-2">{{ $assignment->subject->name }}</span>
+                            <span class="text-muted small ms-2">{{ $assignment->subject->name ?? 'Subject not assigned' }}</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             @if($sub && in_array($sub->status, ['submitted','graded']))
@@ -270,12 +291,10 @@
                         </div>
                     </div>
                     <table class="table table-sm mb-0" style="font-size:.85rem">
-                        <tr><td class="text-muted border-0 ps-0 py-1">Program</td><td class="border-0 py-1">{{ $student->program->name ?? '-' }}</td></tr>
-                        <tr><td class="text-muted border-0 ps-0 py-1">Batch</td><td class="border-0 py-1">{{ $student->batch->name ?? '-' }}</td></tr>
-                        <tr><td class="text-muted border-0 ps-0 py-1">Term</td><td class="border-0 py-1">{{ $currentSemester->name ?? ($student->current_term ?? '-') }}</td></tr>
-                        @if($student->mentor)
-                        <tr><td class="text-muted border-0 ps-0 py-1">Mentor</td><td class="border-0 py-1">{{ $student->mentor->name }}</td></tr>
-                        @endif
+                        <tr><td class="text-muted border-0 ps-0 py-1">Program</td><td class="border-0 py-1">{{ $student->program->name ?? 'Program not assigned yet' }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Batch</td><td class="border-0 py-1">{{ $student->batch->name ?? 'Batch not assigned yet' }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Term</td><td class="border-0 py-1">{{ $currentSemester->name ?? ($student->current_term ?? 'Term not published yet') }}</td></tr>
+                        <tr><td class="text-muted border-0 ps-0 py-1">Mentor</td><td class="border-0 py-1">{{ $student->mentor->name ?? 'Mentor not assigned yet' }}</td></tr>
                     </table>
                 </div>
             </div>

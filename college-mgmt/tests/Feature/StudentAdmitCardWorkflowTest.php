@@ -128,8 +128,58 @@ class StudentAdmitCardWorkflowTest extends TestCase
             ->assertSee('Readable Fallback Final')
             ->assertSee('10:00 AM')
             ->assertSee('12:00 PM')
+            ->assertSee('Venue to be announced')
             ->assertSee('100')
+            ->assertDontSee('TBA')
+            ->assertDontSee('Not set')
             ->assertDontSee('â');
+    }
+
+    public function test_student_admit_card_pdf_uses_readable_missing_data_labels(): void
+    {
+        $student = Student::factory()->make([
+            'id' => 1001,
+            'enrollment_number' => null,
+            'roll_number' => null,
+            'program_id' => null,
+            'batch_id' => null,
+        ]);
+        $student->setRelation('user', null);
+        $student->setRelation('program', null);
+        $student->setRelation('batch', null);
+
+        $exam = Exam::factory()->make([
+            'id' => 2001,
+            'name' => 'Readable Admit Card Exam',
+            'exam_date' => null,
+            'start_time' => null,
+            'end_time' => null,
+            'total_marks' => null,
+            'passing_marks' => null,
+        ]);
+        $exam->setRelation('subject', null);
+        $exam->setRelation('classroom', null);
+        $exam->setRelation('semester', null);
+        $exam->setRelation('term', null);
+
+        $html = view('student.admit-card-pdf', compact('student', 'exam'))->render();
+
+        $this->assertStringContainsString('Admit Card - Readable Admit Card Exam', $html);
+        $this->assertStringContainsString('Student name missing', $html);
+        $this->assertStringContainsString('Enrollment number pending', $html);
+        $this->assertStringContainsString('Program not linked', $html);
+        $this->assertStringContainsString('Roll number pending', $html);
+        $this->assertStringContainsString('Batch not linked', $html);
+        $this->assertStringContainsString('Academic year not linked', $html);
+        $this->assertStringContainsString('Subject not linked', $html);
+        $this->assertStringContainsString('Subject code not linked', $html);
+        $this->assertStringContainsString('Exam date not announced', $html);
+        $this->assertStringContainsString('Time not announced', $html);
+        $this->assertStringContainsString('Venue to be announced', $html);
+        $this->assertStringContainsString('Max marks pending / Passing marks pending', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('&mdash;', $html);
+        $this->assertStringNotContainsString('â', $html);
     }
 
     public function test_student_admit_card_requires_approved_registration_fee_and_attendance_clearance(): void

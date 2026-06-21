@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Follow-up Calendar — ' . $startOfMonth->format('F Y'))
+@section('title', 'Follow-up Calendar - ' . $startOfMonth->format('F Y'))
 @section('page-title', 'Follow-up Calendar')
 
 @section('content')
@@ -10,7 +10,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <a href="{{ route('admission.leads.index') }}" class="text-muted small"><i class="bi bi-arrow-left"></i> All Leads</a>
-            <h2 class="fw-bold mb-0 mt-1">Follow-up Calendar — {{ $startOfMonth->format('F Y') }}</h2>
+            <h2 class="fw-bold mb-0 mt-1">Follow-up Calendar - {{ $startOfMonth->format('F Y') }}</h2>
         </div>
     </div>
 
@@ -20,6 +20,18 @@
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
+
+    <div class="alert alert-info border-0 shadow-sm small mb-4">
+        <div class="fw-semibold mb-1">Follow-up review workflow</div>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="badge text-bg-light border">1. Choose month and counsellor</span>
+            <span class="badge text-bg-light border">2. Review pending callbacks by date</span>
+            <span class="badge text-bg-light border">3. Open the lead before changing outcome</span>
+            <span class="badge text-bg-light border">4. Mark done only after contact is recorded</span>
+            <span class="badge text-bg-light border">5. Schedule the next action if still open</span>
+        </div>
+        <div class="text-muted">This calendar shows only follow-ups visible to your Admission role and hierarchy. Completing an item updates the daily work queues and lead timeline.</div>
+    </div>
 
     {{-- Filters Row --}}
     <div class="card border-0 shadow-sm mb-4">
@@ -79,7 +91,7 @@
                 // Start from Sunday of the week containing the 1st of the month
                 $cursor = $startOfMonth->copy()->startOfWeek(\Illuminate\Support\Carbon::SUNDAY);
                 $today  = now()->format('Y-m-d');
-                $totalCells = 42; // 6 weeks × 7 days
+                $totalCells = 42; // 6 weeks x 7 days
             @endphp
 
             @for($row = 0; $row < 6; $row++)
@@ -104,7 +116,7 @@
                                 <div class="mb-1" style="font-size:0.7rem; overflow:hidden">
                                     <span class="{{ $fu->type_badge }}" style="font-size:0.65rem">{{ $fu->type_label }}</span>
                                     <span class="{{ $fu->isCompleted() ? 'text-decoration-line-through text-muted' : '' }}">
-                                        {{ \Illuminate\Support\Str::limit($fu->lead->name ?? 'Unknown', 12) }}
+                                        {{ \Illuminate\Support\Str::limit($fu->lead->name ?? 'Lead not linked', 12) }}
                                     </span>
                                 </div>
                             @endforeach
@@ -119,12 +131,20 @@
     {{-- Upcoming Follow-ups List --}}
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-transparent fw-semibold">
-            All Follow-ups — {{ $startOfMonth->format('F Y') }}
+            All Follow-ups - {{ $startOfMonth->format('F Y') }}
             <span class="badge bg-secondary ms-2">{{ $followUps->count() }}</span>
         </div>
         <div class="card-body p-0">
             @if($followUps->isEmpty())
-                <p class="text-muted p-3 mb-0">No follow-ups scheduled for this month.</p>
+                <div class="p-4 text-center text-muted">
+                    <div class="fw-semibold text-body mb-1">No follow-ups scheduled for this month.</div>
+                    <div class="small mb-3">Create callbacks from a lead detail page, Calling Desk, or reminder workflow. If you filtered by counsellor, clear the filter to confirm whether another team member owns the follow-up.</div>
+                    <div class="d-flex justify-content-center flex-wrap gap-2">
+                        <a href="{{ route('admission.leads.index') }}" class="btn btn-sm btn-outline-primary">Open Leads</a>
+                        <a href="{{ route('admission.calling-desk.index') }}" class="btn btn-sm btn-outline-primary">Calling Desk</a>
+                        <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-secondary">Reminder Queue</a>
+                    </div>
+                </div>
             @else
             <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0">
@@ -152,12 +172,12 @@
                                         <br><small class="text-muted">{{ $fu->lead->program->name }}</small>
                                     @endif
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <span class="text-muted">Lead not linked</span>
                                 @endif
                             </td>
                             <td><span class="{{ $fu->type_badge }}">{{ $fu->type_label }}</span></td>
-                            <td>{{ $fu->counsellor?->name ?? '—' }}</td>
-                            <td>{{ \Illuminate\Support\Str::limit($fu->notes, 50) }}</td>
+                            <td>{{ $fu->counsellor?->name ?? 'Counsellor not assigned' }}</td>
+                            <td>{{ \Illuminate\Support\Str::limit($fu->notes ?: 'No notes recorded', 50) }}</td>
                             <td>
                                 @if($fu->isCompleted())
                                     <span class="badge bg-success">Completed</span>
@@ -169,7 +189,7 @@
                                 @if(!$fu->isCompleted())
                                 <form action="{{ route('admission.leads.follow-ups.complete', $fu) }}" method="POST">
                                     @csrf @method('PATCH')
-                                    <button type="submit" class="btn btn-link btn-sm p-0 text-success">&#10003; Done</button>
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-success">Mark Done</button>
                                 </form>
                                 @endif
                             </td>

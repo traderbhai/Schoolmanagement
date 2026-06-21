@@ -10,6 +10,7 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -129,6 +130,11 @@ class AcademicsCoeFrontendBetaReadinessTest extends TestCase
             ->assertDontSee(route('academic.transcripts.index'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+
+        $coeGroups = FrontendNavigation::manifest()['coe']['groups'];
+
+        $this->assertNotContains('Academics Governance', collect($coeGroups['Command'])->pluck('label')->all());
+        $this->assertContains('Academics Governance', collect($coeGroups['Governance'])->pluck('label')->all());
     }
 
     public function test_exam_manager_and_officer_rendered_navigation_links_are_reachable(): void

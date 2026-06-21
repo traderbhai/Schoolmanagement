@@ -62,21 +62,26 @@
     <div class="row g-3 mb-4">
         @isset($kpiSummary)
             @foreach([
-                ['label' => 'Workload', 'count' => $kpiSummary['workload'] ?? 0, 'icon' => 'briefcase'],
-                ['label' => 'SLA Breaches', 'count' => $kpiSummary['sla_breaches'] ?? 0, 'icon' => 'clock-history'],
-                ['label' => 'Lead Conv. %', 'count' => ($kpiSummary['application_conversion_pct'] ?? 0) . '%', 'icon' => 'graph-up'],
-                ['label' => 'Follow-up %', 'count' => ($kpiSummary['followup_compliance_pct'] ?? 0) . '%', 'icon' => 'telephone-outbound'],
+                ['label' => 'Workload', 'count' => $kpiSummary['workload'] ?? 0, 'icon' => 'briefcase', 'url' => route('admission.leads.index', request()->only(['program_id', 'counsellor_id', 'priority'])), 'hint' => 'Open matching lead workload'],
+                ['label' => 'SLA Breaches', 'count' => $kpiSummary['sla_breaches'] ?? 0, 'icon' => 'clock-history', 'url' => route('admission.attention.index', ['queue' => 'sla_breaches'] + request()->only(['program_id', 'counsellor_id', 'priority'])), 'hint' => 'Open breached SLA queue'],
+                ['label' => 'Lead Conv. %', 'count' => ($kpiSummary['application_conversion_pct'] ?? 0) . '%', 'icon' => 'graph-up', 'url' => route('admission.reports.index'), 'hint' => 'Open conversion reports'],
+                ['label' => 'Follow-up %', 'count' => ($kpiSummary['followup_compliance_pct'] ?? 0) . '%', 'icon' => 'telephone-outbound', 'url' => route('admission.reminders.index', request()->only(['program_id', 'counsellor_id'])), 'hint' => 'Open follow-up reminders'],
             ] as $card)
             <div class="col-sm-6 col-xl-3">
-                <div class="card h-100 border-primary-subtle">
-                    <div class="card-body">
-                        <div class="text-muted small">{{ $card['label'] }}</div>
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="display-6 fw-semibold">{{ $card['count'] }}</div>
-                            <i class="bi bi-{{ $card['icon'] }} fs-3 text-primary"></i>
+                <a href="{{ $card['url'] }}" class="text-decoration-none text-reset">
+                    <div class="card h-100 border-primary-subtle">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div>
+                                    <div class="text-muted small">{{ $card['label'] }}</div>
+                                    <div class="display-6 fw-semibold">{{ $card['count'] }}</div>
+                                    <div class="small text-muted">{{ $card['hint'] }}</div>
+                                </div>
+                                <i class="bi bi-{{ $card['icon'] }} fs-3 text-primary"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
             @endforeach
         @endisset
@@ -89,7 +94,7 @@
             <div class="row g-3">
                 @foreach($attentionQueues as $queueName => $items)
                     <div class="col-md-3">
-                        <a href="{{ route('admission.attention.index') }}" class="text-decoration-none">
+                        <a href="{{ route('admission.attention.index', ['queue' => $queueName] + request()->only(['program_id', 'counsellor_id', 'priority'])) }}" class="text-decoration-none">
                             <div class="border rounded p-3 h-100">
                                 <div class="text-muted small">{{ ucwords(str_replace('_', ' ', $queueName)) }}</div>
                                 <div class="h4 mb-0">{{ count($items) }}</div>
@@ -136,16 +141,26 @@
                             @forelse($leads->take(12) as $lead)
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $lead->name }}</div>
-                                        <div class="text-muted small">{{ $lead->email ?: $lead->phone }}</div>
+                                        <div class="fw-semibold">{{ $lead->name ?: 'Lead name missing' }}</div>
+                                        <div class="text-muted small">{{ $lead->email ?: ($lead->phone ?: 'No email or phone recorded') }}</div>
                                     </td>
-                                    <td>{{ $lead->program?->name ?? '-' }}</td>
+                                    <td>{{ $lead->program?->name ?? 'Program not selected' }}</td>
                                     <td>{{ $lead->assignedTo?->name ?? 'Unassigned' }}</td>
-                                    <td>{{ $lead->next_action ?? '-' }}</td>
+                                    <td>{{ $lead->next_action ?? 'Next action not set' }}</td>
                                     <td><a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-4">No leads in scope.</td></tr>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <div class="fw-semibold text-body mb-1">No leads match this workbench scope.</div>
+                                        <div class="small mb-3">Clear filters, review unassigned leads, or confirm whether new enquiries are entering through web forms, walk-ins, partner submissions, or imports.</div>
+                                        <div class="d-flex justify-content-center flex-wrap gap-2">
+                                            <a href="{{ route('admission.workbench') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                            <a href="{{ route('admission.leads.index', ['assigned' => 'unassigned']) }}" class="btn btn-sm btn-outline-primary">Unassigned Leads</a>
+                                            <a href="{{ route('admission.walk-ins.index') }}" class="btn btn-sm btn-outline-primary">Walk-ins</a>
+                                        </div>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -163,16 +178,22 @@
                             @forelse($enrollmentReady as $applicant)
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $applicant->user?->name }}</div>
-                                        <div class="text-muted small">{{ $applicant->application_number }}</div>
+                                        <div class="fw-semibold">{{ $applicant->user?->name ?? 'Applicant name missing' }}</div>
+                                        <div class="text-muted small">{{ $applicant->application_number ?? 'Application number missing' }}</div>
                                     </td>
-                                    <td>{{ $applicant->program?->name }}</td>
+                                    <td>{{ $applicant->program?->name ?? 'Program not assigned' }}</td>
                                     <td>{{ ucfirst($applicant->priority ?? 'normal') }}</td>
                                     <td>{{ $applicant->next_action ?? 'Create enrollment confirmation' }}</td>
                                     <td><a href="{{ route('admission.enrollment.create', $applicant) }}" class="btn btn-sm btn-success">Enroll</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-4">No enrollment-ready applicants found.</td></tr>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <div class="fw-semibold text-body mb-1">No enrollment-ready applicants in this scope.</div>
+                                        <div class="small mb-3">Applicants appear here only after selection, required documents, payment readiness, offer acceptance, and enrollment blockers are clear.</div>
+                                        <a href="{{ route('admission.applicants.index', ['status' => 'selected']) }}" class="btn btn-sm btn-outline-primary">Open Selected Applicants</a>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -186,11 +207,15 @@
                 <div class="list-group list-group-flush">
                     @forelse($pendingDocuments->take(8) as $document)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.documents.preview', $document) }}">
-                            <div class="fw-semibold">{{ $document->applicant?->user?->name }}</div>
-                            <div class="small text-muted">{{ $document->requiredDocument?->name }}</div>
+                            <div class="fw-semibold">{{ $document->applicant?->user?->name ?? 'Applicant name missing' }}</div>
+                            <div class="small text-muted">{{ $document->requiredDocument?->name ?? 'Document requirement not linked' }}</div>
                         </a>
                     @empty
-                        <div class="list-group-item text-muted">No pending documents.</div>
+                        <div class="list-group-item text-muted small">
+                            <div class="fw-semibold text-body mb-1">No pending documents in this scope.</div>
+                            Document blockers appear here after applicants upload files that need staff verification.
+                            <div class="mt-2"><a href="{{ route('admission.documents.queue') }}" class="btn btn-sm btn-outline-primary">Open Document Queue</a></div>
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -202,11 +227,15 @@
                 <div class="list-group list-group-flush">
                     @forelse($pendingPayments->take(8) as $payment)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.applicants.payments', $payment->applicant) }}">
-                            <div class="fw-semibold">{{ $payment->applicant?->user?->name }} - {{ $payment->formatted_amount }}</div>
-                            <div class="small text-muted">{{ $payment->installment?->name }} {{ $payment->gateway_status ? '(' . $payment->gateway_status . ')' : '' }}</div>
+                            <div class="fw-semibold">{{ $payment->applicant?->user?->name ?? 'Applicant name missing' }} - {{ $payment->formatted_amount ?? 'Amount not recorded' }}</div>
+                            <div class="small text-muted">{{ $payment->installment?->name ?? 'Installment not linked' }} {{ $payment->gateway_status ? '(' . $payment->gateway_status . ')' : '' }}</div>
                         </a>
                     @empty
-                        <div class="list-group-item text-muted">No pending payments.</div>
+                        <div class="list-group-item text-muted small">
+                            <div class="fw-semibold text-body mb-1">No pending payments in this scope.</div>
+                            Payment proof and gateway-review items appear here after applicants submit payable admission milestones.
+                            <div class="mt-2"><a href="{{ route('admission.payments.queue') }}" class="btn btn-sm btn-outline-primary">Open Payment Queue</a></div>
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -218,17 +247,28 @@
                 <div class="list-group list-group-flush">
                     @forelse($sessionsToday as $session)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.sessions.show', $session) }}">
-                            <div class="fw-semibold">{{ $session->session_name }}</div>
-                            <div class="small text-muted">{{ $session->program?->name }} at {{ $session->start_time }}</div>
+                            <div class="fw-semibold">{{ $session->session_name ?: 'Session name missing' }}</div>
+                            <div class="small text-muted">{{ $session->program?->name ?? 'Program not linked' }} at {{ $session->start_time ?? 'Time not announced' }}</div>
                         </a>
                     @empty
-                        <div class="list-group-item text-muted">No sessions today.</div>
+                        <div class="list-group-item text-muted small">
+                            <div class="fw-semibold text-body mb-1">No assessment sessions scheduled today.</div>
+                            Today's assessment sessions appear after panel, slot, and candidate assignment are published.
+                            <div class="mt-2"><a href="{{ route('admission.assessment-control-room.index') }}" class="btn btn-sm btn-outline-primary">Assessment Control Room</a></div>
+                        </div>
                     @endforelse
                     @foreach($offerExpiryRisk->take(5) as $offer)
                         <a class="list-group-item list-group-item-action text-warning" href="{{ route('admission.offer-letters.show', $offer) }}">
-                            {{ $offer->applicant?->user?->name }} offer expires {{ $offer->acceptance_deadline?->format('d M Y') }}
+                            {{ $offer->applicant?->user?->name ?? 'Applicant name missing' }} offer expires {{ $offer->acceptance_deadline?->format('d M Y') ?? 'Deadline not set' }}
                         </a>
                     @endforeach
+                    @if($offerExpiryRisk->isEmpty())
+                        <div class="list-group-item text-muted small">
+                            <div class="fw-semibold text-body mb-1">No offer expiry risk in the next 3 days.</div>
+                            Offer-risk items appear after issued offers have acceptance deadlines near expiry.
+                            <div class="mt-2"><a href="{{ route('admission.offer-rounds.index') }}" class="btn btn-sm btn-outline-primary">Offer And Seat Control</a></div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

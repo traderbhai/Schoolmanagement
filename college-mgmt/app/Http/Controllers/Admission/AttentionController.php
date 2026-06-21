@@ -12,8 +12,12 @@ class AttentionController extends Controller
 
     public function index(Request $request)
     {
-        $queues = $this->attention->queuesFor($request->user(), $request->only(['program_id', 'priority', 'counsellor_id']));
+        $filters = $request->only(['program_id', 'priority', 'counsellor_id']);
+        $allQueues = $this->attention->queuesFor($request->user(), $filters);
+        $selectedQueue = $request->string('queue')->toString();
+        $selectedQueue = array_key_exists($selectedQueue, $allQueues) ? $selectedQueue : null;
+        $queues = $selectedQueue ? [$selectedQueue => $allQueues[$selectedQueue]] : $allQueues;
 
-        return view('admission.attention.index', compact('queues'));
+        return view('admission.attention.index', compact('queues', 'selectedQueue', 'filters'));
     }
 }

@@ -1,6 +1,6 @@
 @extends('layouts.teacher')
 
-@section('title', 'Mentee — ' . ($student->user->name ?? ''))
+@section('title', 'Mentee - ' . ($student->user->name ?? 'Student'))
 
 @section('content')
 <div class="container-fluid px-4">
@@ -11,7 +11,7 @@
             <li class="breadcrumb-item">
                 <a href="{{ route('teacher.mentor.index') }}">My Mentees</a>
             </li>
-            <li class="breadcrumb-item active">{{ $student->user->name ?? '—' }}</li>
+            <li class="breadcrumb-item active">{{ $student->user->name ?? 'Student name unavailable' }}</li>
         </ol>
     </nav>
 
@@ -22,14 +22,14 @@
             {{ strtoupper(substr($student->user->name ?? 'S', 0, 1)) }}
         </div>
         <div>
-            <h4 class="mb-0">{{ $student->user->name ?? '—' }}</h4>
+            <h4 class="mb-0">{{ $student->user->name ?? 'Student name unavailable' }}</h4>
             <div class="text-muted small">
                 {{ $student->enrollment_number ?? '' }}
                 @if($student->program)
-                    &bull; <span class="badge bg-secondary">{{ $student->program->name }}</span>
+                    <span class="mx-1">|</span><span class="badge bg-secondary">{{ $student->program->name }}</span>
                 @endif
                 @if($student->batch)
-                    &bull; {{ $student->batch->name }}
+                    <span class="mx-1">|</span>{{ $student->batch->name }}
                 @endif
             </div>
         </div>
@@ -41,7 +41,30 @@
         </div>
     @endif
 
-    <div class="row g-4">
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-3">
+            <div class="row g-3 small">
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">1. Check recent signals</div>
+                    <div class="text-muted">Use attendance and published results to decide the follow-up priority.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">2. Message or meet</div>
+                    <div class="text-muted">Send a short check-in or schedule a progress review with a clear topic.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">3. Record evidence</div>
+                    <div class="text-muted">Keep notes specific enough for Program Chair, PMC, and Dean review.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">4. Escalate when needed</div>
+                    <div class="text-muted">Escalate repeated absence, poor results, or non-response through academic governance.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
 
         {{-- LEFT COLUMN --}}
         <div class="col-lg-8">
@@ -67,7 +90,7 @@
                                     </div>
                                     <div class="text-muted mt-1 {{ $isMine ? 'text-end' : '' }}" style="font-size:0.72rem;">
                                         {{ $msg->sender->name ?? '' }}
-                                        &bull;
+                                        <span class="mx-1">|</span>
                                         {{ \Carbon\Carbon::parse($msg->created_at)->format('d M, H:i') }}
                                     </div>
                                 </div>
@@ -216,7 +239,7 @@
                                         $color = $pct < 75 ? 'text-danger fw-semibold' : 'text-success';
                                     @endphp
                                     <tr>
-                                        <td class="small">{{ $att->subject->name ?? '—' }}</td>
+                                        <td class="small">{{ $att->subject->name ?? 'Subject unavailable' }}</td>
                                         <td class="text-center small">{{ $att->present }}/{{ $att->total }}</td>
                                         <td class="text-center small {{ $color }}">{{ $pct }}%</td>
                                     </tr>
@@ -256,8 +279,8 @@
                                                   : null;
                                     @endphp
                                     <tr>
-                                        <td class="small">{{ $result->exam->subject->name ?? '—' }}</td>
-                                        <td class="small">{{ $result->exam->name ?? '—' }}</td>
+                                        <td class="small">{{ $result->exam->subject->name ?? 'Subject unavailable' }}</td>
+                                        <td class="small">{{ $result->exam->name ?? 'Exam unavailable' }}</td>
                                         <td class="text-center small">
                                             {{ $result->marks_obtained }}
                                             @if($result->exam)
@@ -270,7 +293,7 @@
                                                     {{ $resPct }}%
                                                 </span>
                                             @else
-                                                —
+                                                Not calculated
                                             @endif
                                         </td>
                                     </tr>

@@ -24,6 +24,10 @@
             <div>
                 <div class="fw-semibold">CoE source-list workflow</div>
                 <div class="small text-muted">Use this list to diagnose the queue before changing source records or issuing official documents.</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge text-bg-primary">Owner: CoE / Examination team</span>
+                    <span class="badge text-bg-secondary">Source: {{ $section['title'] }}</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Filter exam/program/status</span>
@@ -93,7 +97,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">{{ $section['title'] }} source records</caption>
-                <thead><tr><th>Record</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th>Record</th><th>Owner / Source</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse($section['items'] as $item)
                         <tr>
@@ -101,11 +105,21 @@
                                 <div class="fw-semibold">{{ $item['title'] }}</div>
                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                             </td>
+                            <td>
+                                <span class="badge text-bg-light border">Owner: CoE</span>
+                                <span class="badge text-bg-light border">Source: {{ $section['title'] }}</span>
+                            </td>
                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No CoE records match the current scope and filters.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-body">No CoE records match this source list.</div>
+                                <div class="small">This usually means the current exam/program/status filters have no blockers, or the source workflow has not yet created matching exam, result, hall-ticket, transcript, appeal, or anomaly records.</div>
+                                <div class="small mt-1">Before issuing official documents, recheck published-result, eligibility, registration approval, and transcript-readiness boundaries.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

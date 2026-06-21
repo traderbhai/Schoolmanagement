@@ -32,8 +32,11 @@ class SharedNotificationInboxUxTest extends TestCase
             ->assertSee('Student Portal')
             ->assertSee('Notification Inbox')
             ->assertSee('Your institute messages and action alerts')
-            ->assertSee('No notifications yet')
+            ->assertSee('Owner: Your account')
+            ->assertSee('Source: workflow notifications, approvals, payments, documents, timetable, and institute messages assigned to you')
+            ->assertSee('No notifications match the current inbox filters')
             ->assertSee('Official messages will appear here when an institute office sends an update')
+            ->assertSee('Clear Filters')
             ->assertSee('meta name="csrf-token"', false)
             ->assertDontSee('Admin Portal')
             ->assertDontSee('<div class="p-4 text-center text-muted">No notifications</div>', false);
@@ -58,6 +61,8 @@ class SharedNotificationInboxUxTest extends TestCase
             ->assertSee('Applicant Portal')
             ->assertSee('Document review update')
             ->assertSee('1</strong> unread', false)
+            ->assertSee('matching messages')
+            ->assertSee('Source: Info')
             ->assertDontSee('Includes action link')
             ->assertDontSee('Admin Portal');
 
@@ -66,6 +71,9 @@ class SharedNotificationInboxUxTest extends TestCase
             ->assertOk()
             ->assertSee('Applicant Portal')
             ->assertSee('Notification Detail')
+            ->assertSee('Owner: Your account')
+            ->assertSee('Source: Info')
+            ->assertSee('Read status updates when this page opens')
             ->assertSee('Document review update')
             ->assertSee('Back to Inbox')
             ->assertDontSee('Admin Portal');
@@ -96,5 +104,55 @@ class SharedNotificationInboxUxTest extends TestCase
             ->assertJson(['success' => true]);
 
         $this->assertSame(0, $teacher->notifications()->where('is_read', false)->count());
+    }
+
+    public function test_notification_inbox_filters_owned_messages_and_explains_no_match_state(): void
+    {
+        $student = $this->userWithRole('student');
+        $other = $this->userWithRole('student');
+
+        Notification::factory()->create([
+            'user_id' => $student->id,
+            'title' => 'Payment verification pending',
+            'message' => 'Please review your payment proof status.',
+            'type' => 'payment',
+            'is_read' => false,
+            'read_at' => null,
+        ]);
+        Notification::factory()->create([
+            'user_id' => $student->id,
+            'title' => 'Timetable published',
+            'message' => 'Your timetable is ready.',
+            'type' => 'timetable',
+            'is_read' => true,
+            'read_at' => now(),
+        ]);
+        Notification::factory()->create([
+            'user_id' => $other->id,
+            'title' => 'Other student payment alert',
+            'message' => 'This must not appear.',
+            'type' => 'payment',
+            'is_read' => false,
+            'read_at' => null,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('notifications.index', ['status' => 'unread', 'type' => 'payment', 'search' => 'Payment']))
+            ->assertOk()
+            ->assertSee('Showing 1 notification(s)')
+            ->assertSee('with status "unread"', false)
+            ->assertSee('and type "payment"', false)
+            ->assertSee('Payment verification pending')
+            ->assertSee('Source: Payment')
+            ->assertDontSee('Timetable published')
+            ->assertDontSee('Other student payment alert')
+            ->assertDontSee('N/A')
+            ->assertDontSee('â', false);
+
+        $this->actingAs($student)
+            ->get(route('notifications.index', ['search' => 'no-matching-message']))
+            ->assertOk()
+            ->assertSee('No notifications match the current inbox filters')
+            ->assertSee('Clear filters to review older read messages');
     }
 }

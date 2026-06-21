@@ -6,11 +6,14 @@
 <p>Your results for the following exam have been published:</p>
 
 <div class="info-box">
-    <p><strong>Exam:</strong> {{ $exam->name ?? 'N/A' }}</p>
+    <p><strong>Exam:</strong> {{ $exam->name ?? 'Exam name pending' }}</p>
     @if(isset($result))
-    <p><strong>Marks Obtained:</strong> {{ $result->marks_obtained ?? 'N/A' }} / {{ $result->total_marks ?? 'N/A' }}</p>
-    <p><strong>Grade:</strong> {{ $result->grade ?? 'N/A' }}</p>
+    <p><strong>Marks Obtained:</strong> {{ $result->marks_obtained ?? 'Marks pending' }} / {{ $result->total_marks ?? 'Total marks pending' }}</p>
+    <p><strong>Grade:</strong> {{ $result->grade ?? 'Grade pending' }}</p>
     <p><strong>Status:</strong> {{ ($result->marks_obtained ?? 0) >= ($result->passing_marks ?? 0) ? 'Pass' : 'Fail' }}</p>
+    @else
+    <p><strong>Marks Obtained:</strong> Marks pending / Total marks pending</p>
+    <p><strong>Grade:</strong> Grade pending</p>
     @endif
 </div>
 

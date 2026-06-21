@@ -15,6 +15,25 @@
     $verifiedDocs = $applicant->documents->where('status', 'verified')->count();
     $verifiedPayments = $applicant->payments->where('status', 'verified')->count();
     $pendingPayments = $applicant->payments->where('status', 'pending')->count();
+    $ownerFor = function (array $item): array {
+        if ($item['ready']) {
+            return ['label' => 'Complete', 'class' => 'ui-status-success', 'hint' => 'No action needed'];
+        }
+
+        $applicantRoutes = [
+            'applicant.application.show',
+            'applicant.documents.index',
+            'applicant.registration-fee.show',
+            'applicant.fees.index',
+        ];
+
+        if (in_array($item['route'], $applicantRoutes, true)) {
+            return ['label' => 'Your action', 'class' => 'ui-status-warning', 'hint' => 'Open this step'];
+        }
+
+        return ['label' => 'Admission team', 'class' => 'ui-status-info', 'hint' => 'Track progress'];
+    };
+    $nextOwner = $nextItem ? $ownerFor($nextItem) : ['label' => 'Complete', 'class' => 'ui-status-success', 'hint' => 'No action needed'];
     $journeySteps = [
         ['label' => 'Draft', 'active' => true],
         ['label' => 'Submitted', 'active' => in_array($applicant->status, ['submitted', 'under_review', 'shortlisted', 'selected', 'enrolled'], true)],
@@ -49,6 +68,10 @@
                             @else
                                 Your applicant-side checklist is complete. Watch status, offer, and admission operation updates.
                             @endif
+                        </div>
+                        <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                            <span class="ui-status {{ $nextOwner['class'] }}">Owner: {{ $nextOwner['label'] }}</span>
+                            <span class="small text-muted">{{ $nextOwner['hint'] }}</span>
                         </div>
                     </div>
                 </div>
@@ -109,6 +132,9 @@
                     <a href="{{ route('applicant.status') }}" class="btn btn-outline-secondary btn-sm">Full Tracker</a>
                 </div>
                 <div class="card-body py-3">
+                    <div class="small text-muted mb-3">
+                        Follow this path in order. Items marked <strong>Your action</strong> need you to upload, pay, or complete details. Items marked <strong>Admission team</strong> are staff review, assessment, offer, seat, or handoff steps.
+                    </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         @foreach($journeySteps as $step)
                             <div class="d-flex align-items-center gap-2">
@@ -136,18 +162,23 @@
                             <tr>
                                 <th>Step</th>
                                 <th>Status</th>
+                                <th>Owner</th>
                                 <th>What this means</th>
                                 <th class="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($items as $item)
+                                @php($owner = $ownerFor($item))
                                 <tr>
                                     <td class="fw-semibold">{{ $item['label'] }}</td>
                                     <td>
                                         <span class="ui-status {{ $item['ready'] ? 'ui-status-success' : 'ui-status-warning' }}">
                                             {{ $item['ready'] ? 'Ready' : 'Needs action' }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        <span class="ui-status {{ $owner['class'] }}">{{ $owner['label'] }}</span>
                                     </td>
                                     <td class="small text-muted">
                                         @if($item['ready'])
@@ -183,7 +214,7 @@
                         <dt class="col-5 text-muted">Program</dt>
                         <dd class="col-7">{{ $applicant->program->name }}</dd>
                         <dt class="col-5 text-muted">Batch</dt>
-                        <dd class="col-7">{{ $applicant->batch?->name ?? '-' }}</dd>
+                        <dd class="col-7">{{ $applicant->batch?->name ?? 'Batch not assigned yet' }}</dd>
                         <dt class="col-5 text-muted">Submitted</dt>
                         <dd class="col-7">{{ $applicant->applied_at?->format('d M Y') ?? 'Not submitted' }}</dd>
                     </dl>

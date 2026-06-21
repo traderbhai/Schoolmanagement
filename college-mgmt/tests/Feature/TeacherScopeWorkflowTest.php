@@ -501,6 +501,8 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.materials.index'))
             ->assertOk()
+            ->assertSeeText('Material workflow:')
+            ->assertSeeText('Published materials become visible to students in their course content area')
             ->assertSeeText('No study materials match this view yet')
             ->assertSeeText('Upload notes, slides, readings, or links for your assigned subject')
             ->assertSeeText('Upload material')
@@ -508,11 +510,50 @@ class TeacherScopeWorkflowTest extends TestCase
             ->assertDontSeeText('Upload the first one.');
 
         $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.materials.create'))
+            ->assertOk()
+            ->assertSeeText('Upload sequence:')
+            ->assertSeeText('Select published teaching subject')
+            ->assertDontSee('—', false);
+
+        StudyMaterial::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'uploaded_by' => $fixture['teacher']->user_id,
+            'title' => 'Legacy Material Without File',
+            'type' => 'notes',
+            'is_published' => false,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.materials.index'))
+            ->assertOk()
+            ->assertSeeText('Legacy Material Without File')
+            ->assertSeeText('File or link not attached')
+            ->assertDontSee('â', false);
+
+        $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.announcements.index'))
             ->assertOk()
+            ->assertSeeText('Announcement workflow:')
+            ->assertSeeText('Students see posted announcements in their course feed')
+            ->assertSeeText('Select published teaching subject')
             ->assertSeeText('No subject announcements are posted yet')
             ->assertSeeText('Use the form above to publish the first notice for an assigned subject')
             ->assertDontSeeText('No announcements posted yet.');
+
+        SubjectAnnouncement::create([
+            'subject_id' => $fixture['assignedSubject']->id,
+            'posted_by' => $fixture['teacher']->user_id,
+            'title' => 'Legacy Announcement Subject Fallback',
+            'body' => 'Announcement fallback labels should remain readable.',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.announcements.index'))
+            ->assertOk()
+            ->assertSeeText('Legacy Announcement Subject Fallback')
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
     }
 
     public function test_teacher_cannot_grade_another_teachers_assignment_submission(): void
@@ -556,11 +597,20 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.assignments.index'))
             ->assertOk()
+            ->assertSeeText('Assignment workflow:')
+            ->assertSeeText('create work only for subjects assigned to you in a published timetable')
             ->assertSeeText('No assignments are published or drafted for this view yet')
             ->assertSeeText('Create the first assignment for your assigned subject')
             ->assertSeeText('Create assignment')
             ->assertDontSeeText('No assignments yet.')
             ->assertDontSeeText('Create one.');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.assignments.create'))
+            ->assertOk()
+            ->assertSeeText('Create assignment sequence:')
+            ->assertSeeText('Select published teaching subject')
+            ->assertDontSee('—', false);
 
         $assignment = Assignment::create([
             'subject_id' => $fixture['assignedSubject']->id,
@@ -575,6 +625,8 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.assignments.submissions', $assignment))
             ->assertOk()
+            ->assertSeeText('Submission workflow:')
+            ->assertSeeText('this page uses the active roster for the assignment subject')
             ->assertSeeText('No students have submitted this assignment yet')
             ->assertSeeText('Use the Not Yet Submitted list below to follow up with students')
             ->assertDontSeeText('No submissions yet.');
@@ -875,12 +927,17 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.mentor.index'))
             ->assertOk()
+            ->assertSeeText('Use this desk to review assigned mentees')
+            ->assertSeeText('1. Review risk')
+            ->assertSeeText('4. Escalate blockers')
             ->assertSee('Messaging and meeting scheduling are locked because this teacher profile is not active.')
             ->assertSee('Historical mentor meeting');
 
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.mentor.mentee', $fixture['enrolled']))
             ->assertOk()
+            ->assertSeeText('1. Check recent signals')
+            ->assertSeeText('4. Escalate when needed')
             ->assertSee('Historical mentor message')
             ->assertSee('Historical mentor meeting')
             ->assertSee('Mentoring message replies are locked for inactive profiles.')
@@ -918,6 +975,8 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->actingAs($fixture['teacher']->user)
             ->get(route('teacher.mentor.mentee', $fixture['enrolled']))
             ->assertOk()
+            ->assertSeeText('Use attendance and published results to decide the follow-up priority')
+            ->assertSeeText('Keep notes specific enough for Program Chair, PMC, and Dean review')
             ->assertSeeText('No mentor messages are recorded yet')
             ->assertSeeText('Start with a short check-in message')
             ->assertSeeText('No mentor meetings are scheduled or recorded yet')
@@ -929,7 +988,8 @@ class TeacherScopeWorkflowTest extends TestCase
             ->assertDontSeeText('No messages yet. Start the conversation below.')
             ->assertDontSeeText('No meetings recorded yet.')
             ->assertDontSeeText('No attendance data.')
-            ->assertDontSeeText('No exam results yet.');
+            ->assertDontSeeText('No exam results yet.')
+            ->assertDontSeeText('N/A');
     }
 
     public function test_teacher_can_mark_attendance_and_results_for_enrolled_roster_only(): void

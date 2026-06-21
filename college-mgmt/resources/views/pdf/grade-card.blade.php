@@ -31,25 +31,25 @@
 <div class="header">
   <h1>College Management System</h1>
   <p>Grade Card / Mark Sheet</p>
-  <p>Academic Record — Official Document</p>
+  <p>Academic Record - Official Document</p>
 </div>
 
 <div class="info-grid">
   <div class="info-box">
     <div class="label">Student Name</div>
-    <div class="value">{{ $student->user->name }}</div>
+    <div class="value">{{ $student->user?->name ?? 'Student name missing' }}</div>
   </div>
   <div class="info-box">
     <div class="label">Enrollment No.</div>
-    <div class="value">{{ $student->enrollment_number }}</div>
+    <div class="value">{{ $student->enrollment_number ?? 'Enrollment number pending' }}</div>
   </div>
   <div class="info-box">
     <div class="label">Course</div>
-    <div class="value">{{ $student->course->name ?? '—' }}</div>
+    <div class="value">{{ $student->course?->name ?? $student->program?->name ?? 'Program not linked' }}</div>
   </div>
   <div class="info-box">
     <div class="label">Semester</div>
-    <div class="value">{{ $semester->name }}</div>
+    <div class="value">{{ $semester->name ?? 'Semester not linked' }}</div>
   </div>
 </div>
 
@@ -79,12 +79,12 @@
   <tbody>
     @foreach($results as $row)
     <tr>
-      <td>{{ $row['subject']->name }}</td>
+      <td>{{ $row['subject']?->name ?? 'Subject not linked' }}</td>
       <td>{{ $row['credits'] }}</td>
-      <td>{{ $row['obtained'] ?? '—' }}</td>
-      <td>{{ $row['max'] ?? '—' }}</td>
-      <td>{{ $row['pct'] !== null ? $row['pct'].'%' : '—' }}</td>
-      <td><strong>{{ $row['grade']['letter'] ?? '—' }}</strong></td>
+      <td>{{ $row['obtained'] ?? 'Marks pending' }}</td>
+      <td>{{ $row['max'] ?? 'Max marks pending' }}</td>
+      <td>{{ $row['pct'] !== null ? $row['pct'].'%' : 'Result pending' }}</td>
+      <td><strong>{{ $row['grade']['letter'] ?? 'Grade pending' }}</strong></td>
       <td>
         @if($row['status'] === 'pass') <span class="badge badge-pass">PASS</span>
         @elseif($row['status'] === 'fail') <span class="badge badge-fail">FAIL</span>
@@ -97,7 +97,7 @@
 </table>
 
 <div class="footer">
-  Generated on {{ now()->format('d M Y, h:i A') }} &bull; This is a computer-generated document. No signature required.
+  Generated on {{ now()->format('d M Y, h:i A') }} - This is a computer-generated document. No signature required.
 </div>
 
 </body>

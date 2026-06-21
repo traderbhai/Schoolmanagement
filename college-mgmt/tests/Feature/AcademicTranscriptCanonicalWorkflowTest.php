@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\{AcademicTranscript, Batch, Department, DepartmentFeatureSetting, Exam, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Term, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ViewErrorBag;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -122,6 +124,77 @@ class AcademicTranscriptCanonicalWorkflowTest extends TestCase
             ->assertSee(route('academic.transcripts.index'), false)
             ->assertSee(route('admin.students.index'), false)
             ->assertDontSee('No students found.');
+    }
+
+    public function test_transcript_views_use_readable_missing_data_labels(): void
+    {
+        Role::firstOrCreate(['name' => 'dean_academics', 'guard_name' => 'web']);
+        $dean = User::factory()->create();
+        $dean->assignRole('dean_academics');
+        $this->actingAs($dean);
+        View::share('errors', new ViewErrorBag);
+
+        $student = Student::factory()->make([
+            'id' => 1001,
+            'enrollment_number' => null,
+            'program_id' => null,
+            'batch_id' => null,
+        ]);
+        $student->setRelation('user', null);
+        $student->setRelation('program', null);
+        $student->setRelation('batch', null);
+
+        $semesterReports = [[
+            'term' => null,
+            'sgpa' => 0,
+            'earned_credits' => 0,
+            'total_credits' => 4,
+            'subjects' => [[
+                'subject' => null,
+                'credits' => 4,
+                'obtained' => null,
+                'total' => 100,
+                'pct' => null,
+                'grade' => null,
+                'status' => null,
+            ]],
+        ]];
+
+        $html = view('academic.transcripts.show', [
+            'student' => $student,
+            'semesterReports' => [],
+            'cgpa' => 0,
+            'totalCredits' => 0,
+            'transcript' => null,
+        ])->render();
+
+        $this->assertStringContainsString('Student name missing', $html);
+        $this->assertStringContainsString('Enrollment number pending', $html);
+        $this->assertStringContainsString('Program not linked', $html);
+        $this->assertStringContainsString('Batch not linked', $html);
+        $this->assertStringContainsString('No published semester result data is ready for this transcript.', $html);
+        $this->assertStringContainsString('active subject enrollments, published exams, and recorded marks', $html);
+        $this->assertStringNotContainsString('No semester data found for this student.', $html);
+        $this->assertStringNotContainsString('â', $html);
+
+        $pdfHtml = view('pdf.academic-transcript', [
+            'student' => $student,
+            'semesterReports' => $semesterReports,
+            'cgpa' => 0,
+            'totalCredits' => 0,
+            'issuedAt' => now(),
+        ])->render();
+
+        $this->assertStringContainsString('Student name missing', $pdfHtml);
+        $this->assertStringContainsString('Enrollment number pending', $pdfHtml);
+        $this->assertStringContainsString('Program not linked', $pdfHtml);
+        $this->assertStringContainsString('Batch not linked', $pdfHtml);
+        $this->assertStringContainsString('Term not linked', $pdfHtml);
+        $this->assertStringContainsString('Subject not linked', $pdfHtml);
+        $this->assertStringContainsString('Result pending', $pdfHtml);
+        $this->assertStringContainsString('Grade pending', $pdfHtml);
+        $this->assertStringNotContainsString('N/A', $pdfHtml);
+        $this->assertStringNotContainsString('â', $pdfHtml);
     }
 
     public function test_academic_transcript_excludes_unpublished_draft_exam_results(): void

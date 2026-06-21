@@ -33,6 +33,18 @@
             <div class="text-uppercase text-muted fw-semibold mb-1" style="font-size:.72rem;letter-spacing:.04em">Parent Priority</div>
             <h5 class="fw-bold mb-1">{{ $parentPriority['title'] }}</h5>
             <p class="text-muted mb-0">{{ $parentPriority['body'] }}</p>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+                @if(($parentPriority['type'] ?? null) === 'attendance')
+                    <span class="badge text-bg-danger">Owner: Student + mentor</span>
+                    <span class="badge text-bg-light">Source: Published attendance</span>
+                @elseif(($parentPriority['type'] ?? null) === 'fees')
+                    <span class="badge text-bg-warning">Owner: Parent + Accounts</span>
+                    <span class="badge text-bg-light">Source: Fee demands</span>
+                @else
+                    <span class="badge text-bg-light">Owner: Parent</span>
+                    <span class="badge text-bg-light">Source: Linked child records</span>
+                @endif
+            </div>
         </div>
         <a href="{{ $parentPriority['route'] }}" class="btn btn-primary btn-sm">
             <i class="bi bi-arrow-right-circle me-1"></i>{{ $parentPriority['action'] }}
@@ -72,13 +84,13 @@
             <div class="col-sm-4">
                 <a href="{{ route('parent.children.attendance', $s) }}" class="kpi-card kpi-blue d-block text-decoration-none text-white" aria-label="Open attendance details for {{ $s->user->name }}">
                     <div class="kpi-label">Attendance</div>
-                    <div class="kpi-value">{{ $item['attendancePct'] !== null ? $item['attendancePct'].'%' : 'N/A' }}</div>
+                    <div class="kpi-value">{{ $item['attendancePct'] !== null ? $item['attendancePct'].'%' : 'No records' }}</div>
                 </a>
             </div>
             <div class="col-sm-4">
                 <a href="{{ route('parent.children.results', $s) }}" class="kpi-card kpi-green d-block text-decoration-none text-white" aria-label="Open result details for {{ $s->user->name }}">
                     <div class="kpi-label">SGPA</div>
-                    <div class="kpi-value">{{ $item['sgpa'] ?? 'N/A' }}</div>
+                    <div class="kpi-value">{{ $item['sgpa'] ?? 'Not published' }}</div>
                 </a>
             </div>
             <div class="col-sm-4">
@@ -90,11 +102,13 @@
         </div>
 
         <div class="mt-3 d-flex flex-wrap gap-3 text-muted" style="font-size:.8rem">
-            <span><i class="bi bi-journal-bookmark me-1"></i>{{ optional($s->program)->name ?? optional($s->course)->name ?? 'N/A' }}</span>
-            <span>Enrollment: {{ $s->enrollment_number }}</span>
+            <span><i class="bi bi-journal-bookmark me-1"></i>{{ optional($s->program)->name ?? optional($s->course)->name ?? 'Program not assigned yet' }}</span>
+            <span>Enrollment: {{ $s->enrollment_number ?? 'Enrollment not issued yet' }}</span>
             <span>Open demands: {{ $finance['open_demand_count'] }}</span>
             @if($finance['next_due_date'])
                 <span>Next due: {{ $finance['next_due_date']->format('d M Y') }}</span>
+            @else
+                <span>No due date published</span>
             @endif
         </div>
     </div>
@@ -103,7 +117,7 @@
 <div class="empty-state py-5 text-center">
     <div class="empty-icon"><i class="bi bi-people fs-1 text-muted"></i></div>
     <div class="mt-2 fw-semibold">No children linked to your account</div>
-    <div class="text-muted">Please contact the administration.</div>
+    <div class="text-muted">Ask the administration office to link your parent profile with the student record before attendance, results, fees, and notices can appear here.</div>
 </div>
 @endforelse
 
@@ -117,7 +131,7 @@
         @foreach($notices as $notice)
         <div class="list-group-item">
             <div class="fw-semibold" style="font-size:.9rem">{{ $notice->title }}</div>
-            <div class="text-muted" style="font-size:.8rem">{{ $notice->publish_date->format('d M Y') }} &bull; {{ ucfirst($notice->audience) }}</div>
+            <div class="text-muted" style="font-size:.8rem">{{ $notice->publish_date->format('d M Y') }} | {{ ucfirst($notice->audience) }}</div>
         </div>
         @endforeach
     </div>

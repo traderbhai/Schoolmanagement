@@ -45,7 +45,20 @@
                     <div class="small text-muted">Templates should move through safety approval before bulk or automated sends.</div>
                 </div>
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Name</th><th>Channel</th><th>Purpose</th></tr></thead><tbody>
-                    @forelse($templates as $template)<tr><td>{{ $template->name }}</td><td>{{ $template->channel }}</td><td>{{ $template->purpose }}</td></tr>@empty<tr><td colspan="3" class="text-muted text-center py-3">No templates.</td></tr>@endforelse
+                    @forelse($templates as $template)
+                        <tr>
+                            <td>{{ $template->name ?: 'Template name missing' }}</td>
+                            <td>{{ strtoupper($template->channel ?: 'internal') }}</td>
+                            <td>{{ $template->purpose ?: 'Purpose not classified' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-muted text-center py-4">
+                                <div class="fw-semibold text-body mb-1">No communication templates are configured yet.</div>
+                                <div class="small">Create an approved template before counsellors, reminders, automations, assessments, offers, or parent journeys can queue reusable messages.</div>
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody></table></div>
             </div>
             <form method="POST" action="{{ route('admission.communication.dispatch') }}" class="mb-3" onsubmit="return confirm('Dispatch all queued Admission messages through the configured providers?')">@csrf<button class="btn btn-outline-success" @disabled(! $canManageCommunication)>Dispatch Queued Messages</button> <span class="small text-muted ms-2">Runs provider-ready queued messages after safety checks have already created the queue.</span></form>
@@ -55,7 +68,26 @@
                     <div class="small text-muted">Use this table to confirm queued, sent, failed, delayed, or blocked delivery states.</div>
                 </div>
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>Recipient</th></tr></thead><tbody>
-                    @forelse($logs as $log)<tr><td>{{ $log->channel }}</td><td>{{ $log->provider }}</td><td>{{ $log->status }}</td><td>{{ $log->recipient }}</td></tr>@empty<tr><td colspan="4" class="text-muted text-center py-3">No messages yet.</td></tr>@endforelse
+                    @forelse($logs as $log)
+                        <tr>
+                            <td>{{ strtoupper($log->channel ?: 'internal') }}</td>
+                            <td>{{ $log->provider ?: 'Provider not selected' }}</td>
+                            <td>{{ ucfirst($log->status ?: 'queued') }}</td>
+                            <td>{{ $log->recipient ?: 'Recipient not recorded' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-muted text-center py-4">
+                                <div class="fw-semibold text-body mb-1">No communication logs are visible in this scope yet.</div>
+                                <div class="small mb-3">Messages appear here after a lead, applicant, reminder, automation, assessment, offer, or bulk-send workflow queues communication through the safety service.</div>
+                                <div class="d-flex justify-content-center flex-wrap gap-2">
+                                    <a href="{{ route('admission.bulk-communication.index') }}" class="btn btn-sm btn-outline-primary">Bulk Communication</a>
+                                    <a href="{{ route('admission.communication-safety.index') }}" class="btn btn-sm btn-outline-primary">Communication Safety</a>
+                                    <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-secondary">Reminder Queue</a>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody></table></div>
             </div>
         </div>

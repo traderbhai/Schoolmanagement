@@ -83,7 +83,7 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Title, job role…" value="{{ request('search') }}">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Title or job role" value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Status</label>
@@ -141,8 +141,8 @@
                         </td>
                         <td>{{ $drive->company->name }}</td>
                         <td>{{ $drive->job_role }}</td>
-                        <td>{{ $drive->package ?? '—' }}</td>
-                        <td>{{ $drive->drive_date ? $drive->drive_date->format('d M Y') : '—' }}</td>
+                        <td>{{ $drive->package ?? 'Package not published' }}</td>
+                        <td>{{ $drive->drive_date ? $drive->drive_date->format('d M Y') : 'Drive date not scheduled' }}</td>
                         <td><span class="badge bg-primary">{{ $drive->placements_count }}</span></td>
                         <td>
                             @php

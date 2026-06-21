@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Applicant;
+use App\Models\AdmissionCommunicationLog;
+use App\Models\AdmissionCommunicationTemplate;
 use App\Models\SeatMatrix;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +25,8 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
     public function test_communication_hub_explains_safe_send_sequence(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
+        AdmissionCommunicationLog::query()->delete();
+        AdmissionCommunicationTemplate::query()->delete();
 
         $this->actingAs($head)
             ->get(route('admission.communication.index'))
@@ -34,7 +39,20 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
             ->assertSee('Monitor delivery status')
             ->assertSee('Use Bulk Communication for audience sends')
             ->assertSee('Recent Messages')
+            ->assertSee('No communication templates are configured yet.')
+            ->assertSee('Create an approved template before counsellors, reminders, automations, assessments, offers, or parent journeys can queue reusable messages.')
+            ->assertSee('No communication logs are visible in this scope yet.')
+            ->assertSee('Messages appear here after a lead, applicant, reminder, automation, assessment, offer, or bulk-send workflow queues communication through the safety service.')
+            ->assertSee('Bulk Communication')
+            ->assertSee('Communication Safety')
+            ->assertSee('Reminder Queue')
+            ->assertSee(route('admission.bulk-communication.index'), false)
+            ->assertSee(route('admission.communication-safety.index'), false)
+            ->assertSee(route('admission.reminders.index'), false)
+            ->assertDontSee('No templates.')
+            ->assertDontSee('No messages yet.')
             ->assertDontSee('href="#"', false)
+            ->assertDontSee('N/A', false)
             ->assertDontSee('Whoops', false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Laravel\\', false);
@@ -43,6 +61,7 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
     public function test_bulk_communication_and_safety_pages_explain_recipient_controls(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
+        $applicant = Applicant::with(['user', 'program'])->whereNotNull('program_id')->firstOrFail();
 
         $this->actingAs($head)
             ->get(route('admission.bulk-communication.index'))
@@ -55,6 +74,10 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
             ->assertSee('Any Status')
             ->assertSee('Any Program')
             ->assertSee('Any Batch')
+            ->assertSee('No audience preview yet')
+            ->assertSee('The send form stays hidden until staff can see the matching applicants and confirm the audience source.')
+            ->assertSee(route('admission.communication-safety.index'), false)
+            ->assertSee(route('admission.communication.index'), false)
             ->assertDontSee('â', false)
             ->assertDontSee('Ã', false)
             ->assertDontSee('N/A', false)
@@ -67,12 +90,33 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
             ->get(route('admission.bulk-communication.index', ['filter_status' => 'no_matching_status']))
             ->assertOk()
             ->assertSeeText('No applicants match the selected filters')
+            ->assertSee('Active filters:')
+            ->assertSee('Status: No Matching Status')
             ->assertSeeText('Clear filters or adjust one filter at a time before composing a bulk message.')
             ->assertSee(route('admission.bulk-communication.index'), false)
+            ->assertSee(route('admission.applicants.index'), false)
             ->assertDontSee('No applicants match the selected filters.', false)
             ->assertDontSee('â', false)
             ->assertDontSee('Ã', false)
             ->assertDontSee('N/A', false);
+
+        $this->actingAs($head)
+            ->get(route('admission.bulk-communication.index', [
+                'filter_status' => $applicant->status,
+                'filter_program_id' => $applicant->program_id,
+            ]))
+            ->assertOk()
+            ->assertSee('recipient(s) selected')
+            ->assertSee('Audience filter summary:')
+            ->assertSee('Status: ' . ucwords(str_replace('_', ' ', $applicant->status)))
+            ->assertSee('Program: ' . $applicant->program->name)
+            ->assertSee($applicant->user->name)
+            ->assertSee('#' . $applicant->application_number)
+            ->assertSee('Email: ' . $applicant->user->email)
+            ->assertSee('Open Communication Safety before high-volume send')
+            ->assertSee(route('admission.communication-safety.index'), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('href="#"', false);
 
         $this->actingAs($head)
             ->get(route('admission.communication-safety.index'))

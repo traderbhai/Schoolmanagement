@@ -83,6 +83,8 @@ class TeacherDashboardGuidanceTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Grade 1 pending submission')
             ->assertDontSee('Grade 2 pending submissions')
+            ->assertSee('Owner: You')
+            ->assertSee('Source: Submitted assignment work')
             ->assertSee('Review Submissions')
             ->assertSee(route('teacher.assignments.index'), false);
     }
@@ -96,11 +98,15 @@ class TeacherDashboardGuidanceTest extends TestCase
             ->get(route('teacher.dashboard'))
             ->assertStatus(200)
             ->assertSee('Monitor active assignments')
+            ->assertSee('Owner: You')
+            ->assertSee('Source: Published assignments')
             ->assertSee('View Assignments');
     }
 
     public function test_teacher_dashboard_shows_only_published_timetable_rows(): void
     {
+        $this->travelTo(\Carbon\Carbon::parse('2026-06-22 09:00:00'));
+
         $teacher = $this->makeTeacher();
         $program = Program::factory()->create();
         $batch = Batch::factory()->create(['program_id' => $program->id]);
@@ -111,6 +117,7 @@ class TeacherDashboardGuidanceTest extends TestCase
             'term_number' => 1,
             'name' => 'Term 1',
         ]);
+        Semester::query()->update(['is_current' => false]);
         $semester = Semester::factory()->create([
             'number' => 1,
             'name' => 'Term 1',
@@ -155,6 +162,8 @@ class TeacherDashboardGuidanceTest extends TestCase
             ->get(route('teacher.dashboard'))
             ->assertStatus(200)
             ->assertSeeText("Mark attendance for today's classes")
+            ->assertSee('Owner: You')
+            ->assertSee('Source: Published timetable')
             ->assertSee('1<span style="font-size:1rem;opacity:.7"> classes</span>', false)
             ->assertSee('Published Dashboard Class')
             ->assertSee('TDASH')
@@ -171,6 +180,12 @@ class TeacherDashboardGuidanceTest extends TestCase
             ->get(route('teacher.dashboard'))
             ->assertStatus(200)
             ->assertSee('No urgent teaching action due today')
+            ->assertSee('Owner: You + Program office')
+            ->assertSee('Source: Your teaching records')
+            ->assertSee('No published timetable for your profile yet')
+            ->assertSee('Only published classes assigned to your teacher profile appear here')
+            ->assertSee('Review teacher profile')
+            ->assertSee(route('teacher.profile'), false)
             ->assertSee('Upload Material')
             ->assertSee('View Timetable');
     }

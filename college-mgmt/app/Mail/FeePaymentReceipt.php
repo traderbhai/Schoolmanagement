@@ -19,8 +19,9 @@ class FeePaymentReceipt extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $amount = $this->data['feePayment']->amount ?? 0;
-        return new Envelope(subject: "Fee Payment Receipt — ₹{$amount}");
+        $amount = number_format((float) ($this->data['feePayment']->amount ?? 0), 2);
+
+        return new Envelope(subject: "Fee Payment Receipt - Rs. {$amount}");
     }
 
     public function content(): Content

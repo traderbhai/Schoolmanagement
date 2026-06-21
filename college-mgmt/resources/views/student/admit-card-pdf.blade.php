@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admit Card — {{ $exam->name }}</title>
+    <title>Admit Card - {{ $exam->name }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10px; color: #1a1a1a; background: #fff; }
@@ -62,21 +62,21 @@
         <table class="info-table">
             <tr>
                 <td class="lbl">Student Name</td>
-                <td>{{ $student->user->name ?? '—' }}</td>
+                <td>{{ $student->user?->name ?? 'Student name missing' }}</td>
                 <td class="lbl">Enrollment No.</td>
-                <td>{{ $student->enrollment_number ?? '—' }}</td>
+                <td>{{ $student->enrollment_number ?? 'Enrollment number pending' }}</td>
             </tr>
             <tr>
                 <td class="lbl">Program</td>
-                <td>{{ $student->program->name ?? '—' }}</td>
+                <td>{{ $student->program?->name ?? 'Program not linked' }}</td>
                 <td class="lbl">Roll No.</td>
-                <td>{{ $student->roll_number ?? ($student->enrollment_number ?? '—') }}</td>
+                <td>{{ $student->roll_number ?? ($student->enrollment_number ?? 'Roll number pending') }}</td>
             </tr>
             <tr>
                 <td class="lbl">Batch</td>
-                <td>{{ $student->batch->name ?? '—' }}</td>
+                <td>{{ $student->batch?->name ?? 'Batch not linked' }}</td>
                 <td class="lbl">Academic Year</td>
-                <td>{{ $exam->semester->academicYear->name ?? ($exam->term->name ?? now()->year) }}</td>
+                <td>{{ $exam->semester?->academicYear?->name ?? ($exam->term?->name ?? 'Academic year not linked') }}</td>
             </tr>
         </table>
 
@@ -87,27 +87,27 @@
                 <div class="exam-row">
                     <div class="exam-cell">
                         <div class="key">Subject</div>
-                        <div class="val">{{ $exam->subject->name ?? '—' }}</div>
+                        <div class="val">{{ $exam->subject?->name ?? 'Subject not linked' }}</div>
                     </div>
                     <div class="exam-cell">
                         <div class="key">Subject Code</div>
-                        <div class="val">{{ $exam->subject->code ?? '—' }}</div>
+                        <div class="val">{{ $exam->subject?->code ?? 'Subject code not linked' }}</div>
                     </div>
                 </div>
                 <div class="exam-row">
                     <div class="exam-cell">
                         <div class="key">Exam Date</div>
-                        <div class="val">{{ $exam->exam_date->format('l, d F Y') }}</div>
+                        <div class="val">{{ $exam->exam_date ? $exam->exam_date->format('l, d F Y') : 'Exam date not announced' }}</div>
                     </div>
                     <div class="exam-cell">
                         <div class="key">Time</div>
                         <div class="val">
                             @if($exam->start_time && $exam->end_time)
                                 {{ \Carbon\Carbon::parse($exam->start_time)->format('h:i A') }}
-                                &mdash;
+                                -
                                 {{ \Carbon\Carbon::parse($exam->end_time)->format('h:i A') }}
                             @else
-                                —
+                                Time not announced
                             @endif
                         </div>
                     </div>
@@ -115,11 +115,11 @@
                 <div class="exam-row">
                     <div class="exam-cell">
                         <div class="key">Venue</div>
-                        <div class="val">{{ $exam->classroom->name ?? 'TBA' }}</div>
+                        <div class="val">{{ $exam->classroom?->name ?? 'Venue to be announced' }}</div>
                     </div>
                     <div class="exam-cell">
                         <div class="key">Max Marks / Passing</div>
-                        <div class="val">{{ $exam->total_marks ?? '—' }} / {{ $exam->passing_marks ?? '—' }}</div>
+                        <div class="val">{{ $exam->total_marks ?? 'Max marks pending' }} / {{ $exam->passing_marks ?? 'Passing marks pending' }}</div>
                     </div>
                 </div>
             </div>
@@ -157,7 +157,7 @@
     </div>
 
     <div class="footer-strip">
-        Generated on {{ now()->format('d M Y, H:i') }} &mdash; This is a computer-generated admit card. Valid only with institutional seal.
+        Generated on {{ now()->format('d M Y, H:i') }} - This is a computer-generated admit card. Valid only with institutional seal.
     </div>
 </div>
 </body>

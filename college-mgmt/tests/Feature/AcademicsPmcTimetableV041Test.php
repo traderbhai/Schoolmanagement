@@ -77,6 +77,55 @@ class AcademicsPmcTimetableV041Test extends TestCase
         }
     }
 
+    public function test_v041_dashboard_exposes_actionable_real_world_timetable_sequence(): void
+    {
+        $chair = $this->seedFixture();
+
+        $this->actingAs($chair)
+            ->get(route('academics.pmc.timetable-os.index'))
+            ->assertOk()
+            ->assertSee('aria-label="PMC timetable build workflow links"', false)
+            ->assertSee(route('academics.pmc.student-course-baskets.index'), false)
+            ->assertSee(route('academics.pmc.course-groups.index'), false)
+            ->assertSee(route('academics.pmc.section-faculty-allocation.index'), false)
+            ->assertSee(route('academics.pmc.locked-slots.index'), false)
+            ->assertSee(route('academics.pmc.timetable-generator.index'), false)
+            ->assertSee(route('academics.pmc.timetable-versions-v041.index'), false)
+            ->assertSee('6. Approve, publish, freeze');
+    }
+
+    public function test_v041_group_launch_diagnostics_respect_pmc_manager_scope(): void
+    {
+        $this->seedFixture();
+        $manager = User::where('email', 'pmc.manager@college.com')->firstOrFail();
+        $service = app(\App\Services\AcademicPmcTimetableV041Service::class);
+
+        $before = $service->dashboard($manager)['groupDiagnostics'];
+        $department = Department::factory()->create(['code' => 'OUT', 'name' => 'Out Of Scope Department']);
+        $program = Program::factory()->create(['department_id' => $department->id, 'code' => 'OUT-PGDM', 'name' => 'Out Scope PGDM', 'is_active' => true]);
+        $batch = Batch::factory()->create(['program_id' => $program->id, 'code' => 'OUT-26', 'name' => 'Out Scope 2026', 'status' => 'active']);
+        $term = Term::factory()->create(['program_id' => $program->id, 'batch_id' => $batch->id, 'term_number' => 1, 'name' => 'Out Scope Term', 'is_current' => true]);
+        $subject = Subject::factory()->create(['department_id' => $department->id, 'program_id' => $program->id, 'code' => 'OUT401', 'name' => 'Out Scope Analytics', 'credits' => 3, 'is_active' => true]);
+
+        AcademicPmcCourseGroup::create([
+            'name' => 'Out Scope Unstaffed Section',
+            'group_type' => 'core_section',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'min_capacity' => 20,
+            'max_capacity' => 60,
+            'current_strength' => 0,
+            'status' => 'draft',
+            'is_locked' => false,
+        ]);
+
+        $after = $service->dashboard($manager)['groupDiagnostics'];
+
+        $this->assertSame($before['total_groups'], $after['total_groups']);
+        $this->assertSame($before['blocker_total'], $after['blocker_total']);
+    }
     public function test_v041_pages_render_operational_labels_instead_of_raw_id_fallbacks(): void
     {
         $chair = $this->seedFixture();

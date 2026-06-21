@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\AdmissionPartner;
 use App\Models\AdmissionPayment;
+use App\Models\AdmissionReminderSchedule;
 use App\Models\ApplicantDocument;
 use App\Models\Applicant;
 use App\Models\CounsellingLog;
 use App\Models\Lead;
 use App\Services\AdmissionKpiDrilldownService;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +104,11 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
         $response = $this->actingAs($head)->get(route('admission.dashboard'));
 
         $response->assertOk()
+            ->assertSee('Daily Work')
+            ->assertSee('Communication')
+            ->assertSee('Finance')
+            ->assertSee('Reports')
+            ->assertSee('Governance')
             ->assertSee('Command Center')
             ->assertSee('Calling Desk')
             ->assertSee('Document Queue')
@@ -110,11 +117,25 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee('Offer Letters')
             ->assertSee('Seat Control')
             ->assertSee('All Leads')
+            ->assertSee('Bulk Communication')
             ->assertSee('Consent &amp; Safety', false)
+            ->assertSee('Refunds')
+            ->assertSee('Admission Reports')
+            ->assertSee('Lead Analytics')
+            ->assertSee('Integration Health')
             ->assertSee('Department Controls')
             ->assertSee('Department Hierarchy')
+            ->assertSeeInOrder(['Communication', 'Bulk Communication', 'Consent &amp; Safety'], false)
+            ->assertSeeInOrder(['Finance', 'Refunds'], false)
+            ->assertSeeInOrder(['Reports', 'Admission Reports', 'Lead Analytics'], false)
+            ->assertSeeInOrder(['Governance', 'Integration Health'], false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+
+        $admissionGroups = FrontendNavigation::manifest()['admission']['groups'];
+
+        $this->assertNotContains('Lead Analytics', collect($admissionGroups['Leads'])->pluck('label')->all());
+        $this->assertContains('Lead Analytics', collect($admissionGroups['Reports'])->pluck('label')->all());
     }
 
     public function test_admission_dashboard_recent_interactions_empty_state_guides_next_staff_action(): void
@@ -144,6 +165,14 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.dashboard'))
             ->assertOk()
             ->assertSee('Admission CRM Dashboard')
+            ->assertSeeText('Daily operating order')
+            ->assertSeeText('1. Call next')
+            ->assertSeeText('2. Clear documents')
+            ->assertSeeText('3. Clear payments')
+            ->assertSeeText('4. Run assessments')
+            ->assertSeeText('5. Move seats')
+            ->assertSee(route('admission.calling-desk.index'), false)
+            ->assertSee(route('admission.offer-rounds.index'), false)
             ->assertSee('Follow-ups Due (Next 7 Days)')
             ->assertSee('Recent Interactions')
             ->assertDontSee('N/A', false)
@@ -450,6 +479,61 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee("confirm('Queue this reminder through the communication hub?')", false);
     }
 
+    public function test_reminder_queue_explains_workflow_empty_filters_and_target_context(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        $lead = Lead::whereNotNull('name')->firstOrFail();
+
+        AdmissionReminderSchedule::create([
+            'subject_type' => Lead::class,
+            'subject_id' => $lead->id,
+            'assigned_to' => $head->id,
+            'owner_user_id' => $head->id,
+            'target' => 'lead',
+            'reason' => 'callback_retry',
+            'channel' => 'sms',
+            'status' => 'scheduled',
+            'priority' => 'high',
+            'due_at' => now()->addDay(),
+            'notes' => null,
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.reminders.index', ['reason' => 'callback_retry']))
+            ->assertOk()
+            ->assertSee('Reminder operating workflow')
+            ->assertSee('Filter due reminders')
+            ->assertSee('Open the lead or applicant context')
+            ->assertSee('Queue approved communication')
+            ->assertSee('Complete only after action is recorded')
+            ->assertSee('Pause cadences with a reason')
+            ->assertSee('This queue is scoped to your Admission hierarchy.')
+            ->assertSee('Active filters:')
+            ->assertSee('Reason: callback retry')
+            ->assertSee($lead->name)
+            ->assertSee(route('admission.leads.show', $lead), false)
+            ->assertSee('No reminder notes recorded')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false);
+
+        $this->actingAs($head)
+            ->get(route('admission.reminders.index', ['reason' => 'no_matching_reason_for_ux']))
+            ->assertOk()
+            ->assertSee('No reminders match this scoped queue.')
+            ->assertSee('Clear filters, review the follow-up calendar, or create a reminder from a lead, applicant, Calling Desk, or document/payment blocker workflow.')
+            ->assertSee('Clear Filters')
+            ->assertSee('Follow-up Calendar')
+            ->assertSee('Calling Desk')
+            ->assertSee(route('admission.leads.follow-ups.calendar'), false)
+            ->assertSee(route('admission.calling-desk.index'), false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false);
+    }
+
     public function test_payment_verification_queue_exports_current_filtered_view(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
@@ -500,7 +584,8 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee('Export Current View')
             ->assertSee(route('admission.documents.queue.export', $query), false)
             ->assertSee('Pending Documents (')
-            ->assertSee('Filter: Document: ' . $documentName);
+            ->assertSee('Filter: Document: ' . $documentName)
+            ->assertDontSee('&bull;', false);
 
         $response = $this->actingAs($head)
             ->get(route('admission.documents.queue.export', $query));

@@ -138,6 +138,9 @@ class TeacherStudentListTest extends TestCase
         $response = $this->actingAs($teacherUser)
             ->get(route('teacher.students.index'))
             ->assertOk()
+            ->assertSeeText('Roster source:')
+            ->assertSeeText('published timetable for the current semester or term')
+            ->assertSeeText('Academic setup must publish the current semester before teacher rosters can appear')
             ->assertDontSee('Unrelated Visible Risk');
 
         $this->assertCount(0, $response->viewData('students'));
@@ -293,17 +296,23 @@ class TeacherStudentListTest extends TestCase
         $this->actingAs($teacherUser)
             ->get(route('teacher.students.index'))
             ->assertOk()
+            ->assertSeeText('Roster source:')
+            ->assertSeeText('Search roster')
+            ->assertSeeText('Showing 2 roster student(s)')
             ->assertSee($student->user->name)
             ->assertSee('50%')
             ->assertSee('1/2')
             ->assertSee('No attendance marked yet')
             ->assertDontSee('No records')
+            ->assertDontSee(route('admin.students.show', $student), false)
             ->assertSee(route('teacher.students.index'), false)
             ->assertSee(route('notifications.index'), false);
 
         $this->actingAs($teacherUser)
             ->get(route('teacher.students.index', ['search' => 'Aarav']))
             ->assertOk()
+            ->assertSeeText('Showing 1 roster student(s) for "Aarav"')
+            ->assertSeeText('Clear')
             ->assertSee('Aarav Searchable')
             ->assertDontSee('Bhavna Filtered');
     }

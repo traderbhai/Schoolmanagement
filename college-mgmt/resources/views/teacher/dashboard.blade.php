@@ -59,6 +59,21 @@
                     <h5 class="fw-bold mb-1">No urgent teaching action due today</h5>
                     <p class="text-muted mb-0">Use this time to upload materials, create assignments, or review your timetable for upcoming classes.</p>
                 @endif
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @if($pendingGrading > 0)
+                        <span class="badge text-bg-primary">Owner: You</span>
+                        <span class="badge text-bg-light">Source: Submitted assignment work</span>
+                    @elseif(count($todayClasses) > 0)
+                        <span class="badge text-bg-warning">Owner: You</span>
+                        <span class="badge text-bg-light">Source: Published timetable</span>
+                    @elseif($activeAssignments > 0)
+                        <span class="badge text-bg-primary">Owner: You</span>
+                        <span class="badge text-bg-light">Source: Published assignments</span>
+                    @else
+                        <span class="badge text-bg-light">Owner: You + Program office</span>
+                        <span class="badge text-bg-light">Source: Your teaching records</span>
+                    @endif
+                </div>
             </div>
             <div class="d-grid gap-2" style="min-width: 220px;">
                 @if($pendingGrading > 0)
@@ -129,7 +144,8 @@
         <span class="fw-semibold">My Weekly Schedule</span>
     </div>
     <div class="card-body p-0">
-        @if(count($grid))
+        @php($hasScheduleEntries = collect($grid)->flatten(1)->filter()->isNotEmpty())
+        @if($hasScheduleEntries)
         <div class="table-responsive">
             <table class="table table-bordered timetable-grid mb-0">
                 <thead>
@@ -160,9 +176,9 @@
                         <td class="p-1">
                             @if(isset($grid[$day][$slot->id]))
                             <div class="timetable-cell">
-                                <div class="subj fw-semibold" style="font-size:.78rem;line-height:1.2">{{ $grid[$day][$slot->id]->subject->name }}</div>
-                                <div class="tchr text-muted mt-1" style="font-size:.68rem">{{ $grid[$day][$slot->id]->course->code }}</div>
-                                <span class="room-tag badge bg-light text-secondary border mt-1" style="font-size:.62rem">{{ $grid[$day][$slot->id]->classroom->room_number }}</span>
+                                <div class="subj fw-semibold" style="font-size:.78rem;line-height:1.2">{{ $grid[$day][$slot->id]->subject?->name ?? 'Subject not assigned' }}</div>
+                                <div class="tchr text-muted mt-1" style="font-size:.68rem">{{ $grid[$day][$slot->id]->course?->code ?? 'Course not assigned' }}</div>
+                                <span class="room-tag badge bg-light text-secondary border mt-1" style="font-size:.62rem">{{ $grid[$day][$slot->id]->classroom?->room_number ?? $grid[$day][$slot->id]->classroom?->name ?? 'Room not assigned' }}</span>
                             </div>
                             @endif
                         </td>
@@ -176,8 +192,9 @@
         @else
         <div class="empty-state py-5">
             <div class="empty-icon"><i class="bi bi-grid text-muted" style="font-size:3rem"></i></div>
-            <h6 class="mt-3 text-muted">No Timetable Entries</h6>
-            <p class="text-muted small mb-0">Your timetable hasn't been configured yet. Contact admin.</p>
+            <h6 class="mt-3 text-muted">No published timetable for your profile yet</h6>
+            <p class="text-muted small mb-2">Only published classes assigned to your teacher profile appear here. If you expected classes, check that your teacher profile and timetable allocation are published.</p>
+            <a href="{{ route('teacher.profile') }}" class="btn btn-sm btn-outline-primary">Review teacher profile</a>
         </div>
         @endif
     </div>

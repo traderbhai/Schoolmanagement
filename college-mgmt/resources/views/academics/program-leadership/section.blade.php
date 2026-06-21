@@ -24,6 +24,10 @@
             <div>
                 <div class="fw-semibold">Program source-list workflow</div>
                 <div class="small text-muted">Use this list to move from scoped program signal to source record, owner action, and report evidence.</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge text-bg-primary">Owner: assigned Program Leader / Director</span>
+                    <span class="badge text-bg-secondary">Source: {{ $section['title'] }}</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Filter program/status</span>
@@ -91,7 +95,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">{{ $section['title'] }} source records</caption>
-                <thead><tr><th>Record</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th>Record</th><th>Owner / Source</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse($section['items'] as $item)
                         <tr>
@@ -99,11 +103,21 @@
                                 <div class="fw-semibold">{{ $item['title'] }}</div>
                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                             </td>
+                            <td>
+                                <span class="badge text-bg-light border">Owner: Program leadership</span>
+                                <span class="badge text-bg-light border">Source: {{ $section['title'] }}</span>
+                            </td>
                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No program leadership records match the current scope and filters.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-body">No program leadership records match this source list.</div>
+                                <div class="small">This usually means the assigned program scope has no matching risks, or source workflows have not yet created portfolio, course-delivery, student-intervention, quality-signal, or Chair-escalation records.</div>
+                                <div class="small mt-1">Before closing a program review, recheck scope assignment, owner action, student-risk evidence, delivery progress, and escalation status.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

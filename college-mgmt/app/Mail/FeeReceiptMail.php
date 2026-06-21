@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\FeePayment;
@@ -16,7 +17,7 @@ class FeeReceiptMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Fee Payment Confirmation — Receipt #' . $this->payment->receipt_number);
+        return new Envelope(subject: 'Fee Payment Confirmation - Receipt #' . ($this->payment->receipt_number ?? 'pending'));
     }
 
     public function content(): Content

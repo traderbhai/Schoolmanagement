@@ -70,6 +70,63 @@ class FeeDemandTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_fee_demand_pages_use_readable_finance_fallbacks(): void
+    {
+        view()->share('errors', new \Illuminate\Support\ViewErrorBag());
+
+        $student = Student::factory()->make(['enrollment_number' => null]);
+        $student->setRelation('user', null);
+        $student->setRelation('program', null);
+
+        $feeDemand = FeeDemand::factory()->make([
+            'total_amount' => 50000,
+            'scholarship_deduction' => 5000,
+            'final_amount' => 45000,
+            'penalty_amount' => 0,
+            'due_date' => null,
+            'status' => 'pending',
+        ]);
+        $feeDemand->id = 9876;
+        $feeDemand->setRelation('student', $student);
+        $feeDemand->setRelation('term', null);
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(collect([$feeDemand]), 1, 15);
+        $listHtml = view('academic.fee-demands.index', [
+            'feeDemands' => $paginator,
+            'batches' => collect(),
+            'terms' => collect(),
+        ])->render();
+
+        $detailHtml = view('academic.fee-demands.show', [
+            'feeDemand' => $feeDemand,
+            'payments' => collect([
+                (object) [
+                    'payment_date' => null,
+                    'amount_paid' => 2500,
+                    'payment_method' => null,
+                    'status' => 'pending',
+                ],
+            ]),
+        ])->render();
+
+        foreach ([$listHtml, $detailHtml] as $html) {
+            $this->assertStringContainsString('Rs.', $html);
+            $this->assertStringContainsString('Due date not published', $html);
+            $this->assertStringContainsString('No penalty', $html);
+            $this->assertStringNotContainsString('N/A', $html);
+            $this->assertStringNotContainsString('â', $html);
+            $this->assertStringNotContainsString('&mdash;', $html);
+            $this->assertStringNotContainsString('&ndash;', $html);
+        }
+
+        $this->assertStringContainsString('Enrollment number pending', $listHtml);
+        $this->assertStringContainsString('Term not linked', $listHtml);
+        $this->assertStringContainsString('Student name missing', $detailHtml);
+        $this->assertStringContainsString('Program not linked', $detailHtml);
+        $this->assertStringContainsString('Payment date pending', $detailHtml);
+        $this->assertStringContainsString('Payment method pending', $detailHtml);
+    }
+
     public function test_can_update_fee_demand()
     {
         $feeDemand = FeeDemand::factory()->create(['status' => 'pending']);

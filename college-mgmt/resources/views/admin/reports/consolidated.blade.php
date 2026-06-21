@@ -31,27 +31,27 @@ tr:nth-child(even) td { background: #f8fafc; }
 </div>
 
 <div class="student-info">
-    <div class="info-group"><div class="label">Student Name</div><div class="value">{{ $student->user->name }}</div></div>
-    <div class="info-group"><div class="label">Enrollment No</div><div class="value">{{ $student->enrollment_number }}</div></div>
-    <div class="info-group"><div class="label">Course</div><div class="value">{{ $student->course->name ?? '—' }}</div></div>
-    <div class="info-group"><div class="label">Department</div><div class="value">{{ $student->department->name ?? '—' }}</div></div>
+    <div class="info-group"><div class="label">Student Name</div><div class="value">{{ $student->user?->name ?? 'Student name missing' }}</div></div>
+    <div class="info-group"><div class="label">Enrollment No</div><div class="value">{{ $student->enrollment_number ?? 'Enrollment number pending' }}</div></div>
+    <div class="info-group"><div class="label">Course</div><div class="value">{{ $student->course?->name ?? $student->program?->name ?? 'Program not linked' }}</div></div>
+    <div class="info-group"><div class="label">Department</div><div class="value">{{ $student->department?->name ?? 'Department not linked' }}</div></div>
     <div class="info-group"><div class="label">Report Date</div><div class="value">{{ now()->format('d M Y') }}</div></div>
 </div>
 
 @foreach($semesterReports as $sr)
-<div class="sem-header">{{ $sr['semester']->name }} — SGPA: {{ number_format($sr['report']['sgpa'],2) }} | {{ $sr['report']['result'] }}</div>
+<div class="sem-header">{{ $sr['semester']?->name ?? 'Semester not linked' }} - SGPA: {{ number_format($sr['report']['sgpa'],2) }} | {{ $sr['report']['result'] ?? 'Result pending' }}</div>
 <table>
     <thead><tr><th>Subject</th><th>Credits</th><th>Marks</th><th>%</th><th>Grade</th><th>Points</th><th>Status</th></tr></thead>
     <tbody>
     @foreach($sr['report']['subjects'] as $row)
     <tr>
-        <td>{{ $row['subject']->name }}</td>
+        <td>{{ $row['subject']?->name ?? 'Subject not linked' }}</td>
         <td>{{ $row['credits'] }}</td>
-        <td>{{ isset($row['obtained']) ? $row['obtained'].'/'.$row['max'] : '—' }}</td>
-        <td>{{ $row['pct'] !== null ? $row['pct'].'%' : '—' }}</td>
-        <td>{{ $row['grade']['letter'] ?? '—' }}</td>
-        <td>{{ $row['grade']['points'] ?? '—' }}</td>
-        <td><span class="badge {{ ($row['status']??'') === 'pass' ? 'badge-pass' : 'badge-fail' }}">{{ ucfirst($row['status'] ?? 'N/A') }}</span></td>
+        <td>{{ isset($row['obtained']) ? $row['obtained'].'/'.($row['max'] ?? 'Max marks pending') : 'Marks pending' }}</td>
+        <td>{{ $row['pct'] !== null ? $row['pct'].'%' : 'Result pending' }}</td>
+        <td>{{ $row['grade']['letter'] ?? 'Grade pending' }}</td>
+        <td>{{ $row['grade']['points'] ?? 'Points pending' }}</td>
+        <td><span class="badge {{ ($row['status']??'') === 'pass' ? 'badge-pass' : 'badge-fail' }}">{{ ucfirst($row['status'] ?? 'pending') }}</span></td>
     </tr>
     @endforeach
     </tbody>

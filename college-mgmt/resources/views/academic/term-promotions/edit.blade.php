@@ -12,11 +12,11 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Student</label>
-                        <input type="text" class="form-control" value="{{ $termPromotion->student->enrollment_number ?? 'N/A' }}" readonly>
+                        <input type="text" class="form-control" value="{{ $termPromotion->student->enrollment_number ?? 'Enrollment number pending' }}" readonly>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Current Term</label>
-                        <input type="text" class="form-control" value="{{ $termPromotion->currentTerm->name ?? 'N/A' }}" readonly>
+                        <input type="text" class="form-control" value="{{ $termPromotion->currentTerm->name ?? 'Current term not linked' }}" readonly>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">CGPA</label>

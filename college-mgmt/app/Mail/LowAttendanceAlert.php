@@ -20,8 +20,9 @@ class LowAttendanceAlert extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $subjectName = $this->data['subject']->name ?? 'Subject';
-        $percentage  = $this->data['attendance_percentage'] ?? 0;
-        return new Envelope(subject: "Attendance Alert — {$subjectName}: {$percentage}%");
+        $percentage = $this->data['attendance_percentage'] ?? 0;
+
+        return new Envelope(subject: "Attendance Alert - {$subjectName}: {$percentage}%");
     }
 
     public function content(): Content

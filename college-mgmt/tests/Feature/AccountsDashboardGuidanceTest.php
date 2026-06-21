@@ -108,12 +108,17 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->get(route('accounts.dashboard'))
             ->assertOk()
+            ->assertSee('Accounts operating sequence')
+            ->assertSee('Owner: Accounts office')
+            ->assertSee('Source: fee demands, verified payments, Admission receipts, and scholarship awards')
             ->assertSee('Open demand report')
             ->assertSee(route('accounts.reports'), false)
             ->assertSee('Open paid collections')
             ->assertSee(route('accounts.fee-collections', ['status' => 'paid']), false)
             ->assertSee('Open outstanding list')
             ->assertSee(route('accounts.outstanding'), false)
+            ->assertSee('Open reconciliation')
+            ->assertSee(route('accounts.reconciliation'), false)
             ->assertSee('Open overdue queue')
             ->assertSee(route('accounts.outstanding', ['mode' => 'overdue_demands']), false);
     }
@@ -203,6 +208,10 @@ class AccountsDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->get(route('accounts.outstanding'))
             ->assertStatus(200)
+            ->assertSee('Outstanding follow-up workflow')
+            ->assertSee('Owner: Accounts office')
+            ->assertSee('Source: active pending, partially paid, and overdue fee demands')
+            ->assertSee('Owner / Source')
             ->assertSee('Export Current View')
             ->assertSee(route('accounts.export-outstanding'), false)
             ->assertSee($student->user->name)
@@ -210,6 +219,66 @@ class AccountsDashboardGuidanceTest extends TestCase
             ->assertSee('1 open')
             ->assertSee('1 overdue')
             ->assertDontSee('999,999');
+    }
+
+    public function test_accounts_daily_finance_lists_explain_source_ownership_and_use_readable_labels(): void
+    {
+        $user = $this->accountsUser();
+        $student = Student::factory()->create();
+        $feeStructure = FeeStructure::create([
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'academic_year_id' => \App\Models\AcademicYear::factory()->create()->id,
+            'fee_type' => 'Tuition',
+            'amount' => 25000,
+        ]);
+
+        FeePayment::create([
+            'student_id' => $student->id,
+            'fee_structure_id' => $feeStructure->id,
+            'amount_paid' => 12000,
+            'payment_date' => now()->toDateString(),
+            'receipt_number' => 'ACC-LIST-001',
+            'payment_method' => 'cash',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.fee-collections'))
+            ->assertOk()
+            ->assertSee('Collection source-list workflow')
+            ->assertSee('Owner: Accounts office')
+            ->assertSee('Source: verified fee payment records')
+            ->assertSee('Filtered Source List')
+            ->assertSee('Visible filter summary')
+            ->assertSee('Owner / Source')
+            ->assertSee('Rs. 12,000.00')
+            ->assertDontSee('â', false)
+            ->assertDontSee('â‚¹', false)
+            ->assertDontSee('href="#"', false);
+
+        $this->actingAs($user)
+            ->get(route('accounts.admission-payments'))
+            ->assertOk()
+            ->assertSee('Admission payment verification workflow')
+            ->assertSee('Owner: Accounts office')
+            ->assertSee('Source: pending Admission payment submissions')
+            ->assertSee('Filtered Source List')
+            ->assertDontSee('â', false)
+            ->assertDontSee('â‚¹', false)
+            ->assertDontSee('href="#"', false);
+
+        $this->actingAs($user)
+            ->get(route('accounts.reconciliation'))
+            ->assertOk()
+            ->assertSee('Reconciliation workflow')
+            ->assertSee('Owner: Accounts office')
+            ->assertSee('Source: verified Admission payment records')
+            ->assertSee('Filtered Source List')
+            ->assertSee('Visible filter summary')
+            ->assertDontSee('â', false)
+            ->assertDontSee('â‚¹', false)
+            ->assertDontSee('href="#"', false);
     }
 
     public function test_accounts_outstanding_export_uses_active_fee_demands(): void

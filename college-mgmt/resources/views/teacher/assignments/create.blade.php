@@ -25,6 +25,14 @@
         </div>
     @endif
 
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Create assignment sequence:</strong>
+            choose one of your published teaching subjects, set a future due date, add clear instructions, then publish only when students should see and submit the work.
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <form method="POST" action="{{ route('teacher.assignments.store') }}" enctype="multipart/form-data" id="assignment-form">
@@ -36,7 +44,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
                         <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
-                            <option value="">— Select Subject —</option>
+                            <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
                                     {{ $subject->name }} ({{ $subject->code }})
@@ -107,7 +115,7 @@
                                    value="{{ old('late_penalty_percent', 10) }}"
                                    class="form-control form-control-sm @error('late_penalty_percent') is-invalid @enderror"
                                    min="0" max="100" style="max-width:120px;" @disabled($actionBlockedReason)>
-                            <div class="form-text">Marks deducted per late submission (0–100%).</div>
+                            <div class="form-text">Marks deducted per late submission (0-100%).</div>
                             @error('late_penalty_percent')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                     </div>

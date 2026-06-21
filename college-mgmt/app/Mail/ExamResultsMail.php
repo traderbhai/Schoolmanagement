@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Mail;
 
 use App\Models\Student;
@@ -21,7 +22,7 @@ class ExamResultsMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Your Exam Results are Available — ' . $this->semesterName);
+        return new Envelope(subject: 'Your Exam Results are Available - ' . $this->semesterName);
     }
 
     public function content(): Content

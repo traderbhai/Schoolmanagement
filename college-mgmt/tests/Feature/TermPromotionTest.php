@@ -90,6 +90,56 @@ class TermPromotionTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_term_promotion_pages_use_readable_progression_fallbacks(): void
+    {
+        view()->share('errors', new \Illuminate\Support\ViewErrorBag());
+
+        $student = Student::factory()->make(['enrollment_number' => null]);
+        $student->setRelation('user', null);
+
+        $promotion = TermPromotion::factory()->make([
+            'cgpa' => 2.75,
+            'attendance_percentage' => 72.5,
+            'meets_academic_criteria' => true,
+            'meets_attendance_criteria' => false,
+            'status' => 'pending',
+            'remarks' => null,
+        ]);
+        $promotion->id = 4321;
+        $promotion->setRelation('student', $student);
+        $promotion->setRelation('currentTerm', null);
+        $promotion->setRelation('promotedToTerm', null);
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(collect([$promotion]), 1, 15);
+
+        $listHtml = view('academic.term-promotions.index', [
+            'promotions' => $paginator,
+        ])->render();
+
+        $showHtml = view('academic.term-promotions.show', [
+            'termPromotion' => $promotion,
+        ])->render();
+
+        $editHtml = view('academic.term-promotions.edit', [
+            'termPromotion' => $promotion,
+        ])->render();
+
+        foreach ([$listHtml, $showHtml, $editHtml] as $html) {
+            $this->assertStringNotContainsString('N/A', $html);
+            $this->assertStringNotContainsString('â', $html);
+            $this->assertStringNotContainsString('&mdash;', $html);
+            $this->assertStringNotContainsString('&ndash;', $html);
+        }
+
+        $this->assertStringContainsString('Student name missing', $listHtml);
+        $this->assertStringContainsString('Current term not linked', $listHtml);
+        $this->assertStringContainsString('Target term not linked', $listHtml);
+        $this->assertStringContainsString('Student name missing', $showHtml);
+        $this->assertStringContainsString('No reviewer remarks yet', $showHtml);
+        $this->assertStringContainsString('Enrollment number pending', $editHtml);
+        $this->assertStringContainsString('Current term not linked', $editHtml);
+    }
+
     public function test_can_approve_eligible_promotion()
     {
         $promotion = $this->eligiblePendingPromotion();

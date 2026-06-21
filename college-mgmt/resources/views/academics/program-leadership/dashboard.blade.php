@@ -29,6 +29,10 @@
             <div>
                 <div class="fw-semibold">Program leadership operating sequence</div>
                 <div class="small text-muted">Use this as the program owner desk. Each KPI opens the scoped source list behind the count.</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge text-bg-primary">Owner: assigned Program Leader / Director</span>
+                    <span class="badge text-bg-secondary">Source: portfolio, delivery, student success, quality signals, Chair escalation</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Review portfolio scope</span>
@@ -85,7 +89,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Item</th><th>Status</th><th></th></tr></thead>
+                                <thead><tr><th>Item</th><th>Owner / Source</th><th>Status</th><th></th></tr></thead>
                                 <tbody>
                                     @forelse($section['items']->take(5) as $item)
                                         <tr>
@@ -93,11 +97,15 @@
                                                 <div class="fw-semibold small">{{ $item['title'] }}</div>
                                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                                             </td>
+                                            <td>
+                                                <span class="badge text-bg-light border">Owner: Program leadership</span>
+                                                <span class="badge text-bg-light border">Source: {{ $meta['label'] }}</span>
+                                            </td>
                                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Go</a></td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="3" class="text-muted text-center py-3">No current exceptions in this program area.</td></tr>
+                                        <tr><td colspan="4" class="text-muted text-center py-3">No current program exceptions for {{ $meta['label'] }}. Continue with portfolio scope review, course delivery checks, student interventions, quality signals, or Chair escalation if a source workflow is missing.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

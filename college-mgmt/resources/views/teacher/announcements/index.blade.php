@@ -7,6 +7,14 @@
 
     <h4 class="mb-3"><i class="bi bi-megaphone me-2 text-primary"></i>Subject Announcements</h4>
 
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Announcement workflow:</strong>
+            post notices only for subjects assigned to you in a published timetable. Students see posted announcements in their course feed; use pinned notices only for items that should stay at the top.
+        </div>
+    </div>
+
     {{-- Post Announcement --}}
     @if($canManageAnnouncements)
     <div class="card shadow-sm mb-4">
@@ -31,7 +39,7 @@
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
                         <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required>
-                            <option value="">— Select Subject —</option>
+                            <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
                                     {{ $subject->name }} ({{ $subject->code }})
@@ -53,7 +61,7 @@
                         <label class="form-label fw-semibold">Body <span class="text-danger">*</span></label>
                         <textarea name="body" rows="4"
                                   class="form-control @error('body') is-invalid @enderror"
-                                  placeholder="Write your announcement here…" required>{{ old('body') }}</textarea>
+                                  placeholder="Write your announcement here..." required>{{ old('body') }}</textarea>
                         @error('body')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
@@ -128,8 +136,8 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <div class="small text-muted">{{ $ann->subject->code ?? '' }}</div>
-                                        {{ $ann->subject->name ?? '—' }}
+                                        <div class="small text-muted">{{ $ann->subject->code ?? 'Subject code not linked' }}</div>
+                                        {{ $ann->subject->name ?? 'Subject not linked' }}
                                     </td>
                                     <td class="text-muted small text-nowrap">
                                         {{ $ann->created_at->format('d M Y, H:i') }}

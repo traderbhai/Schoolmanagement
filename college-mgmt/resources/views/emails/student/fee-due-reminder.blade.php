@@ -6,8 +6,8 @@
 <p>This is a reminder that your fee payment is due soon. Please find the details below:</p>
 
 <div class="alert-warning">
-    <p><strong>Amount Due:</strong> ₹{{ number_format($feeStructure->amount ?? 0, 2) }}</p>
-    <p><strong>Due Date:</strong> {{ isset($feeStructure->due_date) ? \Carbon\Carbon::parse($feeStructure->due_date)->format('d M Y') : 'N/A' }}</p>
+    <p><strong>Amount Due:</strong> Rs. {{ number_format($feeStructure->amount ?? 0, 2) }}</p>
+    <p><strong>Due Date:</strong> {{ isset($feeStructure->due_date) ? \Carbon\Carbon::parse($feeStructure->due_date)->format('d M Y') : 'Due date not published' }}</p>
     @if(isset($daysUntilDue))
     <p><strong>Days Remaining:</strong> {{ $daysUntilDue > 0 ? $daysUntilDue . ' day(s)' : 'Overdue' }}</p>
     @endif

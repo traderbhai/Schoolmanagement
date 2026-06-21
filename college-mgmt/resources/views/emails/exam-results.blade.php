@@ -9,20 +9,20 @@
         <h1 style="margin:0;color:#ffffff;font-size:24px;">Exam Results Available</h1>
       </td></tr>
       <tr><td style="padding:40px;">
-        <p style="margin:0 0 16px;font-size:16px;color:#374151;">Dear <strong>{{ $student->user->name }}</strong>,</p>
-        <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Your exam results for <strong>{{ $semesterName }}</strong> have been published.</p>
+        <p style="margin:0 0 16px;font-size:16px;color:#374151;">Dear <strong>{{ $student->user?->name ?? 'Student' }}</strong>,</p>
+        <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">Your exam results for <strong>{{ $semesterName ?: 'Semester not linked' }}</strong> have been published.</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:24px;">
           <tr style="background:#f9fafb;">
             <td style="padding:12px 16px;font-size:14px;color:#6b7280;width:40%;">Semester</td>
-            <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:bold;">{{ $semesterName }}</td>
+            <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:bold;">{{ $semesterName ?: 'Semester not linked' }}</td>
           </tr>
           <tr>
             <td style="padding:12px 16px;font-size:14px;color:#6b7280;border-top:1px solid #e5e7eb;">SGPA</td>
-            <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:bold;border-top:1px solid #e5e7eb;">{{ number_format($sgpa, 2) }}</td>
+            <td style="padding:12px 16px;font-size:14px;color:#111827;font-weight:bold;border-top:1px solid #e5e7eb;">{{ is_numeric($sgpa) ? number_format((float) $sgpa, 2) : 'SGPA pending' }}</td>
           </tr>
           <tr style="background:#f9fafb;">
             <td style="padding:12px 16px;font-size:14px;color:#6b7280;border-top:1px solid #e5e7eb;">Overall Result</td>
-            <td style="padding:12px 16px;font-size:14px;font-weight:bold;border-top:1px solid #e5e7eb;color:{{ $overallResult === 'Pass' ? '#059669' : '#dc2626' }};">{{ $overallResult }}</td>
+            <td style="padding:12px 16px;font-size:14px;font-weight:bold;border-top:1px solid #e5e7eb;color:{{ $overallResult === 'Pass' ? '#059669' : '#dc2626' }};">{{ $overallResult ?: 'Result status pending' }}</td>
           </tr>
         </table>
         <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">Log in to the portal to view your detailed subject-wise results.</p>

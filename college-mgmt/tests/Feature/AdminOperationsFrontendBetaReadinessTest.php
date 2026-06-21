@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,9 +81,18 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
+            ->assertSee('Admin operating sequence')
+            ->assertSee('Owner: Admin / Director')
+            ->assertSee('Source: institute master data, attendance, fees, notices, exams, and audit logs')
+            ->assertSee('Rs.')
+            ->assertSee('Attendance Trend - Last 14 Days')
+            ->assertSee('Fee Collection - Last 6 Months')
             ->assertSee(route('admin.students.index'), false)
             ->assertSee(route('admin.fees.collect'), false)
             ->assertSee(route('admin.audit.index'), false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Â', false)
+            ->assertDontSee('₹', false)
             ->assertDontSee('href="#"', false);
 
         $this->actingAs($admin)
@@ -184,6 +194,17 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('accounts.reconciliation'), false)
             ->assertDontSee('href="#"', false);
 
+        $accountsGroups = FrontendNavigation::manifest()['accounts']['groups'];
+
+        $this->assertSame(
+            ['Fee Collections', 'Admission Payments', 'Outstanding', 'Reconciliation'],
+            collect($accountsGroups['Finance'])->pluck('label')->all()
+        );
+        $this->assertSame(
+            ['Reports'],
+            collect($accountsGroups['Reports'])->pluck('label')->all()
+        );
+
         $cmc = User::where('email', 'cmc@college.com')->firstOrFail();
         $this->actingAs($cmc)
             ->get(route('cmc.dashboard'))
@@ -207,6 +228,17 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('cmc.analytics'), false)
             ->assertDontSee('href="#"', false);
 
+        $cmcGroups = FrontendNavigation::manifest()['cmc']['groups'];
+
+        $this->assertSame(
+            ['Placement Drives', 'Companies', 'Career Events'],
+            collect($cmcGroups['Placement'])->pluck('label')->all()
+        );
+        $this->assertSame(
+            ['Placement Stats', 'Analytics'],
+            collect($cmcGroups['Reports'])->pluck('label')->all()
+        );
+
         $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
 
         $this->assertStringContainsString('<x-ui.manifest-sidebar role="accounts"', $layout);
@@ -223,13 +255,17 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->assertSee('Command')
             ->assertSee('Governance')
             ->assertSee('Timetable')
+            ->assertSee('People')
             ->assertSee('Admission')
             ->assertSee('Assessments')
             ->assertSee('Academics / Delivery')
             ->assertSee('Finance')
+            ->assertSee('Reports')
             ->assertSee('Operations')
             ->assertSee('Settings')
             ->assertSee('Academic Years')
+            ->assertSee('Teachers')
+            ->assertSee('Parents')
             ->assertSee('Weekly Timetable')
             ->assertSee('Student Documents')
             ->assertSee('Command Center')
@@ -250,6 +286,30 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('admin.roles.hierarchy'), false)
             ->assertDontSee('href="#"', false);
 
+        $adminGroups = FrontendNavigation::manifest()['admin']['groups'];
+
+        $this->assertSame(
+            ['Dashboard', 'Global Search'],
+            collect($adminGroups['Command'])->pluck('label')->all()
+        );
+        $this->assertContains('Analytics', collect($adminGroups['Reports'])->pluck('label')->all());
+        $this->assertContains('Institutional KPI', collect($adminGroups['Reports'])->pluck('label')->all());
+        $this->assertContains('Fees', collect($adminGroups['Finance'])->pluck('label')->all());
+        $this->assertContains('Accounts Dashboard', collect($adminGroups['Finance'])->pluck('label')->all());
+        $this->assertContains('Placement Drives', collect($adminGroups['Placement'])->pluck('label')->all());
+        $this->assertNotContains('Placement Stats', collect($adminGroups['Placement'])->pluck('label')->all());
+        $this->assertContains('Placement Stats', collect($adminGroups['Reports'])->pluck('label')->all());
+        $this->assertNotContains('Fee Report', collect($adminGroups['Finance'])->pluck('label')->all());
+        $this->assertContains('Fee Report', collect($adminGroups['Reports'])->pluck('label')->all());
+        $this->assertNotContains('Lead Analytics', collect($adminGroups['Leads'])->pluck('label')->all());
+        $this->assertContains('Lead Analytics', collect($adminGroups['Reports'])->pluck('label')->all());
+        $this->assertNotContains('Leave Approvals', collect($adminGroups['Academics / Delivery'])->pluck('label')->all());
+        $this->assertContains('Leave Approvals', collect($adminGroups['Approvals'])->pluck('label')->all());
+        $this->assertNotContains('Academics Governance', collect($adminGroups['Academics / Delivery'])->pluck('label')->all());
+        $this->assertContains('Academics Governance', collect($adminGroups['Governance'])->pluck('label')->all());
+        $this->assertContains('Integration Health', collect($adminGroups['Settings'])->pluck('label')->all());
+        $this->assertNotContains('Integration Health', collect($adminGroups['Reports'])->pluck('label')->all());
+
         $layout = file_get_contents(resource_path('views/layouts/admin.blade.php'));
 
         $this->assertStringContainsString('<x-ui.manifest-sidebar role="admin"', $layout);
@@ -265,6 +325,7 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             resource_path('views/admin/settings/api-docs.blade.php'),
             resource_path('views/admin/roles/permissions/index.blade.php'),
             resource_path('views/admin/fees/collect.blade.php'),
+            resource_path('views/admin/results/index.blade.php'),
             resource_path('views/admin/library/index.blade.php'),
             resource_path('views/admin/library/books.blade.php'),
             resource_path('views/admin/hostel/index.blade.php'),
@@ -292,6 +353,20 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             $this->assertStringNotContainsString('Stack trace', $contents, $path);
             $this->assertStringNotContainsString('Laravel', $contents, $path);
         }
+    }
+
+    public function test_admin_grade_reports_template_uses_result_specific_empty_state_and_fallbacks(): void
+    {
+        $contents = file_get_contents(resource_path('views/admin/results/index.blade.php'));
+
+        $this->assertStringContainsString('No published result records match the selected student and semester.', $contents);
+        $this->assertStringContainsString('Marks not published', $contents);
+        $this->assertStringContainsString('Grade pending', $contents);
+        $this->assertStringContainsString('Points pending', $contents);
+        $this->assertStringNotContainsString('No attendance records found for the selected criteria.', $contents);
+        $this->assertStringNotContainsString('Select studentâ', $contents);
+        $this->assertStringNotContainsString('Select semesterâ', $contents);
+        $this->assertStringNotContainsString('Subject-wise Results â', $contents);
     }
 
     public function test_sensitive_operations_lifecycle_forms_have_confirmation_guards(): void
@@ -457,6 +532,22 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
                 ->assertDontSee('Whoops', false)
                 ->assertDontSee('SERVICE ERROR', false)
                 ->assertDontSee('Laravel\\', false);
+
+            if ($route === 'director.dashboard') {
+                $response->assertSee('Academics / Delivery')
+                    ->assertSee('Programs')
+                    ->assertSee('Reports')
+                    ->assertSee('Director Reports');
+            }
+
+            if ($route === 'hod.dashboard') {
+                $response->assertSee('Academics / Delivery')
+                    ->assertSee('Faculty Roster')
+                    ->assertSee('Approvals')
+                    ->assertSee('Leave Approvals')
+                    ->assertSee('Reports')
+                    ->assertSee('Dept Performance');
+            }
         }
 
         $admin = User::where('email', 'admin@demo.edu')->firstOrFail();

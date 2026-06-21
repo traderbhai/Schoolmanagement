@@ -8,6 +8,19 @@
 @endsection
 
 @section('content')
+@php
+    $audienceLabel = match($notice->audience) {
+        'all' => 'All users',
+        'students' => 'Students / parents',
+        'teachers' => 'Teachers',
+        'admin' => 'Admin / staff',
+        default => ucfirst($notice->audience),
+    };
+    $isVisibleNow = $notice->is_published
+        && $notice->publish_date->lte(now())
+        && (! $notice->expiry_date || $notice->expiry_date->gte(now()));
+@endphp
+
 <div class="card" style="max-width:760px">
     <div class="card-header d-flex align-items-center justify-content-between">
         <span class="fw-semibold"><i class="bi bi-megaphone me-2 text-primary"></i>Notice Detail</span>
@@ -17,12 +30,17 @@
         </div>
     </div>
     <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge text-bg-light">Owner: Admin / Director</span>
+            <span class="badge text-bg-light">Source: notice board record #{{ $notice->id }}</span>
+            <span class="badge {{ $isVisibleNow ? 'bg-success' : 'bg-secondary' }}">{{ $isVisibleNow ? 'Visible now' : 'Not currently visible' }}</span>
+        </div>
         <h4 class="fw-bold mb-3">{{ $notice->title }}</h4>
 
         <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
             {{-- Audience badge --}}
             <span class="badge {{ match($notice->audience){'all'=>'bg-primary','students'=>'badge-active','teachers'=>'badge-paid','admin'=>'bg-secondary',default=>'bg-secondary'} }}">
-                <i class="bi bi-people me-1"></i>{{ ucfirst($notice->audience) }}
+                <i class="bi bi-people me-1"></i>{{ $audienceLabel }}
             </span>
 
             {{-- Priority badge --}}
@@ -45,7 +63,7 @@
             {{-- Publish date --}}
             <span class="text-muted" style="font-size:.82rem">
                 <i class="bi bi-calendar me-1"></i>
-                Published: {{ $notice->publish_date->format('d M Y') }}
+                Publish date: {{ $notice->publish_date->format('d M Y') }}
                 @if($notice->published_at)
                     ({{ $notice->published_at->format('d M Y H:i') }})
                 @endif
@@ -64,7 +82,8 @@
         <div class="mt-3" style="line-height:1.8;white-space:pre-wrap;">{!! nl2br(e($notice->content)) !!}</div>
 
         <div class="mt-4 pt-3 border-top text-muted" style="font-size:.8rem">
-            Posted by <strong>{{ $notice->user->name }}</strong> &middot; {{ $notice->created_at->format('d M Y, H:i') }}
+            Posted by <strong>{{ optional($notice->user)->name ?? 'Poster not recorded' }}</strong> - {{ $notice->created_at->format('d M Y, H:i') }}.
+            Published visible notices keep their title, content, audience, and publish date locked; archive and create a corrected notice for material changes.
         </div>
     </div>
 </div>

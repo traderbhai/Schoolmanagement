@@ -417,4 +417,55 @@ class AcademicPublishedResultsReportingIntegrityTest extends TestCase
             ->get(route('admin.students.report', $fixture['draftStudent']))
             ->assertNotFound();
     }
+
+    public function test_admin_consolidated_report_template_uses_readable_missing_data_labels(): void
+    {
+        $student = Student::factory()->make([
+            'id' => 1001,
+            'enrollment_number' => null,
+            'course_id' => null,
+            'program_id' => null,
+            'department_id' => null,
+        ]);
+        $student->setRelation('user', null);
+        $student->setRelation('course', null);
+        $student->setRelation('program', null);
+        $student->setRelation('department', null);
+
+        $semesterReports = [[
+            'semester' => null,
+            'report' => [
+                'sgpa' => 0,
+                'result' => null,
+                'subjects' => [[
+                    'subject' => null,
+                    'credits' => 4,
+                    'obtained' => null,
+                    'max' => null,
+                    'pct' => null,
+                    'grade' => null,
+                    'status' => null,
+                ]],
+            ],
+        ]];
+
+        $html = view('admin.reports.consolidated', [
+            'student' => $student,
+            'semesterReports' => $semesterReports,
+            'cgpa' => 0,
+        ])->render();
+
+        $this->assertStringContainsString('Student name missing', $html);
+        $this->assertStringContainsString('Enrollment number pending', $html);
+        $this->assertStringContainsString('Program not linked', $html);
+        $this->assertStringContainsString('Department not linked', $html);
+        $this->assertStringContainsString('Semester not linked - SGPA', $html);
+        $this->assertStringContainsString('Result pending', $html);
+        $this->assertStringContainsString('Subject not linked', $html);
+        $this->assertStringContainsString('Marks pending', $html);
+        $this->assertStringContainsString('Grade pending', $html);
+        $this->assertStringContainsString('Points pending', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('â', $html);
+    }
 }

@@ -23,7 +23,14 @@
         </div>
     @endif
 
-    {{-- Subject filter --}}
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Assignment workflow:</strong>
+            create work only for subjects assigned to you in a published timetable, publish it for students, then use the submissions link to monitor missing work and enter marks.
+        </div>
+    </div>
+
     <div class="card shadow-sm mb-3">
         <div class="card-body py-2">
             <form method="GET" action="{{ route('teacher.assignments.index') }}" id="filter-form">
@@ -88,8 +95,8 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <span class="text-muted small">{{ $assignment->subject->code ?? '' }}</span><br>
-                                        {{ $assignment->subject->name ?? '—' }}
+                                        <span class="text-muted small">{{ $assignment->subject->code ?? 'Subject code not linked' }}</span><br>
+                                        {{ $assignment->subject->name ?? 'Subject not linked' }}
                                     </td>
                                     <td>
                                         @if($assignment->due_at)
@@ -100,7 +107,7 @@
                                                 <span class="badge bg-danger ms-1 small">Past Due</span>
                                             @endif
                                         @else
-                                            <span class="text-muted">—</span>
+                                            <span class="text-muted">Due date not set</span>
                                         @endif
                                     </td>
                                     <td class="text-center">{{ $assignment->max_marks }}</td>

@@ -34,19 +34,19 @@
     <div class="badge-admit">ADMIT CARD</div>
   </div>
   <div class="body">
-    <div class="student-name">{{ $student->user?->name ?? '—' }}</div>
-    <div class="enroll">Enrollment No: {{ $student->enrollment_number ?? 'N/A' }} &nbsp;|&nbsp; Program: {{ $exam->program?->name ?? 'N/A' }}</div>
+    <div class="student-name">{{ $student->user?->name ?? 'Student name missing' }}</div>
+    <div class="enroll">Enrollment No: {{ $student->enrollment_number ?? 'Enrollment number pending' }} | Program: {{ $exam->program?->name ?? 'Program not linked' }}</div>
 
-    <div class="seat">Seat No: {{ str_pad($student->id, 4, '0', STR_PAD_LEFT) }}</div>
+    <div class="seat">Seat No: {{ str_pad((string) $student->id, 4, '0', STR_PAD_LEFT) }}</div>
 
     <table class="details">
-      <tr><td>Exam Name</td><td>{{ $exam->name }}</td></tr>
-      <tr><td>Subject</td><td>{{ $exam->subject?->name ?? '—' }}</td></tr>
-      <tr><td>Date</td><td>{{ $exam->exam_date->format('d F Y') }}</td></tr>
-      <tr><td>Time</td><td>{{ $exam->start_time ? $exam->start_time . ' – ' . ($exam->end_time ?? '') : 'As scheduled' }}</td></tr>
-      <tr><td>Venue / Room</td><td>{{ $exam->classroom?->name ?? 'To be announced' }}</td></tr>
-      <tr><td>Total Marks</td><td>{{ $exam->total_marks }}</td></tr>
-      <tr><td>Term</td><td>{{ $exam->term?->name ?? '—' }}</td></tr>
+      <tr><td>Exam Name</td><td>{{ $exam->name ?? 'Exam name pending' }}</td></tr>
+      <tr><td>Subject</td><td>{{ $exam->subject?->name ?? 'Subject not linked' }}</td></tr>
+      <tr><td>Date</td><td>{{ $exam->exam_date ? $exam->exam_date->format('d F Y') : 'Exam date not announced' }}</td></tr>
+      <tr><td>Time</td><td>{{ $exam->start_time ? $exam->start_time . ' to ' . ($exam->end_time ?? 'End time pending') : 'Time not announced' }}</td></tr>
+      <tr><td>Venue / Room</td><td>{{ $exam->classroom?->name ?? 'Venue to be announced' }}</td></tr>
+      <tr><td>Total Marks</td><td>{{ $exam->total_marks ?? 'Total marks pending' }}</td></tr>
+      <tr><td>Term</td><td>{{ $exam->term?->name ?? $exam->semester?->name ?? 'Term not linked' }}</td></tr>
     </table>
 
     <div class="instructions">
@@ -68,7 +68,7 @@
   </div>
   <div class="footer">
     <span>Generated: {{ now()->format('d M Y H:i') }}</span>
-    <span>EduManage College — Examination Cell</span>
+    <span>EduManage College - Examination Cell</span>
   </div>
 </div>
 </body>

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\ParentProfile;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -154,6 +156,7 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee('Daily Work')
             ->assertSee('Academics / Delivery')
             ->assertSee('Students')
+            ->assertSee('Reports')
             ->assertSee('Settings')
             ->assertSee('Dashboard')
             ->assertSee('My Timetable')
@@ -171,9 +174,11 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('teacher.timetable.index'), false)
             ->assertSee(route('teacher.attendance.mark'), false)
             ->assertSee(route('teacher.exams.index'), false)
+            ->assertSee(route('teacher.leaves.index'), false)
             ->assertSee(route('teacher.materials.index'), false)
             ->assertSee(route('teacher.assignments.index'), false)
             ->assertSee(route('teacher.students.index'), false)
+            ->assertSee(route('teacher.feedback.index'), false)
             ->assertDontSee('href="#"', false);
 
         $layout = file_get_contents(resource_path('views/layouts/teacher.blade.php'));
@@ -214,6 +219,11 @@ class PortalFrontendBetaReadinessTest extends TestCase
     public function test_parent_layout_uses_manifest_grouped_sidebar_links(): void
     {
         $parent = User::where('email', 'parent@demo.edu')->firstOrFail();
+        $child = ParentProfile::where('user_id', $parent->id)
+            ->firstOrFail()
+            ->students()
+            ->orderBy('students.id')
+            ->firstOrFail();
 
         $this->actingAs($parent)
             ->get(route('parent.dashboard'))
@@ -223,9 +233,15 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee('Communication')
             ->assertSee('Dashboard')
             ->assertSee('My Children')
+            ->assertSee('Attendance')
+            ->assertSee('Results')
+            ->assertSee('Fees')
             ->assertSee('Notices')
             ->assertSee(route('parent.dashboard'), false)
             ->assertSee(route('parent.children'), false)
+            ->assertSee(route('parent.children.attendance', $child), false)
+            ->assertSee(route('parent.children.results', $child), false)
+            ->assertSee(route('parent.children.fees', $child), false)
             ->assertSee(route('parent.notices'), false)
             ->assertDontSee('href="#"', false);
 
@@ -249,6 +265,7 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee('Finance')
             ->assertSee('Career')
             ->assertSee('Support')
+            ->assertSee('Track')
             ->assertSee('Settings')
             ->assertSee('Dashboard')
             ->assertSee('My Timetable')
@@ -263,6 +280,7 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee('Placements')
             ->assertSee('Library')
             ->assertSee('Academic Summary')
+            ->assertSee('Promotion Status')
             ->assertSee('Notifications')
             ->assertSee(route('student.dashboard'), false)
             ->assertSee(route('student.timetable'), false)
@@ -270,6 +288,17 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('student.results'), false)
             ->assertSee(route('student.fee-payment.index'), false)
             ->assertDontSee('href="#"', false);
+
+        $studentGroups = FrontendNavigation::manifest()['student']['groups'];
+
+        $this->assertSame(
+            ['Academic Summary', 'Promotion Status'],
+            collect($studentGroups['Track'])->pluck('label')->all()
+        );
+        $this->assertSame(
+            ['My Profile', 'Notification Settings'],
+            collect($studentGroups['Settings'])->pluck('label')->all()
+        );
 
         $layout = file_get_contents(resource_path('views/layouts/student.blade.php'));
 

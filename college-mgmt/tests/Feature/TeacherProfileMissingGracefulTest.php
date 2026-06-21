@@ -56,7 +56,7 @@ class TeacherProfileMissingGracefulTest extends TestCase
             ->get(route('teacher.attendance.mark'))
             ->assertOk()
             ->assertSee('before marking attendance')
-            ->assertSee('No Classes Scheduled');
+            ->assertSee('No published classes are scheduled for this date');
 
         $this->actingAs($teacherUser)
             ->get(route('teacher.materials.create'))

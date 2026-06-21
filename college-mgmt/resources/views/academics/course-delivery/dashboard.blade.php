@@ -29,6 +29,10 @@
             <div>
                 <div class="fw-semibold">Course delivery daily sequence</div>
                 <div class="small text-muted">Use this as the faculty delivery desk. Each KPI opens the scoped source list behind the count.</div>
+                <div class="small text-muted mt-1">
+                    <span class="badge text-bg-light me-1">Owner: assigned faculty, mentor, or course coordinator</span>
+                    <span class="badge text-bg-light">Source: timetable, attendance, LMS engagement, feedback, and mentor records</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Confirm assigned course load</span>
@@ -85,7 +89,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Item</th><th>Status</th><th></th></tr></thead>
+                                <thead><tr><th>Item</th><th>Owner / Source</th><th>Status</th><th></th></tr></thead>
                                 <tbody>
                                     @forelse($section['items']->take(5) as $item)
                                         <tr>
@@ -93,11 +97,19 @@
                                                 <div class="fw-semibold small">{{ $item['title'] }}</div>
                                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                                             </td>
+                                            <td>
+                                                <div class="small text-muted">Owner: course delivery team</div>
+                                                <div class="small text-muted">Source: {{ $meta['label'] }}</div>
+                                            </td>
                                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Go</a></td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="3" class="text-muted text-center py-3">No current course-delivery exceptions in this scope.</td></tr>
+                                        <tr>
+                                            <td colspan="4" class="text-muted text-center py-3">
+                                                No current course-delivery exceptions for {{ $meta['label'] }}. Continue with assigned course load, published sessions, attendance intervention, engagement/material review, or mentor action checks if a source workflow is missing.
+                                            </td>
+                                        </tr>
                                     @endforelse
                                 </tbody>
                             </table>

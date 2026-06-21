@@ -28,6 +28,18 @@
                 <div class="small text-muted text-uppercase fw-semibold">Today Priority</div>
                 <div class="fw-semibold">{{ $todayPriority['title'] }}</div>
                 <div class="small text-muted">{{ $todayPriority['body'] }}</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    @if($todayPriority['level'] === 'danger')
+                        <span class="badge text-bg-danger">Owner: Dean + assigned branch</span>
+                        <span class="badge text-bg-light">Source: Critical attention queue</span>
+                    @elseif($todayPriority['level'] === 'warning')
+                        <span class="badge text-bg-warning">Owner: Program or branch leader</span>
+                        <span class="badge text-bg-light">Source: Program risk heatmap</span>
+                    @else
+                        <span class="badge text-bg-light">Owner: Dean</span>
+                        <span class="badge text-bg-light">Source: Branch health review</span>
+                    @endif
+                </div>
             </div>
             <a class="btn btn-sm btn-{{ $todayPriority['level'] === 'danger' ? 'danger' : ($todayPriority['level'] === 'warning' ? 'warning' : 'primary') }}" href="{{ $todayPriority['route'] }}">{{ $todayPriority['action'] }}</a>
         </div>
@@ -101,9 +113,18 @@
                         <a href="{{ $item['route'] }}" class="list-group-item list-group-item-action py-2">
                             <div class="d-flex justify-content-between gap-2"><span class="fw-semibold small">{{ $item['title'] }}</span><span class="badge text-bg-{{ $item['severity'] === 'critical' ? 'danger' : 'warning' }}">{{ $item['severity'] }}</span></div>
                             <div class="small text-muted">{{ $item['subtitle'] }}</div>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                <span class="badge text-bg-light">Owner: {{ $item['owner'] ?: 'Owner not assigned' }}</span>
+                                <span class="badge text-bg-light">Source: {{ str($item['sourceType'] ?? 'dean')->replace('_', ' ')->title() }}</span>
+                                @if(!empty($item['due']))
+                                    <span class="badge text-bg-light">Due: {{ \Illuminate\Support\Carbon::parse($item['due'])->format('d M Y') }}</span>
+                                @else
+                                    <span class="badge text-bg-light">Due date not set</span>
+                                @endif
+                            </div>
                         </a>
                     @empty
-                        <div class="list-group-item text-muted">No critical attention items.</div>
+                        <div class="list-group-item text-muted">No critical attention items. Continue with branch health, risk review, or open Dean actions.</div>
                     @endforelse
                 </div>
             </div>
@@ -117,7 +138,7 @@
                         <tbody>
                         @foreach($programRisks->take(6) as $risk)
                             <tr>
-                                <td class="fw-semibold">{{ $risk['program']->code }}</td>
+                                <td class="fw-semibold">{{ $risk['program']->code ?? $risk['program']->name ?? 'Program not assigned' }}</td>
                                 <td><span class="badge text-bg-{{ $risk['band'] === 'critical' ? 'danger' : ($risk['band'] === 'high' ? 'warning' : 'light') }}">{{ $risk['band'] }} {{ $risk['score'] }}</span></td>
                                 <td class="small text-muted">{{ $risk['reasons']->join(', ') ?: 'No major risk signals' }}</td>
                             </tr>
@@ -135,9 +156,9 @@
                         <thead><tr><th>Action</th><th>Owner</th><th>Status</th></tr></thead>
                         <tbody>
                         @forelse($actions as $action)
-                            <tr><td class="small fw-semibold">{{ $action->title }}</td><td class="small">{{ $action->owner?->name ?? 'Unassigned' }}</td><td><span class="badge text-bg-light">{{ $action->status }}</span></td></tr>
+                            <tr><td class="small fw-semibold">{{ $action->title }}</td><td class="small">{{ $action->owner?->name ?? 'Owner not assigned' }}</td><td><span class="badge text-bg-light">{{ str($action->status)->replace('_', ' ')->title() }}</span></td></tr>
                         @empty
-                            <tr><td colspan="3" class="text-muted text-center py-3">No open Dean actions.</td></tr>
+                            <tr><td colspan="3" class="text-muted text-center py-3">No open Dean actions. Create actions from attention queues, review meetings, or branch health issues when follow-up is needed.</td></tr>
                         @endforelse
                         </tbody>
                     </table>

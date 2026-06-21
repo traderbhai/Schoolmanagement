@@ -39,7 +39,7 @@
             <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-start">
                 <div>
                     <h6 class="fw-bold mb-0">{{ $exam->name }}</h6>
-                    <div class="text-muted small">{{ $exam->subject->name ?? 'General' }}</div>
+                    <div class="text-muted small">{{ $exam->subject->name ?? 'Subject not linked' }}</div>
                 </div>
                 <span class="badge bg-{{ $urgency }}-subtle text-{{ $urgency }} border border-{{ $urgency }}-subtle">
                     {{ $urgencyLabel }}
@@ -57,15 +57,15 @@
                             to
                             {{ \Carbon\Carbon::parse($exam->end_time)->format('h:i A') }}
                         @else
-                            <span class="text-muted">TBA</span>
+                            <span class="text-muted">Time not announced</span>
                         @endif
                     </dd>
 
                     <dt class="col-5 text-muted fw-normal">Venue</dt>
-                    <dd class="col-7 mb-1">{{ $exam->classroom->name ?? 'TBA' }}</dd>
+                    <dd class="col-7 mb-1">{{ $exam->classroom->name ?? 'Venue to be announced' }}</dd>
 
                     <dt class="col-5 text-muted fw-normal">Max Marks</dt>
-                    <dd class="col-7 mb-0">{{ $exam->total_marks ?? 'Not set' }}</dd>
+                    <dd class="col-7 mb-0">{{ $exam->total_marks ?? 'Max marks pending' }}</dd>
                 </dl>
             </div>
             <div class="card-footer bg-transparent border-0 pt-0 pb-3">

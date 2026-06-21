@@ -6,7 +6,7 @@
 <p>We would like to bring to your attention that your attendance in the following subject has dropped below the required minimum of 75%:</p>
 
 <div class="alert-danger">
-    <p><strong>Subject:</strong> {{ $subject->name ?? 'N/A' }}</p>
+    <p><strong>Subject:</strong> {{ $subject->name ?? 'Subject not linked' }}</p>
     <p><strong>Current Attendance:</strong> {{ $attendance_percentage ?? 0 }}%</p>
     <p><strong>Minimum Required:</strong> 75%</p>
 </div>

@@ -13,7 +13,7 @@
             [
                 'label' => 'SLA Breaches',
                 'value' => $dashboard['kpiSummary']['sla_breaches'] ?? 0,
-                'url' => route('admission.attention.index'),
+                'url' => route('admission.attention.index', ['queue' => 'sla_breaches']),
                 'hint' => 'Review breached priority queues',
             ],
             [
@@ -99,9 +99,20 @@
                 <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Next Calls</span><span class="small text-muted">Monitor calling pressure</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($dashboard['callQueue'] as $lead)
-                        <a class="list-group-item list-group-item-action" href="{{ route('admission.leads.show', $lead) }}"><strong>{{ $lead->name }}</strong><div class="small text-muted">{{ $lead->phone }} - {{ ucfirst($lead->priority ?? 'normal') }}</div></a>
+                        <a class="list-group-item list-group-item-action" href="{{ route('admission.leads.show', $lead) }}">
+                            <strong>{{ $lead->name }}</strong>
+                            <div class="small text-muted">
+                                {{ $lead->phone ?: 'Phone not recorded' }} |
+                                {{ $lead->program?->name ?? 'Program not assigned' }} |
+                                {{ ucfirst($lead->priority ?? 'normal') }}
+                            </div>
+                        </a>
                     @empty
-                        <div class="list-group-item text-muted">No calls in queue.</div>
+                        <div class="list-group-item text-muted">
+                            <div class="fw-semibold text-dark">No next calls in the current scope</div>
+                            <div class="small mb-2">Assigned callbacks, hot leads, and no-response follow-ups are clear for the selected team view.</div>
+                            <a href="{{ route('admission.calling-desk.index') }}" class="btn btn-sm btn-outline-primary">Open Calling Desk</a>
+                        </div>
                     @endforelse
                 </div>
             </div>

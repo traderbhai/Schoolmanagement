@@ -21,6 +21,7 @@ use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableSlot;
 use App\Models\User;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -432,6 +433,13 @@ class AcademicsPmcFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('academics.workspaces.show', 'pmc'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+
+        $pmcGroups = FrontendNavigation::manifest()['pmc']['groups'];
+
+        $this->assertNotContains('Leave Approvals', collect($pmcGroups['Students'])->pluck('label')->all());
+        $this->assertContains('Leave Approvals', collect($pmcGroups['Approvals'])->pluck('label')->all());
+        $this->assertNotContains('Academics Governance', collect($pmcGroups['Command'])->pluck('label')->all());
+        $this->assertContains('Academics Governance', collect($pmcGroups['Governance'])->pluck('label')->all());
     }
 
     public function test_legacy_at_risk_students_list_uses_filtered_total_and_export_current_view(): void

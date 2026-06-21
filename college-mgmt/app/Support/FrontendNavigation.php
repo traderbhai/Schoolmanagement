@@ -23,8 +23,6 @@ class FrontendNavigation
                     'Command' => [
                         ['label' => 'Dashboard', 'route' => 'admin.dashboard'],
                         ['label' => 'Global Search', 'route' => 'admin.search'],
-                        ['label' => 'Analytics', 'route' => 'admin.analytics'],
-                        ['label' => 'Institutional KPI', 'route' => 'admin.institutional-kpi'],
                     ],
                     'Governance' => [
                         ['label' => 'Academic Years', 'route' => 'admin.academic-years.index', 'active' => 'admin.academic-years.*'],
@@ -34,19 +32,22 @@ class FrontendNavigation
                         ['label' => 'Classrooms', 'route' => 'admin.classrooms.index', 'active' => 'admin.classrooms.*'],
                         ['label' => 'Programs', 'route' => 'admin.programs.index', 'active' => ['admin.programs.*', 'admin.admission-config.*']],
                         ['label' => 'Batches', 'route' => 'admin.batches.index', 'active' => 'admin.batches.*'],
+                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index', 'active' => 'academics.*'],
                     ],
                     'Timetable' => [
                         ['label' => 'Time Slots', 'route' => 'admin.timetable-slots.index', 'active' => 'admin.timetable-slots.*'],
                         ['label' => 'Weekly Timetable', 'route' => 'admin.timetable.index', 'active' => ['admin.timetable.index', 'admin.timetable.create', 'admin.timetable.edit']],
                         ['label' => 'Teacher View', 'route' => 'admin.timetable.teacher-view'],
                     ],
-                    'Students / Applicants' => [
+                    'People' => [
                         ['label' => 'Teachers', 'route' => 'admin.teachers.index', 'active' => 'admin.teachers.*'],
                         ['label' => 'Students', 'route' => 'admin.students.index', 'active' => 'admin.students.*'],
+                        ['label' => 'Parents', 'route' => 'admin.parents.index', 'active' => 'admin.parents.*'],
+                    ],
+                    'Students / Applicants' => [
                         ['label' => 'Student Documents', 'route' => 'admin.document-requests.index', 'active' => 'admin.document-requests.*'],
                         ['label' => 'Applications', 'route' => 'admin.applicants.index', 'active' => 'admin.applicants.*'],
                         ['label' => 'Admissions', 'route' => 'admin.admissions.index', 'active' => 'admin.admissions.*'],
-                        ['label' => 'Parents', 'route' => 'admin.parents.index', 'active' => 'admin.parents.*'],
                     ],
                     'Admission' => [
                         ['label' => 'CRM Dashboard', 'route' => 'admission.dashboard'],
@@ -83,7 +84,6 @@ class FrontendNavigation
                         ['label' => 'All Leads', 'route' => 'admission.leads.index', 'active' => ['admission.leads.index', 'admission.leads.show']],
                         ['label' => 'Import Leads', 'route' => 'admission.leads.import'],
                         ['label' => 'Follow-up Calendar', 'route' => 'admission.leads.follow-ups.calendar', 'active' => 'admission.leads.follow-ups.*'],
-                        ['label' => 'Lead Analytics', 'route' => 'admission.leads.analytics'],
                     ],
                     'Communication' => [
                         ['label' => 'Communication Hub', 'route' => 'admission.communication.index', 'active' => 'admission.communication.*'],
@@ -95,11 +95,9 @@ class FrontendNavigation
                     ],
                     'Academics / Delivery' => [
                         ['label' => 'Academics Command', 'route' => 'academics.command-center.index', 'active' => ['academics.command-center.*', 'academics.attention.*']],
-                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index', 'active' => 'academics.*'],
                         ['label' => 'Curriculum Changes', 'route' => 'academic.curriculum-changes.index', 'active' => 'academic.curriculum-changes.*'],
                         ['label' => 'OBE Framework', 'route' => 'academic.obe.co.index', 'active' => 'academic.obe.*'],
                         ['label' => 'Faculty Roster', 'route' => 'hod.faculty.roster', 'active' => 'hod.faculty.*'],
-                        ['label' => 'Leave Approvals', 'route' => 'hod.leaves', 'active' => 'hod.leaves*'],
                         ['label' => 'Leave Mgmt', 'route' => 'admin.leaves.index', 'active' => 'admin.leaves.*'],
                         ['label' => 'Faculty Workload', 'route' => 'admin.faculty.workload', 'active' => 'admin.faculty.*'],
                         ['label' => 'Attendance', 'route' => 'admin.attendance.index', 'active' => 'admin.attendance.*'],
@@ -115,7 +113,6 @@ class FrontendNavigation
                     ],
                     'Finance' => [
                         ['label' => 'Fees', 'route' => 'admin.fees.index', 'active' => ['admin.fees.index', 'admin.fees.show', 'admin.fees.create', 'admin.fees.edit', 'admin.fees.collect', 'admin.fees.receipt']],
-                        ['label' => 'Fee Report', 'route' => 'admin.fees.report'],
                         ['label' => 'Accounts Dashboard', 'route' => 'accounts.dashboard'],
                         ['label' => 'Reconciliation', 'route' => 'accounts.reconciliation'],
                         ['label' => 'Refunds', 'route' => 'admission.refunds.index', 'active' => 'admission.refunds.*'],
@@ -133,12 +130,12 @@ class FrontendNavigation
                         ['label' => 'Companies', 'route' => 'admin.companies.index', 'active' => 'admin.companies.*'],
                         ['label' => 'Drives', 'route' => 'admin.placement-drives.index', 'active' => 'admin.placement-drives.*'],
                         ['label' => 'Placement Drives', 'route' => 'cmc.drives', 'active' => 'cmc.drives*'],
-                        ['label' => 'Placement Stats', 'route' => 'cmc.placement-stats'],
                         ['label' => 'Internships', 'route' => 'cmc.internships.index', 'active' => 'cmc.internships.*'],
                         ['label' => 'Alumni Database', 'route' => 'cmc.alumni.index', 'active' => 'cmc.alumni.*'],
                     ],
                     'Approvals' => [
                         ['label' => 'My Approvals', 'route' => 'approvals.inbox', 'active' => 'approvals.*'],
+                        ['label' => 'Leave Approvals', 'route' => 'hod.leaves', 'active' => 'hod.leaves*'],
                     ],
                     'Settings' => [
                         ['label' => 'Role Hierarchy', 'route' => 'admin.roles.hierarchy'],
@@ -151,13 +148,18 @@ class FrontendNavigation
                         ['label' => 'Department Governance', 'route' => 'department-governance.index', 'active' => 'department-governance.*'],
                         ['label' => 'Audit Log', 'route' => 'admin.audit.index', 'active' => 'admin.audit.*'],
                         ['label' => 'Grievances', 'route' => 'admin.grievances.index', 'active' => 'admin.grievances.*'],
+                        ['label' => 'Integration Health', 'route' => 'admission.integration-health.index', 'active' => 'admission.integration-health.*'],
                         ['label' => 'System Settings', 'route' => 'admin.settings'],
                         ['label' => 'Activity Log', 'route' => 'admin.activity-log'],
                     ],
                     'Reports' => [
+                        ['label' => 'Analytics', 'route' => 'admin.analytics'],
+                        ['label' => 'Institutional KPI', 'route' => 'admin.institutional-kpi'],
+                        ['label' => 'Fee Report', 'route' => 'admin.fees.report'],
                         ['label' => 'Admission Reports', 'route' => 'admission.reports.index', 'active' => 'admission.reports.*'],
-                        ['label' => 'Integration Health', 'route' => 'admission.integration-health.index', 'active' => 'admission.integration-health.*'],
+                        ['label' => 'Lead Analytics', 'route' => 'admission.leads.analytics'],
                         ['label' => 'Forecasting', 'route' => 'admission.forecasting.index', 'active' => 'admission.forecasting.*'],
+                        ['label' => 'Placement Stats', 'route' => 'cmc.placement-stats'],
                         ['label' => 'AICTE Report', 'route' => 'admin.aicte-report', 'active' => 'admin.aicte-report*'],
                     ],
                 ],
@@ -198,14 +200,20 @@ class FrontendNavigation
                         ['label' => 'All Leads', 'route' => 'admission.leads.index', 'active' => ['admission.leads.index', 'admission.leads.show']],
                         ['label' => 'Import Leads', 'route' => 'admission.leads.import'],
                         ['label' => 'Follow-up Calendar', 'route' => 'admission.leads.follow-ups.calendar', 'active' => 'admission.leads.follow-ups.*'],
-                        ['label' => 'Lead Analytics', 'route' => 'admission.leads.analytics'],
+                    ],
+                    'Communication' => [
+                        ['label' => 'Bulk Communication', 'route' => 'admission.bulk-communication.index', 'active' => 'admission.bulk-communication.*'],
+                        ['label' => 'Consent & Safety', 'route' => 'admission.communication-safety.index', 'active' => ['admission.communication-safety.*', 'admission.consent-center.*', 'admission.template-approvals.*']],
+                    ],
+                    'Finance' => [
+                        ['label' => 'Refunds', 'route' => 'admission.refunds.index', 'active' => 'admission.refunds.*'],
                     ],
                     'Reports' => [
                         ['label' => 'Admission Reports', 'route' => 'admission.reports.index', 'active' => 'admission.reports.*'],
-                        ['label' => 'Bulk Communication', 'route' => 'admission.bulk-communication.index', 'active' => 'admission.bulk-communication.*'],
-                        ['label' => 'Consent & Safety', 'route' => 'admission.communication-safety.index', 'active' => ['admission.communication-safety.*', 'admission.consent-center.*', 'admission.template-approvals.*']],
+                        ['label' => 'Lead Analytics', 'route' => 'admission.leads.analytics'],
+                    ],
+                    'Governance' => [
                         ['label' => 'Integration Health', 'route' => 'admission.integration-health.index', 'active' => 'admission.integration-health.*'],
-                        ['label' => 'Refunds', 'route' => 'admission.refunds.index', 'active' => 'admission.refunds.*'],
                     ],
                 ],
             ],
@@ -236,7 +244,6 @@ class FrontendNavigation
                         ['label' => 'Permission Matrix', 'route' => 'academics.permission-matrix.index', 'active' => 'academics.permission-matrix.*'],
                         ['label' => 'Planning', 'route' => 'academics.dean-os.planning.index', 'active' => 'academics.dean-os.planning.*'],
                         ['label' => 'Reviews', 'route' => 'academics.dean-os.reviews', 'active' => 'academics.dean-os.reviews'],
-                        ['label' => 'Approval Cockpit', 'route' => 'academics.dean-os.approval-cockpit.index', 'active' => 'academics.dean-os.approval-cockpit.*'],
                     ],
                     'Operations' => [
                         ['label' => 'PMC Operating', 'route' => 'academics.pmc.index', 'active' => 'academics.pmc.*'],
@@ -264,6 +271,7 @@ class FrontendNavigation
                     ],
                     'Approvals' => [
                         ['label' => 'Approvals', 'route' => 'dean.approvals'],
+                        ['label' => 'Approval Cockpit', 'route' => 'academics.dean-os.approval-cockpit.index', 'active' => 'academics.dean-os.approval-cockpit.*'],
                     ],
                     'Reports' => [
                         ['label' => 'Dean Reports', 'route' => 'academics.dean-os.reports'],
@@ -287,8 +295,7 @@ class FrontendNavigation
                         ['label' => 'Faculty Roster', 'route' => 'hod.faculty.roster', 'active' => ['hod.faculty.roster', 'hod.faculty.roster.alias']],
                         ['label' => 'Faculty Workload', 'route' => 'hod.faculty.workload'],
                     ],
-                    'Students' => [
-                        ['label' => 'Leave Approvals', 'route' => 'hod.leaves', 'active' => 'hod.leaves*'],
+                    'Reports' => [
                         ['label' => 'Dept Performance', 'route' => 'hod.department-performance'],
                     ],
                     'Support' => [
@@ -296,6 +303,7 @@ class FrontendNavigation
                     ],
                     'Approvals' => [
                         ['label' => 'Approvals', 'route' => 'hod.approvals'],
+                        ['label' => 'Leave Approvals', 'route' => 'hod.leaves', 'active' => 'hod.leaves*'],
                     ],
                 ],
             ],
@@ -308,9 +316,9 @@ class FrontendNavigation
                     ],
                     'Academics / Delivery' => [
                         ['label' => 'Programs', 'route' => 'director.programs'],
-                        ['label' => 'Reports', 'route' => 'director.reports'],
                     ],
                     'Reports' => [
+                        ['label' => 'Director Reports', 'route' => 'director.reports'],
                         ['label' => 'Analytics', 'route' => 'admin.analytics'],
                         ['label' => 'Institutional KPI', 'route' => 'admin.institutional-kpi'],
                         ['label' => 'AICTE Report', 'route' => 'admin.aicte-report', 'active' => 'admin.aicte-report*'],
@@ -327,7 +335,6 @@ class FrontendNavigation
                         ['label' => 'PMC Workspace', 'route' => 'academics.workspaces.show', 'params' => ['pmc'], 'active' => ['academics.workspaces.*', 'academics.attention.*']],
                         ['label' => 'PMC Operating', 'route' => 'academics.pmc.index', 'active' => 'academics.pmc.*'],
                         ['label' => 'Program Leadership', 'route' => 'academics.program-leadership.index', 'active' => 'academics.program-leadership.*'],
-                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
                     ],
                     'Planning' => [
                         ['label' => 'Planning', 'route' => 'academics.pmc.planning.index'],
@@ -345,7 +352,6 @@ class FrontendNavigation
                     ],
                     'Students' => [
                         ['label' => 'At-Risk Students', 'route' => 'chair.students.at-risk', 'condition' => 'legacy_program_chair_access'],
-                        ['label' => 'Leave Approvals', 'route' => 'chair.students.leaves', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'Condonations', 'route' => 'chair.students.condonations', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'Student Success', 'route' => 'academics.pmc.student-success-v004.index'],
                     ],
@@ -356,12 +362,16 @@ class FrontendNavigation
                     ],
                     'Approvals' => [
                         ['label' => 'Approvals', 'route' => 'chair.approvals', 'condition' => 'legacy_program_chair_access'],
+                        ['label' => 'Leave Approvals', 'route' => 'chair.students.leaves', 'condition' => 'legacy_program_chair_access'],
                         ['label' => 'Approval Cockpit', 'route' => 'academics.pmc.approvals.index'],
                     ],
                     'Reports' => [
                         ['label' => 'Subject Performance', 'route' => 'chair.reports.subject-performance', 'condition' => 'legacy_program_chair_access', 'active' => 'chair.reports.*'],
                         ['label' => 'Analytics', 'route' => 'academics.pmc.analytics.index'],
                         ['label' => 'Policy Audit', 'route' => 'academics.pmc.policy-audit.index'],
+                    ],
+                    'Governance' => [
+                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
                     ],
                 ],
             ],
@@ -372,7 +382,6 @@ class FrontendNavigation
                     'Command' => [
                         ['label' => 'CoE OS', 'route' => 'academics.coe.index'],
                         ['label' => 'CoE Workspace', 'route' => 'academics.workspaces.show', 'params' => ['coe'], 'active' => ['academics.workspaces.*', 'academics.attention.*']],
-                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
                     ],
                     'Daily Work' => [
                         ['label' => 'Exam Readiness', 'route' => 'academics.coe.exam-readiness'],
@@ -383,6 +392,9 @@ class FrontendNavigation
                         ['label' => 'Transcripts', 'route' => 'academics.coe.transcripts'],
                         ['label' => 'Reports', 'route' => 'academics.coe.reports'],
                     ],
+                    'Governance' => [
+                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
+                    ],
                 ],
             ],
             'iqac' => [
@@ -392,8 +404,6 @@ class FrontendNavigation
                     'Command' => [
                         ['label' => 'IQAC OS', 'route' => 'academics.iqac.index'],
                         ['label' => 'IQAC Workspace', 'route' => 'academics.workspaces.show', 'params' => ['iqac'], 'active' => ['academics.workspaces.*', 'academics.attention.*']],
-                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
-                        ['label' => 'OBE Readiness', 'route' => 'academics.iqac.obe-readiness'],
                     ],
                     'Quality' => [
                         ['label' => 'OBE Framework', 'route' => 'academics.iqac.obe-readiness', 'active' => 'academics.iqac.obe-readiness'],
@@ -403,6 +413,9 @@ class FrontendNavigation
                     ],
                     'Reports' => [
                         ['label' => 'Reports', 'route' => 'academics.iqac.reports'],
+                    ],
+                    'Governance' => [
+                        ['label' => 'Academics Governance', 'route' => 'academics.governance.index'],
                     ],
                 ],
             ],
@@ -456,6 +469,7 @@ class FrontendNavigation
                         ['label' => 'My Timetable', 'route' => 'teacher.timetable.index', 'active' => 'teacher.timetable.*'],
                         ['label' => 'Mark Attendance', 'route' => 'teacher.attendance.mark', 'active' => 'teacher.attendance.*'],
                         ['label' => 'Enter Marks', 'route' => 'teacher.exams.index', 'active' => 'teacher.exams.*'],
+                        ['label' => 'Leave', 'route' => 'teacher.leaves.index', 'active' => 'teacher.leaves.*'],
                     ],
                     'Academics / Delivery' => [
                         ['label' => 'Study Materials', 'route' => 'teacher.materials.index', 'active' => 'teacher.materials.*'],
@@ -466,9 +480,10 @@ class FrontendNavigation
                         ['label' => 'My Students', 'route' => 'teacher.students.index', 'active' => 'teacher.students.*'],
                         ['label' => 'My Mentees', 'route' => 'teacher.mentor.index', 'active' => 'teacher.mentor.*'],
                     ],
-                    'Settings' => [
+                    'Reports' => [
                         ['label' => 'My Feedback', 'route' => 'teacher.feedback.index', 'active' => 'teacher.feedback.*'],
-                        ['label' => 'Leave', 'route' => 'teacher.leaves.index', 'active' => 'teacher.leaves.*'],
+                    ],
+                    'Settings' => [
                         ['label' => 'My Profile', 'route' => 'teacher.profile'],
                     ],
                 ],
@@ -521,9 +536,11 @@ class FrontendNavigation
                         ['label' => 'Outpass Request', 'route' => 'student.hostel.outpass'],
                         ['label' => 'Hostel Complaints', 'route' => 'student.hostel.complaints.index'],
                     ],
-                    'Settings' => [
+                    'Track' => [
                         ['label' => 'Academic Summary', 'route' => 'student.summary.index'],
                         ['label' => 'Promotion Status', 'route' => 'student.promotion.index'],
+                    ],
+                    'Settings' => [
                         ['label' => 'My Profile', 'route' => 'student.profile'],
                         ['label' => 'Notification Settings', 'route' => 'student.notifications.edit'],
                     ],
@@ -538,6 +555,9 @@ class FrontendNavigation
                     ],
                     'Students' => [
                         ['label' => 'My Children', 'route' => 'parent.children'],
+                        ['label' => 'Attendance', 'route' => 'parent.children.attendance', 'paramsFrom' => 'first_parent_student', 'condition' => 'parent_first_student'],
+                        ['label' => 'Results', 'route' => 'parent.children.results', 'paramsFrom' => 'first_parent_student', 'condition' => 'parent_first_student'],
+                        ['label' => 'Fees', 'route' => 'parent.children.fees', 'paramsFrom' => 'first_parent_student', 'condition' => 'parent_first_student'],
                     ],
                     'Communication' => [
                         ['label' => 'Notices', 'route' => 'parent.notices'],
@@ -579,6 +599,8 @@ class FrontendNavigation
                         ['label' => 'Admission Payments', 'route' => 'accounts.admission-payments'],
                         ['label' => 'Outstanding', 'route' => 'accounts.outstanding'],
                         ['label' => 'Reconciliation', 'route' => 'accounts.reconciliation'],
+                    ],
+                    'Reports' => [
                         ['label' => 'Reports', 'route' => 'accounts.reports'],
                     ],
                 ],
@@ -594,13 +616,13 @@ class FrontendNavigation
                         ['label' => 'Placement Drives', 'route' => 'cmc.drives', 'active' => 'cmc.drives*'],
                         ['label' => 'Companies', 'route' => 'cmc.companies', 'active' => 'cmc.companies*'],
                         ['label' => 'Career Events', 'route' => 'cmc.events', 'active' => 'cmc.events*'],
-                        ['label' => 'Placement Stats', 'route' => 'cmc.placement-stats'],
                     ],
                     'Students' => [
                         ['label' => 'Internships', 'route' => 'cmc.internships.index', 'active' => 'cmc.internships.*'],
                         ['label' => 'Alumni Database', 'route' => 'cmc.alumni.index', 'active' => 'cmc.alumni.*'],
                     ],
                     'Reports' => [
+                        ['label' => 'Placement Stats', 'route' => 'cmc.placement-stats'],
                         ['label' => 'Analytics', 'route' => 'cmc.analytics'],
                     ],
                 ],

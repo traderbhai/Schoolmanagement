@@ -4,6 +4,12 @@
 @section('page-title', 'Admission Reports')
 
 @section('content')
+@php
+    $reportFilters = request()->only(['program_id', 'priority', 'counsellor_id']);
+    $activeReportFilters = collect($reportFilters)->filter(fn ($value) => filled($value));
+    $applicantFilters = collect($reportFilters)->filter()->all();
+    $leadFilters = collect($reportFilters)->filter()->all();
+@endphp
 <div class="container-fluid px-4 py-3">
     <div class="alert alert-info border-0 shadow-sm small mb-4">
         <div class="fw-semibold mb-1">Report interpretation workflow</div>
@@ -15,6 +21,17 @@
             <span class="badge text-bg-light border">5. Export with current context</span>
         </div>
         <div class="text-muted mt-2">Use these reports for management review and follow-up planning. When a metric looks off, open the matching operational list from the dashboard or workbench before acting.</div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+            <span class="fw-semibold text-muted">Current report scope:</span>
+            @forelse($activeReportFilters as $label => $value)
+                <span class="badge text-bg-light border">{{ ucwords(str_replace('_', ' ', $label)) }}: {{ $value }}</span>
+            @empty
+                <span class="text-muted">All visible admission records.</span>
+            @endforelse
+            <a href="{{ route('admission.reports.export-pdf', request()->query()) }}" class="btn btn-sm btn-outline-danger ms-auto" target="_blank">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Export Current Report
+            </a>
+        </div>
     </div>
 
     {{-- ── Header ─────────────────────────────────────────────────────────── --}}
@@ -26,22 +43,22 @@
 
         {{-- KPI Chips --}}
         <div class="d-flex flex-wrap gap-2">
-            <span class="badge rounded-pill fs-6 px-3 py-2" style="background:#6366f1">
+            <a href="{{ route('admission.leads.index', $leadFilters) }}" class="badge rounded-pill fs-6 px-3 py-2 text-decoration-none text-white" style="background:#6366f1">
                 <span class="fw-normal opacity-75">Total Leads</span>
                 &nbsp;<strong>{{ number_format($totalLeads) }}</strong>
-            </span>
-            <span class="badge rounded-pill fs-6 px-3 py-2" style="background:#3b82f6">
+            </a>
+            <a href="{{ route('admission.applicants.index', $applicantFilters) }}" class="badge rounded-pill fs-6 px-3 py-2 text-decoration-none text-white" style="background:#3b82f6">
                 <span class="fw-normal opacity-75">Total Applications</span>
                 &nbsp;<strong>{{ number_format($totalApplicants) }}</strong>
-            </span>
-            <span class="badge rounded-pill fs-6 px-3 py-2" style="background:#22c55e">
+            </a>
+            <a href="{{ route('admission.applicants.index', array_merge($applicantFilters, ['status' => 'selected'])) }}" class="badge rounded-pill fs-6 px-3 py-2 text-decoration-none text-white" style="background:#22c55e">
                 <span class="fw-normal opacity-75">Selected</span>
                 &nbsp;<strong>{{ number_format($selected) }}</strong>
-            </span>
-            <span class="badge rounded-pill fs-6 px-3 py-2" style="background:#15803d">
+            </a>
+            <a href="{{ route('admission.enrollment.index', collect($reportFilters)->only(['program_id'])->filter()->all()) }}" class="badge rounded-pill fs-6 px-3 py-2 text-decoration-none text-white" style="background:#15803d">
                 <span class="fw-normal opacity-75">Enrolled</span>
                 &nbsp;<strong>{{ number_format($enrolled) }}</strong>
-            </span>
+            </a>
         </div>
     </div>
 
@@ -279,7 +296,7 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-semibold"><i class="bi bi-bar-chart-steps me-2"></i>Year-over-Year Comparison</h5>
-            <a href="{{ route('admission.reports.export-pdf') }}" class="btn btn-sm btn-outline-danger" target="_blank">
+            <a href="{{ route('admission.reports.export-pdf', request()->query()) }}" class="btn btn-sm btn-outline-danger" target="_blank">
                 <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF Report
             </a>
         </div>

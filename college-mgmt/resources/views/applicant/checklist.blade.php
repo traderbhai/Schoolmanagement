@@ -8,6 +8,24 @@
     $readyCount = $items->where('ready', true)->count();
     $blockedItems = $items->reject(fn ($item) => $item['ready'])->values();
     $readinessPercent = $items->isEmpty() ? 0 : round(($readyCount / $items->count()) * 100);
+    $ownerFor = function (array $item): array {
+        if ($item['ready']) {
+            return ['label' => 'Complete', 'class' => 'ui-status-success'];
+        }
+
+        $applicantRoutes = [
+            'applicant.application.show',
+            'applicant.documents.index',
+            'applicant.registration-fee.show',
+            'applicant.fees.index',
+        ];
+
+        if (in_array($item['route'], $applicantRoutes, true)) {
+            return ['label' => 'Your action', 'class' => 'ui-status-warning'];
+        }
+
+        return ['label' => 'Admission team', 'class' => 'ui-status-info'];
+    };
 @endphp
 
 <div class="container-fluid px-3 px-lg-4 py-3">
@@ -58,6 +76,7 @@
             <div class="small">
                 <strong>Focus first:</strong> {{ $blockedItems->first()['label'] }} -
                 {{ $blockedItems->first()['blockers'][0] ?? 'open this step and complete the pending requirement.' }}
+                <span class="d-block mt-1">Owner: {{ $ownerFor($blockedItems->first())['label'] }}.</span>
             </div>
         </div>
     @else
@@ -78,18 +97,23 @@
                     <tr>
                         <th style="width: 22%">Step</th>
                         <th style="width: 12%">Status</th>
+                        <th style="width: 14%">Owner</th>
                         <th>Blocker / confirmation</th>
                         <th class="text-end" style="width: 14%">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($items as $item)
+                        @php($owner = $ownerFor($item))
                         <tr>
                             <td class="fw-semibold">{{ $item['label'] }}</td>
                             <td>
                                 <span class="ui-status {{ $item['ready'] ? 'ui-status-success' : 'ui-status-warning' }}">
                                     {{ $item['ready'] ? 'Ready' : 'Blocked' }}
                                 </span>
+                            </td>
+                            <td>
+                                <span class="ui-status {{ $owner['class'] }}">{{ $owner['label'] }}</span>
                             </td>
                             <td class="small text-muted">
                                 @if($item['ready'])

@@ -58,10 +58,10 @@
                 @forelse($students as $student)
                     @php $transcript = $student->transcripts()->latest()->first(); @endphp
                     <tr>
-                        <td class="fw-semibold">{{ $student->user?->name ?? '—' }}</td>
-                        <td class="text-muted small">{{ $student->enrollment_number }}</td>
-                        <td class="small">{{ $student->program?->name ?? '—' }}</td>
-                        <td class="small">{{ $student->batch?->name ?? '—' }}</td>
+                        <td class="fw-semibold">{{ $student->user?->name ?? 'Student name missing' }}</td>
+                        <td class="text-muted small">{{ $student->enrollment_number ?? 'Enrollment number pending' }}</td>
+                        <td class="small">{{ $student->program?->name ?? 'Program not linked' }}</td>
+                        <td class="small">{{ $student->batch?->name ?? 'Batch not linked' }}</td>
                         <td>
                             @if($transcript)
                                 <span class="badge bg-primary">{{ $transcript->cgpa }}</span>

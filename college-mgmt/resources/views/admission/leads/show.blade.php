@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Lead — ' . $lead->name)
+@section('title', 'Lead - ' . $lead->name)
 @section('page-title', 'Lead Details')
 
 @section('content')
@@ -52,7 +52,7 @@
                 <div class="card-body">
                     <h6 class="text-muted mb-3">Contact Info</h6>
                     <p class="mb-1"><i class="bi bi-envelope me-2 text-muted"></i><a href="mailto:{{ $lead->email }}">{{ $lead->email }}</a></p>
-                    <p class="mb-1"><i class="bi bi-telephone me-2 text-muted"></i>{{ $lead->phone ?? '—' }}</p>
+                    <p class="mb-1"><i class="bi bi-telephone me-2 text-muted"></i>{{ $lead->phone ?? 'Phone not provided' }}</p>
                     <p class="mb-0"><i class="bi bi-mortarboard me-2 text-muted"></i>{{ $lead->program?->name ?? 'Not specified' }}</p>
                 </div>
             </div>
@@ -93,7 +93,7 @@
                     @if($lead->notes)
                         <p class="mb-0">{{ $lead->notes }}</p>
                     @else
-                        <p class="text-muted mb-0">No notes added yet.</p>
+                        <p class="text-muted mb-0">No counselling notes are recorded yet. Add the latest call outcome, objection, parent input, or document/payment blocker before changing status.</p>
                     @endif
                 </div>
             </div>
@@ -157,7 +157,7 @@
                     <form action="{{ route('admission.leads.assign', $lead) }}" method="POST" class="d-flex gap-2">
                         @csrf
                         <select name="assigned_to" class="form-select form-select-sm" style="width:auto" required>
-                            <option value="">Select Counsellor…</option>
+                            <option value="">Select Counsellor</option>
                             @foreach(\App\Models\User::whereHas('roles', fn($query) => $query->whereIn('name', \App\Services\DepartmentHierarchyService::ADMISSION_ROLE_NAMES))->orderBy('name')->get() as $u)
                                 <option value="{{ $u->id }}" {{ $lead->assigned_to == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
                             @endforeach
@@ -181,7 +181,10 @@
                 </div>
                 <div class="card-body p-0">
                     @if($lead->followUps->isEmpty())
-                        <p class="text-muted p-3 mb-0">No follow-ups scheduled yet.</p>
+                        <div class="p-3 text-muted small">
+                            <div class="fw-semibold text-body mb-1">No follow-ups scheduled yet.</div>
+                            Schedule the next callback, visit, document reminder, or payment reminder before leaving this lead so it does not disappear from daily queues.
+                        </div>
                     @else
                     <table class="table table-sm mb-0">
                         <thead class="table-light"><tr>
@@ -228,7 +231,9 @@
                             <div class="small text-muted">By {{ $event->assignedBy?->name ?? 'System' }} {{ $event->created_at?->diffForHumans() }} {{ $event->reason ? '- ' . $event->reason : '' }}</div>
                         </div>
                     @empty
-                        <div class="list-group-item text-muted">No assignment events yet.</div>
+                        <div class="list-group-item text-muted">
+                            No assignment events yet. Assign this lead to the current handler or use delegation so workload, hierarchy reporting, and SLA ownership are traceable.
+                        </div>
                     @endforelse
                 </div>
             </div>
@@ -245,7 +250,7 @@
                             @forelse($lead->communicationLogs()->limit(5)->get() as $log)
                                 <div class="border rounded p-2 mb-2 small">{{ strtoupper($log->channel) }} via {{ $log->provider }} - {{ $log->status }}<div class="text-muted">{{ Str::limit($log->body, 80) }}</div></div>
                             @empty
-                                <p class="text-muted small">No communication history.</p>
+                                <p class="text-muted small">No communication history yet. Send a template or record a manual message so future staff can see what was already promised.</p>
                             @endforelse
                         </div>
                         <div class="col-md-6">
@@ -253,7 +258,7 @@
                             @forelse($lead->callLogs()->limit(3)->get() as $call)
                                 <div class="border rounded p-2 mb-2 small">{{ ucfirst(str_replace('_', ' ', $call->disposition)) }} by {{ $call->caller?->name ?? 'Staff' }}<div class="text-muted">{{ $call->notes }}</div></div>
                             @empty
-                                <p class="text-muted small">No calls logged.</p>
+                                <p class="text-muted small">No calls logged yet. Use the Calling Desk or action center after every attempt so contact rate, retry cadence, and script compliance stay accurate.</p>
                             @endforelse
                             @foreach($lead->dataQualityFlags()->where('status', 'open')->limit(3)->get() as $flag)
                                 <span class="badge bg-warning text-dark me-1">{{ $flag->flag_type }}</span>

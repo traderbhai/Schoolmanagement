@@ -68,10 +68,10 @@
                         <td><span class="badge bg-{{ $priorityColors[$c->priority] ?? 'secondary' }}">{{ ucfirst($c->priority) }}</span></td>
                         <td>{{ ucfirst(str_replace('_',' ',$c->category)) }}</td>
                         <td>{{ Str::limit($c->title, 40) }}</td>
-                        <td>{{ $c->student?->user?->name ?? '—' }}</td>
-                        <td>{{ $c->block?->name ?? '' }} {{ $c->room?->room_number ? '/ '.$c->room->room_number : '' }}</td>
+                        <td>{{ $c->student?->user?->name ?? 'Student not linked' }}</td>
+                        <td>{{ $c->block?->name ?? 'Block not linked' }} {{ $c->room?->room_number ? '/ '.$c->room->room_number : '/ Room not linked' }}</td>
                         <td><span class="badge bg-{{ $statusColors[$c->status] ?? 'secondary' }}">{{ ucfirst(str_replace('_',' ',$c->status)) }}</span></td>
-                        <td>{{ $c->assignedTo?->name ?? '—' }}</td>
+                        <td>{{ $c->assignedTo?->name ?? 'Unassigned' }}</td>
                         <td onclick="event.stopPropagation()">
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#complaintModal{{ $c->id }}">Update</button>
                         </td>
@@ -89,7 +89,7 @@
                                     <div class="row mb-3">
                                         <div class="col-sm-6">
                                             <small class="text-muted">Student</small>
-                                            <div>{{ $c->student?->user?->name ?? '—' }}</div>
+                                            <div>{{ $c->student?->user?->name ?? 'Student not linked' }}</div>
                                         </div>
                                         <div class="col-sm-6">
                                             <small class="text-muted">Category / Priority</small>
@@ -121,7 +121,7 @@
                                             <div class="col-sm-8">
                                                 <label class="form-label">Assign To</label>
                                                 <select name="assigned_to" class="form-select">
-                                                    <option value="">— Unassigned —</option>
+                                                    <option value="">Unassigned</option>
                                                     @foreach($users as $u)
                                                         <option value="{{ $u->id }}" @selected($c->assigned_to == $u->id)>{{ $u->name }}</option>
                                                     @endforeach
@@ -142,7 +142,11 @@
                         </div>
                     </div>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted py-4">No complaints found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No hostel complaints match this view. Clear filters or wait for students to submit maintenance, food, room, internet, or safety issues from the hostel portal.
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>

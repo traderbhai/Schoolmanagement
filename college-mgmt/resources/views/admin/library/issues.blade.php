@@ -51,16 +51,17 @@
                     <tr class="{{ $issue->status === 'overdue' ? 'table-danger' : '' }}">
                         <td>
                             <a href="{{ route('admin.library.books.show', $issue->bookCopy->book ?? 0) }}">
-                                {{ $issue->bookCopy->book->title ?? 'N/A' }}
+                                {{ $issue->bookCopy->book->title ?? 'Book title missing' }}
                             </a>
                         </td>
-                        <td><code>{{ $issue->bookCopy->accession_number ?? '' }}</code></td>
+                        <td><code>{{ $issue->bookCopy->accession_number ?? 'Accession pending' }}</code></td>
                         <td>
                             @if($issue->student)
                                 <span class="badge bg-primary">S</span> {{ $issue->student->user->name ?? '' }}
                             @elseif($issue->teacher)
                                 <span class="badge bg-success">T</span> {{ $issue->teacher->user->name ?? '' }}
-                            @else N/A
+                            @else
+                                <span class="text-muted">Borrower not linked</span>
                             @endif
                         </td>
                         <td>{{ \Carbon\Carbon::parse($issue->issued_at)->format('d M Y') }}</td>
@@ -76,7 +77,7 @@
                                 <span class="badge bg-secondary">{{ $issue->status }}</span>
                             @endif
                         </td>
-                        <td>{{ $issue->fine_amount > 0 ? 'Rs. '.number_format((float) $issue->fine_amount, 2) : '-' }}</td>
+                        <td>{{ $issue->fine_amount > 0 ? 'Rs. '.number_format((float) $issue->fine_amount, 2) : 'No fine' }}</td>
                         <td>
                             @if(in_array($issue->status, ['issued','overdue']))
                                 <form method="POST" action="{{ route('admin.library.issues.return', $issue) }}" class="d-inline" onsubmit="return confirm('Mark this book as returned?')">
@@ -87,7 +88,11 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center text-muted py-3">No issues found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-3">
+                            No issue records match this view. Clear filters or issue an available copy to an active student, teacher, or staff member.
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>

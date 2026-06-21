@@ -21,6 +21,10 @@
         <div>
             <div class="fw-semibold">Admin operating sequence</div>
             <div class="small text-muted">Start with institute health, then use quick actions for setup, governance, finance, academics, and operations.</div>
+            <div class="small text-muted mt-1">
+                <span class="badge text-bg-light me-1">Owner: Admin / Director</span>
+                <span class="badge text-bg-light">Source: institute master data, attendance, fees, notices, exams, and audit logs</span>
+            </div>
         </div>
         <div class="d-flex flex-wrap gap-1">
             <span class="badge text-bg-light">1. Check institute KPIs</span>
@@ -114,8 +118,8 @@
             <div class="d-flex align-items-start justify-content-between">
                 <div>
                     <div class="kpi-label">Fee Collected</div>
-                    <div class="kpi-value mt-1">₹{{ number_format($totalFeeCollected) }}</div>
-                    <div class="kpi-trend mt-2"><i class="bi bi-arrow-up-short"></i> of ₹{{ number_format($totalFeeDue) }} due</div>
+                    <div class="kpi-value mt-1">Rs. {{ number_format($totalFeeCollected) }}</div>
+                    <div class="kpi-trend mt-2"><i class="bi bi-arrow-up-short"></i> of Rs. {{ number_format($totalFeeDue) }} due</div>
                 </div>
                 <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
             </div>
@@ -190,7 +194,7 @@
                 <i class="bi bi-mortarboard text-success fs-5"></i>
                 <div>
                     <div class="text-xs text-muted">Current Semester</div>
-                    <div class="fw-600 text-sm">{{ $currentSemester ? $currentSemester->name : '—' }}</div>
+                    <div class="fw-600 text-sm">{{ $currentSemester ? $currentSemester->name : 'Semester not configured' }}</div>
                 </div>
             </div>
         </div>
@@ -202,7 +206,7 @@
     <div class="col-lg-7">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
-                <span class="fw-600 text-sm"><i class="bi bi-check2-square me-2 text-primary"></i>Attendance Trend · Last 14 Days</span>
+                <span class="fw-600 text-sm"><i class="bi bi-check2-square me-2 text-primary"></i>Attendance Trend - Last 14 Days</span>
                 <div class="d-flex align-items-center gap-2">
                     <span class="d-flex align-items-center gap-1 text-xs text-muted"><span style="width:12px;height:3px;background:#4f46e5;border-radius:2px;display:inline-block"></span> % Present</span>
                 </div>
@@ -215,7 +219,7 @@
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header">
-                <span class="fw-600 text-sm"><i class="bi bi-cash-coin me-2 text-success"></i>Fee Collection · Last 6 Months</span>
+                <span class="fw-600 text-sm"><i class="bi bi-cash-coin me-2 text-success"></i>Fee Collection - Last 6 Months</span>
             </div>
             <div class="card-body">
                 <canvas id="feeChart" height="220"></canvas>
@@ -441,7 +445,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <div class="fw-semibold text-sm">{{ $exam->name }}</div>
-                            <div class="text-muted" style="font-size:.75rem">{{ $exam->subject->name ?? '—' }}</div>
+                            <div class="text-muted" style="font-size:.75rem">{{ optional($exam->subject)->name ?? 'Subject not assigned' }}</div>
                         </div>
                         <div class="text-end">
                             <div class="badge bg-danger bg-opacity-10 text-danger">{{ $exam->exam_date->format('d M') }}</div>
@@ -489,14 +493,14 @@
                         <td>{{ $e->teacher->user->name }}</td>
                         <td><span class="badge bg-secondary">{{ $e->classroom->room_number }}</span></td>
                         <td>{{ $e->day_name }}</td>
-                        <td class="text-muted text-sm">{{ $e->slot->start_time }} – {{ $e->slot->end_time }}</td>
+                        <td class="text-muted text-sm">{{ $e->slot->start_time }} - {{ $e->slot->end_time }}</td>
                     </tr>
                     @empty
                     <tr>
                         <td colspan="6">
                             <div class="empty-state py-4">
                                 <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
-                                <div class="mt-2 text-muted">No timetable entries yet.</div>
+                                <div class="mt-2 text-muted">No timetable entries yet. Create academic structure, subjects, teachers, classrooms, and timetable slots before publishing schedules.</div>
                             </div>
                         </td>
                     </tr>
@@ -516,13 +520,13 @@
                 @forelse($recentNotices as $n)
                 <div class="list-group-item list-group-item-action py-2 px-3">
                     <div class="fw-semibold text-sm">{{ $n->title }}</div>
-                    <div class="text-muted text-xs mt-1">{{ $n->publish_date->format('d M Y') }} · <span class="badge badge-active">{{ ucfirst($n->audience) }}</span></div>
+                    <div class="text-muted text-xs mt-1">{{ $n->publish_date->format('d M Y') }} - <span class="badge badge-active">{{ ucfirst($n->audience) }}</span></div>
                 </div>
                 @empty
                 <div class="list-group-item">
                     <div class="empty-state py-3">
                         <div class="empty-icon"><i class="bi bi-megaphone"></i></div>
-                        <div class="text-muted text-sm">No notices posted yet.</div>
+                        <div class="text-muted text-sm">No notices posted yet. Create a notice before staff, students, or parents can see announcements.</div>
                     </div>
                 </div>
                 @endforelse
@@ -537,7 +541,7 @@
                 <div class="text-muted text-sm">{{ $currentSemester->academicYear->name }}</div>
                 <div class="text-sm mt-1">
                     <i class="bi bi-calendar-range me-1 text-muted"></i>
-                    {{ $currentSemester->start_date->format('d M') }} – {{ $currentSemester->end_date->format('d M Y') }}
+                    {{ $currentSemester->start_date->format('d M') }} - {{ $currentSemester->end_date->format('d M Y') }}
                 </div>
             </div>
         </div>
@@ -584,7 +588,7 @@ new Chart(document.getElementById('feeChart'), {
     data: {
         labels: feeData.map(d => d.month),
         datasets: [{
-            label: 'Amount Collected (₹)',
+            label: 'Amount Collected (Rs.)',
             data: feeData.map(d => d.amount),
             backgroundColor: 'rgba(16,185,129,0.75)',
             borderRadius: 6,
@@ -595,7 +599,7 @@ new Chart(document.getElementById('feeChart'), {
         responsive: true,
         plugins: { legend: { display: false } },
         scales: {
-            y: { ticks: { callback: v => '₹' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(0,0,0,.05)' } },
+            y: { ticks: { callback: v => 'Rs. ' + (v/1000).toFixed(0) + 'k' }, grid: { color: 'rgba(0,0,0,.05)' } },
             x: { grid: { display: false } }
         }
     }

@@ -24,6 +24,10 @@
             <div>
                 <div class="fw-semibold">Delivery source-list workflow</div>
                 <div class="small text-muted">Use this list to move from teaching signal to source record, student/faculty follow-up, and closure evidence.</div>
+                <div class="small text-muted mt-1">
+                    <span class="badge text-bg-light me-1">Owner: assigned faculty, mentor, or course coordinator</span>
+                    <span class="badge text-bg-light">Source: {{ $section['title'] }}</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Filter subject/status</span>
@@ -91,7 +95,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">{{ $section['title'] }} source records</caption>
-                <thead><tr><th>Record</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th>Record</th><th>Owner / Source</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse($section['items'] as $item)
                         <tr>
@@ -99,11 +103,21 @@
                                 <div class="fw-semibold">{{ $item['title'] }}</div>
                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                             </td>
+                            <td>
+                                <div class="small text-muted">Owner: course delivery team</div>
+                                <div class="small text-muted">Source: {{ $section['title'] }}</div>
+                            </td>
                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-primary">Open source</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="text-center text-muted py-4">No course-delivery records match the current scope and filters.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold">No course-delivery records match this source list.</div>
+                                <div class="small mt-1">This usually means the assigned course scope has no matching delivery exceptions, or source workflows have not yet created timetable, attendance, engagement, feedback, or mentor records.</div>
+                                <div class="small mt-1">Before closing a delivery review, recheck faculty assignment, published timetable, attendance evidence, material updates, feedback signals, and mentor follow-up status.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Transcript — ' . $student->user?->name)
+@section('title', 'Transcript - ' . ($student->user?->name ?? 'Student name missing'))
 @section('page-title', 'Academic Transcript')
 
 @section('content')
@@ -21,19 +21,19 @@
         <div class="row g-3">
             <div class="col-sm-3">
                 <div class="text-muted small">Student Name</div>
-                <div class="fw-semibold">{{ $student->user?->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $student->user?->name ?? 'Student name missing' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted small">Enrollment No.</div>
-                <div class="fw-semibold">{{ $student->enrollment_number }}</div>
+                <div class="fw-semibold">{{ $student->enrollment_number ?? 'Enrollment number pending' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted small">Program</div>
-                <div class="fw-semibold">{{ $student->program?->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $student->program?->name ?? 'Program not linked' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted small">Batch</div>
-                <div class="fw-semibold">{{ $student->batch?->name ?? '—' }}</div>
+                <div class="fw-semibold">{{ $student->batch?->name ?? 'Batch not linked' }}</div>
             </div>
         </div>
         @if($transcript)
@@ -71,7 +71,7 @@
                 <tbody>
                 @foreach($report['subjects'] as $s)
                     <tr>
-                        <td class="small">{{ $s['subject']?->name ?? '—' }}</td>
+                        <td class="small">{{ $s['subject']?->name ?? 'Subject not linked' }}</td>
                         <td class="small">{{ $s['credits'] }}</td>
                         <td class="small">
                             @if($s['obtained'] !== null)
@@ -80,8 +80,8 @@
                                 <span class="text-muted">Pending</span>
                             @endif
                         </td>
-                        <td class="small">{{ $s['pct'] !== null ? $s['pct'].'%' : '—' }}</td>
-                        <td><strong>{{ $s['grade']['letter'] ?? '—' }}</strong></td>
+                        <td class="small">{{ $s['pct'] !== null ? $s['pct'].'%' : 'Result pending' }}</td>
+                        <td><strong>{{ $s['grade']['letter'] ?? 'Grade pending' }}</strong></td>
                         <td>
                             @if($s['status'] === 'pass')
                                 <span class="badge bg-success">Pass</span>
@@ -101,7 +101,12 @@
 @endforeach
 
 @if(empty($semesterReports))
-<div class="alert alert-info">No semester data found for this student.</div>
+<div class="alert alert-info">
+    <div class="fw-semibold">No published semester result data is ready for this transcript.</div>
+    <div class="small mt-1">
+        Confirm the student has active subject enrollments, published exams, and recorded marks before issuing an official transcript.
+    </div>
+</div>
 @endif
 
 {{-- CGPA Summary --}}

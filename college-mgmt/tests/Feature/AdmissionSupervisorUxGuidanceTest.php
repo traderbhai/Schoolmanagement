@@ -40,6 +40,7 @@ class AdmissionSupervisorUxGuidanceTest extends TestCase
             ->assertSee(route('admission.workbench'), false)
             ->assertSee(route('admission.manager-workspace.index'), false)
             ->assertSee(route('admission.attention.index'), false)
+            ->assertSee(route('admission.attention.index', ['queue' => 'sla_breaches']), false)
             ->assertDontSee('href="#"', false)
             ->assertDontSee('Whoops', false)
             ->assertDontSee('SERVICE ERROR', false)
@@ -137,10 +138,82 @@ class AdmissionSupervisorUxGuidanceTest extends TestCase
             ->assertSee('Verify documents/payments')
             ->assertSee('Move enrollment-ready applicants')
             ->assertSee('Each card opens the queue that caused the count')
+            ->assertSee('Open matching lead workload')
+            ->assertSee('Open breached SLA queue')
+            ->assertSee('Open conversion reports')
+            ->assertSee('Open follow-up reminders')
             ->assertSee('Open, assign, or set next action')
             ->assertSee('Verify blockers before enrolling')
+            ->assertSee(route('admission.attention.index', ['queue' => 'unassigned_hot_leads']), false)
+            ->assertSee(route('admission.attention.index', ['queue' => 'sla_breaches']), false)
+            ->assertSee(route('admission.reports.index'), false)
             ->assertSee(route('admission.assignment-rules.index'), false)
             ->assertSee(route('admission.process-templates.index'), false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_workbench_empty_operational_panels_explain_next_source_workflow(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.workbench', ['priority' => 'low', 'program_id' => 999999]))
+            ->assertOk()
+            ->assertSee('No leads match this workbench scope.')
+            ->assertSee('Clear filters, review unassigned leads, or confirm whether new enquiries are entering through web forms, walk-ins, partner submissions, or imports.')
+            ->assertSee('No enrollment-ready applicants in this scope.')
+            ->assertSee('Applicants appear here only after selection, required documents, payment readiness, offer acceptance, and enrollment blockers are clear.')
+            ->assertSee('No pending documents in this scope.')
+            ->assertSee('Document blockers appear here after applicants upload files that need staff verification.')
+            ->assertSee('No pending payments in this scope.')
+            ->assertSee('Payment proof and gateway-review items appear here after applicants submit payable admission milestones.')
+            ->assertSee('No assessment sessions scheduled today.')
+            ->assertSee('No offer expiry risk in the next 3 days.')
+            ->assertSee(route('admission.workbench'), false)
+            ->assertSee(route('admission.leads.index', ['assigned' => 'unassigned']), false)
+            ->assertSee(route('admission.documents.queue'), false)
+            ->assertSee(route('admission.payments.queue'), false)
+            ->assertSee(route('admission.assessment-control-room.index'), false)
+            ->assertSee(route('admission.offer-rounds.index'), false)
+            ->assertDontSee('No leads in scope.')
+            ->assertDontSee('No pending documents.')
+            ->assertDontSee('No pending payments.')
+            ->assertDontSee('No sessions today.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
+    public function test_attention_queue_honors_selected_queue_filter_and_explains_empty_state(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.attention.index', [
+                'queue' => 'unassigned_hot_leads',
+                'priority' => 'low',
+                'program_id' => 999999,
+            ]))
+            ->assertOk()
+            ->assertSee('Unassigned Hot Leads')
+            ->assertSee('Displayed total')
+            ->assertSee('0 item(s)')
+            ->assertSee('Active source filters')
+            ->assertSee('Queue: Unassigned Hot Leads')
+            ->assertSee('Priority: low')
+            ->assertSee('Program Id: 999999')
+            ->assertSee('No unassigned hot leads match this scope.')
+            ->assertSee('Clear filters, open all visible leads, or review assignment rules to confirm new high-priority enquiries are being routed.')
+            ->assertSee(route('admission.leads.index', ['assigned' => 'unassigned']), false)
+            ->assertSee('/admission/attention?program_id=999999&amp;priority=low', false)
+            ->assertDontSee('Pending Documents')
+            ->assertDontSee('No items.')
             ->assertDontSee('href="#"', false)
             ->assertDontSee('Whoops', false)
             ->assertDontSee('SERVICE ERROR', false)

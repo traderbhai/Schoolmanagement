@@ -14,10 +14,52 @@
                     Review official updates, workflow reminders, document/payment alerts, and action links sent to your account.
                     Open a message to mark it as read automatically.
                 </p>
+                <div class="mt-2 d-flex flex-wrap gap-2">
+                    <span class="badge text-bg-light">Owner: Your account</span>
+                    <span class="badge text-bg-light">Source: workflow notifications, approvals, payments, documents, timetable, and institute messages assigned to you</span>
+                </div>
             </div>
             <div class="text-end small text-muted">
                 <div><strong>{{ $unreadCount }}</strong> unread</div>
-                <div><strong>{{ $notifications->total() }}</strong> total messages</div>
+                <div><strong>{{ $notifications->total() }}</strong> matching messages</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-3">
+            <form method="GET" action="{{ route('notifications.index') }}" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Search inbox</label>
+                    <input type="search" name="search" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Title or message">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Read status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All messages</option>
+                        <option value="unread" @selected(($filters['status'] ?? '') === 'unread')>Unread only</option>
+                        <option value="read" @selected(($filters['status'] ?? '') === 'read')>Read only</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Type</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">All types</option>
+                        @foreach($typeOptions as $option)
+                            <option value="{{ $option }}" @selected(($filters['type'] ?? '') === $option)>{{ ucfirst(str_replace('_', ' ', $option)) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                    <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+            <div class="text-muted small mt-2">
+                Showing {{ $notifications->total() }} notification(s)
+                @if(($filters['search'] ?? '') !== '') for "{{ $filters['search'] }}" @endif
+                @if(($filters['status'] ?? '') !== '') with status "{{ $filters['status'] }}" @endif
+                @if(($filters['type'] ?? '') !== '') and type "{{ str_replace('_', ' ', $filters['type']) }}" @endif.
             </div>
         </div>
     </div>
@@ -26,7 +68,7 @@
         <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
             <div>
                 <div class="fw-semibold">Inbox</div>
-                <div class="text-muted small">Newest messages appear first.</div>
+                <div class="text-muted small">Newest matching messages appear first. This list only contains notifications owned by your account.</div>
             </div>
             <button
                 type="button"
@@ -59,6 +101,8 @@
                         <div class="text-muted small mb-1">{{ \Illuminate\Support\Str::limit($notification->message, 180) }}</div>
                         <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
                             <span><i class="bi bi-clock me-1"></i>{{ $notification->created_at->diffForHumans() }}</span>
+                            <span>|</span>
+                            <span>Source: {{ ucfirst(str_replace('_', ' ', $notification->type ?: 'general')) }}</span>
                             @if($notification->action_url)
                                 <span>|</span>
                                 <span>Includes action link</span>
@@ -73,11 +117,13 @@
         @empty
             <div class="card-body text-center py-5">
                 <i class="bi bi-bell fs-1 d-block mb-2 text-muted"></i>
-                <div class="fw-semibold text-dark mb-1">No notifications yet</div>
+                <div class="fw-semibold text-dark mb-1">No notifications match the current inbox filters</div>
                 <div class="text-muted small mx-auto" style="max-width:640px">
                     Official messages will appear here when an institute office sends an update, reminder,
                     approval decision, payment/document alert, timetable change, or workflow action for your account.
+                    Clear filters to review older read messages, other notification types, or all owned messages.
                 </div>
+                <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-outline-secondary mt-3">Clear Filters</a>
             </div>
         @endforelse
 

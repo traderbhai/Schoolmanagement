@@ -404,6 +404,74 @@ class AssetWorkflowTest extends TestCase
             ->assertSee('Rs. 65,000.00');
     }
 
+    public function test_asset_register_metric_cards_link_to_source_sections(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $category = $this->category();
+        InstituteAsset::create([
+            'asset_category_id' => $category->id,
+            'asset_tag' => 'AV-PROJ-001',
+            'name' => 'AV Projector One',
+            'purchase_cost' => 30000,
+            'condition' => 'good',
+            'status' => 'available',
+        ]);
+        InstituteAsset::create([
+            'asset_category_id' => $category->id,
+            'asset_tag' => 'AV-PROJ-002',
+            'name' => 'AV Projector Two',
+            'purchase_cost' => 30000,
+            'condition' => 'needs_repair',
+            'status' => 'maintenance',
+        ]);
+        InventoryItem::create([
+            'asset_category_id' => $category->id,
+            'name' => 'HDMI Cable',
+            'sku' => 'AV-HDMI',
+            'unit' => 'piece',
+            'current_stock' => 1,
+            'reorder_level' => 5,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.assets.index'))
+            ->assertOk()
+            ->assertSee('Owner: Admin / Director operations')
+            ->assertSee('Source: Asset register, custody assignments, inventory movements')
+            ->assertSee(route('admin.assets.index') . '#asset-register', false)
+            ->assertSee(route('admin.assets.index', ['status' => 'available']) . '#asset-register', false)
+            ->assertSee(route('admin.assets.index', ['status' => 'assigned']) . '#asset-register', false)
+            ->assertSee(route('admin.assets.index', ['status' => 'maintenance']) . '#asset-register', false)
+            ->assertSee('href="#asset-consumable-stock"', false)
+            ->assertSee('id="asset-register"', false)
+            ->assertSee('id="asset-consumable-stock"', false)
+            ->assertSee('Ready to assign')
+            ->assertSee('Repair queue')
+            ->assertSee('Review reorder list');
+    }
+
+    public function test_asset_register_empty_states_explain_setup_and_filter_next_steps(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.assets.index', ['search' => 'missing-laptop', 'status' => 'assigned']))
+            ->assertStatus(200)
+            ->assertSee('No assets match this register view.')
+            ->assertSee('Create a category and asset first, or clear the search/status filter to review the full institute asset register.')
+            ->assertSee('Clear Filters')
+            ->assertSee('No active asset assignments.')
+            ->assertSee('Available assets can be assigned from the register above. Returned or maintenance assets stay out of the active custody list.')
+            ->assertSee('No consumable stock items are configured.')
+            ->assertSee('Create stationery, lab, housekeeping, or office stock items above before receiving or issuing inventory.')
+            ->assertSee('No stock movements recorded yet.')
+            ->assertSee('Receive stock from a vendor or issue stock to a user to create the first audited movement entry.')
+            ->assertDontSee('No assets found.')
+            ->assertDontSee('No consumable stock items found.')
+            ->assertDontSee('No stock movements yet.');
+    }
+
     public function test_admin_can_create_inventory_item_and_receive_stock(): void
     {
         $admin = $this->userWithRole('admin');

@@ -327,6 +327,18 @@ class StudentLeaveWorkflowTest extends TestCase
             ->assertDontSee('No leave applications yet.')
             ->assertDontSee('â€“');
 
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.leaves.create'))
+            ->assertOk()
+            ->assertSee('1. Choose leave type')
+            ->assertSee('2. Check date overlap')
+            ->assertSee('Open pending or approved leave for the same dates will be blocked')
+            ->assertSee('Mention class, exam, mentoring, or duty impact')
+            ->assertSee('Pending requests can be cancelled before review')
+            ->assertSee('Submit only future leave dates')
+            ->assertSee('Include handover or coverage notes')
+            ->assertDontSee('Describe the reason for leave...');
+
         LeaveApplication::create([
             'teacher_id' => $teacher->id,
             'leave_type' => 'duty',

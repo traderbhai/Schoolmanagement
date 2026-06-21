@@ -30,6 +30,47 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-center">
+            <div class="col-lg-3">
+                <div class="fw-bold small text-uppercase text-muted">Daily operating order</div>
+                <div class="small">Start with live conversion work, then clear blockers before review meetings.</div>
+            </div>
+            <div class="col-6 col-lg">
+                <a href="{{ route('admission.calling-desk.index') }}" class="text-decoration-none text-reset d-block rounded-2 border p-2 h-100">
+                    <div class="fw-semibold small"><i class="bi bi-telephone-outbound me-1 text-primary"></i>1. Call next</div>
+                    <div class="text-muted small">Hot leads, callbacks, no-response retry.</div>
+                </a>
+            </div>
+            <div class="col-6 col-lg">
+                <a href="{{ route('admission.documents.queue') }}" class="text-decoration-none text-reset d-block rounded-2 border p-2 h-100">
+                    <div class="fw-semibold small"><i class="bi bi-file-earmark-check me-1 text-warning"></i>2. Clear documents</div>
+                    <div class="text-muted small">Pending proof and rejection blockers.</div>
+                </a>
+            </div>
+            <div class="col-6 col-lg">
+                <a href="{{ route('admission.payments.queue') }}" class="text-decoration-none text-reset d-block rounded-2 border p-2 h-100">
+                    <div class="fw-semibold small"><i class="bi bi-credit-card me-1 text-info"></i>3. Clear payments</div>
+                    <div class="text-muted small">Registration and admission fee queues.</div>
+                </a>
+            </div>
+            <div class="col-6 col-lg">
+                <a href="{{ route('admission.assessment-control-room.index') }}" class="text-decoration-none text-reset d-block rounded-2 border p-2 h-100">
+                    <div class="fw-semibold small"><i class="bi bi-clipboard2-pulse me-1 text-success"></i>4. Run assessments</div>
+                    <div class="text-muted small">Sessions, attendance, scores, decisions.</div>
+                </a>
+            </div>
+            <div class="col-6 col-lg">
+                <a href="{{ route('admission.offer-rounds.index') }}" class="text-decoration-none text-reset d-block rounded-2 border p-2 h-100">
+                    <div class="fw-semibold small"><i class="bi bi-award me-1 text-danger"></i>5. Move seats</div>
+                    <div class="text-muted small">Offers, waitlist, holds, enrollment.</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- KPI Cards --}}
 <div class="row g-2 mb-3">
     @foreach([

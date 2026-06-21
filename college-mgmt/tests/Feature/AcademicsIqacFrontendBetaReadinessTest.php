@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Term;
 use App\Models\User;
+use App\Support\FrontendNavigation;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -131,6 +132,12 @@ class AcademicsIqacFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('academics.workspaces.show', 'iqac'), false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+
+        $iqacGroups = FrontendNavigation::manifest()['iqac']['groups'];
+
+        $this->assertNotContains('Academics Governance', collect($iqacGroups['Command'])->pluck('label')->all());
+        $this->assertContains('Academics Governance', collect($iqacGroups['Governance'])->pluck('label')->all());
+        $this->assertNotContains('OBE Readiness', collect($iqacGroups['Command'])->pluck('label')->all());
     }
 
     public function test_iqac_manager_and_officer_rendered_navigation_links_are_reachable(): void

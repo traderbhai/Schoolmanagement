@@ -208,6 +208,7 @@ class ReportingController extends Controller
     {
         $query = Lead::query();
         $this->hierarchy->applyLeadVisibility($query, $request->user(), 'ADM');
+        $this->applyReportFilters($query, $request);
 
         return $query;
     }
@@ -216,7 +217,16 @@ class ReportingController extends Controller
     {
         $query = Applicant::query();
         $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+        $this->applyReportFilters($query, $request);
 
         return $query;
+    }
+
+    private function applyReportFilters($query, Request $request): void
+    {
+        $query
+            ->when($request->filled('program_id'), fn ($q) => $q->where('program_id', $request->program_id))
+            ->when($request->filled('priority'), fn ($q) => $q->where('priority', $request->priority))
+            ->when($request->filled('counsellor_id'), fn ($q) => $q->where('assigned_to', $request->counsellor_id));
     }
 }

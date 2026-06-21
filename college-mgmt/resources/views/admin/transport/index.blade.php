@@ -168,7 +168,12 @@
                             </form>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-muted py-4">No vehicles configured.</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No vehicles are configured.</div>
+                                <div class="small">Add active buses, vans, or other transport vehicles before assigning students to route capacity.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -269,14 +274,14 @@
                             @forelse($assignments as $assignment)
                                 <tr>
                                     <td>
-                                        <div class="fw-semibold">{{ $assignment->student->user->name ?? 'Student' }}</div>
-                                        <div class="small text-muted">{{ $assignment->student->enrollment_number ?? '' }}</div>
+                                        <div class="fw-semibold">{{ $assignment->student->user->name ?? 'Student not linked' }}</div>
+                                        <div class="small text-muted">{{ $assignment->student->enrollment_number ?? 'Enrollment number pending' }}</div>
                                     </td>
                                     <td>
-                                        {{ $assignment->route->name ?? '-' }}
+                                        {{ $assignment->route->name ?? 'Route not linked' }}
                                         <div class="small text-muted">{{ $assignment->stop->name ?? 'No stop selected' }}</div>
                                     </td>
-                                    <td>{{ $assignment->vehicle->registration_number ?? '-' }}</td>
+                                    <td>{{ $assignment->vehicle->registration_number ?? 'Vehicle not assigned' }}</td>
                                     <td class="text-end">Rs. {{ number_format($assignment->monthly_fee, 2) }}</td>
                                     <td class="text-end">
                                         <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline" onsubmit="return confirm('End this transport assignment from today?')">
@@ -287,7 +292,15 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted py-4">No active transport assignments.</td></tr>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <div class="fw-semibold text-dark">No active transport assignments match this view.</div>
+                                        <div class="small">Assign an active student to an active route and stop above, or clear the search filter to review all current transport allocations.</div>
+                                        <div class="mt-2">
+                                            <a href="{{ route('admin.transport.index') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                        </div>
+                                    </td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -319,7 +332,7 @@
                             @forelse($route->stops as $stop)
                                 <span class="badge bg-light text-dark border me-1 mb-1">{{ $stop->sequence }}. {{ $stop->name }}</span>
                             @empty
-                                <span class="text-muted">No stops yet.</span>
+                                <span class="text-muted">No stops configured yet. Add pickup/drop stops before assigning students to this route.</span>
                             @endforelse
                         </div>
                     </div>

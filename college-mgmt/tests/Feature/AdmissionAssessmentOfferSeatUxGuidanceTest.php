@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\MasterDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AdmissionAssessmentOfferSeatUxGuidanceTest extends TestCase
@@ -105,5 +106,39 @@ class AdmissionAssessmentOfferSeatUxGuidanceTest extends TestCase
             ->assertDontSee('Whoops', false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_offer_seat_control_empty_states_explain_source_workflow_and_next_actions(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        DB::table('admission_joining_kit_tasks')->delete();
+        DB::table('admission_deferrals')->delete();
+        DB::table('admission_seat_holds')->delete();
+        DB::table('admission_waitlist_entries')->delete();
+        DB::table('admission_offer_rounds')->delete();
+
+        $this->actingAs($head)
+            ->get(route('admission.offer-rounds.index'))
+            ->assertOk()
+            ->assertSeeText('No offer rounds are ready yet')
+            ->assertSeeText('Create an offer round after merit list or committee decisions are reviewed')
+            ->assertSeeText('No waitlist entries are active')
+            ->assertSeeText('review selected applicants and the seat matrix first')
+            ->assertSeeText('No seat holds are active')
+            ->assertSeeText('check offer letters and payment deadline status')
+            ->assertSeeText('No joining-kit blockers are prepared yet')
+            ->assertSeeText('final document, fee, orientation, hostel, transport, or Academics handoff checks')
+            ->assertSeeText('No deferral requests need review')
+            ->assertSeeText('payment, documents, and target batch readiness')
+            ->assertSee(route('admission.selection-committee.index'), false)
+            ->assertSee(route('admission.applicants.index', ['status' => 'selected']), false)
+            ->assertSee('/admission/seat-matrices/', false)
+            ->assertSee(route('admission.payments.queue'), false)
+            ->assertSee(route('admission.enrollment.index'), false)
+            ->assertDontSeeText('No offer rounds created yet.')
+            ->assertDontSeeText('No waitlist entries.')
+            ->assertDontSeeText('No active seat holds.')
+            ->assertDontSeeText('No joining-kit tasks prepared yet.')
+            ->assertDontSeeText('No deferral requests.');
     }
 }

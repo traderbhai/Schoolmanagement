@@ -9,12 +9,47 @@ use Illuminate\Http\Request;
 
 class NoticeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $this->authorizeOfficialNoticeManagement(request());
+        $this->authorizeOfficialNoticeManagement($request);
 
-        $notices = Notice::with('user')->latest()->paginate(15);
-        return view('admin.notices.index', compact('notices'));
+        $query = Notice::with('user')->latest();
+
+        if ($search = trim((string) $request->query('search'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%");
+            });
+        }
+
+        if ($audience = $request->query('audience')) {
+            if (in_array($audience, ['all', 'students', 'teachers', 'admin'], true)) {
+                $query->where('audience', $audience);
+            }
+        }
+
+        if ($status = $request->query('status')) {
+            if ($status === 'published') {
+                $query->where('is_published', true);
+            } elseif ($status === 'draft') {
+                $query->where('is_published', false);
+            } elseif ($status === 'active') {
+                $query->active();
+            } elseif ($status === 'scheduled') {
+                $query->where('is_published', true)->where('publish_date', '>', now());
+            } elseif ($status === 'expired') {
+                $query->whereNotNull('expiry_date')->where('expiry_date', '<', now());
+            }
+        }
+
+        $notices = $query->paginate(15)->withQueryString();
+        $filters = [
+            'search' => $search ?? '',
+            'audience' => $audience ?: '',
+            'status' => $status ?: '',
+        ];
+
+        return view('admin.notices.index', compact('notices', 'filters'));
     }
 
     public function create()

@@ -24,7 +24,7 @@
                         <select name="batch_id" class="form-select form-select-sm" required>
                             <option value="">Select Batch</option>
                             @foreach($batches ?? [] as $b)
-                            <option value="{{ $b->id }}">{{ $b->name }} ({{ $b->program->name ?? '' }})</option>
+                            <option value="{{ $b->id }}">{{ $b->name }} ({{ $b->program->name ?? 'Program not linked' }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -84,19 +84,19 @@
                 <tbody>
                     @forelse($feeDemands as $demand)
                     <tr>
-                        <td>{{ $demand->student->enrollment_number ?? 'N/A' }}</td>
-                        <td>{{ $demand->term->name ?? 'N/A' }}</td>
-                        <td>₹{{ number_format($demand->total_amount) }}</td>
-                        <td>₹{{ number_format($demand->final_amount) }}</td>
+                        <td>{{ $demand->student->enrollment_number ?? 'Enrollment number pending' }}</td>
+                        <td>{{ $demand->term->name ?? 'Term not linked' }}</td>
+                        <td>Rs. {{ number_format($demand->total_amount) }}</td>
+                        <td>Rs. {{ number_format($demand->final_amount) }}</td>
                         <td>
                             @if(($demand->penalty_amount ?? 0) > 0)
-                                <span class="text-danger fw-semibold">₹{{ number_format($demand->penalty_amount, 2) }}</span>
+                                <span class="text-danger fw-semibold">Rs. {{ number_format($demand->penalty_amount, 2) }}</span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">No penalty</span>
                             @endif
                         </td>
                         <td class="{{ $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending' ? 'text-danger fw-semibold' : '' }}">
-                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : '—' }}
+                            {{ $demand->due_date ? $demand->due_date->format('d M Y') : 'Due date not published' }}
                         </td>
                         <td>
                             <span class="badge bg-{{ $demand->status === 'fully_paid' ? 'success' : ($demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending' ? 'danger' : 'warning') }}">
@@ -106,7 +106,11 @@
                         <td><a href="{{ route('academic.fee-demands.show', $demand) }}" class="btn btn-sm btn-primary">View</a></td>
                     </tr>
                     @empty
-                    <tr><td colspan="8" class="text-center text-muted">No fee demands found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No fee demands match this view yet. Generate semester demands after batch, term, fee structure, and active student records are ready, or add a one-off demand for an individual student.
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>

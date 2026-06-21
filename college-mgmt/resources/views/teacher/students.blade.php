@@ -20,7 +20,7 @@
                 <div class="opacity-75 small mt-1">
                     @if($currentSemester)
                         {{ $currentSemester->name }}
-                        @if($currentSemester->academicYear) &mdash; {{ $currentSemester->academicYear->name }} @endif
+                        @if($currentSemester->academicYear) - {{ $currentSemester->academicYear->name }} @endif
                     @else
                         No active semester configured
                     @endif
@@ -32,6 +32,42 @@
                 </span>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+    <i class="bi bi-info-circle text-primary mt-1"></i>
+    <div class="small">
+        <strong>Roster source:</strong>
+        this list shows students actively enrolled in subjects from your published timetable for the current semester or term. Draft timetables, unpublished versions, and students outside your subject roster are not shown.
+    </div>
+</div>
+
+<div class="card mb-3" style="box-shadow:var(--shadow-sm)">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ route('teacher.students.index') }}" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small mb-1">Search roster</label>
+                <input type="search" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, enrollment, roll, or phone">
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+            @if($search !== '')
+                <div class="col-md-auto">
+                    <a href="{{ route('teacher.students.index') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </a>
+                </div>
+            @endif
+            <div class="col-md text-md-end">
+                <span class="badge bg-light text-dark border">
+                    Showing {{ $students->count() }} roster student(s){{ $search !== '' ? ' for "'.$search.'"' : '' }}
+                </span>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -47,9 +83,9 @@
             <h6 class="mt-3 text-muted">No Students Found</h6>
             <p class="text-muted small mb-0">
                 @if($currentSemester)
-                    No students are enrolled in your subjects for this semester.
+                    No active roster students match this view. Check whether the PMC timetable is published, students are allocated to your subject sections/groups, or clear the search filter.
                 @else
-                    There is no active semester configured.
+                    There is no active semester configured. Academic setup must publish the current semester before teacher rosters can appear.
                 @endif
             </p>
         </div>
@@ -75,24 +111,24 @@
                         <div class="d-flex align-items-center gap-2">
                             <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
                                  style="width:36px;height:36px;background:var(--clr-primary,#4f46e5);font-size:.85rem">
-                                {{ strtoupper(substr($s->user->name, 0, 1)) }}
+                                {{ strtoupper(substr($s->user->name ?? 'S', 0, 1)) }}
                             </div>
                             <div>
-                                <div class="fw-semibold" style="font-size:.88rem">{{ $s->user->name }}</div>
-                                <div class="text-muted" style="font-size:.73rem">{{ $s->user->email }}</div>
+                                <div class="fw-semibold" style="font-size:.88rem">{{ $s->user->name ?? 'Student name missing' }}</div>
+                                <div class="text-muted" style="font-size:.73rem">{{ $s->user->email ?? 'Email not linked' }}</div>
                             </div>
                         </div>
                     </td>
-                    <td class="font-monospace small">{{ $s->enrollment_number ?? '-' }}</td>
+                    <td class="font-monospace small">{{ $s->enrollment_number ?? 'Enrollment pending' }}</td>
                     <td>
                         <span class="badge bg-primary bg-opacity-10 text-primary me-1" style="font-size:.72rem">
-                            {{ $s->course->code ?? ($s->course->name ?? '-') }}
+                            {{ $s->course->code ?? ($s->course->name ?? 'Course not linked') }}
                         </span>
                         <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size:.72rem">
-                            Sem {{ $s->current_semester }}
+                            Sem {{ $s->current_semester ?? 'not set' }}
                         </span>
                     </td>
-                    <td class="text-muted small">{{ $s->department->name ?? '-' }}</td>
+                    <td class="text-muted small">{{ $s->department->name ?? 'Department not linked' }}</td>
                     <td>
                         @if($s->teacher_attendance_percentage === null)
                             <span class="text-muted small">No attendance marked yet</span>
@@ -113,12 +149,7 @@
                         @endif
                     </td>
                     <td>
-                        @if(Route::has('admin.students.show'))
-                        <a href="{{ route('admin.students.show', $s) }}"
-                           class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem">
-                            <i class="bi bi-eye me-1"></i>View
-                        </a>
-                        @endif
+                        <span class="text-muted small">Use attendance, assignments, or mentor workflows for action.</span>
                     </td>
                 </tr>
                 @endforeach

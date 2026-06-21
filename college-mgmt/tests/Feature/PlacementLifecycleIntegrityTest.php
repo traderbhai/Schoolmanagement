@@ -150,6 +150,54 @@ class PlacementLifecycleIntegrityTest extends TestCase
         ]);
     }
 
+    public function test_admin_placement_drive_pages_use_operational_missing_data_labels(): void
+    {
+        $company = $this->company();
+        $drive = $this->drive([
+            'company_id' => $company->id,
+            'package' => null,
+            'drive_date' => null,
+            'last_apply_date' => null,
+            'location' => null,
+            'min_cgpa' => null,
+            'eligibility' => null,
+            'vacancies' => null,
+            'status' => 'upcoming',
+        ]);
+        $student = Student::factory()->create();
+        Placement::create([
+            'drive_id' => $drive->id,
+            'student_id' => $student->id,
+            'application_status' => 'applied',
+            'offered_package' => null,
+        ]);
+
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.placement-drives.index'))
+            ->assertOk()
+            ->assertSee('Package not published')
+            ->assertSee('Drive date not scheduled')
+            ->assertDontSee('N/A')
+            ->assertDontSee('—', false)
+            ->assertDontSee('₹', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.placement-drives.show', $drive))
+            ->assertOk()
+            ->assertSee('Package not published')
+            ->assertSee('Application deadline not published')
+            ->assertSee('Location not published')
+            ->assertSee('CGPA rule not set')
+            ->assertSee('Vacancies not published')
+            ->assertSee('Eligibility not published')
+            ->assertSee('Offer package not recorded')
+            ->assertDontSee('N/A')
+            ->assertDontSee('—', false)
+            ->assertDontSee('₹', false);
+    }
+
     public function test_placement_drives_cannot_be_created_for_inactive_company_partners(): void
     {
         $inactiveCompany = $this->company();

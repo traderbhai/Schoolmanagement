@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Leads & Enquiries')
+@section('title', 'Leads and Enquiries')
 
 @push('styles')
 <style>
@@ -49,6 +49,18 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
+
+    <div class="alert alert-info border-0 shadow-sm small mb-3">
+        <div class="fw-semibold mb-1">Lead queue workflow</div>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <span class="badge text-bg-light border">1. Filter by status/source/program</span>
+            <span class="badge text-bg-light border">2. Open the highest-priority record</span>
+            <span class="badge text-bg-light border">3. Confirm owner and last contact</span>
+            <span class="badge text-bg-light border">4. Log call, reminder, or next action</span>
+            <span class="badge text-bg-light border">5. Convert only when ready</span>
+        </div>
+        <div class="text-muted">The total above is the exact visible lead set after your Admission role scope and filters. Export uses the same filters shown here.</div>
+    </div>
 
     <div class="row g-2 mb-3">
         @foreach([
@@ -151,9 +163,9 @@
                             <td class="fw-semibold">{{ $lead->name }}</td>
                             <td class="small">
                                 <div>{{ $lead->email }}</div>
-                                <div class="text-muted">{{ $lead->phone ?? '-' }}</div>
+                                <div class="text-muted">{{ $lead->phone ?? 'Phone not provided' }}</div>
                             </td>
-                            <td class="small">{{ $lead->program?->abbreviation ?? $lead->program?->name ?? '-' }}</td>
+                            <td class="small">{{ $lead->program?->abbreviation ?? $lead->program?->name ?? 'Program not selected' }}</td>
                             <td class="small">{{ $lead->source_label }}</td>
                             <td><span class="{{ $lead->status_badge }}">{{ ucfirst(str_replace('_', ' ', $lead->status)) }}</span></td>
                             <td><span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span></td>
@@ -164,7 +176,19 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="text-center text-muted py-4">No leads match the current filters.</td></tr>
+                        <tr>
+                            <td colspan="9" class="py-4">
+                                <div class="text-center text-muted">
+                                    <div class="fw-semibold text-body mb-1">No leads match this scoped view.</div>
+                                    <div class="small mb-3">Clear filters, broaden status/source/program, or confirm whether new enquiries are entering through web forms, walk-ins, partner submissions, or imports.</div>
+                                    <div class="d-flex justify-content-center flex-wrap gap-2">
+                                        <a href="{{ route('admission.leads.index') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                        <a href="{{ route('admission.walk-ins.index') }}" class="btn btn-sm btn-outline-primary">Open Walk-ins</a>
+                                        <a href="{{ route('admission.partners.index') }}" class="btn btn-sm btn-outline-primary">Partner Leads</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

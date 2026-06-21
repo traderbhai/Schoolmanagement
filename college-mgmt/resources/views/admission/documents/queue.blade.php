@@ -163,7 +163,7 @@
                             <div class="fw-semibold">{{ $doc->applicant->user->name ?? 'Applicant name missing' }}</div>
                             <div class="small text-muted">
                                 #{{ str_pad($doc->applicant_id, 5, '0', STR_PAD_LEFT) }}
-                                &bull; {{ $doc->applicant->program->name ?? 'Program not assigned' }}
+                                - {{ $doc->applicant->program->name ?? 'Program not assigned' }}
                             </div>
                         </td>
                         <td>

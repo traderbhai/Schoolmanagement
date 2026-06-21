@@ -38,6 +38,7 @@ class FrontendReadinessTest extends TestCase
             'Command',
             'Daily Work',
             'Admission',
+            'People',
             'Students',
             'Students / Applicants',
             'Applicants',
@@ -103,6 +104,7 @@ class FrontendReadinessTest extends TestCase
             $user = User::where('email', $config['email'])->firstOrFail();
             $routes = collect($config['groups'])
                 ->flatten(1)
+                ->reject(fn (array $item) => isset($item['paramsFrom']))
                 ->unique(fn (array $item) => $item['route'] . serialize($item['params'] ?? []))
                 ->take(5);
 

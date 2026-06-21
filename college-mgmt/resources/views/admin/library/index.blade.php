@@ -111,14 +111,15 @@
                 <tbody>
                     @forelse($latestIssues as $issue)
                     <tr>
-                        <td>{{ $issue->bookCopy->book->title ?? 'N/A' }}</td>
-                        <td><code>{{ $issue->bookCopy->accession_number ?? '' }}</code></td>
+                        <td>{{ $issue->bookCopy->book->title ?? 'Book title missing' }}</td>
+                        <td><code>{{ $issue->bookCopy->accession_number ?? 'Accession pending' }}</code></td>
                         <td>
                             @if($issue->student)
                                 <span class="badge bg-primary">Student</span> {{ $issue->student->user->name ?? '' }}
                             @elseif($issue->teacher)
                                 <span class="badge bg-success">Teacher</span> {{ $issue->teacher->user->name ?? '' }}
-                            @else N/A
+                            @else
+                                <span class="text-muted">Borrower not linked</span>
                             @endif
                         </td>
                         <td>{{ \Carbon\Carbon::parse($issue->issued_at)->format('d M Y') }}</td>
@@ -136,7 +137,11 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="6" class="text-center text-muted py-3">No issues yet.</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">
+                            No issue activity yet. Issue a catalog copy to an active member to start circulation tracking.
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>

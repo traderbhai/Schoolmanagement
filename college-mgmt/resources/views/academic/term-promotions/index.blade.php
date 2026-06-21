@@ -34,9 +34,9 @@
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Current Term <span class="text-danger">*</span></label>
                         <select name="term_id" class="form-select" required>
-                            <option value="">— Select Term —</option>
+                            <option value="">Select current term</option>
                             @foreach(\App\Models\Term::with('batch')->orderByDesc('id')->get() as $term)
-                                <option value="{{ $term->id }}">{{ $term->name }} ({{ $term->batch->name ?? '—' }})</option>
+                                <option value="{{ $term->id }}">{{ $term->name }} ({{ $term->batch->name ?? 'Batch not linked' }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -71,7 +71,7 @@
         @csrf
         <div class="card-body p-0">
             @if($promotions->isEmpty())
-                <div class="text-center py-5 text-muted">No promotion records found.</div>
+                <div class="text-center py-5 text-muted">No promotion records are ready for review. Generate promotions after term results, attendance, student current-term assignment, and target-term setup are complete.</div>
             @else
             <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0">
@@ -98,9 +98,9 @@
                                            class="row-check" onchange="updateBulkBtn()">
                                 @endif
                             </td>
-                            <td class="fw-semibold">{{ $tp->student->user->name ?? $tp->student->name ?? '—' }}</td>
-                            <td>{{ $tp->currentTerm->name ?? '—' }}</td>
-                            <td>{{ $tp->promotedToTerm->name ?? '—' }}</td>
+                            <td class="fw-semibold">{{ $tp->student->user->name ?? $tp->student->name ?? 'Student name missing' }}</td>
+                            <td>{{ $tp->currentTerm->name ?? 'Current term not linked' }}</td>
+                            <td>{{ $tp->promotedToTerm->name ?? 'Target term not linked' }}</td>
                             <td class="text-center">{{ number_format($tp->cgpa, 2) }}</td>
                             <td class="text-center">{{ number_format($tp->attendance_percentage, 1) }}%</td>
                             <td class="text-center">

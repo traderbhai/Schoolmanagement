@@ -42,31 +42,31 @@
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Package</div>
-                <div class="fw-semibold">{{ $placementDrive->package ?? '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->package ?? 'Package not published' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Drive Date</div>
-                <div class="fw-semibold">{{ $placementDrive->drive_date ? $placementDrive->drive_date->format('d M Y') : '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->drive_date ? $placementDrive->drive_date->format('d M Y') : 'Drive date not scheduled' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Last Apply Date</div>
-                <div class="fw-semibold">{{ $placementDrive->last_apply_date ? $placementDrive->last_apply_date->format('d M Y') : '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->last_apply_date ? $placementDrive->last_apply_date->format('d M Y') : 'Application deadline not published' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Location</div>
-                <div class="fw-semibold">{{ $placementDrive->location ?? '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->location ?? 'Location not published' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Min CGPA</div>
-                <div class="fw-semibold">{{ $placementDrive->min_cgpa ?? '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->min_cgpa ?? 'CGPA rule not set' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Vacancies</div>
-                <div class="fw-semibold">{{ $placementDrive->vacancies ?? '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->vacancies ?? 'Vacancies not published' }}</div>
             </div>
             <div class="col-sm-3">
                 <div class="text-muted" style="font-size:.75rem">Eligibility</div>
-                <div class="fw-semibold">{{ $placementDrive->eligibility ?? '—' }}</div>
+                <div class="fw-semibold">{{ $placementDrive->eligibility ?? 'Eligibility not published' }}</div>
             </div>
             @if($placementDrive->description)
             <div class="col-12">
@@ -89,12 +89,12 @@
             <div class="col-md-6">
                 <label class="form-label form-label-sm">Select Student</label>
                 <select name="student_id" class="form-select form-select-sm" required>
-                    <option value="">— Select Student —</option>
+                    <option value="">Select student</option>
                     @foreach($students as $student)
                         <option value="{{ $student->id }}">
-                            {{ $student->user->name ?? 'N/A' }}
-                            ({{ $student->enrollment_number }})
-                            @if($student->course) — {{ $student->course->name }} @endif
+                            {{ $student->user->name ?? 'Student name missing' }}
+                            ({{ $student->enrollment_number ?? 'Enrollment pending' }})
+                            @if($student->course) - {{ $student->course->name }} @endif
                         </option>
                     @endforeach
                 </select>
@@ -128,10 +128,10 @@
                     @forelse($placementDrive->placements as $placement)
                     <tr>
                         <td>
-                            <div class="fw-semibold">{{ $placement->student->user->name ?? 'N/A' }}</div>
+                            <div class="fw-semibold">{{ $placement->student->user->name ?? 'Student name missing' }}</div>
                         </td>
-                        <td>{{ $placement->student->enrollment_number }}</td>
-                        <td>{{ $placement->student->course->name ?? '—' }}</td>
+                        <td>{{ $placement->student->enrollment_number ?? 'Enrollment pending' }}</td>
+                        <td>{{ $placement->student->course->name ?? 'Course not linked' }}</td>
                         <td>
                             @php
                                 $statusBadge = [
@@ -147,7 +147,7 @@
                                 {{ ucfirst($placement->application_status) }}
                             </span>
                         </td>
-                        <td>{{ $placement->offered_package ? '₹ '.$placement->offered_package.' LPA' : '—' }}</td>
+                        <td>{{ $placement->offered_package ? 'Rs. '.$placement->offered_package.' LPA' : 'Offer package not recorded' }}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateModal{{ $placement->id }}">
                                 <i class="bi bi-pencil"></i> Update
@@ -162,7 +162,7 @@
                                 <form method="POST" action="{{ route('admin.placements.update-status', $placement) }}">
                                     @csrf @method('PATCH')
                                     <div class="modal-header">
-                                        <h6 class="modal-title">Update Application — {{ $placement->student->user->name ?? 'Student' }}</h6>
+                                        <h6 class="modal-title">Update Application - {{ $placement->student->user->name ?? 'Student' }}</h6>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">

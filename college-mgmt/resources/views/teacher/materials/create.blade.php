@@ -25,6 +25,14 @@
         </div>
     @endif
 
+    <div class="alert alert-light border d-flex align-items-start gap-2 py-2 mb-3">
+        <i class="bi bi-info-circle text-primary mt-1"></i>
+        <div class="small">
+            <strong>Upload sequence:</strong>
+            choose a published teaching subject, select the material type, add a file, link, or useful description, then publish only when students should see it.
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="card-body">
             <form method="POST" action="{{ route('teacher.materials.store') }}" enctype="multipart/form-data">
@@ -36,7 +44,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
                         <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
-                            <option value="">Select Subject</option>
+                            <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
                                     {{ $subject->name }} ({{ $subject->code }})
@@ -105,7 +113,7 @@
                         <input type="url" name="external_url" value="{{ old('external_url') }}"
                                class="form-control @error('external_url') is-invalid @enderror"
                                placeholder="https://..." @disabled($actionBlockedReason)>
-                        <div class="form-text">OR provide a URL instead of uploading a file.</div>
+                        <div class="form-text">Provide a URL instead of uploading a file.</div>
                         @error('external_url')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

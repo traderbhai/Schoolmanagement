@@ -27,6 +27,10 @@ class AcademicsCourseDeliveryUxGuidanceTest extends TestCase
             ->assertOk()
             ->assertSee('Course delivery daily sequence')
             ->assertSee('Each KPI opens the scoped source list behind the count')
+            ->assertSee('Owner: assigned faculty, mentor, or course coordinator')
+            ->assertSee('Source: timetable, attendance, LMS engagement, feedback, and mentor records')
+            ->assertSee('Owner / Source')
+            ->assertSee('Owner: course delivery team')
             ->assertSee('1. Confirm assigned course load')
             ->assertSee('2. Review today sessions')
             ->assertSee('3. Follow up attendance risk')
@@ -53,6 +57,9 @@ class AcademicsCourseDeliveryUxGuidanceTest extends TestCase
                 ->get(route($route))
                 ->assertOk()
                 ->assertSee('Delivery source-list workflow')
+                ->assertSee('Owner: assigned faculty, mentor, or course coordinator')
+                ->assertSee('Owner / Source')
+                ->assertSee('Owner: course delivery team')
                 ->assertSee('1. Filter subject/status')
                 ->assertSee('2. Review delivery signal')
                 ->assertSee('3. Open source workflow')
@@ -64,5 +71,21 @@ class AcademicsCourseDeliveryUxGuidanceTest extends TestCase
                 ->assertDontSee('Whoops', false)
                 ->assertDontSee('SERVICE ERROR', false);
         }
+    }
+
+    public function test_course_delivery_empty_filtered_source_list_explains_delivery_evidence_boundaries(): void
+    {
+        $faculty = User::where('email', 'pmc.faculty@college.com')->firstOrFail();
+
+        $this->actingAs($faculty)
+            ->get(route('academics.course-delivery.session-delivery', ['search' => 'no-matching-delivery-record']))
+            ->assertOk()
+            ->assertSee('No course-delivery records match this source list')
+            ->assertSee('source workflows have not yet created timetable, attendance, engagement, feedback, or mentor records')
+            ->assertSee('recheck faculty assignment, published timetable, attendance evidence, material updates, feedback signals, and mentor follow-up status')
+            ->assertDontSee('No course-delivery records match the current scope and filters')
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false);
     }
 }

@@ -41,11 +41,11 @@
                 <tbody>
                     @forelse($memberships as $m)
                     <tr>
-                        <td>{{ $m->user->name ?? 'N/A' }}<br><small class="text-muted">{{ $m->user->email ?? '' }}</small></td>
+                        <td>{{ $m->user->name ?? 'Member name missing' }}<br><small class="text-muted">{{ $m->user->email ?? 'Email not linked' }}</small></td>
                         <td><span class="badge bg-secondary">{{ ucfirst($m->member_type) }}</span></td>
                         <td>{{ $m->max_books_allowed }}</td>
                         <td>{{ $m->max_days_allowed }}</td>
-                        <td>₹{{ $m->fine_per_day }}</td>
+                        <td>Rs. {{ number_format((float) $m->fine_per_day, 2) }}</td>
                         <td>{{ $m->expiry_date ? \Carbon\Carbon::parse($m->expiry_date)->format('d M Y') : 'No Expiry' }}</td>
                         <td>
                             @if($m->is_active)
@@ -56,7 +56,11 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="7" class="text-center text-muted py-3">No memberships found.</td></tr>
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-3">
+                            No library memberships are configured yet. Add a membership before issuing books so limits, due days, and fines can be applied.
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -81,7 +85,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">User *</label>
                         <select name="user_id" class="form-select" required>
-                            <option value="">-- Select User --</option>
+                            <option value="">Select user</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                             @endforeach
@@ -106,7 +110,7 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Fine Per Day (₹) *</label>
+                        <label class="form-label fw-semibold">Fine Per Day (Rs.) *</label>
                         <input type="number" name="fine_per_day" class="form-control" value="1.00" min="0" step="0.5" required>
                     </div>
                     <div class="mb-3">

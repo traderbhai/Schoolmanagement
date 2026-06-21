@@ -500,6 +500,39 @@ class TransportWorkflowTest extends TestCase
             ->assertSee('Fleet Count Student');
     }
 
+    public function test_transport_index_empty_states_explain_setup_and_filter_next_steps(): void
+    {
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.transport.index', ['assignment_search' => 'missing-student']))
+            ->assertStatus(200)
+            ->assertSee('No vehicles are configured.')
+            ->assertSee('Add active buses, vans, or other transport vehicles before assigning students to route capacity.')
+            ->assertSee('No active transport assignments match this view.')
+            ->assertSee('Assign an active student to an active route and stop above, or clear the search filter to review all current transport allocations.')
+            ->assertSee('Clear Filters')
+            ->assertSee('Create a route before adding stops or assignments.')
+            ->assertDontSee('No vehicles configured.')
+            ->assertDontSee('No active transport assignments.');
+
+        TransportRoute::create([
+            'name' => 'Empty Stop Route',
+            'code' => 'ESR-01',
+            'start_point' => 'North Gate',
+            'end_point' => 'Main Campus',
+            'distance_km' => 7,
+            'monthly_fee' => 1800,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.transport.index'))
+            ->assertStatus(200)
+            ->assertSee('No stops configured yet. Add pickup/drop stops before assigning students to this route.')
+            ->assertDontSee('No stops yet.');
+    }
+
     public function test_admin_can_end_active_transport_assignment(): void
     {
         $admin = $this->userWithRole('admin');

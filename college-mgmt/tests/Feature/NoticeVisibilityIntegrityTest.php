@@ -180,6 +180,87 @@ class NoticeVisibilityIntegrityTest extends TestCase
         Bus::assertDispatched(SendBulkNoticeEmail::class, 1);
     }
 
+    public function test_admin_notice_board_explains_workflow_filters_and_visibility_state(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $published = $this->notice([
+            'user_id' => $admin->id,
+            'title' => 'Current Student Operations Notice',
+            'content' => 'Students should review the updated schedule.',
+            'audience' => 'students',
+            'publish_date' => now()->subDay()->toDateString(),
+            'expiry_date' => null,
+            'is_published' => true,
+        ]);
+        $draft = $this->notice([
+            'user_id' => $admin->id,
+            'title' => 'Internal Draft Notice',
+            'audience' => 'admin',
+            'is_published' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.notices.index', ['search' => 'Current Student', 'audience' => 'students', 'status' => 'active']))
+            ->assertOk()
+            ->assertSee('Notice workflow')
+            ->assertSee('Owner: Admin / Director')
+            ->assertSee('Source: official notices with audience, publish date, expiry, and posted-by records')
+            ->assertSee('Showing 1 notice(s)')
+            ->assertSee('Students / parents')
+            ->assertSee('Visible now')
+            ->assertSee('No expiry set')
+            ->assertSee(route('admin.notices.show', $published), false)
+            ->assertDontSee($draft->title)
+            ->assertDontSee('N/A')
+            ->assertDontSee('â', false)
+            ->assertDontSee('&ndash;', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.notices.index', ['search' => 'no-matching-notice-title']))
+            ->assertOk()
+            ->assertSee('No notices match the current source filters')
+            ->assertSee('Clear Filters');
+    }
+
+    public function test_admin_notice_forms_and_detail_explain_publish_email_and_lock_rules(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $notice = $this->notice([
+            'user_id' => $admin->id,
+            'title' => 'Published Lock Notice',
+            'content' => 'Published notices preserve the official communication.',
+            'audience' => 'students',
+            'publish_date' => now()->subDay()->toDateString(),
+            'expiry_date' => now()->addWeek()->toDateString(),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.notices.create'))
+            ->assertOk()
+            ->assertSee('Create sequence')
+            ->assertSee('notification email queue for current visible student notices')
+            ->assertSee('If published for students or all users with today')
+            ->assertSee('Students / parents');
+
+        $this->actingAs($admin)
+            ->get(route('admin.notices.edit', $notice))
+            ->assertOk()
+            ->assertSee('This notice is already visible')
+            ->assertSee('archive and create a corrected notice')
+            ->assertSee('Published visible notices preserve their communication contract');
+
+        $this->actingAs($admin)
+            ->get(route('admin.notices.show', $notice))
+            ->assertOk()
+            ->assertSee('Source: notice board record #' . $notice->id)
+            ->assertSee('Visible now')
+            ->assertSee('Students / parents')
+            ->assertSee('archive and create a corrected notice for material changes')
+            ->assertDontSee('&middot;', false)
+            ->assertDontSee('N/A');
+    }
+
     public function test_admin_cannot_rewrite_visible_published_notice_contract(): void
     {
         Bus::fake();

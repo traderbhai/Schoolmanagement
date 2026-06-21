@@ -62,6 +62,16 @@ class InstitutionalProfileUpdateIntegrityTest extends TestCase
         ]);
 
         $this->actingAs($user)
+            ->get(route('teacher.profile'))
+            ->assertOk()
+            ->assertSee('Profile data ownership:')
+            ->assertSee('Department, employee ID, employment type, joining date, and active/inactive status are maintained by administration')
+            ->assertSee('Profile updates are locked because this teacher profile is not active')
+            ->assertSee('disabled', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
+
+        $this->actingAs($user)
             ->from(route('teacher.profile'))
             ->put(route('teacher.profile.update'), [
                 'designation' => 'Professor',
@@ -108,6 +118,15 @@ class InstitutionalProfileUpdateIntegrityTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHas('success');
+
+        $this->actingAs($teacherUser)
+            ->get(route('teacher.profile'))
+            ->assertOk()
+            ->assertSee('Profile data ownership:')
+            ->assertSee('You can update contact, designation, qualification, and specialization here')
+            ->assertSee('Keep these fields current so students, mentors, Program Leadership, and PMC can identify the right contact')
+            ->assertDontSee('â', false)
+            ->assertDontSee('—', false);
 
         $this->actingAs($teacherUser)
             ->put(route('teacher.profile.update'), [

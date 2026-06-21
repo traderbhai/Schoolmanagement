@@ -242,4 +242,51 @@ class StudentResultsWorkflowTest extends TestCase
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('content-type'));
     }
+
+    public function test_grade_card_pdf_uses_readable_missing_data_labels(): void
+    {
+        $student = Student::factory()->make([
+            'id' => 1001,
+            'enrollment_number' => null,
+            'course_id' => null,
+            'program_id' => null,
+        ]);
+        $student->setRelation('user', null);
+        $student->setRelation('course', null);
+        $student->setRelation('program', null);
+
+        $semester = Semester::factory()->make(['name' => null]);
+
+        $results = [[
+            'subject' => null,
+            'credits' => 4,
+            'obtained' => null,
+            'max' => null,
+            'pct' => null,
+            'grade' => null,
+            'status' => 'pending',
+        ]];
+
+        $html = view('pdf.grade-card', [
+            'student' => $student,
+            'semester' => $semester,
+            'results' => $results,
+            'sgpa' => 0,
+            'cgpa' => 0,
+        ])->render();
+
+        $this->assertStringContainsString('Academic Record - Official Document', $html);
+        $this->assertStringContainsString('Student name missing', $html);
+        $this->assertStringContainsString('Enrollment number pending', $html);
+        $this->assertStringContainsString('Program not linked', $html);
+        $this->assertStringContainsString('Semester not linked', $html);
+        $this->assertStringContainsString('Subject not linked', $html);
+        $this->assertStringContainsString('Marks pending', $html);
+        $this->assertStringContainsString('Max marks pending', $html);
+        $this->assertStringContainsString('Result pending', $html);
+        $this->assertStringContainsString('Grade pending', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('&bull;', $html);
+        $this->assertStringNotContainsString('â', $html);
+    }
 }

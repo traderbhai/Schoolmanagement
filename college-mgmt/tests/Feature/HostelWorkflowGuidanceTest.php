@@ -216,6 +216,92 @@ class HostelWorkflowGuidanceTest extends TestCase
         ]);
     }
 
+    public function test_admin_hostel_daily_pages_use_operational_empty_and_missing_data_labels(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $student = $this->student('Hostel UX Student');
+        $room = $this->room(['room_number' => '601', 'monthly_fee' => 7200]);
+        $allocation = HostelAllocation::create([
+            'hostel_room_id' => $room->id,
+            'student_id' => $student->id,
+            'bed_number' => 1,
+            'allocated_from' => now()->subWeek()->toDateString(),
+            'status' => 'active',
+            'allocated_by' => $admin->id,
+        ]);
+        OutpassRequest::create([
+            'student_id' => $student->id,
+            'hostel_allocation_id' => $allocation->id,
+            'reason' => 'Parent meeting',
+            'out_datetime' => now()->addDay(),
+            'expected_return' => now()->addDay()->addHours(4),
+            'actual_return' => null,
+            'status' => 'approved',
+            'approved_by' => $admin->id,
+            'approved_at' => now(),
+        ]);
+        HostelComplaint::create([
+            'student_id' => $student->id,
+            'hostel_room_id' => $room->id,
+            'hostel_block_id' => $room->hostel_block_id,
+            'title' => 'WiFi issue',
+            'description' => 'WiFi is unstable in the room.',
+            'category' => 'internet',
+            'priority' => 'medium',
+            'status' => 'open',
+            'assigned_to' => null,
+        ]);
+        $emptyBlock = HostelBlock::create([
+            'name' => 'Empty UX Block',
+            'gender' => 'mixed',
+            'total_floors' => 1,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.complaints'))
+            ->assertOk()
+            ->assertSee('Unassigned')
+            ->assertDontSee('N/A')
+            ->assertDontSee('—', false)
+            ->assertDontSee('₹', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.complaints', ['status' => 'closed', 'priority' => 'high']))
+            ->assertOk()
+            ->assertSee('No hostel complaints match this view')
+            ->assertSee('Clear filters')
+            ->assertDontSee('No complaints found.');
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.outpasses'))
+            ->assertOk()
+            ->assertSee('Return not marked')
+            ->assertDontSee('N/A')
+            ->assertDontSee('—', false)
+            ->assertDontSee('₹', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.outpasses', ['status' => 'rejected']))
+            ->assertOk()
+            ->assertSee('No outpass requests match this view')
+            ->assertDontSee('No outpass requests found.');
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.rooms', $room->block))
+            ->assertOk()
+            ->assertSee('Rs. 7,200')
+            ->assertSee('Monthly Fee (Rs.)')
+            ->assertDontSee('₹', false)
+            ->assertDontSee('—', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.hostel.rooms', $emptyBlock))
+            ->assertOk()
+            ->assertSee('No rooms are configured in this block yet')
+            ->assertDontSee('No rooms in this block yet.');
+    }
+
     public function test_admin_cannot_allocate_invalid_or_maintenance_room_bed(): void
     {
         $admin = $this->userWithRole('admin');

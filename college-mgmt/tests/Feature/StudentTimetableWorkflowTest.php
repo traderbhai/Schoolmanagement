@@ -263,4 +263,50 @@ class StudentTimetableWorkflowTest extends TestCase
             ->assertDontSee('Draft Teacher Timetable Subject')
             ->assertDontSee('Draft Version Teacher Timetable Subject');
     }
+
+    public function test_teacher_timetable_empty_state_explains_published_assignment_source(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term Without Teacher Allocation',
+            'start_date' => now()->subDay(),
+        ]);
+        TimetableSlot::factory()->create([
+            'name' => 'Period 1',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'sort_order' => 1,
+            'is_active' => true,
+            'is_break' => false,
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole('teacher');
+        Teacher::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->get(route('teacher.timetable.index'))
+            ->assertOk()
+            ->assertSee('No published teaching timetable is assigned to you yet.')
+            ->assertSee('PMC or the academic office must publish your subject allocation in the official timetable before classes appear here.')
+            ->assertSee('Draft timetable entries and unpublished timetable versions stay hidden from teacher self-service.')
+            ->assertSee('Free')
+            ->assertDontSee('N/A')
+            ->assertDontSee('â', false)
+            ->assertDontSee('&mdash;', false)
+            ->assertDontSee('&ndash;', false);
+
+        $template = file_get_contents(resource_path('views/teacher/timetable/index.blade.php'));
+
+        $this->assertStringNotContainsString('N/A', $template);
+        $this->assertStringNotContainsString('â', $template);
+        $this->assertStringNotContainsString('&mdash;', $template);
+        $this->assertStringNotContainsString('&ndash;', $template);
+    }
 }

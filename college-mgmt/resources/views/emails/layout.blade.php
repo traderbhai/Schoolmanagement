@@ -38,7 +38,7 @@
         <div class="footer">
             <p>This is an automated email. Please do not reply to this message.</p>
             <p style="margin-top:8px;">
-                {{ env('INSTITUTE_NAME', config('app.name')) }} &mdash; All rights reserved.<br>
+                {{ env('INSTITUTE_NAME', config('app.name')) }} - All rights reserved.<br>
                 <small>If you believe you received this email in error, please contact support.</small>
             </p>
         </div>

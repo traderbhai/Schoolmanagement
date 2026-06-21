@@ -28,8 +28,12 @@ class AdmissionApplicantUxGuidanceTest extends TestCase
             ->get(route('applicant.dashboard'))
             ->assertOk()
             ->assertSee('Next required action')
+            ->assertSee('Owner:')
+            ->assertSee('Your action')
+            ->assertSee('Admission team')
             ->assertSee('Your Admission Tasks')
             ->assertSee('Admission Journey')
+            ->assertSee('Follow this path in order')
             ->assertSee('Quick Links')
             ->assertSee('Application Summary')
             ->assertSee(route('applicant.checklist'), false)
@@ -57,12 +61,40 @@ class AdmissionApplicantUxGuidanceTest extends TestCase
             ->assertSee('Checklist progress')
             ->assertSee('Open blockers')
             ->assertSee('Focus first')
+            ->assertSee('Owner:')
+            ->assertSee('Your action')
+            ->assertSee('Admission team')
             ->assertSee('Readiness Details')
             ->assertSee('Blocker / confirmation')
             ->assertSee('Resolve')
             ->assertSee(route('applicant.dashboard'), false)
             ->assertSee(route('applicant.status'), false)
             ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+
+        $this->assertApplicantPageHasNoMojibakeSeparators($response->getContent());
+    }
+
+    public function test_applicant_dashboard_uses_readable_batch_fallback(): void
+    {
+        $program = Program::where('is_active', true)->firstOrFail();
+        $user = User::factory()->create();
+        $user->assignRole('applicant');
+
+        Applicant::factory()->create([
+            'user_id' => $user->id,
+            'program_id' => $program->id,
+            'batch_id' => null,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('applicant.dashboard'))
+            ->assertOk()
+            ->assertSee('Batch not assigned yet')
+            ->assertDontSee('<dd class="col-7">-</dd>', false)
             ->assertDontSee('Whoops', false)
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Laravel\\', false);

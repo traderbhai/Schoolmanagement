@@ -336,12 +336,50 @@ class StudentDashboardGuidanceTest extends TestCase
     public function test_dashboard_has_clear_empty_priority_state(): void
     {
         $student = $this->makeStudent();
+        $student->update(['batch_id' => null]);
 
         $this->actingAs($student->user)
             ->get(route('student.dashboard'))
             ->assertStatus(200)
             ->assertSee('No urgent academic action due today')
+            ->assertSee('Owner: You')
+            ->assertSee('Source: Your student records')
+            ->assertSee('No classes scheduled for today')
+            ->assertSee('Review subject registration')
+            ->assertSee('Batch not assigned yet')
+            ->assertSee('Term not published yet')
+            ->assertSee('Mentor not assigned yet')
             ->assertSee('Review Courses')
             ->assertSee('Need Help?');
+    }
+
+    public function test_dashboard_labels_priority_owner_and_source_for_student_action(): void
+    {
+        $student = $this->makeStudent();
+        $subject = Subject::factory()->create(['program_id' => $student->program_id, 'name' => 'Student UX Subject']);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+        ]);
+
+        Assignment::create([
+            'subject_id' => $subject->id,
+            'created_by' => User::factory()->create()->id,
+            'title' => 'Student UX Action Assignment',
+            'description' => 'This verifies dashboard action ownership.',
+            'max_marks' => 25,
+            'due_at' => now()->addDays(3),
+            'is_published' => true,
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.dashboard'))
+            ->assertStatus(200)
+            ->assertSee('Submit 1 upcoming assignment')
+            ->assertSee('Owner: You')
+            ->assertSee('Source: Published assignments')
+            ->assertSee('Student UX Action Assignment')
+            ->assertSee('Student UX Subject');
     }
 }

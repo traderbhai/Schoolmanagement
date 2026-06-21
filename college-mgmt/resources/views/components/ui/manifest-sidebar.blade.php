@@ -21,6 +21,13 @@
         ->where('is_active', true)
         ->orderBy('id')
         ->value('id');
+    $firstParentStudentId = $user
+        ? \App\Models\ParentProfile::where('user_id', $user->id)
+            ->first()
+            ?->students()
+            ->orderBy('students.id')
+            ->value('students.id')
+        : null;
     $iconMap = [
         'dashboard' => 'bi-speedometer2',
         'command center' => 'bi-command',
@@ -183,7 +190,7 @@
         'account settings' => 'bi-gear',
     ];
 
-    $conditionVisible = function (array $item) use ($student, $user, $firstAdmissionProgram): bool {
+    $conditionVisible = function (array $item) use ($student, $user, $firstAdmissionProgram, $firstParentStudentId): bool {
         if (($item['condition'] ?? null) === 'student_has_issued_transcript') {
             return $student
                 ? \App\Models\AcademicTranscript::where('student_id', $student->id)
@@ -207,6 +214,10 @@
 
         if (($item['condition'] ?? null) === 'admission_first_program') {
             return (bool) $firstAdmissionProgram;
+        }
+
+        if (($item['condition'] ?? null) === 'parent_first_student') {
+            return (bool) $firstParentStudentId;
         }
 
         if (($item['condition'] ?? null) === 'legacy_program_chair_access') {
@@ -243,6 +254,9 @@
                     $routeParams = $item['params'] ?? [];
                     if (($item['paramsFrom'] ?? null) === 'first_admission_program') {
                         $routeParams = $firstAdmissionProgram ? [$firstAdmissionProgram] : [];
+                    }
+                    if (($item['paramsFrom'] ?? null) === 'first_parent_student') {
+                        $routeParams = $firstParentStudentId ? [$firstParentStudentId] : [];
                     }
                 @endphp
                 <a href="{{ route($item['route'], $routeParams) }}" class="nav-link @if($active) active @endif">

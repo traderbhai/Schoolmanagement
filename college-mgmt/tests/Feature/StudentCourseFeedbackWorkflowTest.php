@@ -355,9 +355,13 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
         $this->actingAs($teacher->user)
             ->get(route('teacher.feedback.index'))
             ->assertOk()
+            ->assertSee('Use this page to identify course-delivery improvements')
+            ->assertSee('1. Confirm source')
+            ->assertSee('4. Escalate persistent gaps')
             ->assertSee('Feedback Analytics')
             ->assertSee('1 responses')
             ->assertSee('5.0')
+            ->assertSee('Comment: Legitimate enrolled feedback.')
             ->assertSee('Legitimate enrolled feedback.')
             ->assertDontSee('Rogue feedback should be ignored.');
     }
@@ -375,6 +379,8 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Course Feedback')
             ->assertSee('- Feedback Empty Term')
+            ->assertSee('Subjects appear only after PMC publishes your teaching allocation')
+            ->assertSee('Raise recurring low feedback through Course Delivery')
             ->assertSee('No published teaching subjects are linked for this term yet')
             ->assertSee('subject allocation is published in the timetable')
             ->assertSee('verify your teacher profile and timetable assignment')
@@ -423,6 +429,7 @@ class StudentCourseFeedbackWorkflowTest extends TestCase
             ->assertSee('Feedback Pending Subject')
             ->assertSee('No student feedback responses yet')
             ->assertSee('only after enrolled students submit feedback for the current term')
+            ->assertSee('Keep teaching materials, attendance, and assignment follow-up current while waiting')
             ->assertSee('Individual responses stay hidden to protect anonymity')
             ->assertDontSee('No feedback collected yet for this subject.')
             ->assertDontSee('â€”');

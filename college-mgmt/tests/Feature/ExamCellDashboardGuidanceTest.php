@@ -1137,4 +1137,47 @@ class ExamCellDashboardGuidanceTest extends TestCase
             ->get(route('exam-cell.hall-ticket.download', [$exam, $eligible]))
             ->assertForbidden();
     }
+
+    public function test_exam_cell_hall_ticket_pdf_uses_readable_missing_data_labels(): void
+    {
+        $student = Student::factory()->make([
+            'id' => 4101,
+            'enrollment_number' => null,
+            'program_id' => null,
+        ]);
+        $student->setRelation('user', null);
+        $student->setRelation('program', null);
+
+        $exam = Exam::factory()->make([
+            'name' => null,
+            'exam_date' => null,
+            'start_time' => null,
+            'end_time' => null,
+            'total_marks' => null,
+        ]);
+        $exam->setRelation('program', null);
+        $exam->setRelation('subject', null);
+        $exam->setRelation('classroom', null);
+        $exam->setRelation('term', null);
+        $exam->setRelation('semester', null);
+
+        $html = view('departmental.exam-cell.hall-ticket-pdf', compact('student', 'exam'))->render();
+
+        $this->assertStringContainsString('Student name missing', $html);
+        $this->assertStringContainsString('Enrollment number pending', $html);
+        $this->assertStringContainsString('Program not linked', $html);
+        $this->assertStringContainsString('Exam name pending', $html);
+        $this->assertStringContainsString('Subject not linked', $html);
+        $this->assertStringContainsString('Exam date not announced', $html);
+        $this->assertStringContainsString('Time not announced', $html);
+        $this->assertStringContainsString('Venue to be announced', $html);
+        $this->assertStringContainsString('Total marks pending', $html);
+        $this->assertStringContainsString('Term not linked', $html);
+        $this->assertStringContainsString('EduManage College - Examination Cell', $html);
+        $this->assertStringNotContainsString('N/A', $html);
+        $this->assertStringNotContainsString('&mdash;', $html);
+        $this->assertStringNotContainsString('&ndash;', $html);
+        $this->assertStringNotContainsString('Ã¢', $html);
+        $this->assertStringNotContainsString('â', $html);
+    }
 }

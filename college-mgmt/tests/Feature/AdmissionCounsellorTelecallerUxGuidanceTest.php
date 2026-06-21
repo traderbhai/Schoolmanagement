@@ -102,6 +102,72 @@ class AdmissionCounsellorTelecallerUxGuidanceTest extends TestCase
             ->assertDontSee('Laravel\\', false);
     }
 
+    public function test_calling_desk_queue_rows_link_to_source_records_with_readable_fallbacks(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_telecaller', 'guard_name' => 'web']);
+        $telecaller = User::factory()->create();
+        $telecaller->assignRole('admission_telecaller');
+
+        $lead = Lead::factory()->create([
+            'name' => 'Scoped Calling Lead',
+            'phone' => '',
+            'program_id' => null,
+            'assigned_to' => $telecaller->id,
+            'current_handler_user_id' => $telecaller->id,
+            'status' => 'new',
+            'priority' => 'high',
+            'next_action' => null,
+        ]);
+
+        $this->actingAs($telecaller)
+            ->get(route('admission.calling-desk.index'))
+            ->assertOk()
+            ->assertSee('Scoped Calling Lead')
+            ->assertSee('Phone not recorded')
+            ->assertSee('Program not assigned')
+            ->assertSee('Call and confirm next step.')
+            ->assertSee('Open record')
+            ->assertSee(route('admission.leads.show', $lead), false)
+            ->assertDontSee('<td></td>', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_counsellor_desk_queue_rows_use_readable_missing_data_labels(): void
+    {
+        Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);
+        $counsellor = User::factory()->create();
+        $counsellor->assignRole('admission_counsellor');
+
+        Lead::factory()->create([
+            'name' => 'Scoped Desk Lead',
+            'phone' => '',
+            'program_id' => null,
+            'assigned_to' => $counsellor->id,
+            'current_handler_user_id' => $counsellor->id,
+            'status' => 'new',
+            'priority' => 'high',
+            'next_action' => null,
+        ]);
+
+        $this->actingAs($counsellor)
+            ->get(route('admission.counsellor-desk.index'))
+            ->assertOk()
+            ->assertSee('Scoped Desk Lead')
+            ->assertSee('Phone not recorded')
+            ->assertSee('Program not assigned')
+            ->assertSee('Next action not set')
+            ->assertSee('No applicant blockers in your scope')
+            ->assertSee('Document, payment, and review blockers appear here')
+            ->assertDontSee('No applicant blockers.</div>', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
     public function test_counsellor_workspace_explains_empty_queues_without_vague_fallbacks(): void
     {
         Role::firstOrCreate(['name' => 'admission_counsellor', 'guard_name' => 'web']);

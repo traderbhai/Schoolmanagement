@@ -3855,7 +3855,7 @@ class AcademicPmcTimetableV041Service
     private function launchControl(?User $user = null): array
     {
         $basketDiagnostics = $this->courseBasketDiagnostics($user);
-        $groupDiagnostics = $this->courseGroupDiagnostics();
+        $groupDiagnostics = $this->courseGroupDiagnostics($user);
         $facultyDiagnostics = $this->facultyAllocationDiagnostics($user);
         $facultySuitabilityDiagnostics = $this->facultySuitabilityDiagnostics(null, $user);
         $readinessInputDiagnostics = $this->readinessInputDiagnostics($user);
@@ -4341,11 +4341,59 @@ class AcademicPmcTimetableV041Service
         ];
     }
 
-    private function courseGroupDiagnostics(): array
+    private function courseGroupDiagnostics(?User $user = null): array
     {
-        $groups = AcademicPmcCourseGroup::with(['members', 'facultyAssignments'])->get();
-        $pendingAdjustments = AcademicPmcCourseGroupAdjustment::whereIn('status', ['requested', 'pending', 'under_review'])->count();
+        $scopeIds = $user && ! $this->policy->canIgnorePmcScope($user) ? [
+            'program_id' => $this->policy->scopedProgramIds($user),
+            'batch_id' => $this->policy->scopedBatchIds($user),
+            'term_id' => $this->policy->scopedTermIds($user),
+            'subject_id' => $this->policy->scopedSubjectIds($user),
+        ] : null;
+        $applyAnyCourseGroupScope = function (Builder $query) use ($scopeIds): Builder {
+            if ($scopeIds === null) {
+                return $query;
+            }
+
+            $hasAnyConcreteScope = collect($scopeIds)->contains(fn ($ids) => is_array($ids) && ! empty($ids));
+            if (! $hasAnyConcreteScope) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where(function (Builder $scopeQuery) use ($scopeIds): void {
+                foreach ($scopeIds as $column => $ids) {
+                    if (is_array($ids) && ! empty($ids)) {
+                        $scopeQuery->orWhereIn($column, $ids);
+                    }
+                }
+            });
+        };
+
+        $groups = $applyAnyCourseGroupScope(AcademicPmcCourseGroup::with(['members', 'facultyAssignments']))->get();
+        $pendingAdjustments = AcademicPmcCourseGroupAdjustment::whereIn('status', ['requested', 'pending', 'under_review'])
+            ->when($scopeIds !== null, fn ($query) => $query->whereHas('courseGroup', fn (Builder $groupQuery) => $applyAnyCourseGroupScope($groupQuery)))
+            ->count();
         $ungroupedAllocations = AcademicPmcStudentCourseAllocation::whereIn('basket_status', ['approved', 'locked', 'allocated'])
+            ->when($scopeIds !== null, function ($query) use ($scopeIds) {
+                $hasAnyConcreteScope = collect($scopeIds)->contains(fn ($ids) => is_array($ids) && ! empty($ids));
+                if (! $hasAnyConcreteScope) {
+                    return $query->whereRaw('1 = 0');
+                }
+
+                return $query->where(function (Builder $scopeQuery) use ($scopeIds): void {
+                    if (! empty($scopeIds['term_id'])) {
+                        $scopeQuery->orWhereIn('term_id', $scopeIds['term_id']);
+                    }
+                    if (! empty($scopeIds['subject_id'])) {
+                        $scopeQuery->orWhereIn('subject_id', $scopeIds['subject_id']);
+                    }
+                    if (! empty($scopeIds['program_id'])) {
+                        $scopeQuery->orWhereHas('student', fn (Builder $studentQuery) => $studentQuery->whereIn('program_id', $scopeIds['program_id']));
+                    }
+                    if (! empty($scopeIds['batch_id'])) {
+                        $scopeQuery->orWhereHas('student', fn (Builder $studentQuery) => $studentQuery->whereIn('batch_id', $scopeIds['batch_id']));
+                    }
+                });
+            })
             ->whereDoesntHave('groupMemberships', fn ($query) => $query->where('status', 'active'))
             ->count();
 

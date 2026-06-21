@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Lead;
+use App\Models\LeadFollowUp;
 use App\Models\Applicant;
 use App\Models\Batch;
 use App\Models\Program;
@@ -179,11 +180,127 @@ class LeadTest extends TestCase
 
         $response = $this->actingAs($officer)->get(route('admission.leads.index'));
         $response->assertOk()
-            ->assertSee('Leads & Enquiries')
+            ->assertSeeText('Leads & Enquiries')
             ->assertSee('3 records after filters')
             ->assertSee('Analytics')
             ->assertDontSee('SERVICE ERROR', false)
             ->assertDontSee('Whoops', false);
+    }
+
+    public function test_lead_queue_explains_workflow_and_missing_source_data(): void
+    {
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        Lead::factory()->create([
+            'name' => 'Phone Missing Lead',
+            'phone' => null,
+            'program_id' => null,
+            'status' => 'new',
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.leads.index'))
+            ->assertOk()
+            ->assertSeeText('Lead queue workflow')
+            ->assertSeeText('Filter by status/source/program')
+            ->assertSeeText('Open the highest-priority record')
+            ->assertSeeText('Confirm owner and last contact')
+            ->assertSeeText('Log call, reminder, or next action')
+            ->assertSeeText('Convert only when ready')
+            ->assertSeeText('The total above is the exact visible lead set after your Admission role scope and filters.')
+            ->assertSeeText('Phone not provided')
+            ->assertSeeText('Program not selected')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
+    public function test_empty_lead_queue_explains_filters_and_source_workflows(): void
+    {
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        Lead::factory()->create(['name' => 'Visible Lead']);
+
+        $this->actingAs($officer)
+            ->get(route('admission.leads.index', ['search' => 'no-matching-lead-token']))
+            ->assertOk()
+            ->assertSeeText('No leads match this scoped view.')
+            ->assertSeeText('Clear filters, broaden status/source/program, or confirm whether new enquiries are entering through web forms, walk-ins, partner submissions, or imports.')
+            ->assertSeeText('Clear Filters')
+            ->assertSeeText('Open Walk-ins')
+            ->assertSeeText('Partner Leads')
+            ->assertSee(route('admission.walk-ins.index'), false)
+            ->assertSee(route('admission.partners.index'), false)
+            ->assertDontSeeText('No leads match the current filters.')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
+    public function test_follow_up_calendar_explains_empty_month_workflow(): void
+    {
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $this->actingAs($officer)
+            ->get(route('admission.leads.follow-ups.calendar', ['month' => now()->format('Y-m')]))
+            ->assertOk()
+            ->assertSeeText('Follow-up Calendar - '.now()->format('F Y'))
+            ->assertSeeText('Follow-up review workflow')
+            ->assertSeeText('Choose month and counsellor')
+            ->assertSeeText('Review pending callbacks by date')
+            ->assertSeeText('Open the lead before changing outcome')
+            ->assertSeeText('Mark done only after contact is recorded')
+            ->assertSeeText('Schedule the next action if still open')
+            ->assertSeeText('This calendar shows only follow-ups visible to your Admission role and hierarchy.')
+            ->assertSeeText('No follow-ups scheduled for this month.')
+            ->assertSeeText('Create callbacks from a lead detail page, Calling Desk, or reminder workflow.')
+            ->assertSeeText('Open Leads')
+            ->assertSeeText('Calling Desk')
+            ->assertSeeText('Reminder Queue')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
+    public function test_follow_up_calendar_uses_readable_row_fallbacks(): void
+    {
+        $officer = User::factory()->create();
+        $officer->assignRole('admission_officer');
+
+        $lead = Lead::factory()->create([
+            'assigned_to' => null,
+            'name' => 'Calendar Fallback Lead',
+        ]);
+
+        LeadFollowUp::create([
+            'lead_id' => $lead->id,
+            'assigned_to' => null,
+            'type' => 'call',
+            'scheduled_at' => now()->addDay(),
+            'notes' => null,
+        ]);
+
+        $this->actingAs($officer)
+            ->get(route('admission.leads.follow-ups.calendar', ['month' => now()->format('Y-m')]))
+            ->assertOk()
+            ->assertSeeText('Calendar Fallback Lead')
+            ->assertSeeText('Counsellor not assigned')
+            ->assertSeeText('No notes recorded')
+            ->assertSeeText('Mark Done')
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
     }
 
     public function test_officer_can_filter_leads_by_status(): void

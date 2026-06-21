@@ -15,6 +15,11 @@
             </a>
         </div>
         <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge text-bg-light">Owner: Your account</span>
+                <span class="badge text-bg-light">Source: {{ ucfirst(str_replace('_', ' ', $notification->type ?: 'general notification')) }}</span>
+                <span class="badge text-bg-light">Read status updates when this page opens</span>
+            </div>
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                 @if($notification->type)
                     <span class="badge bg-secondary-subtle text-secondary">{{ ucfirst($notification->type) }}</span>
@@ -35,6 +40,7 @@
                     <a href="{{ $notification->action_url }}" class="btn btn-primary btn-sm">
                         <i class="bi bi-box-arrow-up-right me-1"></i>Open Related Page
                     </a>
+                    <span class="text-muted small align-self-center">The related page is supplied by the source workflow that created this notification.</span>
                 @endif
                 <a href="{{ route('notifications.index') }}" class="btn btn-outline-secondary btn-sm">Back to Inbox</a>
             </div>

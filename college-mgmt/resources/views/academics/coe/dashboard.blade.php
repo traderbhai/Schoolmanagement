@@ -30,6 +30,10 @@
             <div>
                 <div class="fw-semibold">CoE exam operations sequence</div>
                 <div class="small text-muted">Use this as the CoE starting point. Each KPI opens the scoped source list behind the count.</div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <span class="badge text-bg-primary">Owner: CoE / Examination team</span>
+                    <span class="badge text-bg-secondary">Source: Exams, marks, registrations, transcripts, appeals, anomalies</span>
+                </div>
             </div>
             <div class="d-flex flex-wrap gap-1">
                 <span class="badge text-bg-light">1. Confirm exam readiness</span>
@@ -86,7 +90,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Item</th><th>Status</th><th></th></tr></thead>
+                                <thead><tr><th>Item</th><th>Owner / Source</th><th>Status</th><th></th></tr></thead>
                                 <tbody>
                                     @forelse($section['items']->take(5) as $item)
                                         <tr>
@@ -94,11 +98,15 @@
                                                 <div class="fw-semibold small">{{ $item['title'] }}</div>
                                                 <div class="small text-muted">{{ $item['subtitle'] }}</div>
                                             </td>
+                                            <td>
+                                                <span class="badge text-bg-light border">Owner: CoE</span>
+                                                <span class="badge text-bg-light border">Source: {{ $meta['label'] }}</span>
+                                            </td>
                                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
                                             <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Go</a></td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="3" class="text-muted text-center py-3">No current exceptions in this CoE area.</td></tr>
+                                        <tr><td colspan="4" class="text-muted text-center py-3">No current CoE exceptions for {{ $meta['label'] }}. Continue with readiness review, official publication checks, or open the source list to confirm filters and published-state boundaries.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

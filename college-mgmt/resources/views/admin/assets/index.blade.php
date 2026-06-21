@@ -24,6 +24,10 @@
         <div>
             <div class="fw-semibold">Asset operating sequence</div>
             <div class="small text-muted">Start with stock and availability, then create categories/items, add assets, assign or return, and export the current register.</div>
+            <div class="d-flex flex-wrap gap-2 mt-2 small">
+                <span class="badge text-bg-light">Owner: Admin / Director operations</span>
+                <span class="badge text-bg-light">Source: Asset register, custody assignments, inventory movements</span>
+            </div>
         </div>
         <div class="d-flex flex-wrap gap-1">
             <span class="badge text-bg-light">1. Check availability</span>
@@ -36,15 +40,39 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total Assets</div><div class="fs-3 fw-bold">{{ $stats['total'] }}</div></div></div></div>
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Available</div><div class="fs-3 fw-bold text-success">{{ $stats['available'] }}</div></div></div></div>
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Assigned</div><div class="fs-3 fw-bold text-primary">{{ $stats['assigned'] }}</div></div></div></div>
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Maintenance</div><div class="fs-3 fw-bold text-warning">{{ $stats['maintenance'] }}</div></div></div></div>
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Stock Items</div><div class="fs-3 fw-bold">{{ $stats['stock_items'] }}</div></div></div></div>
-    <div class="col-md-2"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Low Stock</div><div class="fs-3 fw-bold text-danger">{{ $stats['low_stock'] }}</div></div></div></div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="{{ route('admin.assets.index') }}#asset-register" aria-label="Open all assets in the register">
+            <div class="card-body"><div class="text-muted small">Total Assets</div><div class="fs-3 fw-bold">{{ $stats['total'] }}</div><div class="small text-muted">Open register</div></div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="{{ route('admin.assets.index', ['status' => 'available']) }}#asset-register" aria-label="Open available assets">
+            <div class="card-body"><div class="text-muted small">Available</div><div class="fs-3 fw-bold text-success">{{ $stats['available'] }}</div><div class="small text-muted">Ready to assign</div></div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="{{ route('admin.assets.index', ['status' => 'assigned']) }}#asset-register" aria-label="Open assigned assets">
+            <div class="card-body"><div class="text-muted small">Assigned</div><div class="fs-3 fw-bold text-primary">{{ $stats['assigned'] }}</div><div class="small text-muted">Review custody</div></div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="{{ route('admin.assets.index', ['status' => 'maintenance']) }}#asset-register" aria-label="Open maintenance assets">
+            <div class="card-body"><div class="text-muted small">Maintenance</div><div class="fs-3 fw-bold text-warning">{{ $stats['maintenance'] }}</div><div class="small text-muted">Repair queue</div></div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="#asset-consumable-stock" aria-label="Open consumable stock section">
+            <div class="card-body"><div class="text-muted small">Stock Items</div><div class="fs-3 fw-bold">{{ $stats['stock_items'] }}</div><div class="small text-muted">Open stock table</div></div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="card border-0 shadow-sm h-100 text-decoration-none text-reset" href="#asset-consumable-stock" aria-label="Open low-stock items in consumable stock section">
+            <div class="card-body"><div class="text-muted small">Low Stock</div><div class="fs-3 fw-bold text-danger">{{ $stats['low_stock'] }}</div><div class="small text-muted">Review reorder list</div></div>
+        </a>
+    </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4" id="asset-register">
     <div class="card-header bg-transparent fw-semibold">Create Consumable Stock Item</div>
     <div class="card-body">
         <form method="POST" action="{{ route('admin.assets.stock-items.store') }}" class="row g-3 align-items-end">
@@ -172,8 +200,8 @@
                                 <div class="fw-semibold">{{ $asset->name }}</div>
                                 <div class="small text-muted"><code>{{ $asset->asset_tag }}</code> {{ $asset->serial_number ? '/ '.$asset->serial_number : '' }}</div>
                             </td>
-                            <td>{{ $asset->category->name ?? '-' }}</td>
-                            <td>{{ $asset->location ?? '-' }}</td>
+                            <td>{{ $asset->category->name ?? 'Category not linked' }}</td>
+                            <td>{{ $asset->location ?? 'Location not recorded' }}</td>
                             <td>
                                 @if($asset->status === 'available')
                                     <span class="badge bg-success">Available</span>
@@ -185,7 +213,7 @@
                                     <span class="badge bg-secondary">{{ ucfirst($asset->status) }}</span>
                                 @endif
                             </td>
-                            <td>{{ $asset->currentAssignment->assignedTo->name ?? '-' }}</td>
+                            <td>{{ $asset->currentAssignment->assignedTo->name ?? 'Not assigned' }}</td>
                             <td class="text-end">Rs. {{ number_format($asset->purchase_cost, 2) }}</td>
                             <td class="text-end">
                                 @if($asset->status === 'available')
@@ -196,7 +224,15 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-4">No assets found.</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No assets match this register view.</div>
+                                <div class="small">Create a category and asset first, or clear the search/status filter to review the full institute asset register.</div>
+                                <div class="mt-2">
+                                    <a href="{{ route('admin.assets.index') }}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -229,8 +265,8 @@
                 <tbody>
                     @forelse($activeAssignments as $assignment)
                         <tr>
-                            <td>{{ $assignment->asset->name ?? '-' }} <span class="text-muted small">({{ $assignment->asset->asset_tag ?? '-' }})</span></td>
-                            <td>{{ $assignment->assignedTo->name ?? '-' }}</td>
+                            <td>{{ $assignment->asset->name ?? 'Asset record missing' }} <span class="text-muted small">({{ $assignment->asset->asset_tag ?? 'Tag missing' }})</span></td>
+                            <td>{{ $assignment->assignedTo->name ?? 'Custodian not linked' }}</td>
                             <td>{{ $assignment->assigned_on?->format('d M Y') }}</td>
                             <td class="text-end">
                                 <form method="POST" action="{{ route('admin.assets.assignments.return', $assignment) }}" class="d-inline" onsubmit="return confirm('Return this asset in good condition?')">
@@ -242,7 +278,12 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="text-center text-muted py-4">No active asset assignments.</td></tr>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No active asset assignments.</div>
+                                <div class="small">Available assets can be assigned from the register above. Returned or maintenance assets stay out of the active custody list.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -250,7 +291,7 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mt-4">
+<div class="card border-0 shadow-sm mt-4" id="asset-consumable-stock">
     <div class="card-header bg-transparent d-flex justify-content-between align-items-center gap-3 flex-wrap">
         <div>
             <div class="fw-semibold">Consumable Stock</div>
@@ -279,8 +320,8 @@
                                 <div class="fw-semibold">{{ $item->name }}</div>
                                 <div class="small text-muted"><code>{{ $item->sku }}</code> / {{ $item->unit }}</div>
                             </td>
-                            <td>{{ $item->category->name ?? '-' }}</td>
-                            <td>{{ $item->location ?? '-' }}</td>
+                            <td>{{ $item->category->name ?? 'Category not linked' }}</td>
+                            <td>{{ $item->location ?? 'Store location not recorded' }}</td>
                             <td class="text-end fw-semibold">{{ $item->current_stock }}</td>
                             <td class="text-end">{{ $item->reorder_level }}</td>
                             <td>
@@ -302,7 +343,12 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-muted py-4">No consumable stock items found.</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No consumable stock items are configured.</div>
+                                <div class="small">Create stationery, lab, housekeeping, or office stock items above before receiving or issuing inventory.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -334,15 +380,20 @@
                 <tbody>
                     @forelse($recentMovements as $movement)
                         <tr>
-                            <td>{{ $movement->movement_date?->format('d M Y') }}</td>
-                            <td>{{ $movement->item->name ?? '-' }}</td>
+                            <td>{{ $movement->movement_date?->format('d M Y') ?? 'Movement date missing' }}</td>
+                            <td>{{ $movement->item->name ?? 'Stock item missing' }}</td>
                             <td>{{ ucfirst($movement->movement_type) }}</td>
                             <td class="text-end">{{ $movement->quantity }}</td>
-                            <td>{{ $movement->reference_number ?? $movement->vendor_name ?? '-' }}</td>
-                            <td>{{ $movement->issuedTo->name ?? '-' }}</td>
+                            <td>{{ $movement->reference_number ?? $movement->vendor_name ?? 'Reference not recorded' }}</td>
+                            <td>{{ $movement->issuedTo->name ?? 'Not issued to a user' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-muted py-4">No stock movements yet.</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <div class="fw-semibold text-dark">No stock movements recorded yet.</div>
+                                <div class="small">Receive stock from a vendor or issue stock to a user to create the first audited movement entry.</div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

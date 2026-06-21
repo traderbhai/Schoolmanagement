@@ -20,7 +20,8 @@ class ExamResultPublished extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $examName = $this->data['exam']->name ?? 'Exam';
-        return new Envelope(subject: "Results Published — {$examName}");
+
+        return new Envelope(subject: "Results Published - {$examName}");
     }
 
     public function content(): Content

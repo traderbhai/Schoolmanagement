@@ -93,7 +93,18 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-muted text-center py-3">No offer rounds created yet.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="fw-semibold text-dark">No offer rounds are ready yet</div>
+                                    <div class="small text-muted">Create an offer round after merit list or committee decisions are reviewed. Publishing a round creates seat-hold pressure and applicant communication, so keep this empty until the source decision list is ready.</div>
+                                    <div class="mt-2 d-flex flex-wrap justify-content-center gap-2">
+                                        @if($programs->isNotEmpty())
+                                            <a href="{{ route('admission.merit-list.index', $programs->first()) }}" class="btn btn-sm btn-outline-primary">Open Merit List</a>
+                                        @endif
+                                        <a href="{{ route('admission.selection-committee.index') }}" class="btn btn-sm btn-outline-secondary">Open Committee Board</a>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -133,7 +144,18 @@
                                 <td><span class="badge text-bg-warning">{{ str($entry->status)->headline() }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="text-muted text-center py-3">No waitlist entries.</td></tr>
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <div class="fw-semibold text-dark">No waitlist entries are active</div>
+                                    <div class="small text-muted">Waitlist rows should be created only after selected candidates are ranked and seat capacity is known. If candidates are expected here, review selected applicants and the seat matrix first.</div>
+                                    <div class="mt-2 d-flex flex-wrap justify-content-center gap-2">
+                                        <a href="{{ route('admission.applicants.index', ['status' => 'selected']) }}" class="btn btn-sm btn-outline-primary">Open Selected Applicants</a>
+                                        @if($programs->isNotEmpty())
+                                            <a href="{{ route('admission.seat-matrices.index', $programs->first()) }}" class="btn btn-sm btn-outline-secondary">Open Seat Matrix</a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -164,7 +186,18 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-muted text-center py-3">No active seat holds.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <div class="fw-semibold text-dark">No seat holds are active</div>
+                                    <div class="small text-muted">Seat holds appear after an offer round is published or leadership manually holds a seat. If offers were already issued, check offer letters and payment deadline status.</div>
+                                    <div class="mt-2 d-flex flex-wrap justify-content-center gap-2">
+                                        @if($programs->isNotEmpty())
+                                            <a href="{{ route('admission.offer-letters.index', $programs->first()) }}" class="btn btn-sm btn-outline-primary">Open Offer Letters</a>
+                                        @endif
+                                        <a href="{{ route('admission.payments.queue') }}" class="btn btn-sm btn-outline-secondary">Open Payment Queue</a>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -208,7 +241,16 @@
                                 <td>{{ $rowApplicantLabel($task) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="text-muted text-center py-3">No joining-kit tasks prepared yet.</td></tr>
+                            <tr>
+                                <td colspan="3" class="text-center py-4">
+                                    <div class="fw-semibold text-dark">No joining-kit blockers are prepared yet</div>
+                                    <div class="small text-muted">Joining-kit tasks should appear when an admitted applicant needs final document, fee, orientation, hostel, transport, or Academics handoff checks before enrollment closure.</div>
+                                    <div class="mt-2 d-flex flex-wrap justify-content-center gap-2">
+                                        <a href="{{ route('admission.enrollment.index') }}" class="btn btn-sm btn-outline-primary">Open Enrollments</a>
+                                        <a href="{{ route('admission.handoff.index') }}" class="btn btn-sm btn-outline-secondary">Open Handoff Queue</a>
+                                    </div>
+                                </td>
+                            </tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -237,12 +279,21 @@
                                     <button class="btn btn-sm btn-outline-success" @disabled(! $canManageSeatControl)>Approve</button>
                                 </form>
                             @else
-                                {{ $deferral->carry_forward_notes ?: '-' }}
+                                {{ $deferral->carry_forward_notes ?: 'Carry-forward notes not recorded' }}
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-muted text-center py-3">No deferral requests.</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <div class="fw-semibold text-dark">No deferral requests need review</div>
+                            <div class="small text-muted">Deferrals appear after an applicant requests a future batch or staff records a carry-forward case. Approved deferrals should include notes about payment, documents, and target batch readiness.</div>
+                            <div class="mt-2 d-flex flex-wrap justify-content-center gap-2">
+                                <a href="{{ route('admission.applicants.index') }}" class="btn btn-sm btn-outline-primary">Open Applicants</a>
+                                <a href="{{ route('admission.enrollment.index') }}" class="btn btn-sm btn-outline-secondary">Open Enrollment Queue</a>
+                            </div>
+                        </td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>

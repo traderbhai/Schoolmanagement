@@ -92,6 +92,78 @@ class LibraryCirculationWorkflowTest extends TestCase
             ->assertSee('Issue History');
     }
 
+    public function test_admin_library_pages_use_readable_operational_fallbacks(): void
+    {
+        $this->actingAs($this->userWithRole('admin'));
+        view()->share('errors', new \Illuminate\Support\ViewErrorBag());
+
+        $copy = new BookCopy(['accession_number' => null]);
+        $copy->id = 111;
+        $copy->setRelation('book', null);
+
+        $issue = new BookIssue([
+            'issued_at' => now(),
+            'due_date' => now()->addDays(7),
+            'status' => 'issued',
+            'fine_amount' => 0,
+        ]);
+        $issue->id = 222;
+        $issue->setRelation('bookCopy', $copy);
+        $issue->setRelation('student', null);
+        $issue->setRelation('teacher', null);
+
+        $membership = new LibraryMembership([
+            'member_type' => 'student',
+            'max_books_allowed' => 2,
+            'max_days_allowed' => 14,
+            'fine_per_day' => 1.5,
+            'is_active' => true,
+            'expiry_date' => null,
+        ]);
+        $membership->id = 333;
+        $membership->setRelation('user', null);
+
+        $issues = new \Illuminate\Pagination\LengthAwarePaginator(collect([$issue]), 1, 15);
+        $memberships = new \Illuminate\Pagination\LengthAwarePaginator(collect([$membership]), 1, 15);
+
+        $dashboardHtml = view('admin.library.index', [
+            'totalBooks' => 0,
+            'totalCopies' => 0,
+            'issuedToday' => 0,
+            'overdueCount' => 0,
+            'dueToday' => 0,
+            'finesPending' => 0,
+            'latestIssues' => collect([$issue]),
+        ])->render();
+
+        $issuesHtml = view('admin.library.issues', [
+            'issues' => $issues,
+            'availableCopies' => collect(),
+            'students' => collect(),
+            'teachers' => collect(),
+        ])->render();
+
+        $membershipsHtml = view('admin.library.memberships', [
+            'memberships' => $memberships,
+            'users' => collect(),
+        ])->render();
+
+        foreach ([$dashboardHtml, $issuesHtml, $membershipsHtml] as $html) {
+            $this->assertStringNotContainsString('N/A', $html);
+            $this->assertStringNotContainsString('â', $html);
+            $this->assertStringNotContainsString('&mdash;', $html);
+            $this->assertStringNotContainsString('&ndash;', $html);
+        }
+
+        $this->assertStringContainsString('Book title missing', $dashboardHtml);
+        $this->assertStringContainsString('Borrower not linked', $issuesHtml);
+        $this->assertStringContainsString('No fine', $issuesHtml);
+        $this->assertStringContainsString('Member name missing', $membershipsHtml);
+        $this->assertStringContainsString('Email not linked', $membershipsHtml);
+        $this->assertStringContainsString('Rs. 1.50', $membershipsHtml);
+        $this->assertStringContainsString('Select user', $membershipsHtml);
+    }
+
     public function test_admin_library_books_issues_and_reservations_export_current_filtered_view(): void
     {
         $admin = $this->userWithRole('admin');

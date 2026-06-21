@@ -43,6 +43,42 @@ class AdmissionDetailTimelineUxGuidanceTest extends TestCase
             ->assertDontSee('Laravel\\', false);
     }
 
+    public function test_lead_detail_empty_operational_sections_explain_next_staff_action(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        $program = Program::firstOrFail();
+
+        $lead = Lead::factory()->create([
+            'program_id' => $program->id,
+            'phone' => null,
+            'notes' => null,
+            'assigned_to' => null,
+            'status' => 'new',
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.leads.show', $lead))
+            ->assertOk()
+            ->assertSeeText('Lead - '.$lead->name)
+            ->assertSeeText('Phone not provided')
+            ->assertSeeText('No counselling notes are recorded yet')
+            ->assertSeeText('Add the latest call outcome, objection, parent input, or document/payment blocker before changing status.')
+            ->assertSeeText('Select Counsellor')
+            ->assertSeeText('No follow-ups scheduled yet.')
+            ->assertSeeText('Schedule the next callback, visit, document reminder, or payment reminder before leaving this lead')
+            ->assertSeeText('No assignment events yet. Assign this lead to the current handler or use delegation')
+            ->assertSeeText('No communication history yet. Send a template or record a manual message')
+            ->assertSeeText('No calls logged yet. Use the Calling Desk or action center after every attempt')
+            ->assertDontSeeText('No notes added yet.')
+            ->assertDontSee('â', false)
+            ->assertDontSee('Ã', false)
+            ->assertDontSee('N/A', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
     public function test_applicant_detail_explains_review_sequence(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();

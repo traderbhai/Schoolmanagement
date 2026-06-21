@@ -12,7 +12,7 @@
     <div class="col-lg-9">
         <div class="card">
             <div class="card-header py-3">
-                <h6 class="mb-0 fw-bold">Edit Drive — {{ $placementDrive->title }}</h6>
+                <h6 class="mb-0 fw-bold">Edit Drive - {{ $placementDrive->title }}</h6>
             </div>
             <div class="card-body">
                 @if($errors->any())

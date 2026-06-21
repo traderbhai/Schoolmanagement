@@ -21,10 +21,33 @@
         </div>
     @endif
 
-    <div class="alert alert-info mb-4">
+    <div class="alert alert-info mb-3">
         <i class="bi bi-shield-lock me-2"></i>
         <strong>Ratings are aggregated and anonymous.</strong>
-        Individual student responses are not shown to protect respondent privacy.
+        Individual student responses are not shown to protect respondent privacy. Use this page to identify course-delivery improvements, not to trace individual students.
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-3">
+            <div class="row g-3 small">
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">1. Confirm source</div>
+                    <div class="text-muted">Subjects appear only after PMC publishes your teaching allocation for the term.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">2. Review aggregate rating</div>
+                    <div class="text-muted">Compare teaching, content, and overall scores before changing delivery plans.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">3. Act on themes</div>
+                    <div class="text-muted">Use repeated comments to improve pacing, material clarity, or assessment support.</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="fw-semibold text-dark">4. Escalate persistent gaps</div>
+                    <div class="text-muted">Raise recurring low feedback through Course Delivery, Program Leadership, or PMC review.</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     @if($feedbackBySubject->isEmpty())
@@ -36,15 +59,15 @@
             </div>
         </div>
     @else
-        <div class="row g-4">
+        <div class="row g-3">
             @foreach($feedbackBySubject as $subject)
                 @php $stats = $subject->feedback_stats ?? null; @endphp
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100 shadow-sm">
                         <div class="card-header bg-white d-flex align-items-center justify-content-between">
                             <div>
-                                <div class="fw-bold">{{ $subject->name }}</div>
-                                <div class="text-muted small">{{ $subject->code }}</div>
+                                <div class="fw-bold">{{ $subject->name ?: 'Subject name unavailable' }}</div>
+                                <div class="text-muted small">{{ $subject->code ?: 'Subject code pending' }}</div>
                             </div>
                             @if($stats)
                                 <span class="badge bg-primary">{{ $stats->response_count ?? 0 }} responses</span>
@@ -56,7 +79,7 @@
                                 <div class="text-center text-muted py-4">
                                     <i class="bi bi-hourglass-split fs-2 d-block mb-2 opacity-25"></i>
                                     <div class="fw-semibold text-dark mb-1">No student feedback responses yet</div>
-                                    <small>Students will appear in this aggregate only after enrolled students submit feedback for the current term. Individual responses stay hidden to protect anonymity.</small>
+                                    <small>Students appear in this aggregate only after enrolled students submit feedback for the current term. Keep teaching materials, attendance, and assignment follow-up current while waiting. Individual responses stay hidden to protect anonymity.</small>
                                 </div>
                             @else
                                 @php
@@ -107,11 +130,11 @@
                                     </div>
                                     @foreach(array_slice($stats->comments, 0, 5) as $comment)
                                         @if(trim($comment))
-                                            <div class="bg-light rounded px-3 py-2 mb-2 small text-muted fst-italic">
-                                                "{{ $comment }}"
-                                            </div>
-                                        @endif
-                                    @endforeach
+                                        <div class="bg-light rounded px-3 py-2 mb-2 small text-muted fst-italic">
+                                            Comment: {{ $comment }}
+                                        </div>
+                                    @endif
+                                @endforeach
                                 @endif
 
                             @endif
