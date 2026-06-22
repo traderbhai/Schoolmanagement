@@ -30,7 +30,7 @@ class TimetableController extends Controller
         $courseId = $request->course_id;
 
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
-        $grid = $semesterId ? $this->service->buildWeeklyGrid($semesterId, $courseId) : [];
+        $grid = $semesterId ? $this->service->buildWeeklyGrid($semesterId, $courseId, officialOnly: true) : [];
 
         return view('admin.timetable.index', compact(
             'semesters', 'courses', 'slots', 'grid', 'semesterId', 'courseId'
@@ -177,7 +177,7 @@ class TimetableController extends Controller
         $teacherId = $request->teacher_id;
 
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
-        $grid = ($semesterId && $teacherId) ? $this->service->buildWeeklyGrid($semesterId, null, $teacherId) : [];
+        $grid = ($semesterId && $teacherId) ? $this->service->buildWeeklyGrid($semesterId, null, $teacherId, officialOnly: true) : [];
 
         return view('admin.timetable.teacher-view', compact('teachers', 'semesters', 'slots', 'grid', 'semesterId', 'teacherId'));
     }

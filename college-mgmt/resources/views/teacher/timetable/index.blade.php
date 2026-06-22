@@ -33,10 +33,14 @@
             <ul class="mb-0 mt-1">
                 @foreach($todaySubstitutions as $sub)
                     <li>
-                        Today: <strong>{{ $sub->entry->subject->name ?? 'Subject not linked' }}</strong>
-                        - {{ $sub->action }}
-                        @if($sub->reason)
-                            <span class="text-muted small">({{ $sub->reason }})</span>
+                        Today: <strong>{{ $sub['subject'] ?? 'Subject not linked' }}</strong>
+                        @if(!empty($sub['group']))
+                            <span class="text-muted small">({{ $sub['group'] }})</span>
+                        @endif
+                        - {{ $sub['action'] ?? 'Updated' }}
+                        <span class="badge bg-secondary ms-1">{{ $sub['source'] ?? 'Timetable' }}</span>
+                        @if(!empty($sub['reason']))
+                            <span class="text-muted small">({{ $sub['reason'] }})</span>
                         @endif
                     </li>
                 @endforeach
@@ -81,11 +85,11 @@
                                     @elseif($entry)
                                         <td class="text-center py-2">
                                             <div class="fw-bold text-primary" style="font-size:0.8rem;">
-                                                {{ $entry->subject->code ?? 'Subject code pending' }}
+                                                {{ $entry->subject?->code ?? $entry->courseGroup?->subject?->code ?? 'Subject code pending' }}
                                             </div>
-                                            <div class="small">{{ $entry->subject->name ?? 'Subject not linked' }}</div>
+                                            <div class="small">{{ $entry->subject?->name ?? $entry->courseGroup?->subject?->name ?? 'Subject not linked' }}</div>
                                             <div class="text-muted" style="font-size:0.72rem;">
-                                                {{ $entry->batch->name ?? 'Batch not linked' }}
+                                                {{ $entry->courseGroup?->name ?? $entry->batch?->name ?? 'Batch not linked' }}
                                             </div>
                                             <div class="text-muted" style="font-size:0.72rem;">
                                                 <i class="bi bi-door-open"></i>

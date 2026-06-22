@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Models\AcademicDeanActionItem;
 use App\Models\AcademicDeanExportLog;
 use App\Models\AcademicDeanReviewMeeting;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Attendance;
 use App\Models\Course;
 use App\Models\Department;
@@ -14,7 +17,10 @@ use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
+use App\Models\Term;
 use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use App\Services\AcademicDeanAttentionService;
 use App\Services\AcademicDeanRiskService;
@@ -157,6 +163,197 @@ class AcademicsDeanV007Test extends TestCase
             ->first(fn ($row) => $row['program']->id === $fixture['program']->id);
 
         $this->assertSame(1, $risk['metrics']['failedResults']);
+    }
+
+    public function test_dean_timetable_gap_queue_prefers_canonical_pmc_generation_items(): void
+    {
+        $fixture = $this->seedDeanFixture();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $term = Term::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $canonicalSubject = Subject::factory()->create([
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'name' => 'Canonical Dean Timetable Draft',
+            'is_active' => true,
+        ]);
+        $legacySubject = Subject::factory()->create([
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'name' => 'Stale Legacy Dean Draft',
+            'is_active' => true,
+        ]);
+
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Dean Section A',
+            'group_type' => 'section',
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $canonicalSubject->id,
+            'status' => 'active',
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Dean Canonical Draft Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $draftVersion->id,
+            'created_by' => User::factory()->create()->id,
+            'status' => 'draft',
+        ]);
+
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $canonicalSubject->id,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'day_of_week' => 1,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'status' => 'scheduled',
+            'official_status' => 'draft',
+        ]);
+
+        TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $legacySubject->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+
+        $titles = collect(app(AcademicDeanAttentionService::class)->queue('timetable_publish_gaps')['items'])
+            ->pluck('title');
+
+        $this->assertTrue($titles->contains('Canonical Dean Timetable Draft'));
+        $this->assertFalse($titles->contains('Stale Legacy Dean Draft'));
+    }
+
+    public function test_dean_program_risk_counts_canonical_pmc_timetable_gaps_without_stale_legacy_duplicates(): void
+    {
+        $fixture = $this->seedDeanFixture();
+        $baselineDraftTimetable = app(AcademicDeanRiskService::class)
+            ->programRisks()
+            ->first(fn ($row) => $row['program']->id === $fixture['program']->id)['metrics']['draftTimetable'];
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $term = Term::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $draftSubject = Subject::factory()->create([
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'name' => 'Risk Canonical Draft Timetable',
+            'is_active' => true,
+        ]);
+        $publishedSubject = Subject::factory()->create([
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'name' => 'Risk Canonical Published Timetable',
+            'is_active' => true,
+        ]);
+        $legacySubject = Subject::factory()->create([
+            'department_id' => $fixture['department']->id,
+            'program_id' => $fixture['program']->id,
+            'name' => 'Risk Stale Legacy Draft Timetable',
+            'is_active' => true,
+        ]);
+
+        $draftGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Risk Section A',
+            'group_type' => 'section',
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $draftSubject->id,
+            'status' => 'active',
+        ]);
+        $publishedGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Risk Section B',
+            'group_type' => 'section',
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $publishedSubject->id,
+            'status' => 'active',
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'published',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Dean Risk Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'created_by' => User::factory()->create()->id,
+            'status' => 'draft',
+        ]);
+
+        foreach ([
+            [$draftGroup, $draftSubject, $draftVersion, 'draft'],
+            [$publishedGroup, $publishedSubject, $publishedVersion, 'published'],
+        ] as [$group, $subject, $version, $officialStatus]) {
+            AcademicPmcTimetableGenerationItem::create([
+                'generation_run_id' => $run->id,
+                'timetable_version_id' => $version->id,
+                'course_group_id' => $group->id,
+                'program_id' => $fixture['program']->id,
+                'term_id' => $term->id,
+                'subject_id' => $subject->id,
+                'session_type' => 'lecture',
+                'duration_slots' => 1,
+                'day_of_week' => 1,
+                'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+                'status' => 'scheduled',
+                'official_status' => $officialStatus,
+            ]);
+        }
+
+        TimetableEntry::factory()->create([
+            'semester_id' => $fixture['semester']->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $legacySubject->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+
+        $risk = app(AcademicDeanRiskService::class)
+            ->programRisks()
+            ->first(fn ($row) => $row['program']->id === $fixture['program']->id);
+
+        $this->assertSame($baselineDraftTimetable + 1, $risk['metrics']['draftTimetable']);
+        $this->assertTrue($risk['reasons']->contains(($baselineDraftTimetable + 1) . ' timetable gaps'));
     }
 
     public function test_dean_can_create_review_action_update_action_and_export(): void

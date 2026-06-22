@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\{TimetableEntry, TimetableSlot, Teacher, Term};
+use App\Models\{AcademicPmcTimetableGenerationItem, TimetableEntry, TimetableSlot, Teacher, Term};
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class TeacherWorkloadWarningService
 {
@@ -16,6 +17,15 @@ class TeacherWorkloadWarningService
      */
     public function getCurrentWorkload(int $teacherId, int $termId): array
     {
+        $officialItems = $this->officialPmcItemsForTerm($termId);
+        if ($officialItems->isNotEmpty()) {
+            return $this->canonicalCurrentWorkload(
+                $officialItems->where('teacher_id', $teacherId)->values(),
+                $teacherId,
+                $termId
+            );
+        }
+
         $entries = TimetableEntry::where('teacher_id', $teacherId)
             ->where('term_id', $termId)
             ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
@@ -90,6 +100,11 @@ class TeacherWorkloadWarningService
      */
     public function getTeachersWithWarnings(int $termId): array
     {
+        $officialItems = $this->officialPmcItemsForTerm($termId);
+        if ($officialItems->isNotEmpty()) {
+            return $this->canonicalTeachersWithWarnings($officialItems, $termId);
+        }
+
         $entries = TimetableEntry::where('term_id', $termId)
             ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
             ->with(['teacher.user', 'slot'])
@@ -167,6 +182,81 @@ class TeacherWorkloadWarningService
         $end = \Carbon\Carbon::parse($slot->end_time);
 
         return $start->diffInMinutes($end) / 60;
+    }
+
+    private function officialPmcItemsForTerm(int $termId): Collection
+    {
+        return AcademicPmcTimetableGenerationItem::with(['teacher.user', 'courseGroup.batch', 'courseGroup.subject', 'batch', 'subject', 'slot', 'timetableVersion'])
+            ->where(function (Builder $query) use ($termId) {
+                $query->where('term_id', $termId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $query) => $query->where('status', 'published'))
+            ->get();
+    }
+
+    private function canonicalCurrentWorkload(Collection $items, int $teacherId, int $termId): array
+    {
+        $totalHours = $items->sum(fn ($item) => $this->getSlotDuration($item->timetable_slot_id) * max(1, (int) ($item->duration_slots ?? 1)));
+        $teachingWeeks = $this->getTeachingWeeks($termId);
+        $weeklyLoad = $teachingWeeks > 0 ? $totalHours / $teachingWeeks : 0;
+
+        return [
+            'teacher_id' => $teacherId,
+            'total_hours' => $totalHours,
+            'weekly_load' => round($weeklyLoad, 2),
+            'session_count' => $items->count(),
+            'subject_count' => $items
+                ->map(fn ($item) => $item->subject_id ?: $item->courseGroup?->subject_id)
+                ->filter()
+                ->unique()
+                ->count(),
+            'entries' => $items->map(function ($item) {
+                $subject = $item->subject ?: $item->courseGroup?->subject;
+                $batch = $item->batch ?: $item->courseGroup?->batch;
+
+                return [
+                    'day' => $item->day_of_week,
+                    'slot' => $item->slot->name ?? 'N/A',
+                    'subject' => $subject?->name ?? 'N/A',
+                    'batch' => $item->courseGroup?->name ?? $batch?->name ?? 'N/A',
+                    'hours' => $this->getSlotDuration($item->timetable_slot_id) * max(1, (int) ($item->duration_slots ?? 1)),
+                    'source' => 'canonical_pmc_official_sessions',
+                ];
+            })->toArray(),
+        ];
+    }
+
+    private function canonicalTeachersWithWarnings(Collection $items, int $termId): array
+    {
+        $warnings = [];
+
+        foreach ($items->groupBy('teacher_id') as $teacherId => $teacherItems) {
+            $totalHours = $teacherItems->sum(fn ($item) => $this->getSlotDuration($item->timetable_slot_id) * max(1, (int) ($item->duration_slots ?? 1)));
+            $teachingWeeks = $this->getTeachingWeeks($termId);
+            $weeklyLoad = $teachingWeeks > 0 ? $totalHours / $teachingWeeks : 0;
+
+            if ($weeklyLoad >= self::WARNING_THRESHOLD) {
+                $teacher = $teacherItems->first()->teacher;
+                $warnings[] = [
+                    'teacher_id' => $teacherId,
+                    'teacher_name' => $teacher?->user->name ?? 'Unknown',
+                    'weekly_load' => round($weeklyLoad, 2),
+                    'session_count' => $teacherItems->count(),
+                    'warning_type' => $weeklyLoad > self::OPTIMAL_MAX ? 'overload' : 'approaching',
+                    'status_color' => $weeklyLoad > self::OPTIMAL_MAX ? 'danger' : 'warning',
+                    'source' => 'canonical_pmc_official_sessions',
+                ];
+            }
+        }
+
+        usort($warnings, fn($a, $b) => $b['weekly_load'] <=> $a['weekly_load']);
+
+        return $warnings;
     }
 
     private function publishedTimetableScope(Builder $query): Builder

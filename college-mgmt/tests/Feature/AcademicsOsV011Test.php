@@ -3,7 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\ApprovalWorkflow;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Attendance;
+use App\Models\Batch;
+use App\Models\Classroom;
 use App\Models\Course;
 use App\Models\CourseOutcome;
 use App\Models\CurriculumChange;
@@ -16,6 +21,7 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
 use App\Models\TimetableVersion;
@@ -404,6 +410,135 @@ class AcademicsOsV011Test extends TestCase
 
         $this->assertFalse($workloadTitles->contains('Draft Version Workload Faculty'));
         $this->assertTrue($draftTitles->contains($fixture['subject']->name));
+    }
+
+    public function test_attention_faculty_workload_prefers_canonical_pmc_official_sessions_for_migrated_scope(): void
+    {
+        $fixture = $this->academicFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $batch = Batch::factory()->create(['program_id' => $fixture['program']->id]);
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id, 'batch_id' => $batch->id]);
+        $slot = TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1]);
+        $room = Classroom::factory()->create();
+        $canonicalTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Canonical Attention Faculty'])->id,
+            'department_id' => $fixture['department']->id,
+        ]);
+        $legacyTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Stale Legacy Attention Faculty'])->id,
+            'department_id' => $fixture['department']->id,
+        ]);
+        $draftTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Canonical Attention Faculty'])->id,
+            'department_id' => $fixture['department']->id,
+        ]);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $dean->id,
+            'published_by' => $dean->id,
+            'published_at' => now(),
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $dean->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Attention Canonical Workload Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'created_by' => $dean->id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Attention Canonical Group',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 40,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'course_group_id' => $group->id,
+            'session_index' => 1,
+            'session_type' => 'lab',
+            'duration_slots' => 5,
+            'teacher_id' => $canonicalTeacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => 1,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'locked',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $dean->id,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'session_index' => 2,
+            'session_type' => 'lab',
+            'duration_slots' => 5,
+            'teacher_id' => $draftTeacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => 2,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+        ]);
+
+        foreach (range(1, 5) as $day) {
+            TimetableEntry::factory()->create([
+                'semester_id' => $fixture['semester']->id,
+                'course_id' => $course->id,
+                'program_id' => $fixture['program']->id,
+                'term_id' => $term->id,
+                'subject_id' => $fixture['subject']->id,
+                'teacher_id' => $legacyTeacher->id,
+                'timetable_slot_id' => TimetableSlot::factory()->create([
+                    'start_time' => sprintf('%02d:00:00', 8 + $day),
+                    'end_time' => sprintf('%02d:00:00', 9 + $day),
+                    'sort_order' => $day + 10,
+                ])->id,
+                'day_of_week' => $day,
+                'is_active' => true,
+                'status' => 'published',
+            ]);
+        }
+
+        $queue = app(AcademicAttentionService::class)->queue($dean, 'faculty_workload');
+        $titles = collect($queue['items'])->pluck('title');
+        $canonicalItem = collect($queue['items'])->firstWhere('title', 'Canonical Attention Faculty');
+
+        $this->assertTrue($titles->contains('Canonical Attention Faculty'));
+        $this->assertFalse($titles->contains('Stale Legacy Attention Faculty'));
+        $this->assertFalse($titles->contains('Draft Canonical Attention Faculty'));
+        $this->assertSame('canonical_pmc_official_sessions', $canonicalItem['source']);
+        $this->assertStringContainsString('5 timetable slots', $canonicalItem['subtitle']);
     }
 
     public function test_attention_service_result_publish_pending_excludes_already_published_exams(): void

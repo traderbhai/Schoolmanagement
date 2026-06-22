@@ -2,10 +2,13 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
-use App\Models\{CourseFeedback, Subject, Term, TimetableEntry};
+use App\Http\Controllers\Teacher\Concerns\UsesOfficialTeachingSubjects;
+use App\Models\{CourseFeedback, Subject, Term};
 
 class FeedbackViewController extends Controller
 {
+    use UsesOfficialTeachingSubjects;
+
     public function index()
     {
         $teacher = auth()->user()->teacher;
@@ -18,14 +21,7 @@ class FeedbackViewController extends Controller
             return view('teacher.feedback.index', compact('feedbackBySubject', 'currentTerm', 'profileMissing'));
         }
 
-        $subjectIds = TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('is_active', true)
-            ->where('status', 'published')
-            ->where(function ($query) {
-                $query->whereNull('timetable_version_id')
-                    ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
-            })
-            ->pluck('subject_id')->unique()->toArray();
+        $subjectIds = $this->officialTeachingSubjectIds($teacher);
 
         $feedbackBySubject = Subject::whereIn('id', $subjectIds)
             ->get()

@@ -2,9 +2,11 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Term, Teacher, TimetableEntry, TimetableSlot, Subject,
+use App\Models\{AcademicPmcTimetableGenerationItem, Program, Term, Teacher, TimetableEntry, TimetableSlot, Subject,
                 SubjectFacultyAssignment, Attendance, CourseFeedback, Exam, ExamResult,
                 RoleProgramAssignment, AssessmentComponent, ProgramSubject};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -29,15 +31,37 @@ class PmcFacultyController extends Controller
 
         $slots = TimetableSlot::where('is_active', true)->get()->keyBy('id');
 
-        // All teachers assigned to entries in these programs this term
-        $entries = TimetableEntry::whereIn('program_id', $programIds)
-            ->where('term_id', $selectedTerm?->id)
-            ->where('is_active', true)
-            ->with(['teacher.user', 'slot', 'subject', 'batch'])
-            ->get();
+        $officialItems = $this->officialPmcItems($programIds, $selectedTerm?->id);
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
 
-        // Compute hours/week per teacher
-        $workload = $entries->groupBy('teacher_id')->map(function ($teacherEntries) use ($slots) {
+        $legacyEntries = TimetableEntry::whereIn('program_id', $programIds)
+            ->where('term_id', $selectedTerm?->id)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+            ->with(['teacher.user', 'slot', 'subject', 'batch', 'version'])
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+
+        $workload = $this->canonicalWorkloadRows($officialItems, $slots)
+            ->merge($this->legacyWorkloadRows($legacyEntries, $slots))
+            ->sortByDesc('hours')
+            ->values();
+
+        $terms = Term::orderByDesc('start_date')->take(8)->get();
+
+        return view('departmental.program-chair.faculty.workload', compact(
+            'workload', 'terms', 'selectedTerm'
+        ));
+    }
+
+    private function legacyWorkloadRows(Collection $entries, Collection $slots): Collection
+    {
+        return $entries->groupBy('teacher_id')->map(function ($teacherEntries) use ($slots) {
             $teacher = $teacherEntries->first()?->teacher;
             if (!$teacher) return null;
             $hours = $teacherEntries->sum(function ($e) use ($slots) {
@@ -55,13 +79,81 @@ class PmcFacultyController extends Controller
                 'batches'  => $teacherEntries->pluck('batch.name')->unique()->filter()->values(),
                 'overload' => $hours > 18,
             ];
-        })->filter()->sortByDesc('hours')->values();
+        })->filter()->values();
+    }
 
-        $terms = Term::orderByDesc('start_date')->take(8)->get();
+    private function canonicalWorkloadRows(Collection $items, Collection $slots): Collection
+    {
+        return $items->groupBy('teacher_id')->map(function ($teacherItems) use ($slots) {
+            $teacher = $teacherItems->first()?->teacher;
+            if (!$teacher) return null;
 
-        return view('departmental.program-chair.faculty.workload', compact(
-            'workload', 'terms', 'selectedTerm'
-        ));
+            $hours = $teacherItems->sum(function (AcademicPmcTimetableGenerationItem $item) use ($slots) {
+                $slot = $slots[$item->timetable_slot_id] ?? null;
+                if (!$slot) return max(1, (int) ($item->duration_slots ?? 1));
+
+                $start = strtotime($slot->start_time);
+                $end = strtotime($slot->end_time);
+                $slotHours = ($end - $start) / 3600;
+
+                return $slotHours * max(1, (int) ($item->duration_slots ?? 1));
+            });
+
+            return (object) [
+                'teacher' => $teacher,
+                'sessions' => $teacherItems->count(),
+                'hours' => round($hours, 1),
+                'subjects' => $teacherItems
+                    ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->subject ?: $item->courseGroup?->subject)
+                    ->filter()
+                    ->unique('id')
+                    ->values(),
+                'batches' => $teacherItems
+                    ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->batch ?: $item->courseGroup?->batch)
+                    ->filter()
+                    ->unique('id')
+                    ->values(),
+                'overload' => $hours > 18,
+                'source' => 'canonical_pmc_official_sessions',
+            ];
+        })->filter()->values();
+    }
+
+    private function officialPmcItems(array $programIds, ?int $termId): Collection
+    {
+        return AcademicPmcTimetableGenerationItem::with(['teacher.user', 'slot', 'subject', 'batch', 'courseGroup.subject', 'courseGroup.batch', 'timetableVersion'])
+            ->where(function (Builder $query) use ($programIds) {
+                $query->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+            })
+            ->when($termId, function (Builder $query) use ($termId) {
+                $query->where(function (Builder $scope) use ($termId) {
+                    $scope->where('term_id', $termId)
+                        ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+                });
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->get();
+    }
+
+    private function publishedTimetableScope(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function (Builder $versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 
     // ── Marks submission tracker ──────────────────────────────────────────────

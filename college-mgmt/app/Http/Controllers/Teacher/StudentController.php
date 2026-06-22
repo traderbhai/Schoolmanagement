@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, Student, TimetableEntry, Semester, Term};
+use App\Models\{AcademicPmcCourseGroupMember, AcademicPmcTimetableGenerationItem, Attendance, Student, TimetableEntry, Semester, Term};
+use App\Services\CanonicalTimetableBridgeService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
@@ -14,6 +16,48 @@ class StudentController extends Controller
 
         if (! $teacher) {
             $students = collect();
+
+            return view('teacher.students', compact('students', 'currentSemester', 'search'));
+        }
+
+        app(CanonicalTimetableBridgeService::class)
+            ->ensureTeacherSemesterBridges((int) $teacher->id, $currentSemester, $request->user());
+
+        $canonicalItems = $this->officialPmcTeacherItems((int) $teacher->id, $currentSemester);
+
+        if ($canonicalItems->isNotEmpty()) {
+            $courseGroupIds = $canonicalItems->pluck('course_group_id')->filter()->unique()->values();
+            $studentIds = AcademicPmcCourseGroupMember::whereIn('course_group_id', $courseGroupIds)
+                ->where('status', 'active')
+                ->pluck('student_id')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $students = $studentIds->isEmpty()
+                ? collect()
+                : Student::whereIn('id', $studentIds)
+                    ->with(['user', 'course', 'department'])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $query->where(function ($scope) use ($search) {
+                            $scope->whereHas('user', fn ($userQuery) => $userQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%"))
+                                ->orWhere('enrollment_number', 'like', "%{$search}%")
+                                ->orWhere('roll_number', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                    })
+                    ->orderBy('roll_number')
+                    ->get();
+
+            $entryIds = $canonicalItems->pluck('operational_timetable_entry_id')
+                ->merge(TimetableEntry::whereIn('pmc_generation_item_id', $canonicalItems->pluck('id'))->pluck('id'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $this->attachAttendanceSummary($students, $entryIds);
 
             return view('teacher.students', compact('students', 'currentSemester', 'search'));
         }
@@ -62,14 +106,41 @@ class StudentController extends Controller
             ->orderBy('roll_number')
             ->get();
 
-        $attendanceSummary = Attendance::selectRaw(
-                "student_id, COUNT(*) as total_sessions, SUM(CASE WHEN status IN ('present', 'late') THEN 1 ELSE 0 END) as attended_sessions"
-            )
-            ->whereIn('timetable_entry_id', $entryIds)
-            ->whereIn('student_id', $students->pluck('id'))
-            ->groupBy('student_id')
-            ->get()
-            ->keyBy('student_id');
+        $this->attachAttendanceSummary($students, $entryIds);
+
+        return view('teacher.students', compact('students', 'currentSemester', 'search'));
+    }
+
+    private function officialPmcTeacherItems(int $teacherId, ?Semester $currentSemester)
+    {
+        return AcademicPmcTimetableGenerationItem::with(['courseGroup.term', 'timetableVersion'])
+            ->where('teacher_id', $teacherId)
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('course_group_id')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->when($currentSemester, function (Builder $query) use ($currentSemester) {
+                $query->where(function (Builder $scope) use ($currentSemester) {
+                    $scope->whereHas('term', fn (Builder $term) => $this->semesterTermScope($term, $currentSemester))
+                        ->orWhereHas('courseGroup.term', fn (Builder $term) => $this->semesterTermScope($term, $currentSemester));
+                });
+            })
+            ->get();
+    }
+
+    private function attachAttendanceSummary($students, $entryIds): void
+    {
+        $attendanceSummary = $entryIds->isEmpty() || $students->isEmpty()
+            ? collect()
+            : Attendance::selectRaw(
+                    "student_id, COUNT(*) as total_sessions, SUM(CASE WHEN status IN ('present', 'late') THEN 1 ELSE 0 END) as attended_sessions"
+                )
+                ->whereIn('timetable_entry_id', $entryIds)
+                ->whereIn('student_id', $students->pluck('id'))
+                ->groupBy('student_id')
+                ->get()
+                ->keyBy('student_id');
 
         $students->each(function (Student $student) use ($attendanceSummary) {
             $summary = $attendanceSummary->get($student->id);
@@ -82,8 +153,14 @@ class StudentController extends Controller
                 ? round(($attended / $total) * 100, 1)
                 : null;
         });
+    }
 
-        return view('teacher.students', compact('students', 'currentSemester', 'search'));
+    private function semesterTermScope(Builder $term, Semester $semester): void
+    {
+        $term->where(function (Builder $scope) use ($semester) {
+            $scope->where('term_number', $semester->number)
+                ->orWhere('name', $semester->name);
+        });
     }
 
     private function publishedTimetableScope($query)

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Attendance, Batch, Classroom, Course, Exam, ExamRegistration, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, TimetableVersion, User};
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, Attendance, Batch, Classroom, Course, Exam, ExamRegistration, ExamResult, Program, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, TimetableVersion, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -74,6 +74,9 @@ class AdminAcademicRosterCanonicalWorkflowTest extends TestCase
             'exam_date' => now()->subDay()->toDateString(),
             'total_marks' => 100,
         ]);
+        $teacher = Teacher::factory()->create();
+        $classroom = Classroom::factory()->create();
+        $slot = TimetableSlot::factory()->create();
         $entry = TimetableEntry::factory()->create([
             'program_id' => $program->id,
             'batch_id' => $batch->id,
@@ -81,14 +84,14 @@ class AdminAcademicRosterCanonicalWorkflowTest extends TestCase
             'term_id' => $term->id,
             'semester_id' => $semester->id,
             'subject_id' => $subject->id,
-            'teacher_id' => Teacher::factory()->create()->id,
-            'classroom_id' => Classroom::factory()->create()->id,
-            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $classroom->id,
+            'timetable_slot_id' => $slot->id,
             'day_of_week' => now()->dayOfWeekIso,
             'is_active' => true,
         ]);
 
-        return compact('admin', 'student', 'outsider', 'exam', 'entry');
+        return compact('admin', 'program', 'batch', 'course', 'term', 'semester', 'subject', 'student', 'outsider', 'exam', 'entry', 'teacher', 'classroom', 'slot');
     }
 
     public function test_admin_exam_results_use_canonical_subject_roster_and_reject_outsider_results(): void
@@ -556,6 +559,99 @@ class AdminAcademicRosterCanonicalWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_admin_attendance_entries_json_creates_bridge_for_unbridged_official_pmc_session(): void
+    {
+        $fixture = $this->fixture();
+        $subject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Admin Unbridged Official Subject',
+        ]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Admin Unbridged Section',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $subject->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 1,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $group->members()->create(['student_id' => $fixture['student']->id, 'status' => 'active']);
+        $version = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['batch']->id,
+            'version_number' => 3,
+            'status' => 'published',
+            'created_by' => $fixture['admin']->id,
+            'published_by' => $fixture['admin']->id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Admin Unbridged Attendance Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $fixture['admin']->id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+        ]);
+        $slot = TimetableSlot::factory()->create([
+            'sort_order' => ((int) $fixture['entry']->slot?->sort_order) + 1,
+            'is_break' => false,
+        ]);
+        $item = AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $subject->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => $fixture['entry']->classroom_id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $fixture['admin']->id,
+        ]);
+
+        $this->assertDatabaseMissing('timetable_entries', [
+            'pmc_generation_item_id' => $item->id,
+        ]);
+
+        $this->actingAs($fixture['admin'])
+            ->get(route('admin.attendance.index'))
+            ->assertOk()
+            ->assertSee('PMC Group Admin Unbridged Section');
+
+        $bridge = TimetableEntry::where('pmc_generation_item_id', $item->id)->firstOrFail();
+
+        $this->actingAs($fixture['admin'])
+            ->getJson(route('admin.attendance.entries', [
+                'semester_id' => $fixture['semester']->id,
+                'course_id' => $bridge->course_id,
+                'date' => now()->toDateString(),
+            ]))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $bridge->id,
+            ])
+            ->assertSee('Admin Unbridged Official Subject');
+    }
+
     public function test_admin_attendance_requires_active_entry_and_scheduled_date(): void
     {
         $fixture = $this->fixture();
@@ -835,8 +931,9 @@ class AdminAcademicRosterCanonicalWorkflowTest extends TestCase
             ->buildWeeklyGrid($fixture['entry']->semester_id, officialOnly: true);
         $subjects = collect($grid)
             ->flatMap(fn (array $day) => collect($day))
+            ->flatMap(fn ($entries) => $entries)
             ->filter()
-            ->map(fn (TimetableEntry $entry) => $entry->subject?->name)
+            ->map(fn ($entry) => $entry->subject?->name)
             ->values()
             ->all();
 

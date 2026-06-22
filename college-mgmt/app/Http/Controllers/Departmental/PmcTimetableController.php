@@ -2,10 +2,10 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AcademicYear, Course, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, AcademicYear, Course, Department, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment, Semester};
-use App\Services\{TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
+use App\Services\{AcademicPmcTimetableV041Service, TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -149,6 +149,29 @@ class PmcTimetableController extends Controller {
         );
     }
 
+    private function legacyCourseForCourseGroup(AcademicPmcCourseGroup $group, Program $program): Course
+    {
+        $departmentId = $group->subject?->department_id
+            ?: $program->department_id
+            ?: Department::query()->value('id');
+
+        if (! $departmentId) {
+            $departmentId = Department::firstOrCreate(['code' => 'ACAD'], ['name' => 'Academics'])->id;
+        }
+
+        return Course::firstOrCreate(
+            ['code' => 'PMCG' . $group->id],
+            [
+                'department_id' => $departmentId,
+                'name' => 'PMC Group ' . $group->name,
+                'description' => 'Compatibility bridge for PMC timetable group #' . $group->id,
+                'duration_years' => 1,
+                'total_semesters' => 1,
+                'is_active' => true,
+            ]
+        );
+    }
+
     // ── Timetable builder ─────────────────────────────────────────────────────
     public function builder(Request $request) {
         $programIds = $this->programIds();
@@ -164,11 +187,18 @@ class PmcTimetableController extends Controller {
 
         $selectedBatch = $request->filled('batch_id')
             ? Batch::find($request->batch_id) : null;
+        $builderFilters = [
+            'teacher_id' => $request->filled('teacher_id') ? (int) $request->teacher_id : null,
+            'classroom_id' => $request->filled('classroom_id') ? (int) $request->classroom_id : null,
+            'course_group_id' => $request->filled('course_group_id') ? (int) $request->course_group_id : null,
+            'session_type' => $request->filled('session_type') ? (string) $request->session_type : null,
+            'timetable_status' => $request->filled('timetable_status') ? (string) $request->timetable_status : null,
+        ];
 
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
         $days  = [1=>'Monday',2=>'Tuesday',3=>'Wednesday',4=>'Thursday',5=>'Friday',6=>'Saturday'];
 
-        // Entries for this program-term-batch
+        // Legacy compatibility entries for this program-term-batch.
         $entries = TimetableEntry::where('term_id', $selectedTerm?->id)
             ->when($selectedProgram, fn($q) => $q->where('program_id', $selectedProgram->id))
             ->when($selectedBatch,   fn($q) => $q->where('batch_id', $selectedBatch->id))
@@ -177,11 +207,64 @@ class PmcTimetableController extends Controller {
             ->get()
             ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
 
+        $canonicalEntries = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject', 'courseGroup.batch', 'teacher.user', 'classroom', 'slot', 'batch'])
+            ->whereNotIn('official_status', ['archived', 'cancelled'])
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->whereNotNull('day_of_week')
+            ->whereNotNull('timetable_slot_id')
+            ->when($selectedProgram, fn($q) => $q->where(function ($scope) use ($selectedProgram) {
+                $scope->where('program_id', $selectedProgram->id)
+                    ->orWhereHas('courseGroup', fn($group) => $group->where('program_id', $selectedProgram->id));
+            }))
+            ->when($selectedTerm, fn($q) => $q->where(function ($scope) use ($selectedTerm) {
+                $scope->where('term_id', $selectedTerm->id)
+                    ->orWhereHas('courseGroup', fn($group) => $group->where('term_id', $selectedTerm->id));
+            }))
+            ->when($selectedBatch, fn($q) => $q->where(function ($scope) use ($selectedBatch) {
+                $scope->where('batch_id', $selectedBatch->id)
+                    ->orWhereHas('courseGroup', fn($group) => $group->where('batch_id', $selectedBatch->id));
+            }))
+            ->when($builderFilters['teacher_id'], fn($q, $teacherId) => $q->where('teacher_id', $teacherId))
+            ->when($builderFilters['classroom_id'], fn($q, $classroomId) => $q->where('classroom_id', $classroomId))
+            ->when($builderFilters['course_group_id'], fn($q, $courseGroupId) => $q->where('course_group_id', $courseGroupId))
+            ->when($builderFilters['session_type'], fn($q, $sessionType) => $q->where('session_type', $sessionType))
+            ->when($builderFilters['timetable_status'], fn($q, $status) => $q->where('status', $status))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id')
+            ->orderBy('id')
+            ->get()
+            ->groupBy(fn($item) => $item->day_of_week . '-' . $item->timetable_slot_id);
+
         // Subjects in this program-term
         $programSubjects = \App\Models\ProgramSubject::where('program_id', $selectedProgram?->id ?? 0)
             ->when($selectedTerm, fn($q) => $q->where('term_id', $selectedTerm->id))
             ->with('subject')
             ->get();
+
+        $courseGroups = AcademicPmcCourseGroup::with(['subject', 'batch'])
+            ->when($selectedProgram, fn($q) => $q->where('program_id', $selectedProgram->id))
+            ->when($selectedTerm, fn($q) => $q->where('term_id', $selectedTerm->id))
+            ->when($selectedBatch, fn($q) => $q->where('batch_id', $selectedBatch->id))
+            ->whereIn('status', ['active', 'draft'])
+            ->orderBy('name')
+            ->get();
+
+        $subjectOptions = $programSubjects
+            ->pluck('subject')
+            ->filter()
+            ->merge($courseGroups->pluck('subject')->filter())
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
+        $courseGroupsForBuilder = $courseGroups
+            ->map(fn (AcademicPmcCourseGroup $group): array => [
+                'id' => $group->id,
+                'subject_id' => $group->subject_id,
+                'batch_id' => $group->batch_id,
+                'group_type' => $group->group_type,
+            ])
+            ->values();
 
         $teachers   = Teacher::with('user')->where('status','active')->orderBy('id')->get();
         $classrooms = Classroom::where('is_active', true)->orderBy('name')->get();
@@ -200,7 +283,7 @@ class PmcTimetableController extends Controller {
 
         return view('departmental.program-chair.timetable.builder', compact(
             'programs','terms','batches','selectedProgram','selectedTerm','selectedBatch',
-            'slots','days','entries','programSubjects','teachers','classrooms','availability','version'
+            'builderFilters','slots','days','entries','canonicalEntries','programSubjects','subjectOptions','courseGroups','courseGroupsForBuilder','teachers','classrooms','availability','version'
         ));
     }
 
@@ -215,6 +298,9 @@ class PmcTimetableController extends Controller {
             'subject_id'        => 'nullable|exists:subjects,id',
             'teacher_id'        => 'nullable|exists:teachers,id',
             'classroom_id'      => 'nullable|exists:classrooms,id',
+            'course_group_id'   => 'nullable|exists:academic_pmc_course_groups,id',
+            'session_type'      => 'nullable|string|max:80',
+            'duration_slots'    => 'nullable|integer|min:1|max:6',
         ]);
 
         if ($message = $this->validateAcademicScope($request)) {
@@ -223,6 +309,10 @@ class PmcTimetableController extends Controller {
 
         if ($this->hasPublishedVersion((int) $request->program_id, (int) $request->term_id, $request->filled('batch_id') ? (int) $request->batch_id : null)) {
             return response()->json(['message' => $this->publishedLockMessage()], 423);
+        }
+
+        if ($request->filled('course_group_id')) {
+            return $this->saveCanonicalCourseGroupSlot($request);
         }
 
         $program = Program::findOrFail($request->program_id);
@@ -270,6 +360,98 @@ class PmcTimetableController extends Controller {
                 'timetable_slot_id' => $request->timetable_slot_id,
                 'is_active'         => true,
                 'status'            => 'draft',
+            ]);
+        }
+
+        return response()->json(['message' => 'Saved.']);
+    }
+
+    private function saveCanonicalCourseGroupSlot(Request $request)
+    {
+        $courseGroup = AcademicPmcCourseGroup::findOrFail($request->course_group_id);
+
+        if (
+            (int) $courseGroup->program_id !== (int) $request->program_id
+            || (int) $courseGroup->term_id !== (int) $request->term_id
+            || (int) $courseGroup->batch_id !== (int) $request->batch_id
+            || ($request->filled('subject_id') && (int) $courseGroup->subject_id !== (int) $request->subject_id)
+        ) {
+            return response()->json(['message' => 'Course group does not match the selected program, term, batch, and subject.'], 422);
+        }
+
+        $existing = AcademicPmcTimetableGenerationItem::where('course_group_id', $courseGroup->id)
+            ->where('day_of_week', $request->day_of_week)
+            ->where('timetable_slot_id', $request->timetable_slot_id)
+            ->get();
+
+        $locked = $existing->first(fn (AcademicPmcTimetableGenerationItem $item): bool =>
+            $item->official_status === 'published'
+            || $item->timetable_version_id !== null
+            || $item->is_locked
+        );
+
+        if ($locked) {
+            return response()->json(['message' => 'Existing canonical timetable history for this group slot is locked. Use the PMC revision/version workflow.'], 423);
+        }
+
+        if ($request->filled('subject_id')) {
+            $availability = app(ConflictPreventionService::class)->isSlotAvailable(
+                (int) $request->day_of_week,
+                (int) $request->timetable_slot_id,
+                (int) $request->teacher_id,
+                (int) $request->classroom_id,
+                (int) $request->batch_id,
+                (int) $request->term_id,
+                $courseGroup->id,
+                (int) ($request->duration_slots ?? $this->durationForCourseGroup($courseGroup)),
+                $existing->pluck('id')->map(fn ($id) => (int) $id)->all()
+            );
+
+            if (! $availability['available']) {
+                return response()->json(['conflicts' => $availability['conflicts']], 422);
+            }
+        }
+
+        $existing->each->delete();
+
+        if ($request->filled('subject_id')) {
+            $run = AcademicPmcTimetableGenerationRun::create([
+                'title' => 'Manual course-group slot edit',
+                'strategy' => 'manual_slot_edit',
+                'program_id' => $request->program_id,
+                'batch_id' => $request->batch_id,
+                'term_id' => $request->term_id,
+                'created_by' => Auth::id(),
+                'status' => 'draft',
+                'scheduled_count' => 1,
+                'unscheduled_count' => 0,
+                'quality_score' => 0,
+                'input_summary' => [
+                    'source' => 'program_chair_save_slot',
+                ],
+            ]);
+
+            AcademicPmcTimetableGenerationItem::create([
+                'generation_run_id' => $run->id,
+                'course_group_id' => $courseGroup->id,
+                'program_id' => $request->program_id,
+                'batch_id' => $request->batch_id,
+                'term_id' => $request->term_id,
+                'subject_id' => $request->subject_id,
+                'session_index' => 1,
+                'session_type' => $request->session_type ?? $this->sessionTypeForCourseGroup($courseGroup, []),
+                'duration_slots' => $request->duration_slots ?? $this->durationForCourseGroup($courseGroup),
+                'teacher_id' => $request->teacher_id,
+                'classroom_id' => $request->classroom_id,
+                'day_of_week' => $request->day_of_week,
+                'timetable_slot_id' => $request->timetable_slot_id,
+                'status' => 'scheduled',
+                'official_status' => 'draft',
+                'source_type' => 'manual_slot_edit',
+                'metadata' => [
+                    'edited_from' => 'program_chair_legacy_builder',
+                    'group_type' => $courseGroup->group_type,
+                ],
             ]);
         }
 
@@ -327,6 +509,19 @@ class PmcTimetableController extends Controller {
             'effective_from' => $request->effective_from ?? now()->toDateString(),
         ]);
 
+        $this->archiveCanonicalItemsForPublishedScope(
+            (int) $request->program_id,
+            (int) $request->term_id,
+            $request->filled('batch_id') ? (int) $request->batch_id : null
+        );
+        $canonicalItems = $this->canonicalPublishItems(
+            (int) $request->program_id,
+            (int) $request->term_id,
+            $request->filled('batch_id') ? (int) $request->batch_id : null
+        )->get();
+        $this->publishCanonicalItems($canonicalItems, $version);
+        $this->syncCanonicalItemsToLegacyRows($canonicalItems, $version);
+
         // Mark entries as published
         TimetableEntry::where([
             'program_id' => $request->program_id,
@@ -337,8 +532,162 @@ class PmcTimetableController extends Controller {
         return back()->with('success', "Timetable published as version {$version->version_number}.");
     }
 
+    private function canonicalPublishItems(int $programId, int $termId, ?int $batchId)
+    {
+        return AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'subject', 'teacher', 'classroom', 'slot'])
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where(fn ($query) => $query->whereNull('official_status')->orWhere('official_status', '!=', 'archived'))
+            ->whereNotNull('day_of_week')
+            ->whereNotNull('timetable_slot_id')
+            ->where(function ($query) use ($programId, $termId) {
+                $query->where(function ($direct) use ($programId, $termId) {
+                    $direct->where('program_id', $programId)
+                        ->where('term_id', $termId);
+                })->orWhereHas('courseGroup', function ($group) use ($programId, $termId) {
+                    $group->where('program_id', $programId)
+                        ->where('term_id', $termId);
+                });
+            })
+            ->when($batchId, function ($query) use ($batchId) {
+                $query->where(function ($scope) use ($batchId) {
+                    $scope->where('batch_id', $batchId)
+                        ->orWhereHas('courseGroup', fn ($group) => $group->where('batch_id', $batchId));
+                });
+            });
+    }
+
+    private function archiveCanonicalItemsForPublishedScope(int $programId, int $termId, ?int $batchId): void
+    {
+        $versionIds = TimetableVersion::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->when($batchId, fn ($query) => $query->where('batch_id', $batchId), fn ($query) => $query->whereNull('batch_id'))
+            ->where('status', 'archived')
+            ->pluck('id');
+
+        if ($versionIds->isEmpty()) {
+            return;
+        }
+
+        AcademicPmcTimetableGenerationItem::whereIn('timetable_version_id', $versionIds)
+            ->where('official_status', 'published')
+            ->update(['official_status' => 'archived', 'updated_at' => now()]);
+    }
+
+    private function publishCanonicalItems($items, TimetableVersion $version): void
+    {
+        foreach ($items as $item) {
+            $group = $item->courseGroup;
+            $item->update([
+                'timetable_version_id' => $version->id,
+                'program_id' => $item->program_id ?? $group?->program_id ?? $version->program_id,
+                'batch_id' => $item->batch_id ?? $group?->batch_id ?? $version->batch_id,
+                'term_id' => $item->term_id ?? $group?->term_id ?? $version->term_id,
+                'subject_id' => $item->subject_id ?? $group?->subject_id,
+                'official_status' => 'published',
+                'published_at' => now(),
+                'published_by' => Auth::id(),
+                'metadata' => array_merge($item->metadata ?: [], [
+                    'canonical_official_session' => true,
+                    'official_source' => 'academic_pmc_timetable_generation_items',
+                    'published_from' => 'program_chair_legacy_publish',
+                    'timetable_version_id' => $version->id,
+                    'published_by' => Auth::id(),
+                    'published_at' => now()->toDateTimeString(),
+                ]),
+            ]);
+        }
+    }
+
+    private function syncCanonicalItemsToLegacyRows($items, TimetableVersion $version): void
+    {
+        $program = Program::find($version->program_id);
+        $term = Term::find($version->term_id);
+        if (! $program || ! $term) {
+            return;
+        }
+
+        $semester = $this->legacySemesterForTerm($term);
+
+        foreach ($items as $item) {
+            if (! $item->teacher_id || ! $item->classroom_id || ! $item->timetable_slot_id || ! $item->day_of_week) {
+                continue;
+            }
+
+            $group = $item->courseGroup;
+            $subjectId = $item->subject_id ?? $group?->subject_id;
+            if (! $subjectId) {
+                continue;
+            }
+
+            $course = $group
+                ? $this->legacyCourseForCourseGroup($group, $program)
+                : $this->legacyCourseForProgram($program);
+            $entry = TimetableEntry::where('pmc_generation_item_id', $item->id)->first() ?: new TimetableEntry();
+            $entry->fill([
+                'semester_id' => $semester->id,
+                'course_id' => $course->id,
+                'program_id' => $item->program_id ?? $group?->program_id ?? $version->program_id,
+                'term_id' => $item->term_id ?? $group?->term_id ?? $version->term_id,
+                'batch_id' => $item->batch_id ?? $group?->batch_id ?? $version->batch_id,
+                'subject_id' => $subjectId,
+                'teacher_id' => $item->teacher_id,
+                'classroom_id' => $item->classroom_id,
+                'timetable_slot_id' => $item->timetable_slot_id,
+                'day_of_week' => $item->day_of_week,
+                'is_active' => true,
+                'status' => 'published',
+                'timetable_version_id' => $version->id,
+                'pmc_generation_item_id' => $item->id,
+            ]);
+            $entry->save();
+
+            $item->update([
+                'operational_timetable_entry_id' => $entry->id,
+                'metadata' => array_merge($item->metadata ?: [], [
+                    'operational_sync' => 'published',
+                    'operational_synced_at' => now()->toDateTimeString(),
+                    'operational_synced_by' => Auth::id(),
+                ]),
+            ]);
+        }
+    }
+
     // ── Conflict checker (AJAX) ───────────────────────────────────────────────
     public function checkConflict(Request $request) {
+        if ($request->filled('course_group_id')) {
+            $request->validate([
+                'course_group_id' => 'required|exists:academic_pmc_course_groups,id',
+                'teacher_id' => 'required|exists:teachers,id',
+                'classroom_id' => 'required|exists:classrooms,id',
+                'batch_id' => 'required|exists:batches,id',
+                'term_id' => 'required|exists:terms,id',
+                'day_of_week' => 'required|integer|between:1,6',
+                'timetable_slot_id' => 'required|exists:timetable_slots,id',
+                'duration_slots' => 'nullable|integer|min:1|max:6',
+            ]);
+
+            $existing = AcademicPmcTimetableGenerationItem::where('course_group_id', $request->course_group_id)
+                ->where('day_of_week', $request->day_of_week)
+                ->where('timetable_slot_id', $request->timetable_slot_id)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $availability = app(ConflictPreventionService::class)->isSlotAvailable(
+                (int) $request->day_of_week,
+                (int) $request->timetable_slot_id,
+                (int) $request->teacher_id,
+                (int) $request->classroom_id,
+                (int) $request->batch_id,
+                (int) $request->term_id,
+                (int) $request->course_group_id,
+                (int) ($request->duration_slots ?? 1),
+                $existing
+            );
+
+            return response()->json(['conflicts' => $availability['conflicts']]);
+        }
+
         $conflicts = app(TimetableConflictService::class)->check($request->all());
         return response()->json(['conflicts' => $conflicts]);
     }
@@ -348,33 +697,122 @@ class PmcTimetableController extends Controller {
         $programIds = $this->programIds();
         $currentTerm = Term::latest('start_date')->first();
 
+        $canonicalSessions = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject', 'courseGroup.batch', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
+            ->where(function ($query) use ($programIds) {
+                $query->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $programIds));
+            })
+            ->where(function ($query) use ($currentTerm) {
+                $query->where('term_id', $currentTerm?->id)
+                    ->orWhereHas('courseGroup', fn ($group) => $group->where('term_id', $currentTerm?->id));
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id')
+            ->get();
+
         $entries = TimetableEntry::whereIn('program_id', $programIds)
             ->where('term_id', $currentTerm?->id)
             ->where('is_active', true)
             ->with(['subject','teacher.user','slot','batch'])
             ->get();
 
-        $recent = TimetableSubstitution::whereHas('entry', fn($q) => $q->whereIn('program_id', $programIds))
+        $recentLegacy = TimetableSubstitution::whereHas('entry', fn($q) => $q->whereIn('program_id', $programIds))
             ->with(['entry.subject','entry.batch','substitute.user','creator'])
             ->orderByDesc('date')
             ->take(30)
             ->get();
 
+        $recentRecommendations = AcademicPmcSubstitutionRecommendation::with(['pmcGenerationItem.subject', 'courseGroup.subject', 'originalTeacher.user', 'substituteTeacher.user'])
+            ->where(function ($query) use ($programIds) {
+                $query->whereHas('pmcGenerationItem', fn ($item) => $item->whereIn('program_id', $programIds))
+                    ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $programIds));
+            })
+            ->orderByDesc('substitution_date')
+            ->orderByDesc('id')
+            ->take(30)
+            ->get();
+
+        $recentChanges = AcademicPmcTimetableChangeRequest::with(['pmcGenerationItem.subject', 'pmcGenerationItem.courseGroup.subject', 'pmcGenerationItem.teacher.user'])
+            ->whereIn('change_type', ['substitution', 'cancellation', 'reschedule'])
+            ->whereHas('pmcGenerationItem', fn ($item) => $item
+                ->whereIn('program_id', $programIds)
+                ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $programIds)))
+            ->orderByDesc('created_at')
+            ->take(30)
+            ->get();
+
+        $recent = $recentRecommendations
+            ->map(fn (AcademicPmcSubstitutionRecommendation $rec): array => [
+                'date' => $rec->substitution_date,
+                'session' => $rec->courseGroup?->subject?->name
+                    ?? $rec->pmcGenerationItem?->subject?->name
+                    ?? $rec->pmcGenerationItem?->courseGroup?->subject?->name
+                    ?? 'Canonical session',
+                'group' => $rec->courseGroup?->name ?? $rec->pmcGenerationItem?->courseGroup?->name,
+                'action' => 'substitute',
+                'status' => $rec->status,
+                'substitute' => $rec->substituteTeacher?->user?->name ?? 'Uncovered',
+                'reason' => collect($rec->reasons ?? [])->map(fn ($reason) => str_replace('_', ' ', (string) $reason))->join(', '),
+                'source' => 'canonical',
+            ])
+            ->merge($recentChanges->map(fn (AcademicPmcTimetableChangeRequest $change): array => [
+                'date' => $change->created_at,
+                'session' => $change->pmcGenerationItem?->subject?->name
+                    ?? $change->pmcGenerationItem?->courseGroup?->subject?->name
+                    ?? 'Canonical session',
+                'group' => $change->pmcGenerationItem?->courseGroup?->name,
+                'action' => $change->change_type,
+                'status' => $change->status,
+                'substitute' => null,
+                'reason' => $change->reason,
+                'source' => 'canonical',
+            ]))
+            ->merge($recentLegacy->map(fn (TimetableSubstitution $sub): array => [
+                'date' => $sub->date,
+                'session' => $sub->entry?->subject?->name ?? 'Legacy session',
+                'group' => $sub->entry?->batch?->name,
+                'action' => $sub->action,
+                'status' => 'recorded',
+                'substitute' => $sub->substitute?->user?->name,
+                'reason' => $sub->reason,
+                'source' => 'legacy',
+            ]))
+            ->sortByDesc('date')
+            ->take(30)
+            ->values();
+
         $teachers = Teacher::with('user')->where('status','active')->get();
 
         return view('departmental.program-chair.timetable.substitutions', compact(
-            'entries', 'recent', 'teachers', 'currentTerm'
+            'canonicalSessions', 'entries', 'recent', 'teachers', 'currentTerm'
         ));
     }
 
     public function createSubstitution(Request $request) {
         $request->validate([
-            'timetable_entry_id'    => 'required|exists:timetable_entries,id',
+            'session_ref'           => 'nullable|string|max:80',
+            'timetable_entry_id'    => 'nullable|exists:timetable_entries,id',
             'date'                  => 'required|date',
             'action'                => 'required|in:substitute,cancelled,rescheduled',
             'substitute_teacher_id' => 'nullable|exists:teachers,id',
             'reason'                => 'nullable|string|max:300',
         ]);
+
+        if ($request->filled('session_ref') && str_starts_with((string) $request->session_ref, 'pmc:')) {
+            return $this->createCanonicalSubstitution($request, (int) str_replace('pmc:', '', (string) $request->session_ref));
+        }
+
+        if ($request->filled('session_ref') && str_starts_with((string) $request->session_ref, 'legacy:')) {
+            $request->merge(['timetable_entry_id' => (int) str_replace('legacy:', '', (string) $request->session_ref)]);
+        }
+
+        if (! $request->filled('timetable_entry_id')) {
+            return back()->with('error', 'Select a timetable session before recording a substitution.');
+        }
 
         $entry = TimetableEntry::findOrFail($request->timetable_entry_id);
         abort_unless(in_array((int) $entry->program_id, $this->programIds(), true), 403);
@@ -393,6 +831,64 @@ class PmcTimetableController extends Controller {
         ]);
 
         return back()->with('success', 'Substitution recorded.');
+    }
+
+    private function createCanonicalSubstitution(Request $request, int $pmcGenerationItemId)
+    {
+        $item = AcademicPmcTimetableGenerationItem::with(['courseGroup', 'subject', 'teacher.user', 'slot', 'timetableVersion'])
+            ->findOrFail($pmcGenerationItemId);
+
+        $programId = (int) ($item->program_id ?: $item->courseGroup?->program_id);
+        abort_unless(in_array($programId, $this->programIds(), true), 403);
+
+        if (
+            $item->official_status !== 'published'
+            || ! $item->timetable_version_id
+            || $item->timetableVersion?->status !== 'published'
+        ) {
+            return back()->with('error', 'Canonical substitutions must target an official published PMC session.');
+        }
+
+        if ($request->action === 'substitute') {
+            AcademicPmcSubstitutionRecommendation::create([
+                'pmc_generation_item_id' => $item->id,
+                'timetable_entry_id' => $item->operational_timetable_entry_id,
+                'course_group_id' => $item->course_group_id,
+                'original_teacher_id' => $item->teacher_id,
+                'substitute_teacher_id' => $request->substitute_teacher_id,
+                'substitution_date' => $request->date,
+                'status' => $request->filled('substitute_teacher_id') ? 'recorded' : 'uncovered',
+                'score' => $request->filled('substitute_teacher_id') ? 100 : 0,
+                'reasons' => array_values(array_filter([
+                    'program_chair_manual_substitution',
+                    $request->reason,
+                ])),
+                'conflict_checks' => [
+                    'source' => 'program_chair_substitution_form',
+                    'target_day' => $item->day_of_week,
+                    'target_slot_id' => $item->timetable_slot_id,
+                    'session_type' => $item->session_type,
+                    'duration_slots' => $item->duration_slots,
+                ],
+            ]);
+
+            return back()->with('success', 'Canonical substitution recorded for the official PMC session.');
+        }
+
+        $changeType = $request->action === 'cancelled' ? 'cancellation' : 'reschedule';
+        app(AcademicPmcTimetableV041Service::class)->requestChange(Auth::user(), [
+            'pmc_generation_item_id' => $item->id,
+            'timetable_version_id' => $item->timetable_version_id,
+            'change_type' => $changeType,
+            'reason' => $request->reason ?: 'Program Chair requested ' . str_replace('_', ' ', $changeType) . '.',
+            'impact_summary' => [
+                'source' => 'program_chair_substitution_form',
+                'requested_date' => $request->date,
+                'session_label' => $item->courseGroup?->name ?? $item->subject?->name,
+            ],
+        ]);
+
+        return back()->with('success', 'Canonical timetable change request recorded for the official PMC session.');
     }
 
     // ── Teacher availability ──────────────────────────────────────────────────
@@ -519,6 +1015,7 @@ class PmcTimetableController extends Controller {
             [
                 'semester_id' => $semester->id,
                 'course_id' => $course->id,
+                'created_by' => Auth::id(),
             ]
         );
 
@@ -650,6 +1147,7 @@ class PmcTimetableController extends Controller {
                 'reassign_classrooms' => $request->boolean('reassign_classrooms'),
                 'semester_id' => $semester->id,
                 'course_id' => $course->id,
+                'created_by' => Auth::id(),
             ]
         );
 
@@ -690,11 +1188,27 @@ class PmcTimetableController extends Controller {
         abort_if($visibleProgramIds !== null && empty($visibleProgramIds), 403);
 
         if ($visibleProgramIds !== null) {
-            abort_unless(TimetableEntry::where('teacher_id', $teacher->id)
+            $hasVisibleLegacyEntries = TimetableEntry::where('teacher_id', $teacher->id)
                 ->where('term_id', $request->term_id)
                 ->whereIn('program_id', $visibleProgramIds)
                 ->where('is_active', true)
-                ->exists(), 403);
+                ->exists();
+
+            $hasVisibleCanonicalEntries = AcademicPmcTimetableGenerationItem::where('teacher_id', $teacher->id)
+                ->where(function ($query) use ($request) {
+                    $query->where('term_id', $request->term_id)
+                        ->orWhereHas('courseGroup', fn ($group) => $group->where('term_id', $request->term_id));
+                })
+                ->where(function ($query) use ($visibleProgramIds) {
+                    $query->whereIn('program_id', $visibleProgramIds)
+                        ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $visibleProgramIds));
+                })
+                ->where('official_status', 'published')
+                ->whereNotNull('timetable_version_id')
+                ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+                ->exists();
+
+            abort_unless($hasVisibleLegacyEntries || $hasVisibleCanonicalEntries, 403);
         }
 
         $service = app(TimetablePdfService::class);
@@ -763,6 +1277,7 @@ class PmcTimetableController extends Controller {
             'classroom_id'      => 'required|exists:classrooms,id',
             'batch_id'          => 'required|exists:batches,id',
             'term_id'           => 'required|exists:terms,id',
+            'course_group_id'   => 'nullable|exists:academic_pmc_course_groups,id',
         ]);
 
         $service = app(ConflictPreventionService::class);
@@ -772,7 +1287,8 @@ class PmcTimetableController extends Controller {
             $request->teacher_id,
             $request->classroom_id,
             $request->batch_id,
-            $request->term_id
+            $request->term_id,
+            $request->filled('course_group_id') ? (int) $request->course_group_id : null
         );
 
         if (!$availability['available']) {
@@ -782,7 +1298,8 @@ class PmcTimetableController extends Controller {
                 $request->teacher_id,
                 $request->classroom_id,
                 $request->batch_id,
-                $request->term_id
+                $request->term_id,
+                $request->filled('course_group_id') ? (int) $request->course_group_id : null
             );
             $availability['suggestions'] = $suggestions;
         }
@@ -818,6 +1335,7 @@ class PmcTimetableController extends Controller {
             'classroom_id'  => 'required|exists:classrooms,id',
             'batch_id'      => 'required|exists:batches,id',
             'term_id'       => 'required|exists:terms,id',
+            'course_group_id' => 'nullable|exists:academic_pmc_course_groups,id',
         ]);
 
         $service = app(ConflictPreventionService::class);
@@ -827,7 +1345,8 @@ class PmcTimetableController extends Controller {
             $request->teacher_id,
             $request->classroom_id,
             $request->batch_id,
-            $request->term_id
+            $request->term_id,
+            $request->filled('course_group_id') ? (int) $request->course_group_id : null
         );
 
         return response()->json(['suggestions' => $suggestions]);
@@ -866,6 +1385,9 @@ class PmcTimetableController extends Controller {
             'suggestions.*.classroom_id' => 'required|exists:classrooms,id',
             'suggestions.*.day_of_week' => 'required|integer|between:1,6',
             'suggestions.*.timetable_slot_id' => 'required|exists:timetable_slots,id',
+            'suggestions.*.course_group_id' => 'nullable|exists:academic_pmc_course_groups,id',
+            'suggestions.*.group_type' => 'nullable|string|max:80',
+            'suggestions.*.duration_slots' => 'nullable|integer|min:1|max:6',
         ]);
 
         if ($message = $this->validateAcademicScope($request)) {
@@ -879,6 +1401,9 @@ class PmcTimetableController extends Controller {
         foreach ($request->suggestions as $suggestion) {
             $batch = Batch::find($suggestion['batch_id']);
             $subject = Subject::find($suggestion['subject_id']);
+            $courseGroup = isset($suggestion['course_group_id'])
+                ? AcademicPmcCourseGroup::find($suggestion['course_group_id'])
+                : null;
 
             if (! $batch || (int) $batch->program_id !== (int) $request->program_id) {
                 return back()->with('error', 'Suggested batch does not belong to the selected program.');
@@ -888,6 +1413,15 @@ class PmcTimetableController extends Controller {
                 return back()->with('error', 'Suggested subject does not belong to the selected program.');
             }
 
+            if ($courseGroup && (
+                (int) $courseGroup->program_id !== (int) $request->program_id
+                || (int) $courseGroup->term_id !== (int) $request->term_id
+                || (int) $courseGroup->batch_id !== (int) $suggestion['batch_id']
+                || (int) $courseGroup->subject_id !== (int) $suggestion['subject_id']
+            )) {
+                return back()->with('error', 'Suggested course group does not match the selected program, term, batch, and subject.');
+            }
+
             if ($this->hasPublishedVersion((int) $request->program_id, (int) $request->term_id, (int) $suggestion['batch_id'])) {
                 return back()->with('error', $this->publishedLockMessage());
             }
@@ -895,6 +1429,67 @@ class PmcTimetableController extends Controller {
 
         $created = 0;
         $errors = [];
+        $canonicalSuggestions = collect($request->suggestions)->filter(fn ($suggestion) => ! empty($suggestion['course_group_id']))->values();
+
+        if ($canonicalSuggestions->isNotEmpty()) {
+            $run = AcademicPmcTimetableGenerationRun::create([
+                'title' => 'Accepted auto-schedule suggestions',
+                'strategy' => 'course_group_auto_schedule',
+                'program_id' => $request->program_id,
+                'batch_id' => $canonicalSuggestions->pluck('batch_id')->unique()->count() === 1 ? $canonicalSuggestions->first()['batch_id'] : null,
+                'term_id' => $request->term_id,
+                'created_by' => Auth::id(),
+                'status' => 'draft',
+                'scheduled_count' => 0,
+                'unscheduled_count' => 0,
+                'quality_score' => 0,
+                'input_summary' => [
+                    'source' => 'program_chair_auto_schedule_acceptance',
+                    'suggestion_count' => $canonicalSuggestions->count(),
+                ],
+            ]);
+
+            foreach ($canonicalSuggestions as $index => $suggestion) {
+                try {
+                    $courseGroup = AcademicPmcCourseGroup::find($suggestion['course_group_id']);
+                    AcademicPmcTimetableGenerationItem::create([
+                        'generation_run_id' => $run->id,
+                        'course_group_id' => $courseGroup?->id,
+                        'program_id' => $request->program_id,
+                        'batch_id' => $suggestion['batch_id'],
+                        'term_id' => $request->term_id,
+                        'subject_id' => $suggestion['subject_id'],
+                        'session_index' => $index + 1,
+                        'session_type' => $this->sessionTypeForCourseGroup($courseGroup, $suggestion),
+                        'duration_slots' => $suggestion['duration_slots'] ?? $this->durationForCourseGroup($courseGroup),
+                        'teacher_id' => $suggestion['teacher_id'],
+                        'classroom_id' => $suggestion['classroom_id'],
+                        'day_of_week' => $suggestion['day_of_week'],
+                        'timetable_slot_id' => $suggestion['timetable_slot_id'],
+                        'status' => 'scheduled',
+                        'official_status' => 'draft',
+                        'source_type' => 'auto_schedule_acceptance',
+                        'confidence' => (int) round((float) ($suggestion['confidence'] ?? 0)),
+                        'explanation' => $suggestion['reason'] ?? null,
+                        'metadata' => [
+                            'accepted_from' => 'program_chair_legacy_auto_schedule',
+                            'group_type' => $suggestion['group_type'] ?? $courseGroup?->group_type,
+                        ],
+                    ]);
+                    $created++;
+                } catch (\Exception $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+
+            $run->update(['scheduled_count' => $created]);
+
+            if ($created > 0) {
+                return back()->with('success', "Auto-scheduled {$created} canonical PMC sessions. Review and publish through the PMC timetable workflow.");
+            }
+
+            return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
+        }
 
         foreach ($request->suggestions as $suggestion) {
             try {
@@ -921,5 +1516,23 @@ class PmcTimetableController extends Controller {
         } else {
             return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
         }
+    }
+
+    private function sessionTypeForCourseGroup(?AcademicPmcCourseGroup $courseGroup, array $suggestion): string
+    {
+        if (($suggestion['group_type'] ?? null) === 'lab_group' || $courseGroup?->group_type === 'lab_group') {
+            return 'lab';
+        }
+
+        return 'lecture';
+    }
+
+    private function durationForCourseGroup(?AcademicPmcCourseGroup $courseGroup): int
+    {
+        if ($courseGroup?->group_type === 'lab_group') {
+            return 2;
+        }
+
+        return 1;
     }
 }

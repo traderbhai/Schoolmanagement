@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Assignment;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Attendance;
 use App\Models\Classroom;
 use App\Models\FeeDemand;
@@ -239,6 +243,183 @@ class StudentDashboardGuidanceTest extends TestCase
             ->assertDontSee('Draft Dashboard Subject')
             ->assertDontSee('Draft Version Dashboard Subject')
             ->assertDontSee('Unenrolled Dashboard Subject');
+    }
+
+    public function test_dashboard_today_classes_prefer_students_official_pmc_group_sessions(): void
+    {
+        $student = $this->makeStudent();
+        $term = Term::factory()->create([
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $student->update(['current_term_id' => $term->id]);
+        $semester = Semester::factory()->create([
+            'number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $subject = Subject::factory()->create([
+            'program_id' => $student->program_id,
+            'term_number' => 1,
+            'name' => 'Canonical Dashboard Subject',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $studentGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Section A',
+            'group_type' => 'section',
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+        ]);
+        $otherGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Section B',
+            'group_type' => 'section',
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+        ]);
+        AcademicPmcCourseGroupMember::create([
+            'course_group_id' => $studentGroup->id,
+            'student_id' => $student->id,
+            'status' => 'active',
+        ]);
+
+        $slot = TimetableSlot::factory()->create(['sort_order' => 1, 'is_active' => true]);
+        $today = now()->dayOfWeekIso;
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $student->program_id,
+            'term_id' => $term->id,
+            'batch_id' => $student->batch_id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $student->program_id,
+            'term_id' => $term->id,
+            'batch_id' => $student->batch_id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Dashboard Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'created_by' => User::factory()->create()->id,
+            'status' => 'published',
+        ]);
+
+        $canonicalTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Canonical Dashboard Faculty'])->id,
+        ]);
+        $legacyTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Legacy Dashboard Faculty'])->id,
+        ]);
+        $otherTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Other Section Faculty'])->id,
+        ]);
+        $draftTeacher = Teacher::factory()->create([
+            'user_id' => User::factory()->create(['name' => 'Draft Canonical Faculty'])->id,
+        ]);
+
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'course_group_id' => $studentGroup->id,
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $canonicalTeacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Canonical Dashboard Room'])->id,
+            'day_of_week' => $today,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'course_group_id' => $otherGroup->id,
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $otherTeacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Other Section Room'])->id,
+            'day_of_week' => $today,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $studentGroup->id,
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $draftTeacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Draft Canonical Room'])->id,
+            'day_of_week' => $today,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+        ]);
+
+        TimetableEntry::create([
+            'semester_id' => $semester->id,
+            'course_id' => $student->course_id,
+            'program_id' => $student->program_id,
+            'batch_id' => $student->batch_id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $legacyTeacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Legacy Dashboard Room'])->id,
+            'timetable_slot_id' => $slot->id,
+            'day_of_week' => $today,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSeeText("Attend today's scheduled classes")
+            ->assertSee('Canonical Dashboard Subject')
+            ->assertSee('Section A')
+            ->assertSee('Canonical Dashboard Faculty')
+            ->assertSee('Canonical Dashboard Room')
+            ->assertDontSee('Legacy Dashboard Faculty')
+            ->assertDontSee('Legacy Dashboard Room')
+            ->assertDontSee('Other Section Faculty')
+            ->assertDontSee('Other Section Room')
+            ->assertDontSee('Draft Canonical Faculty')
+            ->assertDontSee('Draft Canonical Room');
     }
 
     public function test_dashboard_attendance_summary_ignores_draft_timetable_history(): void

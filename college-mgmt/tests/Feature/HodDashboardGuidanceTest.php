@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Applicant;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\ApprovalWorkflow;
 use App\Models\Attendance;
 use App\Models\Course;
@@ -259,6 +262,106 @@ class HodDashboardGuidanceTest extends TestCase
             ->assertOk();
         $subjectStats = $performance->viewData('subjects')->firstWhere('name', 'Official Attendance Subject');
         $this->assertSame(100.0, $subjectStats->attendance_pct);
+    }
+
+    public function test_hod_faculty_workload_prefers_canonical_pmc_sessions_for_migrated_scope(): void
+    {
+        $department = Department::factory()->create(['name' => 'Canonical Workload Department']);
+        $program = Program::factory()->create(['department_id' => $department->id]);
+        $course = Course::factory()->create(['department_id' => $department->id]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+        ]);
+        $subject = Subject::factory()->create([
+            'department_id' => $department->id,
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'HOD Canonical Workload Subject',
+        ]);
+        $legacySubject = Subject::factory()->create([
+            'department_id' => $department->id,
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'HOD Stale Legacy Workload Subject',
+        ]);
+        $faculty = Teacher::factory()->create([
+            'department_id' => $department->id,
+            'user_id' => User::factory()->create(['name' => 'HOD Canonical Faculty'])->id,
+        ]);
+        $hod = $this->hodUser($department);
+
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'HOD Section A',
+            'group_type' => 'section',
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $hod->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'HOD Workload Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $hod->id,
+            'status' => 'published',
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'session_type' => 'lab',
+            'duration_slots' => 2,
+            'teacher_id' => $faculty->id,
+            'day_of_week' => 1,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+        ]);
+
+        TimetableEntry::factory()->create([
+            'semester_id' => Semester::factory()->create(['number' => 1, 'name' => 'Term 1'])->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'subject_id' => $legacySubject->id,
+            'teacher_id' => $faculty->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'day_of_week' => 2,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $roster = $this->actingAs($hod)
+            ->get(route('hod.faculty.roster'))
+            ->assertOk();
+        $rosterFaculty = $roster->viewData('faculty')->firstWhere('id', $faculty->id);
+        $this->assertSame(1, $rosterFaculty->subject_count);
+        $this->assertSame(2, $rosterFaculty->weekly_hours);
+
+        $workload = $this->actingAs($hod)
+            ->get(route('hod.faculty.workload'))
+            ->assertOk()
+            ->assertSee('HOD Canonical Faculty')
+            ->assertSee('HOD Canonical Workload Subject')
+            ->assertDontSee('HOD Stale Legacy Workload Subject');
+        $workloadFaculty = $workload->viewData('faculty')->firstWhere('id', $faculty->id);
+        $this->assertSame(1, $workloadFaculty->subject_count);
+        $this->assertSame(2, $workloadFaculty->weekly_slots);
+        $this->assertSame(['HOD Canonical Workload Subject'], $workloadFaculty->subjects->all());
     }
 
     public function test_hod_cannot_approve_another_department_approval(): void

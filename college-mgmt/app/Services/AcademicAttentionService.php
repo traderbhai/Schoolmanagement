@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AcademicTranscript;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\Applicant;
 use App\Models\ApprovalWorkflow;
 use App\Models\Attendance;
@@ -220,25 +221,77 @@ class AcademicAttentionService
 
     private function facultyWorkload(?Collection $programIds): array
     {
-        $query = $this->applyProgramScope(
+        $officialItems = $this->officialPmcItems($programIds);
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $legacyEntries = $this->applyProgramScope(
             TimetableEntry::query()
-                ->selectRaw('teacher_id, count(*) as load_count')
-                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
-                ->groupBy('teacher_id')
-                ->having('load_count', '>=', 5),
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query)),
             $programIds
-        );
+        )
+            ->get(['id', 'teacher_id', 'program_id', 'term_id'])
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+
+        $canonicalLoads = collect($officialItems
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $items, $teacherId) => [
+                'teacher_id' => $teacherId,
+                'load_count' => (int) $items->sum(fn (AcademicPmcTimetableGenerationItem $item) => max(1, (int) ($item->duration_slots ?? 1))),
+                'source' => 'canonical_pmc_official_sessions',
+            ])
+            ->values()
+            ->all());
+        $legacyLoads = collect($legacyEntries
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $entries, $teacherId) => [
+                'teacher_id' => $teacherId,
+                'load_count' => $entries->count(),
+                'source' => 'legacy_timetable_entries',
+            ])
+            ->values()
+            ->all());
+
+        $loads = $canonicalLoads
+            ->merge($legacyLoads)
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $teacherLoads) => [
+                'teacher_id' => $teacherLoads->first()['teacher_id'],
+                'load_count' => (int) $teacherLoads->sum('load_count'),
+                'source' => $teacherLoads->contains('source', 'canonical_pmc_official_sessions') ? 'canonical_pmc_official_sessions' : 'legacy_timetable_entries',
+            ])
+            ->filter(fn (array $load) => $load['load_count'] >= 5)
+            ->sortByDesc('load_count')
+            ->values();
+
         $teacherMap = Teacher::with('user')
-            ->whereIn('id', (clone $query)->pluck('teacher_id')->filter()->unique())
+            ->whereIn('id', $loads->pluck('teacher_id')->filter()->unique())
             ->get()
             ->keyBy('id');
 
-        return $this->queuePayload('faculty_workload', 'Faculty workload imbalance', 'Faculty with heavy timetable load requiring review.', 'pmc', 'medium', $query, fn ($row) => [
-            'title' => $this->teacherLabel($teacherMap->get($row->teacher_id), $row->teacher_id),
-            'subtitle' => $row->load_count . ' timetable slots' . ($teacherMap->get($row->teacher_id)?->employee_id ? ' - ' . $teacherMap->get($row->teacher_id)->employee_id : ''),
+        $items = $loads->take(10)->map(fn (array $row) => [
+            'title' => $this->teacherLabel($teacherMap->get($row['teacher_id']), $row['teacher_id']),
+            'subtitle' => $row['load_count'] . ' timetable slots' . ($teacherMap->get($row['teacher_id'])?->employee_id ? ' - ' . $teacherMap->get($row['teacher_id'])->employee_id : ''),
             'status' => 'Review load',
             'due' => null,
+            'source' => $row['source'],
         ]);
+
+        return [
+            'key' => 'faculty_workload',
+            'title' => 'Faculty workload imbalance',
+            'description' => 'Faculty with heavy timetable load requiring review.',
+            'workspace' => 'pmc',
+            'severity' => 'medium',
+            'count' => $loads->count(),
+            'items' => $items,
+            'route' => route('academics.attention.queue', ['queue' => 'faculty_workload']),
+        ];
     }
 
     private function attendanceRisk(?Collection $programIds): array
@@ -467,6 +520,34 @@ class AcademicAttentionService
                             ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
                     });
             });
+    }
+
+    private function officialPmcItems(?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with('courseGroup:id,program_id,term_id')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+
+        if ($programIds !== null) {
+            if ($programIds->isEmpty()) {
+                return collect();
+            }
+
+            $query->where(function (Builder $scope) use ($programIds) {
+                $scope->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+            });
+        }
+
+        return $query->get(['id', 'course_group_id', 'program_id', 'term_id', 'teacher_id', 'duration_slots']);
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 
     private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string

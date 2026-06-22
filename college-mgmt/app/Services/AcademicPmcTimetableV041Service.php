@@ -178,9 +178,9 @@ class AcademicPmcTimetableV041Service
         abort_unless($student, 403);
 
         $groupIds = AcademicPmcCourseGroupMember::where('student_id', $student->id)->where('status', 'active')->pluck('course_group_id');
-        $items = AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot'])
+        $items = $this->officialTimetableItemsQuery()
+            ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
             ->whereIn('course_group_id', $groupIds)
-            ->where('status', 'scheduled')
             ->when($filters['day_of_week'] ?? null, fn ($q, $day) => $q->where('day_of_week', $day))
             ->orderBy('day_of_week')
             ->orderBy('timetable_slot_id')
@@ -223,9 +223,9 @@ class AcademicPmcTimetableV041Service
             ->where('status', 'active')
             ->pluck('course_group_id');
 
-        $timetableItems = AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot'])
+        $timetableItems = $this->officialTimetableItemsQuery()
+            ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
             ->whereIn('course_group_id', $groupIds)
-            ->where('status', 'scheduled')
             ->orderBy('day_of_week')
             ->orderBy('timetable_slot_id')
             ->limit(12)
@@ -1115,10 +1115,10 @@ class AcademicPmcTimetableV041Service
         abort_unless($teacher, 403);
 
         $groupIds = AcademicPmcGroupFacultyAssignment::where('teacher_id', $teacher->id)->pluck('course_group_id');
-        $items = AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot'])
+        $items = $this->officialTimetableItemsQuery()
+            ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
             ->whereIn('course_group_id', $groupIds)
             ->where('teacher_id', $teacher->id)
-            ->where('status', 'scheduled')
             ->when($filters['day_of_week'] ?? null, fn ($q, $day) => $q->where('day_of_week', $day))
             ->orderBy('day_of_week')
             ->orderBy('timetable_slot_id')
@@ -1139,24 +1139,36 @@ class AcademicPmcTimetableV041Service
     public function officialTimetableAudience(User $user, array $filters = []): array
     {
         $this->policy->authorizeRead($user);
-        $items = $this->applyScope(
-            AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot']),
+        $itemsQuery = $this->applyScope(
+            $this->officialTimetableItemsQuery()
+                ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion']),
             $user,
             [],
-            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            [
+                'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+                'timetableVersion' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+            ]
         )
-            ->where('status', 'scheduled')
             ->when($filters['program_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('program_id', $id)))
+            ->when($filters['batch_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('batch_id', $id)))
             ->when($filters['term_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('term_id', $id)))
+            ->when($filters['teacher_id'] ?? null, fn ($q, $id) => $q->where('teacher_id', $id))
+            ->when($filters['classroom_id'] ?? null, fn ($q, $id) => $q->where('classroom_id', $id))
+            ->when($filters['subject_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('subject_id', $id)))
+            ->when($filters['course_group_id'] ?? null, fn ($q, $id) => $q->where('course_group_id', $id))
+            ->when($filters['session_type'] ?? null, fn ($q, $type) => $q->where('session_type', $type))
+            ->when($filters['day_of_week'] ?? null, fn ($q, $day) => $q->where('day_of_week', $day))
             ->orderBy('day_of_week')
-            ->orderBy('timetable_slot_id')
-            ->paginate(30)
-            ->withQueryString();
+            ->orderBy('timetable_slot_id');
+
+        $allItems = (clone $itemsQuery)->get();
+        $items = $itemsQuery->paginate(30)->withQueryString();
 
         return [
-            'title' => 'PMC Official Audience Timetable',
+            'title' => 'PMC Master Official Timetable',
             'scopeLabel' => $this->policy->scopeLabel($user),
             'items' => $items,
+            'parallelSlotGroups' => $this->parallelSlotGroups($allItems),
             'groupCount' => $this->applyScope(AcademicPmcCourseGroup::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->count(),
             'filters' => $filters,
             'mode' => 'pmc',
@@ -1214,6 +1226,12 @@ class AcademicPmcTimetableV041Service
             'classrooms' => Classroom::where('is_active', true)->orderBy('name')->limit(150)->get(['id', 'name', 'room_number', 'capacity', 'type']),
             'slots' => TimetableSlot::where('is_active', true)->orderBy('sort_order')->orderBy('start_time')->get(['id', 'name', 'start_time', 'end_time']),
             'timetableVersions' => TimetableVersion::with(['program', 'term'])->latest()->limit(100)->get(['id', 'program_id', 'term_id', 'batch_id', 'version_number', 'status']),
+            'officialTimetableItems' => $this->officialTimetableItemsQuery()
+                ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
+                ->where('status', 'scheduled')
+                ->latest()
+                ->limit(200)
+                ->get(),
         ];
     }
 
@@ -1974,13 +1992,27 @@ class AcademicPmcTimetableV041Service
 
     public function generate(User $actor, array $data): AcademicPmcTimetableGenerationRun
     {
-        $groups = AcademicPmcCourseGroup::with(['facultyAssignments', 'members'])
-            ->when($data['program_id'] ?? null, fn ($q, $id) => $q->where('program_id', $id))
-            ->when($data['term_id'] ?? null, fn ($q, $id) => $q->where('term_id', $id))
-            ->get();
+        $groups = $this->applyScope(
+            AcademicPmcCourseGroup::with(['facultyAssignments', 'members'])
+                ->when($data['program_id'] ?? null, fn ($q, $id) => $q->where('program_id', $id))
+                ->when($data['batch_id'] ?? null, fn ($q, $id) => $q->where('batch_id', $id))
+                ->when($data['term_id'] ?? null, fn ($q, $id) => $q->where('term_id', $id)),
+            $actor,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject']
+        )->get();
         $breakSlotCount = TimetableSlot::where('is_active', true)->where('is_break', true)->count();
         $slots = TimetableSlot::where('is_active', true)->where('is_break', false)->orderBy('sort_order')->get();
         $rooms = Classroom::where('is_active', true)->orderBy('capacity')->get();
+
+        if ($groups->isEmpty()) {
+            abort(422, 'Timetable generation requires at least one course section or group in the selected PMC scope. Complete course allocation and section/group setup before generating.');
+        }
+        if ($slots->isEmpty()) {
+            abort(422, 'Timetable generation requires active non-break teaching slots. Configure timetable slots before generating.');
+        }
+        if ($rooms->isEmpty()) {
+            abort(422, 'Timetable generation requires at least one active classroom, lab, or room. Complete room readiness before generating.');
+        }
 
         $run = AcademicPmcTimetableGenerationRun::create([
             'title' => $data['title'] ?? 'PMC Generated Timetable',
@@ -2026,6 +2058,14 @@ class AcademicPmcTimetableV041Service
                         : null;
 
                     if (! $teacherId || ! $placement) {
+                        $failureDiagnostics = $teacherId
+                            ? $this->placementFailureDiagnostics($group, $teacherId, $rooms, $slots, $preference, $occupied, (int) $demand->duration_slots, $run->strategy)
+                            : [
+                                'primary_blocker' => 'missing_primary_faculty',
+                                'blockers' => ['missing_primary_faculty'],
+                                'recommended_actions' => ['Assign a primary faculty member to this course group.'],
+                            ];
+
                         AcademicPmcTimetableGenerationItem::create([
                             'generation_run_id' => $run->id,
                             'course_group_id' => $group->id,
@@ -2034,8 +2074,12 @@ class AcademicPmcTimetableV041Service
                             'session_type' => $demand->session_type,
                             'duration_slots' => $demand->duration_slots,
                             'status' => 'unscheduled',
-                            'explanation' => ! $teacherId ? 'Missing primary faculty for required weekly session.' : 'No feasible slot found after checking faculty, room, group, student, availability, and locked-slot constraints.',
-                            'metadata' => ['version' => 'PMC OS v0.062'],
+                            'explanation' => ! $teacherId ? 'Missing primary faculty for required weekly session.' : $failureDiagnostics['summary'],
+                            'metadata' => [
+                                'version' => 'PMC OS v0.066',
+                                'required_sessions_per_week' => $demand->required_sessions_per_week,
+                                'unscheduled_diagnostics' => $failureDiagnostics,
+                            ],
                         ]);
                         $unscheduled++;
                         $demandUnscheduled++;
@@ -2110,13 +2154,19 @@ class AcademicPmcTimetableV041Service
         $hard = 0;
         $soft = 0;
 
-        foreach ($items->groupBy(fn ($item) => $item->day_of_week . '-' . $item->timetable_slot_id) as $slotItems) {
-            foreach (['teacher_id' => 'faculty_clash', 'classroom_id' => 'room_clash', 'course_group_id' => 'group_clash'] as $field => $type) {
-                $dupes = $slotItems->filter(fn ($item) => $item->{$field})->groupBy($field)->filter(fn ($group) => $group->count() > 1);
-                foreach ($dupes as $id => $group) {
-                    AcademicPmcTimetableConstraint::create(['generation_run_id' => $run->id, 'constraint_type' => $type, 'severity' => 'hard', 'title' => str($type)->headline(), 'description' => "Duplicate {$field} {$id} in same slot.", 'affected_type' => $field, 'affected_key' => (string) $id, 'recommended_fix' => 'Move one class, change faculty, or change room.', 'source_route' => route('academics.pmc.timetable-planner.index')]);
-                    $hard++;
-                }
+        foreach ($this->resourceConflictBuckets($items) as $bucket) {
+            foreach ($bucket['duplicates'] as $id => $duplicates) {
+                $this->constraint(
+                    $run,
+                    $bucket['type'],
+                    'hard',
+                    str($bucket['type'])->headline()->toString(),
+                    "{$bucket['label']} {$id} is booked more than once on day {$bucket['day']} in slot {$bucket['slot_id']}.",
+                    $bucket['affected_type'],
+                    (string) $id,
+                    $bucket['fix']
+                );
+                $hard++;
             }
         }
 
@@ -2164,20 +2214,6 @@ class AcademicPmcTimetableV041Service
             if ($unavailableSlots->contains(fn ($slot) => (int) ($slot['day'] ?? 0) === (int) $item->day_of_week && (int) ($slot['slot_id'] ?? 0) === (int) $item->timetable_slot_id)) {
                 $this->constraint($run, 'faculty_slot_unavailable', 'hard', 'Faculty unavailable in slot', 'Faculty has marked this slot unavailable.', 'teacher', (string) $item->teacher_id, 'Move class or override availability with Dean/PMC approval.');
                 $hard++;
-            }
-        }
-
-        foreach ($items->where('status', 'scheduled')->groupBy(fn ($item) => $item->day_of_week . '-' . $item->timetable_slot_id) as $slotItems) {
-            $seenStudents = [];
-            foreach ($slotItems as $item) {
-                $studentIds = AcademicPmcCourseGroupMember::where('course_group_id', $item->course_group_id)->where('status', 'active')->pluck('student_id');
-                foreach ($studentIds as $studentId) {
-                    if (isset($seenStudents[$studentId])) {
-                        $this->constraint($run, 'student_clash', 'hard', 'Student timetable clash', "Student {$studentId} is in two scheduled groups at the same time.", 'student', (string) $studentId, 'Move one elective/core group to a different slot.');
-                        $hard++;
-                    }
-                    $seenStudents[$studentId] = true;
-                }
             }
         }
 
@@ -2668,6 +2704,7 @@ class AcademicPmcTimetableV041Service
         ]);
 
         $run->update(['timetable_version_id' => $version->id, 'status' => $blocking->isNotEmpty() ? 'published_with_dean_override' : 'published']);
+        $this->markRunItemsOfficial($run->fresh(), $version, $actor);
         $syncedEntries = $this->syncRunToOperationalTimetable($run->fresh(), $version, $actor);
 
         AcademicPmcTimetableVersionWorkflow::create([
@@ -2911,6 +2948,11 @@ class AcademicPmcTimetableV041Service
             'updated_at' => now(),
         ]);
 
+        AcademicPmcTimetableGenerationItem::where('timetable_version_id', $version->id)->update([
+            'official_status' => 'archived',
+            'updated_at' => now(),
+        ]);
+
         if ($version->status !== 'archived') {
             $version->update(['status' => 'archived']);
         }
@@ -2926,6 +2968,69 @@ class AcademicPmcTimetableV041Service
         return AcademicPmcTimetableGenerationRun::whereIn('timetable_version_id', $this->officialPublishedVersionIds())->pluck('id')->all();
     }
 
+    private function officialTimetableItemsQuery(): Builder
+    {
+        return AcademicPmcTimetableGenerationItem::query()
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $query) => $query->where('status', 'published'));
+    }
+
+    private function parallelSlotGroups(Collection $items): Collection
+    {
+        return $items
+            ->sortBy([
+                ['day_of_week', 'asc'],
+                ['timetable_slot_id', 'asc'],
+                ['course_group_id', 'asc'],
+            ])
+            ->groupBy(fn ($item) => (int) $item->day_of_week . '-' . (int) $item->timetable_slot_id)
+            ->map(function (Collection $slotItems) {
+                $first = $slotItems->first();
+
+                return [
+                    'day_of_week' => (int) $first->day_of_week,
+                    'slot_id' => (int) $first->timetable_slot_id,
+                    'slot' => $first->slot,
+                    'sessions' => $slotItems->values(),
+                    'session_count' => $slotItems->count(),
+                    'rooms' => $slotItems->pluck('classroom_id')->filter()->unique()->count(),
+                    'faculty' => $slotItems->pluck('teacher_id')->filter()->unique()->count(),
+                ];
+            })
+            ->values();
+    }
+
+    private function markRunItemsOfficial(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): void
+    {
+        AcademicPmcTimetableGenerationItem::with('courseGroup')
+            ->where('generation_run_id', $run->id)
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->chunkById(100, function ($items) use ($run, $version, $actor) {
+                foreach ($items as $item) {
+                    $group = $item->courseGroup;
+                    $item->update([
+                        'timetable_version_id' => $version->id,
+                        'program_id' => $group?->program_id ?: $run->program_id,
+                        'batch_id' => $group?->batch_id ?: $run->batch_id,
+                        'term_id' => $group?->term_id ?: $run->term_id,
+                        'subject_id' => $group?->subject_id,
+                        'official_status' => 'published',
+                        'source_type' => 'generated',
+                        'published_at' => now(),
+                        'published_by' => $actor->id,
+                        'metadata' => array_merge($item->metadata ?: [], [
+                            'canonical_official_session' => true,
+                            'official_source' => 'academic_pmc_timetable_generation_items',
+                            'timetable_version_id' => $version->id,
+                            'published_by' => $actor->id,
+                            'published_at' => now()->toDateTimeString(),
+                        ]),
+                    ]);
+                }
+            });
+    }
+
     private function syncRunToOperationalTimetable(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): int
     {
         $semester = $this->operationalSemester($run->term);
@@ -2933,6 +3038,8 @@ class AcademicPmcTimetableV041Service
 
         $items = AcademicPmcTimetableGenerationItem::with(['courseGroup.subject.program.department', 'teacher', 'classroom', 'slot'])
             ->where('generation_run_id', $run->id)
+            ->where('timetable_version_id', $version->id)
+            ->where('official_status', 'published')
             ->whereIn('status', ['scheduled', 'published', 'locked'])
             ->whereNotNull('teacher_id')
             ->whereNotNull('classroom_id')
@@ -2963,6 +3070,7 @@ class AcademicPmcTimetableV041Service
                 'is_active' => true,
                 'status' => 'published',
                 'timetable_version_id' => $version->id,
+                'pmc_generation_item_id' => $item->id,
             ]);
             $entry->save();
 
@@ -3041,12 +3149,18 @@ class AcademicPmcTimetableV041Service
 
     private function matchingOperationalEntry(Semester $semester, Course $course, AcademicPmcTimetableGenerationItem $item): ?TimetableEntry
     {
+        if ($item->operational_timetable_entry_id) {
+            $existing = TimetableEntry::where('semester_id', $semester->id)
+                ->whereKey($item->operational_timetable_entry_id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+        }
+
         return TimetableEntry::where('semester_id', $semester->id)
-            ->where(function ($query) use ($course, $item) {
-                $query->where(fn ($q) => $q->where('course_id', $course->id)->where('day_of_week', $item->day_of_week)->where('timetable_slot_id', $item->timetable_slot_id))
-                    ->orWhere(fn ($q) => $q->where('teacher_id', $item->teacher_id)->where('day_of_week', $item->day_of_week)->where('timetable_slot_id', $item->timetable_slot_id))
-                    ->orWhere(fn ($q) => $q->where('classroom_id', $item->classroom_id)->where('day_of_week', $item->day_of_week)->where('timetable_slot_id', $item->timetable_slot_id));
-            })
+            ->where('pmc_generation_item_id', $item->id)
             ->first();
     }
 
@@ -3110,10 +3224,20 @@ class AcademicPmcTimetableV041Service
 
     public function requestChange(User $actor, array $data): AcademicPmcTimetableChangeRequest
     {
-        $change = AcademicPmcTimetableChangeRequest::create($data + ['requested_by' => $actor->id, 'status' => 'requested']);
-        foreach (['faculty', 'students', 'rooms', 'groups', 'workload'] as $type) {
-            AcademicPmcTimetableImpactRecord::create(['change_request_id' => $change->id, 'impact_type' => $type, 'title' => str($type)->headline() . ' affected by timetable change', 'affected_count' => $type === 'students' ? 42 : 2, 'affected_records' => ['demo' => true]]);
+        $targetItem = null;
+        if (! empty($data['pmc_generation_item_id'])) {
+            $targetItem = $this->officialTimetableItemsQuery()
+                ->with(['courseGroup.members', 'classroom', 'teacher.user', 'slot'])
+                ->findOrFail($data['pmc_generation_item_id']);
+            $data['timetable_version_id'] = $targetItem->timetable_version_id;
         }
+
+        $change = AcademicPmcTimetableChangeRequest::create($data + ['requested_by' => $actor->id, 'status' => 'requested']);
+
+        $targetItem
+            ? $this->createSessionChangeImpactRecords($change, $targetItem)
+            : $this->createGeneralChangeImpactRecords($change);
+
         $this->audit($actor, 'academic_pmc_v041_change_requested', $change->reason ?: 'Timetable change requested', $change);
         return $change;
     }
@@ -3132,13 +3256,97 @@ class AcademicPmcTimetableV041Service
         return $change->fresh();
     }
 
+    private function createGeneralChangeImpactRecords(AcademicPmcTimetableChangeRequest $change): void
+    {
+        foreach (['faculty', 'students', 'rooms', 'groups', 'workload'] as $type) {
+            AcademicPmcTimetableImpactRecord::create([
+                'change_request_id' => $change->id,
+                'impact_type' => $type,
+                'title' => str($type)->headline() . ' affected by timetable change',
+                'affected_count' => 0,
+                'affected_records' => [],
+                'metadata' => ['source' => 'general_change_request'],
+            ]);
+        }
+    }
+
+    private function createSessionChangeImpactRecords(AcademicPmcTimetableChangeRequest $change, AcademicPmcTimetableGenerationItem $item): void
+    {
+        $group = $item->courseGroup;
+        $studentIds = $group
+            ? $group->members->where('status', 'active')->pluck('student_id')->filter()->values()
+            : collect();
+
+        foreach ([
+            [
+                'type' => 'faculty',
+                'title' => 'Faculty affected by session change',
+                'count' => $item->teacher_id ? 1 : 0,
+                'records' => array_filter([
+                    'teacher_id' => $item->teacher_id,
+                    'teacher_name' => $item->teacher?->user?->name,
+                ]),
+            ],
+            [
+                'type' => 'students',
+                'title' => 'Students affected by session change',
+                'count' => $studentIds->count(),
+                'records' => ['student_ids' => $studentIds->all()],
+            ],
+            [
+                'type' => 'rooms',
+                'title' => 'Room affected by session change',
+                'count' => $item->classroom_id ? 1 : 0,
+                'records' => array_filter([
+                    'classroom_id' => $item->classroom_id,
+                    'room' => $item->classroom?->room_number ?? $item->classroom?->name,
+                ]),
+            ],
+            [
+                'type' => 'groups',
+                'title' => 'Course group affected by session change',
+                'count' => $item->course_group_id ? 1 : 0,
+                'records' => array_filter([
+                    'course_group_id' => $item->course_group_id,
+                    'course_group' => $group?->name,
+                    'subject_id' => $item->subject_id ?: $group?->subject_id,
+                ]),
+            ],
+            [
+                'type' => 'workload',
+                'title' => 'Teaching workload affected by session change',
+                'count' => max(1, (int) ($item->duration_slots ?? 1)),
+                'records' => [
+                    'duration_slots' => max(1, (int) ($item->duration_slots ?? 1)),
+                    'day_of_week' => $item->day_of_week,
+                    'timetable_slot_id' => $item->timetable_slot_id,
+                    'slot' => $item->slot?->name,
+                ],
+            ],
+        ] as $impact) {
+            AcademicPmcTimetableImpactRecord::create([
+                'change_request_id' => $change->id,
+                'impact_type' => $impact['type'],
+                'title' => $impact['title'],
+                'affected_count' => $impact['count'],
+                'affected_records' => $impact['records'],
+                'metadata' => [
+                    'source' => 'canonical_pmc_official_session',
+                    'pmc_generation_item_id' => $item->id,
+                    'timetable_version_id' => $item->timetable_version_id,
+                ],
+            ]);
+        }
+    }
+
     public function recommendSubstitution(User $actor, array $data): AcademicPmcSubstitutionRecommendation
     {
         $original = Teacher::find($data['original_teacher_id'] ?? null);
         $courseGroup = AcademicPmcCourseGroup::with('subject')->find($data['course_group_id'] ?? null);
         $targetDate = \Carbon\Carbon::parse($data['substitution_date'] ?? now()->toDateString());
         $targetItem = $courseGroup
-            ? AcademicPmcTimetableGenerationItem::where('course_group_id', $courseGroup->id)
+            ? $this->officialTimetableItemsQuery()
+                ->where('course_group_id', $courseGroup->id)
                 ->where('teacher_id', $original?->id)
                 ->where('status', 'scheduled')
                 ->orderByDesc('id')
@@ -3158,6 +3366,8 @@ class AcademicPmcTimetableV041Service
         $best = $ranked->first();
         $substitute = $best && ($best['score'] ?? 0) > 0 ? Teacher::find($best['teacher_id']) : null;
         $recommendation = AcademicPmcSubstitutionRecommendation::create([
+            'pmc_generation_item_id' => $targetItem?->id,
+            'timetable_entry_id' => $targetItem?->operational_timetable_entry_id,
             'course_group_id' => $data['course_group_id'] ?? null,
             'original_teacher_id' => $original?->id,
             'substitute_teacher_id' => $substitute?->id,
@@ -3190,17 +3400,20 @@ class AcademicPmcTimetableV041Service
             ->where(fn ($q) => $q->whereNull('term_id')->orWhere('term_id', $courseGroup?->term_id))
             ->first();
         $sameSlotConflict = $slotId
-            ? AcademicPmcTimetableGenerationItem::where('teacher_id', $candidate->id)
+            ? $this->officialTimetableItemsQuery()
+                ->where('teacher_id', $candidate->id)
                 ->where('day_of_week', $dayOfWeek)
                 ->where('timetable_slot_id', $slotId)
                 ->where('status', 'scheduled')
                 ->exists()
             : false;
-        $sameDayCount = AcademicPmcTimetableGenerationItem::where('teacher_id', $candidate->id)
+        $sameDayCount = $this->officialTimetableItemsQuery()
+            ->where('teacher_id', $candidate->id)
             ->where('day_of_week', $dayOfWeek)
             ->where('status', 'scheduled')
             ->count();
-        $weeklyCount = AcademicPmcTimetableGenerationItem::where('teacher_id', $candidate->id)
+        $weeklyCount = $this->officialTimetableItemsQuery()
+            ->where('teacher_id', $candidate->id)
             ->where('status', 'scheduled')
             ->count();
         $backupAssignment = $courseGroup
@@ -3671,7 +3884,7 @@ class AcademicPmcTimetableV041Service
                 [],
                 ['timetableVersion' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
             )->latest()->paginate(15, ['*'], 'workflows_page'),
-            'changes' => AcademicPmcTimetableChangeRequest::query()
+            'changes' => AcademicPmcTimetableChangeRequest::with(['pmcGenerationItem.courseGroup.subject', 'pmcGenerationItem.slot', 'pmcGenerationItem.teacher.user'])
                 ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedVersionIds) {
                     if ($scopedVersionIds->isEmpty()) {
                         $query->whereRaw('1 = 0');
@@ -3735,7 +3948,7 @@ class AcademicPmcTimetableV041Service
                 [],
                 ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
             )->latest()->paginate(15),
-            'changes' => AcademicPmcTimetableChangeRequest::query()
+            'changes' => AcademicPmcTimetableChangeRequest::with(['pmcGenerationItem.courseGroup.subject', 'pmcGenerationItem.slot', 'pmcGenerationItem.teacher.user'])
                 ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($versionIds) {
                     if ($versionIds->isEmpty()) {
                         $query->whereRaw('1 = 0');
@@ -5109,6 +5322,10 @@ class AcademicPmcTimetableV041Service
                 return false;
             }
 
+            if ($this->placementBlockedByHardLock($group, $teacherId, $roomId, $day, $blockSlotId)) {
+                return false;
+            }
+
             $key = $day . '-' . $blockSlotId;
             if (isset($occupied['teacher'][$teacherId][$key]) || isset($occupied['room'][$roomId][$key]) || isset($occupied['group'][$group->id][$key])) {
                 return false;
@@ -5122,6 +5339,182 @@ class AcademicPmcTimetableV041Service
         }
 
         return true;
+    }
+
+    private function placementFailureDiagnostics(AcademicPmcCourseGroup $group, int $teacherId, Collection $rooms, Collection $slots, ?AcademicPmcFacultyPreference $preference, array $occupied, int $durationSlots, string $strategy): array
+    {
+        $candidateDays = $this->candidateDays($preference, 1, $strategy);
+        $candidateRooms = $this->candidateRooms($rooms, $group);
+        $blockers = [
+            'no_candidate_days' => count($candidateDays) === 0 ? 1 : 0,
+            'no_candidate_rooms' => $candidateRooms->isEmpty() ? 1 : 0,
+            'incomplete_multi_slot_block' => 0,
+            'faculty_unavailable' => 0,
+            'hard_lock_blocked' => 0,
+            'occupied_resource_or_student' => 0,
+        ];
+        $sampledCandidates = [];
+
+        foreach ($candidateDays as $day) {
+            foreach ($slots as $slot) {
+                $slotId = (int) $slot->id;
+                $blockSlotIds = $this->blockSlotIds($slots, $slotId, $durationSlots);
+
+                if (count($blockSlotIds) < $durationSlots) {
+                    $blockers['incomplete_multi_slot_block']++;
+                    $sampledCandidates[] = ['day' => (int) $day, 'slot_id' => $slotId, 'reason' => 'incomplete_multi_slot_block'];
+                    continue;
+                }
+
+                $facultyUnavailable = collect($blockSlotIds)->contains(fn (int $blockSlotId): bool =>
+                    $this->isSlotUnavailable($preference?->unavailable_slots ?? [], (int) $day, $blockSlotId)
+                );
+                if ($facultyUnavailable) {
+                    $blockers['faculty_unavailable']++;
+                    $sampledCandidates[] = ['day' => (int) $day, 'slot_id' => $slotId, 'reason' => 'faculty_unavailable'];
+                    continue;
+                }
+
+                foreach ($candidateRooms as $room) {
+                    $hardLocked = false;
+                    $occupiedConflict = false;
+
+                    foreach ($blockSlotIds as $blockSlotId) {
+                        if ($this->placementBlockedByHardLock($group, $teacherId, (int) $room->id, (int) $day, $blockSlotId)) {
+                            $hardLocked = true;
+                            break;
+                        }
+
+                        $key = $day . '-' . $blockSlotId;
+                        if (isset($occupied['teacher'][$teacherId][$key]) || isset($occupied['room'][$room->id][$key]) || isset($occupied['group'][$group->id][$key])) {
+                            $occupiedConflict = true;
+                            break;
+                        }
+
+                        foreach ($group->members as $member) {
+                            if (isset($occupied['student'][$member->student_id][$key])) {
+                                $occupiedConflict = true;
+                                break 2;
+                            }
+                        }
+                    }
+
+                    if ($hardLocked) {
+                        $blockers['hard_lock_blocked']++;
+                        $sampledCandidates[] = ['day' => (int) $day, 'slot_id' => $slotId, 'room_id' => (int) $room->id, 'reason' => 'hard_lock_blocked'];
+                        continue;
+                    }
+
+                    if ($occupiedConflict) {
+                        $blockers['occupied_resource_or_student']++;
+                        $sampledCandidates[] = ['day' => (int) $day, 'slot_id' => $slotId, 'room_id' => (int) $room->id, 'reason' => 'occupied_resource_or_student'];
+                    }
+                }
+            }
+        }
+
+        $activeBlockers = collect($blockers)->filter(fn (int $count): bool => $count > 0)->sortDesc();
+        $primary = (string) ($activeBlockers->keys()->first() ?: 'no_feasible_candidate');
+
+        return [
+            'summary' => 'No feasible slot found. Primary blocker: ' . str_replace('_', ' ', $primary) . '.',
+            'primary_blocker' => $primary,
+            'blockers' => $activeBlockers->keys()->values()->all(),
+            'blocker_counts' => $blockers,
+            'candidate_days' => array_values($candidateDays),
+            'candidate_rooms' => $candidateRooms->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+            'sampled_blocked_candidates' => collect($sampledCandidates)->take(8)->values()->all(),
+            'recommended_actions' => $this->recommendedActionsForPlacementBlockers($primary),
+        ];
+    }
+
+    private function recommendedActionsForPlacementBlockers(string $primaryBlocker): array
+    {
+        return match ($primaryBlocker) {
+            'no_candidate_rooms' => ['Add or activate a suitable room/lab, increase room capacity, or split the course group.'],
+            'faculty_unavailable' => ['Adjust faculty availability, choose another faculty member, or approve a formal exception.'],
+            'hard_lock_blocked' => ['Review hard locked slots for the batch, room, teacher, or group and move/remove the lock if appropriate.'],
+            'incomplete_multi_slot_block' => ['Move the session to an earlier contiguous slot or configure more active non-break teaching slots.'],
+            'occupied_resource_or_student' => ['Move another session, change room/faculty, or split overlapping student groups.'],
+            'missing_primary_faculty' => ['Assign a primary faculty member to this course group.'],
+            default => ['Review faculty, room, group, availability, and locked-slot constraints for this demand.'],
+        };
+    }
+
+    private function placementBlockedByHardLock(AcademicPmcCourseGroup $group, int $teacherId, int $roomId, int $day, int $slotId): bool
+    {
+        $members = $group->relationLoaded('members')
+            ? $group->members->where('status', 'active')->pluck('student_id')->filter()->unique()
+            : $group->members()->where('status', 'active')->pluck('student_id')->filter()->unique();
+
+        $locks = AcademicPmcLockedSlot::with('courseGroup.members')
+            ->where('status', 'active')
+            ->where('is_hard_lock', true)
+            ->where('day_of_week', $day)
+            ->where('timetable_slot_id', $slotId)
+            ->where(fn ($query) => $query->where('term_id', $group->term_id)->orWhereNull('term_id'))
+            ->get();
+
+        foreach ($locks as $lock) {
+            if ((int) $lock->course_group_id === (int) $group->id) {
+                if ($lock->teacher_id && (int) $lock->teacher_id !== $teacherId) {
+                    return true;
+                }
+
+                if ($lock->classroom_id && (int) $lock->classroom_id !== $roomId) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($lock->teacher_id && (int) $lock->teacher_id === $teacherId) {
+                return true;
+            }
+
+            if ($lock->classroom_id && (int) $lock->classroom_id === $roomId) {
+                return true;
+            }
+
+            if ($lock->course_group_id && $this->hardLockGroupMembersOverlap($lock, $members)) {
+                return true;
+            }
+
+            if (! $lock->course_group_id && $this->hardLockScopeBlocksGroup($lock, $group)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hardLockGroupMembersOverlap(AcademicPmcLockedSlot $lock, Collection $candidateMembers): bool
+    {
+        if ($candidateMembers->isEmpty()) {
+            return false;
+        }
+
+        $lockedMembers = $lock->courseGroup?->members
+            ? $lock->courseGroup->members->where('status', 'active')->pluck('student_id')->filter()->unique()
+            : collect();
+
+        return $lockedMembers->isNotEmpty() && $candidateMembers->intersect($lockedMembers)->isNotEmpty();
+    }
+
+    private function hardLockScopeBlocksGroup(AcademicPmcLockedSlot $lock, AcademicPmcCourseGroup $group): bool
+    {
+        if ($lock->batch_id && (int) $lock->batch_id === (int) $group->batch_id) {
+            return true;
+        }
+
+        if (! $lock->batch_id && $lock->program_id && (int) $lock->program_id === (int) $group->program_id) {
+            return true;
+        }
+
+        return ! $lock->program_id
+            && ! $lock->batch_id
+            && ! $lock->teacher_id
+            && ! $lock->classroom_id;
     }
 
     private function occupiedCountOnDay(array $occupied, string $type, int $id, int $day): int
@@ -5205,6 +5598,100 @@ class AcademicPmcTimetableV041Service
                 $occupied['student'][$member->student_id][$key] = true;
             }
         }
+    }
+
+    private function resourceConflictBuckets(Collection $items): array
+    {
+        $activeSlots = TimetableSlot::where('is_active', true)->where('is_break', false)->orderBy('sort_order')->get();
+        $buckets = [
+            'faculty_clash' => [
+                'type' => 'faculty_clash',
+                'label' => 'Faculty',
+                'affected_type' => 'teacher',
+                'fix' => 'Move one class, change faculty, or approve a formal substitution.',
+                'items' => [],
+            ],
+            'room_clash' => [
+                'type' => 'room_clash',
+                'label' => 'Room',
+                'affected_type' => 'classroom',
+                'fix' => 'Move one class to a different room or slot.',
+                'items' => [],
+            ],
+            'group_clash' => [
+                'type' => 'group_clash',
+                'label' => 'Course group',
+                'affected_type' => 'course_group',
+                'fix' => 'Move one session for this section/group to a different slot.',
+                'items' => [],
+            ],
+            'student_clash' => [
+                'type' => 'student_clash',
+                'label' => 'Student',
+                'affected_type' => 'student',
+                'fix' => 'Move one elective/core group to a different slot.',
+                'items' => [],
+            ],
+        ];
+
+        $scheduled = $items->where('status', 'scheduled');
+        $membersByGroup = AcademicPmcCourseGroupMember::whereIn('course_group_id', $scheduled->pluck('course_group_id')->filter()->unique())
+            ->where('status', 'active')
+            ->get()
+            ->groupBy('course_group_id');
+
+        foreach ($scheduled as $item) {
+            if (! $item->day_of_week || ! $item->timetable_slot_id) {
+                continue;
+            }
+
+            $blockSlotIds = $this->blockSlotIds($activeSlots, (int) $item->timetable_slot_id, max(1, (int) ($item->duration_slots ?? 1)));
+            if (empty($blockSlotIds)) {
+                $blockSlotIds = [(int) $item->timetable_slot_id];
+            }
+
+            foreach ($blockSlotIds as $slotId) {
+                $key = (int) $item->day_of_week . '-' . (int) $slotId;
+
+                if ($item->teacher_id) {
+                    $buckets['faculty_clash']['items'][$key][$item->teacher_id][] = $item->id;
+                }
+                if ($item->classroom_id) {
+                    $buckets['room_clash']['items'][$key][$item->classroom_id][] = $item->id;
+                }
+                if ($item->course_group_id) {
+                    $buckets['group_clash']['items'][$key][$item->course_group_id][] = $item->id;
+                }
+
+                foreach ($membersByGroup->get($item->course_group_id, collect()) as $member) {
+                    $buckets['student_clash']['items'][$key][$member->student_id][] = $item->id;
+                }
+            }
+        }
+
+        return collect($buckets)
+            ->map(function (array $bucket) {
+                return collect($bucket['items'])->map(function (array $resourceItems, string $key) use ($bucket) {
+                    [$day, $slotId] = array_map('intval', explode('-', $key));
+                    $duplicates = collect($resourceItems)
+                        ->filter(fn (array $itemIds) => count(array_unique($itemIds)) > 1)
+                        ->all();
+
+                    return [
+                        'type' => $bucket['type'],
+                        'label' => $bucket['label'],
+                        'affected_type' => $bucket['affected_type'],
+                        'fix' => $bucket['fix'],
+                        'day' => $day,
+                        'slot_id' => $slotId,
+                        'duplicates' => $duplicates,
+                    ];
+                })->values();
+            })
+            ->collapse()
+            ->filter(fn (array $bucket) => ! empty($bucket['duplicates']))
+            ->values()
+            ->all();
     }
 
     private function blockSlotIds(Collection $slots, int $startSlotId, int $durationSlots = 1): array

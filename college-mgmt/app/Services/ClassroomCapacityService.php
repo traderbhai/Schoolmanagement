@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\{Classroom, Batch, TimetableEntry};
+use App\Models\{AcademicPmcTimetableGenerationItem, Batch, Classroom, TimetableEntry};
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class ClassroomCapacityService
 {
@@ -55,9 +56,13 @@ class ClassroomCapacityService
      */
     public function getUtilizationReport(int $programId, int $termId): array
     {
-        $entries = TimetableEntry::where('program_id', $programId)
-            ->where('term_id', $termId)
-            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+        $canonicalItems = $this->officialPmcItems($programId, $termId);
+
+        if ($canonicalItems->isNotEmpty()) {
+            return $this->canonicalUtilizationReport($canonicalItems);
+        }
+
+        $entries = $this->publishedLegacyEntries($programId, $termId)
             ->distinct()
             ->get(['classroom_id', 'batch_id'])
             ->groupBy('classroom_id');
@@ -127,9 +132,13 @@ class ClassroomCapacityService
      */
     public function findCapacityViolations(int $programId, int $termId): array
     {
-        $entries = TimetableEntry::where('program_id', $programId)
-            ->where('term_id', $termId)
-            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+        $canonicalItems = $this->officialPmcItems($programId, $termId);
+
+        if ($canonicalItems->isNotEmpty()) {
+            return $this->canonicalCapacityViolations($canonicalItems);
+        }
+
+        $entries = $this->publishedLegacyEntries($programId, $termId)
             ->with(['classroom', 'batch'])
             ->get();
 
@@ -188,6 +197,134 @@ class ClassroomCapacityService
                 $versionQuery->whereNull('timetable_version_id')
                     ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
             });
+    }
+
+    private function officialPmcItems(int $programId, int $termId): Collection
+    {
+        return AcademicPmcTimetableGenerationItem::with(['classroom', 'courseGroup.members', 'courseGroup.batch', 'courseGroup.subject', 'batch', 'slot', 'timetableVersion'])
+            ->where(function (Builder $query) use ($programId, $termId) {
+                $query->where(function (Builder $direct) use ($programId, $termId) {
+                    $direct->where('program_id', $programId)
+                        ->where('term_id', $termId);
+                })->orWhereHas('courseGroup', function (Builder $group) use ($programId, $termId) {
+                    $group->where('program_id', $programId)
+                        ->where('term_id', $termId);
+                });
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('classroom_id')
+            ->whereHas('timetableVersion', fn (Builder $query) => $query->where('status', 'published'))
+            ->get();
+    }
+
+    private function publishedLegacyEntries(int $programId, int $termId): Builder
+    {
+        return TimetableEntry::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->where(fn (Builder $query) => $this->publishedTimetableScope($query));
+    }
+
+    private function canonicalUtilizationReport(Collection $items): array
+    {
+        $utilization = [];
+
+        foreach ($items->groupBy('classroom_id') as $classroomId => $roomItems) {
+            $classroom = $roomItems->first()?->classroom ?: Classroom::find($classroomId);
+            if (! $classroom) {
+                continue;
+            }
+
+            $groupData = $roomItems
+                ->filter(fn (AcademicPmcTimetableGenerationItem $item) => $item->courseGroup)
+                ->groupBy('course_group_id')
+                ->map(function (Collection $groupItems) {
+                    $first = $groupItems->first();
+                    $group = $first->courseGroup;
+
+                    return [
+                        'name' => $group->name,
+                        'size' => $this->courseGroupSize($group),
+                        'batch_name' => $group->batch?->name ?? $first->batch?->name,
+                    ];
+                })
+                ->values();
+
+            $maxGroupSize = (int) $groupData->max('size');
+            $totalStudents = (int) $groupData->sum('size');
+            $avgGroupSize = $groupData->count() > 0 ? round($totalStudents / $groupData->count(), 1) : 0;
+
+            $utilization[] = [
+                'classroom_id' => (int) $classroomId,
+                'room_number' => $classroom->room_number,
+                'room_type' => $classroom->type,
+                'capacity' => (int) $classroom->capacity,
+                'batch_count' => $roomItems->count(),
+                'session_count' => $roomItems->count(),
+                'group_count' => $groupData->count(),
+                'max_batch_size' => $maxGroupSize,
+                'avg_batch_size' => $avgGroupSize,
+                'total_students' => $totalStudents,
+                'max_utilization' => $this->capacityPercent($maxGroupSize, (int) $classroom->capacity),
+                'avg_utilization' => $this->capacityPercent($avgGroupSize, (int) $classroom->capacity),
+                'status' => $this->getUtilizationStatus((int) $classroom->capacity, $maxGroupSize),
+                'batches' => $groupData->pluck('name')->filter()->unique()->values()->all(),
+                'has_issues' => $maxGroupSize > (int) $classroom->capacity,
+                'source' => 'canonical_pmc_official_sessions',
+            ];
+        }
+
+        usort($utilization, fn($a, $b) => $b['max_utilization'] <=> $a['max_utilization']);
+
+        return $utilization;
+    }
+
+    private function canonicalCapacityViolations(Collection $items): array
+    {
+        $violations = [];
+
+        foreach ($items as $item) {
+            $group = $item->courseGroup;
+            $classroom = $item->classroom;
+            if (! $group || ! $classroom) {
+                continue;
+            }
+
+            $groupSize = $this->courseGroupSize($group);
+            if ((int) $classroom->capacity < $groupSize) {
+                $violations[] = [
+                    'day_of_week' => $item->day_of_week,
+                    'slot' => $item->slot?->name ?? 'N/A',
+                    'subject' => $group->subject?->name ?? 'N/A',
+                    'batch_name' => $group->name,
+                    'batch_size' => $groupSize,
+                    'room_number' => $classroom->room_number,
+                    'room_capacity' => (int) $classroom->capacity,
+                    'shortage' => $groupSize - (int) $classroom->capacity,
+                    'suggested_rooms' => $this->getSuitableClassrooms((int) ($group->batch_id ?: $item->batch_id)),
+                    'source' => 'canonical_pmc_official_sessions',
+                ];
+            }
+        }
+
+        usort($violations, fn($a, $b) => $b['shortage'] <=> $a['shortage']);
+
+        return $violations;
+    }
+
+    private function courseGroupSize($group): int
+    {
+        $memberCount = $group->relationLoaded('members')
+            ? $group->members->where('status', 'active')->count()
+            : $group->members()->where('status', 'active')->count();
+
+        return max($memberCount, (int) ($group->current_strength ?? 0));
+    }
+
+    private function capacityPercent(float|int $value, int $capacity): float
+    {
+        return $capacity > 0 ? round(($value / $capacity) * 100, 1) : 0.0;
     }
 
     private function batchSize(Batch $batch): int

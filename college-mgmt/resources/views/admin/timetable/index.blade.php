@@ -77,21 +77,37 @@
                         @for($day=1; $day<=6; $day++)
                         <td>
                             @if(isset($grid[$day][$slot->id]))
-                                @php $entry = $grid[$day][$slot->id]; @endphp
-                                <div class="timetable-cell">
-                                    <div class="subj">{{ $entry->subject->name }}</div>
-                                    <div class="tchr">{{ $entry->teacher->user->name }}</div>
-                                    <div class="mt-1">
-                                        <span class="room-tag">{{ $entry->classroom->room_number }}</span>
-                                        <span class="ms-1">
-                                            <a href="{{ route('admin.timetable.edit', $entry) }}" class="text-primary" style="font-size:.68rem"><i class="bi bi-pencil"></i></a>
-                                            <form method="POST" action="{{ route('admin.timetable.destroy', $entry) }}" class="d-inline" onsubmit="return confirm('Remove?')">
-                                                @csrf @method('DELETE')
-                                                <button class="btn btn-link p-0 text-danger" style="font-size:.68rem"><i class="bi bi-x-circle"></i></button>
-                                            </form>
-                                        </span>
+                                @foreach($grid[$day][$slot->id] as $entry)
+                                    <div class="timetable-cell mb-2">
+                                        <div class="subj">
+                                            {{ $entry->subject?->name ?? 'Subject' }}
+                                            @if(($entry->duration_slots ?? 1) > 1)
+                                                <span class="badge bg-light text-muted border ms-1">{{ $entry->duration_slots }} slots</span>
+                                            @endif
+                                        </div>
+                                        @if($entry->course_group)
+                                            <div class="text-muted" style="font-size:.68rem">{{ $entry->course_group->name }}</div>
+                                        @endif
+                                        @if($entry->is_continuation ?? false)
+                                            <div class="text-muted" style="font-size:.68rem">Continued session</div>
+                                        @endif
+                                        <div class="tchr">{{ $entry->teacher?->user?->name ?? '' }}</div>
+                                        <div class="mt-1">
+                                            <span class="room-tag">{{ $entry->classroom?->room_number ?? 'Room TBA' }}</span>
+                                            @if($entry->id)
+                                                <span class="ms-1">
+                                                    <a href="{{ route('admin.timetable.edit', $entry->id) }}" class="text-primary" style="font-size:.68rem"><i class="bi bi-pencil"></i></a>
+                                                    <form method="POST" action="{{ route('admin.timetable.destroy', $entry->id) }}" class="d-inline" onsubmit="return confirm('Remove?')">
+                                                        @csrf @method('DELETE')
+                                                        <button class="btn btn-link p-0 text-danger" style="font-size:.68rem"><i class="bi bi-x-circle"></i></button>
+                                                    </form>
+                                                </span>
+                                            @else
+                                                <span class="badge bg-primary-subtle text-primary ms-1">PMC</span>
+                                            @endif
+                                        </div>
                                     </div>
-                                </div>
+                                @endforeach
                             @endif
                         </td>
                         @endfor

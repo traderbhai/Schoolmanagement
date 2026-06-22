@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\CourseFeedback;
 use App\Models\MentorMeeting;
 use App\Models\Program;
@@ -94,6 +95,11 @@ class AcademicCourseDeliveryService
         $subjectIds = $this->visibleSubjectIds($user);
         $programIds = $this->visibleProgramIds($user);
         $today = now()->dayOfWeekIso;
+        $officialPmcItems = $this->officialPmcSessionItems($subjectIds, $programIds);
+
+        if ($officialPmcItems->isNotEmpty()) {
+            return $this->canonicalSessionDelivery($officialPmcItems, $today);
+        }
 
         $entries = $this->applySubjectScope(
             TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom', 'version'])
@@ -137,6 +143,70 @@ class AcademicCourseDeliveryService
                 'metric_keys' => array_values(array_filter(['draft_sessions', $entry->classroom_id ? null : 'room_pending'])),
                 'action' => route('academics.course-delivery.session-delivery'),
             ]))->values(),
+        ];
+    }
+
+    private function officialPmcSessionItems(?Collection $subjectIds, ?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with([
+            'subject.program',
+            'courseGroup.subject.program',
+            'courseGroup.batch',
+            'teacher.user',
+            'slot',
+            'classroom',
+            'timetableVersion',
+        ])
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id');
+
+        if ($subjectIds !== null) {
+            if ($subjectIds->isEmpty()) {
+                return collect();
+            }
+
+            $query->where(function (Builder $scope) use ($subjectIds) {
+                $scope->whereIn('subject_id', $subjectIds)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('subject_id', $subjectIds));
+            });
+        } elseif ($programIds !== null) {
+            if ($programIds->isEmpty()) {
+                return collect();
+            }
+
+            $query->where(function (Builder $scope) use ($programIds) {
+                $scope->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+            });
+        }
+
+        return $query->limit(40)->get();
+    }
+
+    private function canonicalSessionDelivery(Collection $items, int $today): array
+    {
+        $todayItems = $items->where('day_of_week', $today);
+
+        return [
+            'title' => 'Session Delivery',
+            'description' => 'Today timetable, unpublished slots, room/faculty readiness, and delivery exceptions.',
+            'metrics' => [
+                'today_sessions' => $todayItems->count(),
+                'published_sessions' => $items->count(),
+                'draft_sessions' => 0,
+                'room_pending' => $items->whereNull('classroom_id')->count(),
+            ],
+            'items' => $todayItems->map(fn (AcademicPmcTimetableGenerationItem $item) => [
+                'title' => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Session #' . $item->id,
+                'subtitle' => $item->day_name . ' - ' . ($item->slot?->name ?? 'Slot pending') . ' - ' . ($item->classroom?->name ?? $item->classroom?->room_number ?? 'Room pending') . ' - ' . ($item->courseGroup?->name ?? 'Group pending'),
+                'status' => 'Published',
+                'metric_keys' => ['today_sessions', 'published_sessions'],
+                'action' => route('teacher.attendance.mark'),
+            ])->values(),
         ];
     }
 

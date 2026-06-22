@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\{TimetableEntry, Term, Subject, TeacherAvailability};
+use App\Models\{AcademicPmcTimetableGenerationItem, TimetableEntry, TeacherAvailability};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class SoftConstraintService
 {
@@ -11,14 +13,29 @@ class SoftConstraintService
      */
     public function auditTermConstraints(int $termId, int $programId, ?int $batchId = null): array
     {
-        $entries = TimetableEntry::where('term_id', $termId)
+        $canonicalItems = $this->canonicalItems($termId, $programId, $batchId);
+        $entries = $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->displayEntryFromPmcItem($item))
+            ->toBase();
+        $canonicalProgramTermBatchKeys = $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermBatchKeyForPmcItem($item))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $legacyEntries = TimetableEntry::where('term_id', $termId)
             ->where('program_id', $programId)
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
             ->where('is_active', true)
             ->with(['subject', 'batch', 'teacher.user', 'slot'])
             ->orderBy('day_of_week')
             ->orderBy('timetable_slot_id')
-            ->get();
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermBatchKeys->contains($this->programTermBatchKey($entry->program_id, $entry->term_id, $entry->batch_id)))
+            ->map(fn (TimetableEntry $entry) => $this->displayEntryFromLegacyEntry($entry))
+            ->toBase();
+
+        $entries = $entries->merge($legacyEntries)->values();
 
         $issues = [];
 
@@ -54,11 +71,11 @@ class SoftConstraintService
         // Group by batch and subject
         $subjectDays = [];
         foreach ($entries as $entry) {
-            $key = $entry->batch_id . '-' . $entry->subject_id;
+            $key = ($entry->course_group_id ?? $entry->batch_id) . '-' . $entry->subject_id;
             if (!isset($subjectDays[$key])) {
                 $subjectDays[$key] = [
                     'subject' => $entry->subject->name ?? 'Unknown',
-                    'batch' => $entry->batch->name ?? 'Unknown',
+                    'batch' => $entry->course_group?->name ?? $entry->batch->name ?? 'Unknown',
                     'days' => [],
                     'count' => 0,
                 ];
@@ -92,17 +109,20 @@ class SoftConstraintService
     {
         $issues = [];
         $labEntries = collect($entries)->filter(function ($e) {
-            return strpos(strtolower($e->subject->name ?? ''), 'lab') !== false;
+            return ($e->session_type ?? null) === 'lab'
+                || strpos(strtolower($e->subject->name ?? ''), 'lab') !== false;
         });
 
         // Group labs by subject and day
         $labsBySubjectDay = [];
         foreach ($labEntries as $entry) {
-            $key = $entry->subject_id . '-' . $entry->day_of_week;
+            $key = ($entry->course_group_id ?? $entry->subject_id) . '-' . $entry->day_of_week;
             if (!isset($labsBySubjectDay[$key])) {
                 $labsBySubjectDay[$key] = [];
             }
-            $labsBySubjectDay[$key][] = $entry->timetable_slot_id;
+            foreach ($this->coveredSlotSortOrders($entry) as $slotOrder) {
+                $labsBySubjectDay[$key][] = $slotOrder;
+            }
         }
 
         // Check if labs are consecutive
@@ -208,7 +228,9 @@ class SoftConstraintService
                     'slots' => [],
                 ];
             }
-            $teacherDays[$key]['slots'][] = $entry->timetable_slot_id;
+            foreach ($this->coveredSlotSortOrders($entry) as $slotOrder) {
+                $teacherDays[$key]['slots'][] = $slotOrder;
+            }
         }
 
         // Check for gaps
@@ -252,5 +274,107 @@ class SoftConstraintService
     {
         $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
         return $days[$day] ?? 'Unknown';
+    }
+
+    private function canonicalItems(int $termId, int $programId, ?int $batchId = null): Collection
+    {
+        return AcademicPmcTimetableGenerationItem::with([
+            'subject',
+            'courseGroup.subject',
+            'courseGroup.batch',
+            'teacher.user',
+            'batch',
+            'slot',
+        ])
+            ->where(function (Builder $query) use ($termId, $programId) {
+                $query->where(function (Builder $direct) use ($termId, $programId) {
+                    $direct->where('term_id', $termId)
+                        ->where('program_id', $programId);
+                })->orWhereHas('courseGroup', function (Builder $group) use ($termId, $programId) {
+                    $group->where('term_id', $termId)
+                        ->where('program_id', $programId);
+                });
+            })
+            ->when($batchId, function (Builder $query) use ($batchId) {
+                $query->where(function (Builder $scope) use ($batchId) {
+                    $scope->where('batch_id', $batchId)
+                        ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('batch_id', $batchId));
+                });
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where(fn (Builder $query) => $query->whereNull('official_status')->orWhere('official_status', '!=', 'archived'))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id')
+            ->get();
+    }
+
+    private function displayEntryFromPmcItem(AcademicPmcTimetableGenerationItem $item): object
+    {
+        return (object) [
+            'source' => 'canonical_pmc_session',
+            'program_id' => $item->program_id ?? $item->courseGroup?->program_id,
+            'term_id' => $item->term_id ?? $item->courseGroup?->term_id,
+            'batch_id' => $item->batch_id ?? $item->courseGroup?->batch_id,
+            'course_group_id' => $item->course_group_id,
+            'subject_id' => $item->subject_id ?? $item->courseGroup?->subject_id,
+            'subject' => $item->subject ?? $item->courseGroup?->subject,
+            'batch' => $item->batch ?? $item->courseGroup?->batch,
+            'course_group' => $item->courseGroup,
+            'teacher_id' => $item->teacher_id,
+            'teacher' => $item->teacher,
+            'slot' => $item->slot,
+            'day_of_week' => $item->day_of_week,
+            'timetable_slot_id' => $item->timetable_slot_id,
+            'session_type' => $item->session_type,
+            'duration_slots' => max(1, (int) ($item->duration_slots ?? 1)),
+        ];
+    }
+
+    private function displayEntryFromLegacyEntry(TimetableEntry $entry): object
+    {
+        return (object) [
+            'source' => 'legacy_timetable_entry',
+            'program_id' => $entry->program_id,
+            'term_id' => $entry->term_id,
+            'batch_id' => $entry->batch_id,
+            'course_group_id' => null,
+            'subject_id' => $entry->subject_id,
+            'subject' => $entry->subject,
+            'batch' => $entry->batch,
+            'course_group' => null,
+            'teacher_id' => $entry->teacher_id,
+            'teacher' => $entry->teacher,
+            'slot' => $entry->slot,
+            'day_of_week' => $entry->day_of_week,
+            'timetable_slot_id' => $entry->timetable_slot_id,
+            'session_type' => null,
+            'duration_slots' => 1,
+        ];
+    }
+
+    private function coveredSlotSortOrders(object $entry): array
+    {
+        $start = $entry->slot?->sort_order ?? $entry->timetable_slot_id;
+        $duration = max(1, (int) ($entry->duration_slots ?? 1));
+
+        return range((int) $start, (int) $start + $duration - 1);
+    }
+
+    private function programTermBatchKey(?int $programId, ?int $termId, ?int $batchId): ?string
+    {
+        if (! $programId || ! $termId) {
+            return null;
+        }
+
+        return $programId . ':' . $termId . ':' . ($batchId ?? 'none');
+    }
+
+    private function programTermBatchKeyForPmcItem(AcademicPmcTimetableGenerationItem $item): ?string
+    {
+        return $this->programTermBatchKey(
+            $item->program_id ?? $item->courseGroup?->program_id,
+            $item->term_id ?? $item->courseGroup?->term_id,
+            $item->batch_id ?? $item->courseGroup?->batch_id,
+        );
     }
 }

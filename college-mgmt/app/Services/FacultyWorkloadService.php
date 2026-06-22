@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\{TimetableEntry, TimetableSlot, Teacher, Term, Program};
+use App\Models\{AcademicPmcTimetableGenerationItem, TimetableEntry, TimetableSlot, Teacher, Term, Program};
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class FacultyWorkloadService
 {
@@ -15,6 +16,11 @@ class FacultyWorkloadService
      */
     public function getWorkloadReport(int $programId, int $termId): array
     {
+        $officialItems = $this->officialPmcItems($programId, $termId);
+        if ($officialItems->isNotEmpty()) {
+            return $this->canonicalWorkloadReport($officialItems, $termId);
+        }
+
         $entries = TimetableEntry::where('program_id', $programId)
             ->where('term_id', $termId)
             ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
@@ -157,6 +163,86 @@ class FacultyWorkloadService
                 $versionQuery->whereNull('timetable_version_id')
                     ->orWhereHas('version', fn (Builder $version) => $version->where('status', 'published'));
             });
+    }
+
+    private function officialPmcItems(int $programId, int $termId): Collection
+    {
+        return AcademicPmcTimetableGenerationItem::with(['teacher.user', 'courseGroup.batch', 'courseGroup.subject', 'batch', 'subject', 'slot', 'timetableVersion'])
+            ->where(function (Builder $query) use ($programId) {
+                $query->where('program_id', $programId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('program_id', $programId));
+            })
+            ->where(function (Builder $query) use ($termId) {
+                $query->where('term_id', $termId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $query) => $query->where('status', 'published'))
+            ->get();
+    }
+
+    private function canonicalWorkloadReport(Collection $items, int $termId): array
+    {
+        $workloadByTeacher = [];
+
+        foreach ($items as $item) {
+            $teacherId = $item->teacher_id;
+            $hours = $this->getSlotDuration($item->timetable_slot_id) * max(1, (int) ($item->duration_slots ?? 1));
+            $subject = $item->subject ?: $item->courseGroup?->subject;
+            $batch = $item->batch ?: $item->courseGroup?->batch;
+
+            if (!isset($workloadByTeacher[$teacherId])) {
+                $workloadByTeacher[$teacherId] = [
+                    'teacher_id' => $teacherId,
+                    'teacher_name' => $item->teacher?->user->name ?? 'Unknown',
+                    'total_hours' => 0,
+                    'session_count' => 0,
+                    'subjects' => [],
+                    'entries' => [],
+                ];
+            }
+
+            $workloadByTeacher[$teacherId]['total_hours'] += $hours;
+            $workloadByTeacher[$teacherId]['session_count']++;
+            $workloadByTeacher[$teacherId]['entries'][] = [
+                'day_of_week' => $item->day_of_week,
+                'slot' => $item->slot->name ?? 'N/A',
+                'subject' => $subject?->name ?? 'N/A',
+                'batch' => $item->courseGroup?->name ?? $batch?->name ?? 'N/A',
+                'hours' => $hours,
+                'source' => 'canonical_pmc_official_sessions',
+            ];
+
+            if ($subject?->id && !in_array($subject->id, $workloadByTeacher[$teacherId]['subjects'])) {
+                $workloadByTeacher[$teacherId]['subjects'][] = $subject->id;
+            }
+        }
+
+        $report = [];
+        foreach ($workloadByTeacher as $data) {
+            $weeklyLoad = $data['total_hours'] / $this->getTeachingWeeks($termId);
+            $status = $this->getStatus($weeklyLoad);
+
+            $report[] = [
+                'teacher_id' => $data['teacher_id'],
+                'teacher_name' => $data['teacher_name'],
+                'session_count' => $data['session_count'],
+                'total_hours' => $data['total_hours'],
+                'teaching_weeks' => $this->getTeachingWeeks($termId),
+                'weekly_load' => round($weeklyLoad, 2),
+                'subject_count' => count(array_unique($data['subjects'])),
+                'status' => $status,
+                'status_icon' => $this->getStatusIcon($status),
+                'entries' => $data['entries'],
+            ];
+        }
+
+        usort($report, fn($a, $b) => $b['weekly_load'] <=> $a['weekly_load']);
+
+        return $report;
     }
 
     /**

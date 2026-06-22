@@ -79,13 +79,13 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light"><tr><th>Day</th><th>Time Slot</th><th>Subject</th><th>Course</th><th>Room</th></tr></thead>
                             <tbody>
-                            @forelse($teacher->timetableEntries->where('is_active', true) as $e)
+                            @forelse(($officialSchedule ?? collect()) as $e)
                             <tr>
-                                <td><span class="badge bg-primary">{{ $e->day_name }}</span></td>
+                                <td><span class="badge bg-primary">{{ ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][$e->day_of_week] ?? 'Day' }}</span></td>
                                 <td class="text-muted" style="font-size:.84rem">{{ $e->slot->start_time }} – {{ $e->slot->end_time }}</td>
-                                <td class="fw-semibold">{{ $e->subject->name }}</td>
-                                <td>{{ $e->course->code }}</td>
-                                <td>{{ $e->classroom->room_number }}</td>
+                                <td class="fw-semibold">{{ $e->subject?->name ?? 'Subject' }} @if(($e->source ?? null) === 'canonical_pmc_official_session')<span class="badge bg-primary-subtle text-primary ms-1">PMC</span>@endif</td>
+                                <td>{{ $e->course?->code ?? $e->course_group?->name ?? '-' }}</td>
+                                <td>{{ $e->classroom?->room_number ?? 'Room TBA' }}</td>
                             </tr>
                             @empty
                             <tr><td colspan="5">
@@ -103,13 +103,13 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light"><tr><th>Subject</th><th>Code</th><th>Course</th><th>Type</th></tr></thead>
                             <tbody>
-                            @php $subjects = $teacher->timetableEntries->where('is_active', true)->pluck('subject')->unique('id'); @endphp
+                            @php $subjects = ($officialSchedule ?? collect())->pluck('subject')->filter()->unique('id'); @endphp
                             @forelse($subjects as $sub)
                             <tr>
                                 <td class="fw-semibold">{{ $sub->name }}</td>
                                 <td><code>{{ $sub->code }}</code></td>
-                                <td>{{ $sub->department->code }}</td>
-                                <td><span class="badge bg-info text-dark">{{ ucfirst($sub->type) }}</span></td>
+                                <td>{{ $sub->department?->code ?? $sub->program?->code ?? '-' }}</td>
+                                <td><span class="badge bg-info text-dark">{{ ucfirst($sub->type ?? 'subject') }}</span></td>
                             </tr>
                             @empty
                             <tr><td colspan="4">

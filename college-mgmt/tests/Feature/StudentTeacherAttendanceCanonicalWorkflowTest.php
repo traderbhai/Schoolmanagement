@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\{Attendance, AttendanceCondonation, Batch, Classroom, Course, Enrollment, Program, RoleProgramAssignment, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, TimetableVersion, User};
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, Attendance, AttendanceCondonation, Batch, Classroom, Course, Enrollment, Program, RoleProgramAssignment, Semester, Student, StudentSubjectEnrollment, Subject, Teacher, Term, TimetableEntry, TimetableSlot, TimetableVersion, User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -99,6 +99,223 @@ class StudentTeacherAttendanceCanonicalWorkflowTest extends TestCase
         $this->assertDatabaseHas('attendances', [
             'student_id' => $fixture['student']->id,
             'timetable_entry_id' => $fixture['entry']->id,
+            'status' => 'present',
+        ]);
+    }
+
+    public function test_teacher_attendance_uses_exact_pmc_group_membership_for_bridged_official_sessions(): void
+    {
+        $fixture = $this->fixture();
+        $outsiderUser = User::factory()->create(['name' => 'Same Subject Different Section Student']);
+        $outsiderUser->assignRole('student');
+        $outsider = Student::factory()->create([
+            'user_id' => $outsiderUser->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'course_id' => $fixture['course']->id,
+            'current_term_id' => $fixture['term']->id,
+            'roll_number' => 'OUT001',
+            'status' => 'active',
+        ]);
+        foreach ([$fixture['student'], $outsider] as $student) {
+            StudentSubjectEnrollment::firstOrCreate([
+                'student_id' => $student->id,
+                'subject_id' => $fixture['subject']->id,
+                'term_id' => $fixture['term']->id,
+            ], [
+                'enrollment_type' => 'compulsory',
+                'status' => 'active',
+            ]);
+        }
+
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Attendance PMC Section A',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $fixture['subject']->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 1,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $group->members()->create(['student_id' => $fixture['student']->id, 'status' => 'active']);
+        $version = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['batch']->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $fixture['teacher']->user_id,
+            'published_by' => $fixture['teacher']->user_id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Attendance PMC Bridge Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        $item = AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $fixture['subject']->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => $fixture['entry']->classroom_id,
+            'day_of_week' => $fixture['entry']->day_of_week,
+            'timetable_slot_id' => $fixture['entry']->timetable_slot_id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $fixture['teacher']->user_id,
+        ]);
+        $fixture['entry']->update([
+            'timetable_version_id' => $version->id,
+            'status' => 'published',
+            'pmc_generation_item_id' => $item->id,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.attendance.mark', [
+                'date' => now()->toDateString(),
+                'entry_id' => $fixture['entry']->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Canonical Attendance Student')
+            ->assertDontSee('Same Subject Different Section Student');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $fixture['entry']->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$outsider->id => 'present'],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $outsider->id,
+            'timetable_entry_id' => $fixture['entry']->id,
+        ]);
+    }
+
+    public function test_teacher_attendance_creates_safe_bridge_for_unbridged_official_pmc_session(): void
+    {
+        $fixture = $this->fixture();
+        $subject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_number' => 1,
+            'name' => 'Unbridged Official Attendance Subject',
+        ]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Unbridged Attendance Section',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $subject->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 1,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $group->members()->create(['student_id' => $fixture['student']->id, 'status' => 'active']);
+        $version = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $fixture['term']->id,
+            'batch_id' => $fixture['batch']->id,
+            'version_number' => 2,
+            'status' => 'published',
+            'created_by' => $fixture['teacher']->user_id,
+            'published_by' => $fixture['teacher']->user_id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Unbridged Attendance Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+        ]);
+        $slot = TimetableSlot::factory()->create([
+            'sort_order' => ((int) $fixture['entry']->slot?->sort_order) + 1,
+            'is_break' => false,
+        ]);
+        $item = AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $fixture['batch']->id,
+            'term_id' => $fixture['term']->id,
+            'subject_id' => $subject->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => $fixture['entry']->classroom_id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $fixture['teacher']->user_id,
+        ]);
+
+        $this->assertDatabaseMissing('timetable_entries', [
+            'pmc_generation_item_id' => $item->id,
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.attendance.mark', ['date' => now()->toDateString()]))
+            ->assertOk()
+            ->assertSee('Unbridged Official Attendance Subject');
+
+        $bridge = TimetableEntry::where('pmc_generation_item_id', $item->id)->firstOrFail();
+        $this->assertSame($bridge->id, $item->fresh()->operational_timetable_entry_id);
+        $this->assertSame('published', $bridge->status);
+        $this->assertSame($version->id, $bridge->timetable_version_id);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.attendance.mark', [
+                'date' => now()->toDateString(),
+                'entry_id' => $bridge->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Canonical Attendance Student');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.attendance.store'), [
+                'timetable_entry_id' => $bridge->id,
+                'date' => now()->toDateString(),
+                'attendance' => [$fixture['student']->id => 'present'],
+            ])
+            ->assertRedirect(route('teacher.attendance.mark'));
+
+        $this->assertDatabaseHas('attendances', [
+            'student_id' => $fixture['student']->id,
+            'timetable_entry_id' => $bridge->id,
             'status' => 'present',
         ]);
     }

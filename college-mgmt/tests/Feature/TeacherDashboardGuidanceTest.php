@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Course;
@@ -170,6 +173,153 @@ class TeacherDashboardGuidanceTest extends TestCase
             ->assertSee('TR-1')
             ->assertDontSee('Draft Dashboard Class')
             ->assertDontSee('Draft Version Dashboard Class');
+    }
+
+    public function test_teacher_dashboard_prefers_published_pmc_official_sessions_over_legacy_rows(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-06-22 09:00:00'));
+
+        $teacher = $this->makeTeacher();
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $term = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'name' => 'Term 1',
+        ]);
+        Semester::query()->update(['is_current' => false]);
+        $semester = Semester::factory()->create([
+            'number' => 1,
+            'name' => 'Term 1',
+            'is_current' => true,
+        ]);
+        $course = Course::factory()->create(['code' => 'LEGACY']);
+        $subject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Canonical Dashboard PMC Subject',
+            'code' => 'CDP101',
+        ]);
+        $legacySubject = Subject::factory()->create([
+            'program_id' => $program->id,
+            'term_number' => 1,
+            'name' => 'Legacy Flattened Dashboard Subject',
+            'code' => 'LFD101',
+        ]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Dashboard Section A',
+            'group_type' => 'core_section',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 30,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => User::factory()->create()->id,
+            'published_by' => User::factory()->create()->id,
+            'published_at' => now(),
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => User::factory()->create()->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Dashboard Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $version->created_by,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        $slot = TimetableSlot::factory()->create(['name' => 'Dashboard Canonical Slot', 'sort_order' => 1]);
+        $room = Classroom::factory()->create(['name' => 'Dashboard Canonical Room', 'room_number' => 'DCR-1']);
+
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 2,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'locked',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $version->published_by,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => Subject::factory()->create(['program_id' => $program->id, 'name' => 'Draft Canonical Dashboard Subject'])->id,
+            'session_index' => 2,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Draft Canonical Dashboard Room'])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 2])->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+        ]);
+        TimetableEntry::create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $legacySubject->id,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Legacy Dashboard Room'])->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 3])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($teacher->user)
+            ->get(route('teacher.dashboard'))
+            ->assertOk()
+            ->assertSee('2<span style="font-size:1rem;opacity:.7"> periods</span>', false)
+            ->assertSee('1<span style="font-size:1rem;opacity:.7"> classes</span>', false)
+            ->assertSee('Canonical Dashboard PMC Subject')
+            ->assertSee('Dashboard Section A')
+            ->assertSee('DCR-1')
+            ->assertDontSee('Legacy Flattened Dashboard Subject')
+            ->assertDontSee('Legacy Dashboard Room')
+            ->assertDontSee('Draft Canonical Dashboard Subject')
+            ->assertDontSee('Draft Canonical Dashboard Room');
     }
 
     public function test_teacher_dashboard_has_empty_priority_state(): void

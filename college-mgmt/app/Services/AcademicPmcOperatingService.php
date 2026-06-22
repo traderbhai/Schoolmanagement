@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\Attendance;
 use App\Models\CurriculumChange;
 use App\Models\ExamResult;
@@ -159,47 +160,71 @@ class AcademicPmcOperatingService
     public function timetableReadiness(User $user): array
     {
         $programIds = $this->visibleProgramIds($user);
-        $draft = $this->applyProgramScope(
+        $officialItems = $this->officialPmcItems($programIds);
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->canonicalProgramTermKey($item))
+            ->unique()
+            ->values();
+
+        $draftCanonical = $this->draftPmcItems($programIds);
+        $draftLegacy = $this->applyProgramScope(
             TimetableEntry::with(['program', 'subject', 'teacher.user', 'classroom'])
                 ->where('is_active', true)
                 ->where(fn (Builder $query) => $this->unpublishedTimetableScope($query)),
             $programIds
-        )->orderBy('day_of_week')->limit(25)->get();
+        )
+            ->orderBy('day_of_week')
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
 
-        $conflicts = $this->applyProgramScope(
-            TimetableEntry::query()
-                ->selectRaw('teacher_id, day_of_week, timetable_slot_id, count(*) as conflict_count')
-                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
-                ->groupBy('teacher_id', 'day_of_week', 'timetable_slot_id')
-                ->having('conflict_count', '>', 1),
+        $legacyPublished = $this->applyProgramScope(
+            TimetableEntry::with(['teacher.user'])
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query)),
             $programIds
-        )->limit(25)->get();
+        )
+            ->get(['id', 'teacher_id', 'program_id', 'term_id', 'day_of_week', 'timetable_slot_id'])
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+
+        $conflicts = $this->canonicalTeacherConflicts($officialItems)
+            ->merge($this->legacyTeacherConflicts($legacyPublished))
+            ->take(25)
+            ->values();
         $teacherMap = Teacher::with('user')
             ->whereIn('id', $conflicts->pluck('teacher_id')->filter()->unique())
             ->get()
             ->keyBy('id');
+        $draftItems = collect($draftCanonical->map(fn (AcademicPmcTimetableGenerationItem $item) => [
+            'title' => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Timetable slot',
+            'subtitle' => ($item->program?->code ?? $item->courseGroup?->program?->code ?? 'Program') . ' - Day ' . $item->day_of_week . ' - ' . ($item->classroom?->name ?? 'Room pending'),
+            'status' => ucfirst($item->official_status ?? 'draft'),
+            'metric_keys' => ['draft_slots'],
+            'action' => route('academics.pmc.timetable-planner.index'),
+            'source' => 'canonical_pmc_generation_items',
+        ])->all())->merge(collect($draftLegacy->take(25)->map(fn (TimetableEntry $entry) => [
+            'title' => $entry->subject?->name ?? 'Timetable slot',
+            'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
+            'status' => ucfirst($entry->status ?? 'draft'),
+            'metric_keys' => ['draft_slots'],
+            'action' => route('academics.pmc.timetable-planner.index'),
+            'source' => 'legacy_timetable_entries',
+        ])->all()))->take(25)->values();
 
         return [
             'title' => 'Timetable Readiness',
             'description' => 'Draft slots, publish readiness, faculty-room conflicts, and workload balance.',
             'metrics' => [
-                'draft_slots' => $draft->count(),
-                'published_slots' => $this->applyProgramScope(TimetableEntry::where(fn (Builder $query) => $this->publishedTimetableScope($query)), $programIds)->count(),
+                'draft_slots' => $draftCanonical->count() + $draftLegacy->count(),
+                'published_slots' => $officialItems->count() + $legacyPublished->count(),
                 'teacher_conflicts' => $conflicts->count(),
-                'active_slots' => $this->applyProgramScope(TimetableEntry::where('is_active', true), $programIds)->count(),
+                'active_slots' => $officialItems->count() + $draftCanonical->count() + $legacyPublished->count() + $draftLegacy->count(),
             ],
-            'items' => $draft->map(fn (TimetableEntry $entry) => [
-                'title' => $entry->subject?->name ?? 'Timetable slot',
-                'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name . ' - ' . ($entry->classroom?->name ?? 'Room pending'),
-                'status' => ucfirst($entry->status ?? 'draft'),
-                'metric_keys' => ['draft_slots'],
-                'action' => route('academics.pmc.timetable-planner.index'),
-            ])->merge($conflicts->map(fn ($conflict) => [
-                'title' => $this->teacherLabel($teacherMap->get($conflict->teacher_id), $conflict->teacher_id) . ' conflict',
-                'subtitle' => 'Day ' . $conflict->day_of_week . ', slot ' . ($conflict->timetable_slot_id ?: 'pending'),
+            'items' => $draftItems->merge($conflicts->map(fn (array $conflict) => [
+                'title' => $this->teacherLabel($teacherMap->get($conflict['teacher_id']), $conflict['teacher_id']) . ' conflict',
+                'subtitle' => 'Day ' . $conflict['day_of_week'] . ', slot ' . ($conflict['timetable_slot_id'] ?: 'pending'),
                 'status' => 'Conflict',
                 'metric_keys' => ['teacher_conflicts'],
                 'action' => route('academics.pmc.timetable-planner.index'),
+                'source' => $conflict['source'],
             ]))->values(),
         ];
     }
@@ -379,6 +404,22 @@ class AcademicPmcOperatingService
         return $query->whereIn($column, $programIds);
     }
 
+    private function applyPmcItemProgramScope(Builder $query, ?Collection $programIds): Builder
+    {
+        if ($programIds === null) {
+            return $query;
+        }
+
+        if ($programIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $scope) use ($programIds) {
+            $scope->whereIn('program_id', $programIds)
+                ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+        });
+    }
+
     private function scopeSummary(User $user): array
     {
         if ($this->hierarchy->canSeeAll($user)) {
@@ -416,6 +457,87 @@ class AcademicPmcOperatingService
                             ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
                     });
             });
+    }
+
+    private function officialPmcItems(?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with(['teacher.user', 'program', 'courseGroup.program', 'courseGroup.subject', 'subject', 'classroom', 'timetableVersion'])
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+
+        $this->applyPmcItemProgramScope($query, $programIds);
+
+        return $query->get();
+    }
+
+    private function draftPmcItems(?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with(['program', 'courseGroup.program', 'courseGroup.subject', 'subject', 'classroom', 'timetableVersion'])
+            ->where('status', 'scheduled')
+            ->where(function (Builder $draft) {
+                $draft->where('official_status', '!=', 'published')
+                    ->orWhereNull('timetable_version_id')
+                    ->orWhereDoesntHave('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+            });
+
+        $this->applyPmcItemProgramScope($query, $programIds);
+
+        return $query->orderBy('day_of_week')->limit(25)->get();
+    }
+
+    private function canonicalTeacherConflicts(Collection $items): Collection
+    {
+        return $items
+            ->filter(fn (AcademicPmcTimetableGenerationItem $item) => $item->teacher_id && $item->day_of_week && $item->timetable_slot_id)
+            ->groupBy(fn (AcademicPmcTimetableGenerationItem $item) => $item->teacher_id . ':' . $item->day_of_week . ':' . $item->timetable_slot_id)
+            ->filter(fn (Collection $group) => $group->count() > 1)
+            ->map(function (Collection $group) {
+                $first = $group->first();
+
+                return [
+                    'teacher_id' => $first->teacher_id,
+                    'day_of_week' => $first->day_of_week,
+                    'timetable_slot_id' => $first->timetable_slot_id,
+                    'conflict_count' => $group->count(),
+                    'source' => 'canonical_pmc_official_sessions',
+                ];
+            })
+            ->values();
+    }
+
+    private function legacyTeacherConflicts(Collection $entries): Collection
+    {
+        return $entries
+            ->filter(fn (TimetableEntry $entry) => $entry->teacher_id && $entry->day_of_week && $entry->timetable_slot_id)
+            ->groupBy(fn (TimetableEntry $entry) => $entry->teacher_id . ':' . $entry->day_of_week . ':' . $entry->timetable_slot_id)
+            ->filter(fn (Collection $group) => $group->count() > 1)
+            ->map(function (Collection $group) {
+                $first = $group->first();
+
+                return [
+                    'teacher_id' => $first->teacher_id,
+                    'day_of_week' => $first->day_of_week,
+                    'timetable_slot_id' => $first->timetable_slot_id,
+                    'conflict_count' => $group->count(),
+                    'source' => 'legacy_timetable_entries',
+                ];
+            })
+            ->values();
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
+    }
+
+    private function canonicalProgramTermKey(AcademicPmcTimetableGenerationItem $item): string
+    {
+        return $this->programTermKey(
+            $item->program_id ?? $item->courseGroup?->program_id,
+            $item->term_id ?? $item->courseGroup?->term_id
+        );
     }
 
     private function teacherLabel(?Teacher $teacher, mixed $fallbackId): string

@@ -73,7 +73,13 @@ class TeacherController extends Controller
         $teacher->load(['user','department','timetableEntries.subject','timetableEntries.slot']);
         $currentSemester = \App\Models\Semester::current();
         $weeklyLoad = $currentSemester ? $this->service->getTeacherWeeklyLoad($teacher->id, $currentSemester->id) : 0;
-        return view('admin.teachers.show', compact('teacher','weeklyLoad','currentSemester'));
+        $officialSchedule = $currentSemester
+            ? collect($this->service->buildWeeklyGrid($currentSemester->id, null, $teacher->id, officialOnly: true))
+                ->flatMap(fn ($day) => collect($day)->flatMap(fn ($slotEntries) => $slotEntries))
+                ->values()
+            : collect();
+
+        return view('admin.teachers.show', compact('teacher','weeklyLoad','currentSemester','officialSchedule'));
     }
 
     public function edit(Teacher $teacher)

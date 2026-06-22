@@ -488,12 +488,12 @@
                     <tbody>
                     @forelse($recentEntries as $e)
                     <tr>
-                        <td class="fw-semibold">{{ $e->subject->name }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ $e->course->code }}</span></td>
-                        <td>{{ $e->teacher->user->name }}</td>
-                        <td><span class="badge bg-secondary">{{ $e->classroom->room_number }}</span></td>
-                        <td>{{ $e->day_name }}</td>
-                        <td class="text-muted text-sm">{{ $e->slot->start_time }} - {{ $e->slot->end_time }}</td>
+                        <td class="fw-semibold">{{ $e->subject?->name ?? 'Subject not assigned' }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ $e->course?->code ?? $e->course?->name ?? 'PMC' }}</span></td>
+                        <td>{{ $e->teacher?->user?->name ?? 'Faculty not assigned' }}</td>
+                        <td><span class="badge bg-secondary">{{ $e->classroom?->room_number ?? $e->classroom?->name ?? 'Room pending' }}</span></td>
+                        <td>{{ $e->day_name ?? 'Day pending' }}</td>
+                        <td class="text-muted text-sm">{{ $e->slot?->start_time ?? 'Slot' }} - {{ $e->slot?->end_time ?? 'pending' }}</td>
                     </tr>
                     @empty
                     <tr>

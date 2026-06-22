@@ -2,8 +2,10 @@
 namespace App\Http\Controllers\Admin;
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\Classroom;
 use App\Services\TimetableService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -107,6 +109,7 @@ class ClassroomController extends Controller
     private function hasOperationalDependencies(Classroom $classroom): bool
     {
         return $classroom->timetableEntries()->exists()
+            || $this->officialCanonicalSessions($classroom)->exists()
             || $classroom->exams()->exists();
     }
 
@@ -122,7 +125,7 @@ class ClassroomController extends Controller
 
     private function minimumRequiredCapacity(Classroom $classroom): ?int
     {
-        $maximumBatchSize = $classroom->timetableEntries()
+        $legacyMaximumBatchSize = $classroom->timetableEntries()
             ->where('is_active', true)
             ->with('batch')
             ->get()
@@ -139,6 +142,25 @@ class ClassroomController extends Controller
             ->filter(fn ($size) => $size !== null)
             ->max();
 
+        $canonicalMaximumGroupSize = $this->officialCanonicalSessions($classroom)
+            ->with(['courseGroup.members', 'batch'])
+            ->get()
+            ->map(function (AcademicPmcTimetableGenerationItem $item) {
+                $memberCount = $item->courseGroup?->members
+                    ? $item->courseGroup->members->where('status', 'active')->count()
+                    : 0;
+
+                return max(
+                    $memberCount,
+                    (int) ($item->courseGroup?->current_strength ?? 0),
+                    (int) ($item->batch?->intake_capacity ?? 0)
+                );
+            })
+            ->filter(fn ($size) => $size > 0)
+            ->max();
+
+        $maximumBatchSize = max((int) $legacyMaximumBatchSize, (int) $canonicalMaximumGroupSize);
+
         return $maximumBatchSize ? (int) $maximumBatchSize : null;
     }
 
@@ -149,7 +171,18 @@ class ClassroomController extends Controller
             && (bool) $classroom->is_active
             && (
                 $classroom->timetableEntries()->where('is_active', true)->exists()
+                || $this->officialCanonicalSessions($classroom)->exists()
                 || $classroom->exams()->whereDate('exam_date', '>=', now()->toDateString())->exists()
             );
+    }
+
+    private function officialCanonicalSessions(Classroom $classroom): Builder
+    {
+        return AcademicPmcTimetableGenerationItem::query()
+            ->where('classroom_id', $classroom->id)
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
     }
 }

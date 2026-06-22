@@ -247,3 +247,10 @@ For each completed slice, append a short note:
 - `Fix`: the top timetable build sequence now links directly to the real source workflow pages: student baskets, groups, section/group faculty allocation, locked slots, generator, and publish/freeze. Group launch diagnostics now respect PMC academic scope so a manager does not see unrelated program blockers in the readiness count.
 - `Tests`: `AcademicsPmcTimetableV041Test` passed `6 tests / 161 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`; `git diff --check` passed for the changed files.
 - `Status`: `fixed_verified` for this bounded PMC real-world workflow slice.
+### PMC Timetable Batch-Scoped Generator Slice
+
+- `Date`: 2026-06-22.
+- `Scope`: PMC timetable generator group selection.
+- `Fix`: batch-specific timetable generation now filters course groups by `batch_id` and applies the actor's PMC academic scope before creating generation items, preventing another batch's section/group from entering a selected batch timetable run.
+- `Tests`: `AcademicsPmcTimetableV041Test` passed `7 tests / 164 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`; syntax checks passed for the touched service/test files.
+- `Status`: `fixed_verified` for this bounded generator-boundary slice.

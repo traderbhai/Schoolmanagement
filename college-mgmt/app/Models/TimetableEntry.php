@@ -9,6 +9,7 @@ class TimetableEntry extends Model
     protected $fillable = [
         'semester_id', 'course_id', 'program_id', 'term_id', 'batch_id', 'subject_id', 'teacher_id',
         'classroom_id', 'timetable_slot_id', 'day_of_week', 'is_active', 'status', 'timetable_version_id',
+        'pmc_generation_item_id',
     ];
 
     public function semester()        { return $this->belongsTo(Semester::class); }
@@ -23,6 +24,7 @@ class TimetableEntry extends Model
     public function attendances()     { return $this->hasMany(Attendance::class); }
     public function substitutions()   { return $this->hasMany(TimetableSubstitution::class); }
     public function version()         { return $this->belongsTo(TimetableVersion::class, 'timetable_version_id'); }
+    public function pmcGenerationItem() { return $this->belongsTo(AcademicPmcTimetableGenerationItem::class, 'pmc_generation_item_id'); }
 
     public function getDayNameAttribute(): string
     {

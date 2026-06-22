@@ -51,12 +51,24 @@
                         @for($day=1;$day<=6;$day++)
                         <td>
                             @if(isset($grid[$day][$slot->id]))
-                                @php $e=$grid[$day][$slot->id]; @endphp
-                                <div class="timetable-cell">
-                                    <div class="subj">{{ $e->subject->name }}</div>
-                                    <div class="tchr">{{ $e->course->code }}</div>
-                                    <span class="room-tag">{{ $e->classroom->room_number }}</span>
-                                </div>
+                                @foreach($grid[$day][$slot->id] as $e)
+                                    <div class="timetable-cell mb-2">
+                                        <div class="subj">
+                                            {{ $e->subject?->name ?? 'Subject' }}
+                                            @if(($e->duration_slots ?? 1) > 1)
+                                                <span class="badge bg-light text-muted border ms-1">{{ $e->duration_slots }} slots</span>
+                                            @endif
+                                        </div>
+                                        @if($e->course_group)
+                                            <div class="text-muted" style="font-size:.68rem">{{ $e->course_group->name }}</div>
+                                        @endif
+                                        @if($e->is_continuation ?? false)
+                                            <div class="text-muted" style="font-size:.68rem">Continued session</div>
+                                        @endif
+                                        <div class="tchr">{{ $e->course?->code ?? '' }}</div>
+                                        <span class="room-tag">{{ $e->classroom?->room_number ?? 'Room TBA' }}</span>
+                                    </div>
+                                @endforeach
                             @endif
                         </td>
                         @endfor

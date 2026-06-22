@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AcademicDeanActionItem;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\Attendance;
 use App\Models\CourseFeedback;
 use App\Models\CurriculumChange;
@@ -15,6 +16,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectFacultyAssignment;
 use App\Models\TimetableEntry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -163,12 +165,52 @@ class AcademicDeanAttentionService
 
     private function timetableGaps(): Collection
     {
-        return TimetableEntry::with('subject.program')
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with(['subject.program', 'courseGroup.subject.program', 'program', 'timetableVersion'])
+            ->where(function (Builder $query) {
+                $query->whereNull('official_status')
+                    ->orWhere('official_status', '!=', 'published')
+                    ->orWhereNull('timetable_version_id')
+                    ->orWhereDoesntHave('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked', 'draft'])
+            ->limit(25)
+            ->get();
+
+        $canonicalProgramTermKeys = AcademicPmcTimetableGenerationItem::with('courseGroup:id,program_id,term_id')
+            ->where(function (Builder $query) {
+                $query->whereNotNull('program_id')
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereNotNull('program_id'));
+            })
+            ->get(['id', 'program_id', 'term_id', 'course_group_id'])
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $legacyGaps = TimetableEntry::with('subject.program')
             ->where('is_active', true)
             ->where('status', '!=', 'published')
             ->limit(25)
             ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)))
             ->map(fn (TimetableEntry $entry) => $this->item($entry->subject?->name ?? 'Timetable entry', ($entry->subject?->program?->code ?? 'Program') . ' timetable not published', 'medium', 'pmc', 'PMC Officer', null, route('academics.pmc.timetable-readiness'), 'Publish or fix timetable'));
+
+        return $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->item(
+                $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'PMC timetable session',
+                ($item->program?->code ?? $item->subject?->program?->code ?? $item->courseGroup?->subject?->program?->code ?? 'Program') . ' official timetable not published',
+                'medium',
+                'pmc',
+                'PMC Officer',
+                null,
+                route('academics.pmc.timetable-readiness'),
+                'Publish or fix timetable'
+            ))
+            ->merge($legacyGaps)
+            ->take(25)
+            ->values();
     }
 
     private function examReadinessBlocks(): Collection
@@ -273,6 +315,11 @@ class AcademicDeanAttentionService
         return $subject->name
             ?? $subject->code
             ?? 'Subject record ' . $fallbackId;
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 
     private function applicantLabel(object $row): string

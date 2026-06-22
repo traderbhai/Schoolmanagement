@@ -5,10 +5,11 @@
 <div class="container-fluid py-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">Substitution Management</h4>
-    <a href="{{ route('chair.timetable.builder') }}" class="btn btn-outline-secondary btn-sm">← Builder</a>
+    <a href="{{ route('chair.timetable.builder') }}" class="btn btn-outline-secondary btn-sm">Back to Builder</a>
   </div>
 
   @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <div class="row g-4">
     <div class="col-lg-5">
@@ -19,17 +20,38 @@
             @csrf
             <div class="mb-3">
               <label class="form-label">Session</label>
-              <select name="timetable_entry_id" class="form-select" required>
-                <option value="">Select session…</option>
-                @foreach($entries as $e)
-                  <option value="{{ $e->id }}">
-                    {{ ['Mon','Tue','Wed','Thu','Fri','Sat'][$e->day_of_week-1] ?? '' }}
-                    · {{ $e->slot->name ?? '' }}
-                    · {{ $e->subject->name ?? '?' }}
-                    @if($e->batch)({{ $e->batch->name }})@endif
-                    · {{ $e->teacher->user->name ?? '—' }}
-                  </option>
-                @endforeach
+              <select name="session_ref" class="form-select" required>
+                <option value="">Select session...</option>
+                @if($canonicalSessions->isNotEmpty())
+                  <optgroup label="Official PMC sessions">
+                    @foreach($canonicalSessions as $session)
+                      @php
+                        $subject = $session->subject ?: $session->courseGroup?->subject;
+                        $batch = $session->batch ?: $session->courseGroup?->batch;
+                      @endphp
+                      <option value="pmc:{{ $session->id }}">
+                        {{ ['Mon','Tue','Wed','Thu','Fri','Sat'][$session->day_of_week-1] ?? '' }}
+                        - {{ $session->slot->name ?? '' }}
+                        - {{ $subject?->name ?? '?' }}
+                        @if($session->courseGroup)({{ $session->courseGroup->name }})@elseif($batch)({{ $batch->name }})@endif
+                        - {{ $session->teacher->user->name ?? 'Faculty pending' }}
+                      </option>
+                    @endforeach
+                  </optgroup>
+                @endif
+                @if($entries->isNotEmpty())
+                  <optgroup label="Legacy compatibility sessions">
+                    @foreach($entries as $e)
+                      <option value="legacy:{{ $e->id }}">
+                        {{ ['Mon','Tue','Wed','Thu','Fri','Sat'][$e->day_of_week-1] ?? '' }}
+                        - {{ $e->slot->name ?? '' }}
+                        - {{ $e->subject->name ?? '?' }}
+                        @if($e->batch)({{ $e->batch->name }})@endif
+                        - {{ $e->teacher->user->name ?? '-' }}
+                      </option>
+                    @endforeach
+                  </optgroup>
+                @endif
               </select>
             </div>
             <div class="mb-3">
@@ -47,7 +69,7 @@
             <div class="mb-3" id="sub-row">
               <label class="form-label">Substitute Teacher</label>
               <select name="substitute_teacher_id" class="form-select">
-                <option value="">— None —</option>
+                <option value="">None / uncovered</option>
                 @foreach($teachers as $t)
                   <option value="{{ $t->id }}">{{ $t->user->name ?? $t->id }}</option>
                 @endforeach
@@ -75,14 +97,18 @@
               <tbody>
                 @forelse($recent as $sub)
                   <tr>
-                    <td>{{ $sub->date }}</td>
+                    <td>{{ optional($sub['date'])->format('Y-m-d') ?? $sub['date'] }}</td>
                     <td>
-                      <span class="fw-semibold">{{ $sub->entry->subject->name ?? '?' }}</span>
-                      <small class="text-muted d-block">{{ $sub->entry->batch->name ?? '' }}</small>
+                      <span class="fw-semibold">{{ $sub['session'] }}</span>
+                      <small class="text-muted d-block">
+                        {{ $sub['group'] }}
+                        <span class="badge bg-{{ $sub['source'] === 'canonical' ? 'success' : 'secondary' }} ms-1">{{ $sub['source'] }}</span>
+                        @if($sub['status'])<span class="badge bg-light text-dark ms-1">{{ $sub['status'] }}</span>@endif
+                      </small>
                     </td>
-                    <td><span class="badge bg-{{ $sub->action==='cancelled'?'danger':($sub->action==='substitute'?'info text-dark':'warning text-dark') }}">{{ ucfirst($sub->action) }}</span></td>
-                    <td>{{ $sub->substitute->user->name ?? '—' }}</td>
-                    <td class="small text-muted">{{ Str::limit($sub->reason,40) }}</td>
+                    <td><span class="badge bg-{{ $sub['action']==='cancellation'||$sub['action']==='cancelled'?'danger':($sub['action']==='substitute'?'info text-dark':'warning text-dark') }}">{{ ucfirst(str_replace('_', ' ', $sub['action'])) }}</span></td>
+                    <td>{{ $sub['substitute'] ?? '-' }}</td>
+                    <td class="small text-muted">{{ \Illuminate\Support\Str::limit($sub['reason'], 40) }}</td>
                   </tr>
                 @empty
                   <tr>

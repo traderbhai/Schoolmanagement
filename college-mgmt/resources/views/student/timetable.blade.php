@@ -50,8 +50,13 @@
                                         {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') : 'Not set' }}
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ $entry->subject->name ?? 'Subject not set' }}</div>
-                                        <div class="small text-muted">{{ $entry->subject->code ?? '' }}</div>
+                                        <div class="fw-semibold">{{ $entry->subject?->name ?? $entry->courseGroup?->subject?->name ?? 'Subject not set' }}</div>
+                                        <div class="small text-muted">
+                                            {{ $entry->subject?->code ?? $entry->courseGroup?->subject?->code ?? '' }}
+                                            @if($entry->courseGroup)
+                                                <span class="ms-1">| {{ $entry->courseGroup->name }}</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td>{{ $entry->teacher->user->name ?? 'Teacher not assigned' }}</td>
                                     <td>{{ $entry->classroom->name ?? 'Room not assigned' }}</td>

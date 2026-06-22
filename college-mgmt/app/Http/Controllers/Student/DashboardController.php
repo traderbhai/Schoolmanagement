@@ -1,9 +1,10 @@
 <?php
 namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
-use App\Models\{Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam, Enrollment, Student, StudentSubjectEnrollment, Term, TimetableEntry, HostelFeeDemand};
+use App\Models\{AcademicPmcCourseGroupMember, AcademicPmcTimetableGenerationItem, Semester, Notice, TimetableSlot, Attendance, FeeStructure, FeePayment, FeeDemand, ExamResult, Exam, Enrollment, Student, StudentSubjectEnrollment, Term, TimetableEntry, HostelFeeDemand};
 use App\Models\{Assignment, Quiz, LeaveApplication, AcademicEvent, SubjectAnnouncement};
 use App\Services\TimetableService;
+use Illuminate\Database\Eloquent\Builder;
 
 class DashboardController extends Controller
 {
@@ -173,6 +174,39 @@ class DashboardController extends Controller
             return collect();
         }
 
+        $courseGroupIds = AcademicPmcCourseGroupMember::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->whereHas('courseGroup', fn (Builder $group) => $group->whereIn('subject_id', $subjectIds))
+            ->pluck('course_group_id')
+            ->unique()
+            ->values();
+
+        if ($courseGroupIds->isNotEmpty()) {
+            $canonicalEntries = AcademicPmcTimetableGenerationItem::whereIn('course_group_id', $courseGroupIds)
+                ->where('day_of_week', $dayOfWeek)
+                ->whereIn('status', ['scheduled', 'published', 'locked'])
+                ->where('official_status', 'published')
+                ->whereNotNull('timetable_version_id')
+                ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+                ->when($student->program_id, fn($q) => $q->where(function ($query) use ($student) {
+                    $query->whereNull('program_id')->orWhere('program_id', $student->program_id);
+                }))
+                ->when($student->batch_id, fn($q) => $q->where(function ($query) use ($student) {
+                    $query->whereNull('batch_id')->orWhere('batch_id', $student->batch_id);
+                }))
+                ->when($student->current_term_id, fn($q) => $q->where(function ($query) use ($student) {
+                    $query->whereNull('term_id')->orWhere('term_id', $student->current_term_id);
+                }))
+                ->with(['subject', 'courseGroup.subject', 'classroom', 'teacher.user', 'slot', 'timetableVersion'])
+                ->get()
+                ->sortBy(fn($entry) => optional($entry->slot)->sort_order ?? 0)
+                ->groupBy('timetable_slot_id');
+
+            if ($canonicalEntries->isNotEmpty()) {
+                return $canonicalEntries;
+            }
+        }
+
         return TimetableEntry::whereIn('subject_id', $subjectIds)
             ->where('semester_id', $semesterId)
             ->where('day_of_week', $dayOfWeek)
@@ -194,7 +228,7 @@ class DashboardController extends Controller
             ->with(['subject', 'classroom', 'teacher.user', 'slot'])
             ->get()
             ->sortBy(fn($entry) => optional($entry->slot)->sort_order ?? 0)
-            ->keyBy('timetable_slot_id');
+            ->groupBy('timetable_slot_id');
     }
 
     private function studentPublishedAttendanceQuery(Student $student)

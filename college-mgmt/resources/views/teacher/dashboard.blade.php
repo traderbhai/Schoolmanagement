@@ -175,11 +175,13 @@
                         @for($day=1;$day<=6;$day++)
                         <td class="p-1">
                             @if(isset($grid[$day][$slot->id]))
-                            <div class="timetable-cell">
-                                <div class="subj fw-semibold" style="font-size:.78rem;line-height:1.2">{{ $grid[$day][$slot->id]->subject?->name ?? 'Subject not assigned' }}</div>
-                                <div class="tchr text-muted mt-1" style="font-size:.68rem">{{ $grid[$day][$slot->id]->course?->code ?? 'Course not assigned' }}</div>
-                                <span class="room-tag badge bg-light text-secondary border mt-1" style="font-size:.62rem">{{ $grid[$day][$slot->id]->classroom?->room_number ?? $grid[$day][$slot->id]->classroom?->name ?? 'Room not assigned' }}</span>
-                            </div>
+                                @foreach($grid[$day][$slot->id] as $session)
+                                <div class="timetable-cell mb-1">
+                                    <div class="subj fw-semibold" style="font-size:.78rem;line-height:1.2">{{ $session->subject?->name ?? $session->courseGroup?->subject?->name ?? 'Subject not assigned' }}</div>
+                                    <div class="tchr text-muted mt-1" style="font-size:.68rem">{{ $session->course?->code ?? $session->courseGroup?->name ?? $session->batch?->name ?? 'Group not assigned' }}</div>
+                                    <span class="room-tag badge bg-light text-secondary border mt-1" style="font-size:.62rem">{{ $session->classroom?->room_number ?? $session->classroom?->name ?? 'Room not assigned' }}</span>
+                                </div>
+                                @endforeach
                             @endif
                         </td>
                         @endfor

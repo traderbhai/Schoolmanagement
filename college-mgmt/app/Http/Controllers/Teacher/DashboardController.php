@@ -1,8 +1,9 @@
 <?php
 namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
-use App\Models\{Assignment, AssignmentSubmission, Semester, Notice, TimetableEntry, TimetableSlot};
+use App\Models\{AcademicPmcTimetableGenerationItem, Assignment, AssignmentSubmission, Semester, Notice, TimetableEntry, TimetableSlot};
 use App\Services\TimetableService;
+use Illuminate\Database\Eloquent\Builder;
 
 class DashboardController extends Controller
 {
@@ -41,12 +42,15 @@ class DashboardController extends Controller
         $currentSemester = Semester::current();
         $notices = Notice::active()->where(fn($q) => $q->where('audience','all')->orWhere('audience','teachers'))->latest()->take(5)->get();
         $slots = TimetableSlot::where('is_active',true)->orderBy('sort_order')->get();
-        $entries = $currentSemester ? $this->publishedTimetableEntries($teacher->id, $currentSemester->id) : collect();
+        $entries = $currentSemester ? $this->publishedTimetableSessions($teacher->id, $currentSemester) : collect();
         $grid = $this->weeklyGridFromEntries($entries);
-        $weeklyLoad = $entries->count();
+        $weeklyLoad = $entries->sum(fn ($entry) => max(1, (int) ($entry->duration_slots ?? 1)));
 
         $todayDay = now()->dayOfWeekIso;
-        $todayClasses = isset($grid[$todayDay]) ? array_filter($grid[$todayDay]) : [];
+        $todayClasses = collect($grid[$todayDay] ?? [])
+            ->flatMap(fn ($cellEntries) => $cellEntries)
+            ->values()
+            ->all();
 
         $activeAssignments = Assignment::where('created_by', $user->id)
             ->where('is_published', true)
@@ -66,6 +70,29 @@ class DashboardController extends Controller
             'activeAssignments',
             'pendingGrading'
         ));
+    }
+
+    private function publishedTimetableSessions(int $teacherId, Semester $semester)
+    {
+        $officialPmcItems = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject', 'classroom', 'slot', 'batch', 'term', 'timetableVersion'])
+            ->where('teacher_id', $teacherId)
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->where(function (Builder $query) use ($semester) {
+                $query->whereDoesntHave('term')
+                    ->orWhereHas('term', fn (Builder $term) => $term->where('term_number', $semester->number));
+            })
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id')
+            ->get();
+
+        if ($officialPmcItems->isNotEmpty()) {
+            return $officialPmcItems;
+        }
+
+        return $this->publishedTimetableEntries($teacherId, $semester->id);
     }
 
     private function publishedTimetableEntries(int $teacherId, int $semesterId)
@@ -116,7 +143,8 @@ class DashboardController extends Controller
         }
 
         foreach ($entries as $entry) {
-            $grid[$entry->day_of_week][$entry->timetable_slot_id] = $entry;
+            $grid[$entry->day_of_week][$entry->timetable_slot_id] ??= collect();
+            $grid[$entry->day_of_week][$entry->timetable_slot_id]->push($entry);
         }
 
         return $grid;

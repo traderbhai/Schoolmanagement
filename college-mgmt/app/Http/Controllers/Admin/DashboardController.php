@@ -2,7 +2,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Student, Teacher, Department, Course, Notice, Semester, TimetableEntry, Exam, FeeStructure, FeePayment, Attendance, Placement, PlacementDrive};
+use App\Models\{AcademicPmcTimetableGenerationItem, Student, Teacher, Department, Course, Notice, Semester, TimetableEntry, Exam, FeeStructure, FeePayment, Attendance, Placement, PlacementDrive};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -44,10 +46,7 @@ class DashboardController extends Controller
         $recentNotices  = Notice::with('user')->active()->latest()->take(5)->get();
 
         // Timetable entries
-        $recentEntries = TimetableEntry::with(['course','subject','teacher.user','classroom','slot'])
-            ->where('is_active', true)
-            ->when($currentSemester, fn($q) => $q->where('semester_id', $currentSemester->id))
-            ->latest()->take(10)->get();
+        $recentEntries = $this->recentOfficialTimetableEntries($currentSemester);
 
         // Recent students (last 5 enrolled)
         $recentStudents = Student::with('user')->latest()->take(5)->get();
@@ -122,5 +121,78 @@ class DashboardController extends Controller
             'attendanceTrend', 'feeCollection', 'feeMonthly', 'enrollmentByDept',
             'placedStudents', 'upcomingDrives'
         ));
+    }
+
+    private function recentOfficialTimetableEntries(?Semester $currentSemester): Collection
+    {
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with([
+                'subject',
+                'courseGroup.subject',
+                'courseGroup.program',
+                'courseGroup.term',
+                'program',
+                'batch',
+                'term',
+                'teacher.user',
+                'classroom',
+                'slot',
+                'timetableVersion',
+            ])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->when($currentSemester, function (Builder $query) use ($currentSemester) {
+                $query->where(function (Builder $scope) use ($currentSemester) {
+                    $scope->whereHas('term', fn (Builder $term) => $this->semesterTermScope($term, $currentSemester))
+                        ->orWhereHas('courseGroup.term', fn (Builder $term) => $this->semesterTermScope($term, $currentSemester));
+                });
+            })
+            ->latest()
+            ->get();
+
+        $canonicalProgramTermKeys = $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $legacyEntries = TimetableEntry::with(['course','subject','teacher.user','classroom','slot'])
+            ->where('is_active', true)
+            ->when($currentSemester, fn($q) => $q->where('semester_id', $currentSemester->id))
+            ->latest()
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+
+        return $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => (object) [
+                'subject' => $item->subject ?: $item->courseGroup?->subject,
+                'course' => (object) ['code' => $item->courseGroup?->name ?? $item->batch?->name ?? 'PMC'],
+                'teacher' => $item->teacher,
+                'classroom' => $item->classroom,
+                'slot' => $item->slot,
+                'day_of_week' => $item->day_of_week,
+                'day_name' => $item->day_name,
+                'created_at' => $item->updated_at ?: $item->created_at,
+                'source' => 'canonical_pmc_official_sessions',
+            ])
+            ->merge($legacyEntries)
+            ->sortByDesc(fn ($entry) => $entry->created_at)
+            ->take(10)
+            ->values();
+    }
+
+    private function semesterTermScope(Builder $term, Semester $semester): void
+    {
+        $term->where(function (Builder $scope) use ($semester) {
+            $scope->where('term_number', $semester->number)
+                ->orWhere('name', $semester->name);
+        });
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 }

@@ -2,8 +2,9 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AcademicPmcElectiveChoice, Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
-                ElectiveRegistrationWindow, Department, PmcAssessmentComponentConfig};
+use App\Models\{AcademicPmcElectiveChoice, AcademicPmcTimetableGenerationItem, Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
+                ElectiveRegistrationWindow, Department, PmcAssessmentComponentConfig, TimetableEntry};
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -118,11 +119,7 @@ class PmcCurriculumController extends Controller {
         // Available teachers
         $teachers = Teacher::with('user')->where('status', 'active')->orderBy('id')->get();
 
-        // Workload per teacher this term (entries count)
-        $workload = \App\Models\TimetableEntry::where('term_id', $currentTerm?->id)
-            ->selectRaw('teacher_id, COUNT(*) as sessions')
-            ->groupBy('teacher_id')
-            ->pluck('sessions', 'teacher_id');
+        $workload = $this->officialTeacherWorkloadMap($currentTerm, $programIds);
 
         return view('departmental.program-chair.curriculum.assignments', compact(
             'programs', 'terms', 'batches', 'selectedProgram', 'currentTerm',
@@ -346,6 +343,73 @@ class PmcCurriculumController extends Controller {
     {
         $subject = Subject::findOrFail($subjectId);
         abort_unless($subject->is_active && (int) $subject->program_id === $programId, 422, 'Selected subject must be active and belong to the selected program.');
+    }
+
+    private function officialTeacherWorkloadMap(?Term $term, array $programIds): Collection
+    {
+        if (! $term) {
+            return collect();
+        }
+
+        $officialItems = AcademicPmcTimetableGenerationItem::with(['courseGroup'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+            ->where(function ($query) use ($term) {
+                $query->where('term_id', $term->id)
+                    ->orWhereHas('courseGroup', fn ($group) => $group->where('term_id', $term->id));
+            })
+            ->where(function ($query) use ($programIds) {
+                $query->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $programIds));
+            })
+            ->get();
+
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $canonicalRows = $officialItems
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $items): int => (int) $items->sum(fn (AcademicPmcTimetableGenerationItem $item) => max(1, (int) ($item->duration_slots ?? 1))));
+
+        $legacyRows = TimetableEntry::where('term_id', $term->id)
+            ->whereIn('program_id', $programIds)
+            ->where(fn ($query) => $this->publishedTimetableScope($query))
+            ->get(['teacher_id', 'program_id', 'term_id'])
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)))
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $entries): int => $entries->count());
+
+        $workload = $canonicalRows->map(fn ($sessions): int => (int) $sessions);
+
+        $legacyRows->each(function (int $sessions, int|string $teacherId) use (&$workload): void {
+            $workload->put($teacherId, (int) ($workload->get($teacherId, 0) + $sessions));
+        });
+
+        return $workload;
+    }
+
+    private function publishedTimetableScope($query)
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('status', 'published')
+            ->where(function ($versionQuery) {
+                $versionQuery->whereNull('timetable_version_id')
+                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
+            });
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 
     private function windowHasSubmittedChoices(ElectiveRegistrationWindow $window): bool

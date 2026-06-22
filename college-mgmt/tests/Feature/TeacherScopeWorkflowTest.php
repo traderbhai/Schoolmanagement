@@ -5,6 +5,10 @@ namespace Tests\Feature;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Attendance;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Course;
 use App\Models\CourseFeedback;
@@ -191,6 +195,244 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('assignments', ['title' => 'Draft Subject Assignment']);
         $this->assertDatabaseMissing('study_materials', ['title' => 'Draft Subject Material']);
         $this->assertDatabaseMissing('subject_announcements', ['title' => 'Draft Subject Announcement']);
+    }
+
+    public function test_teacher_content_and_exam_scope_use_canonical_pmc_official_subjects(): void
+    {
+        $fixture = $this->fixture();
+        $batch = Batch::factory()->create(['program_id' => $fixture['program']->id]);
+        $term = Term::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+            'start_date' => now(),
+        ]);
+        $canonicalSubject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'name' => 'Canonical Teacher Content Subject',
+        ]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Canonical Teacher Content Group',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $canonicalSubject->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 1,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $fixture['teacher']->user_id,
+            'published_by' => $fixture['teacher']->user_id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Teacher Content Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $canonicalSubject->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'status' => 'locked',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $fixture['teacher']->user_id,
+        ]);
+        $draftCanonicalSubject = Subject::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'name' => 'Draft Canonical Teacher Content Subject',
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $fixture['teacher']->user_id,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $draftCanonicalSubject->id,
+            'session_index' => 2,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $fixture['teacher']->id,
+            'classroom_id' => Classroom::factory()->create()->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => TimetableSlot::factory()->create()->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+        ]);
+        $canonicalStudent = Student::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'course_id' => $fixture['enrolled']->course_id,
+            'roll_number' => 'CAN-CONTENT-001',
+        ]);
+        StudentSubjectEnrollment::create([
+            'student_id' => $canonicalStudent->id,
+            'subject_id' => $canonicalSubject->id,
+            'term_id' => $term->id,
+            'enrollment_type' => 'compulsory',
+            'status' => 'active',
+        ]);
+        CourseFeedback::create([
+            'student_id' => $canonicalStudent->id,
+            'subject_id' => $canonicalSubject->id,
+            'term_id' => $term->id,
+            'teaching_rating' => 5,
+            'content_rating' => 5,
+            'overall_rating' => 5,
+            'comments' => 'Canonical official feedback visible.',
+        ]);
+        CourseFeedback::create([
+            'student_id' => $fixture['enrolled']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'term_id' => $term->id,
+            'teaching_rating' => 1,
+            'content_rating' => 1,
+            'overall_rating' => 1,
+            'comments' => 'Legacy flattened feedback should be hidden.',
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.assignments.store'), [
+                'subject_id' => $canonicalSubject->id,
+                'title' => 'Canonical Official Assignment',
+                'description' => 'Created from canonical PMC session.',
+                'max_marks' => 10,
+                'due_at' => now()->addWeek()->toDateTimeString(),
+            ])
+            ->assertRedirect(route('teacher.assignments.index'));
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.materials.store'), [
+                'subject_id' => $canonicalSubject->id,
+                'title' => 'Canonical Official Material',
+                'type' => 'notes',
+                'description' => 'Canonical official notes.',
+            ])
+            ->assertRedirect(route('teacher.materials.index'));
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.announcements.store'), [
+                'subject_id' => $canonicalSubject->id,
+                'title' => 'Canonical Official Announcement',
+                'body' => 'Canonical official announcement body.',
+            ])
+            ->assertRedirect();
+
+        foreach ([$fixture['assignedSubject'], $draftCanonicalSubject] as $blockedSubject) {
+            $this->actingAs($fixture['teacher']->user)
+                ->post(route('teacher.assignments.store'), [
+                    'subject_id' => $blockedSubject->id,
+                    'title' => 'Blocked Non Official Assignment',
+                    'max_marks' => 10,
+                    'due_at' => now()->addWeek()->toDateTimeString(),
+                ])
+                ->assertForbidden();
+        }
+
+        $canonicalExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $canonicalSubject->id,
+            'exam_date' => now()->subDay()->toDateString(),
+            'total_marks' => 100,
+        ]);
+        $legacyExam = Exam::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'semester_id' => $fixture['semester']->id,
+            'subject_id' => $fixture['assignedSubject']->id,
+            'name' => 'Legacy Flattened Teacher Exam',
+            'exam_date' => now()->subDay()->toDateString(),
+        ]);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.feedback.index'))
+            ->assertOk()
+            ->assertSee('Canonical Teacher Content Subject')
+            ->assertSee('Canonical official feedback visible.')
+            ->assertDontSee('Legacy flattened feedback should be hidden.')
+            ->assertDontSee('Draft Canonical Teacher Content Subject');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.exams.index'))
+            ->assertOk()
+            ->assertSee($canonicalExam->name)
+            ->assertDontSee('Legacy Flattened Teacher Exam');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $canonicalExam), [
+                'results' => [$canonicalStudent->id => ['marks_obtained' => 88]],
+            ])
+            ->assertRedirect(route('teacher.exams.index'));
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.exams.results.save', $legacyExam), [
+                'results' => [$fixture['enrolled']->id => ['marks_obtained' => 70]],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('assignments', [
+            'subject_id' => $canonicalSubject->id,
+            'created_by' => $fixture['teacher']->user_id,
+            'title' => 'Canonical Official Assignment',
+        ]);
+        $this->assertDatabaseHas('study_materials', [
+            'subject_id' => $canonicalSubject->id,
+            'uploaded_by' => $fixture['teacher']->user_id,
+            'title' => 'Canonical Official Material',
+        ]);
+        $this->assertDatabaseHas('subject_announcements', [
+            'subject_id' => $canonicalSubject->id,
+            'posted_by' => $fixture['teacher']->user_id,
+            'title' => 'Canonical Official Announcement',
+        ]);
+        $this->assertDatabaseHas('exam_results', [
+            'exam_id' => $canonicalExam->id,
+            'student_id' => $canonicalStudent->id,
+            'marks_obtained' => 88,
+        ]);
+        $this->assertDatabaseMissing('assignments', ['title' => 'Blocked Non Official Assignment']);
+        $this->assertDatabaseMissing('exam_results', [
+            'exam_id' => $legacyExam->id,
+            'student_id' => $fixture['enrolled']->id,
+        ]);
     }
 
     public function test_teacher_cannot_save_results_for_same_subject_outside_timetable_program_scope(): void

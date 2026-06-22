@@ -1,7 +1,11 @@
 <?php
 namespace App\Services;
 
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\TimetableEntry;
+use App\Models\TimetableSlot;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class TimetableConflictService {
 
@@ -69,6 +73,31 @@ class TimetableConflictService {
      * Returns grouped list of conflict descriptions.
      */
     public function auditTerm(int $termId, ?int $batchId = null): array {
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with([
+            'subject',
+            'teacher.user',
+            'classroom',
+            'batch',
+            'courseGroup.members',
+        ])
+            ->where(function (Builder $query) use ($termId) {
+                $query->where('term_id', $termId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+            })
+            ->when($batchId, function (Builder $query) use ($batchId) {
+                $query->where(function (Builder $scope) use ($batchId) {
+                    $scope->where('batch_id', $batchId)
+                        ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('batch_id', $batchId));
+                });
+            })
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where(fn (Builder $query) => $query->whereNull('official_status')->orWhere('official_status', '!=', 'archived'))
+            ->get();
+
+        if ($canonicalItems->isNotEmpty()) {
+            return $this->auditCanonicalItems($canonicalItems);
+        }
+
         $entries = TimetableEntry::where('term_id', $termId)
             ->when($batchId, fn($q) => $q->where('batch_id', $batchId))
             ->where('is_active', true)
@@ -115,6 +144,94 @@ class TimetableConflictService {
         }
 
         return array_unique($conflicts);
+    }
+
+    private function auditCanonicalItems(Collection $items): array
+    {
+        $slotOrders = TimetableSlot::whereIn('id', $items->pluck('timetable_slot_id')->filter()->unique())
+            ->pluck('sort_order', 'id');
+        $conflicts = [];
+
+        $items = $items->values();
+        for ($i = 0; $i < $items->count(); $i++) {
+            for ($j = $i + 1; $j < $items->count(); $j++) {
+                $left = $items[$i];
+                $right = $items[$j];
+
+                if ((int) $left->day_of_week !== (int) $right->day_of_week) {
+                    continue;
+                }
+
+                if (! $this->canonicalItemsOverlap($left, $right, $slotOrders)) {
+                    continue;
+                }
+
+                if ($left->teacher_id && $left->teacher_id === $right->teacher_id) {
+                    $conflicts[] = 'Teacher conflict: ' . ($left->teacher?->user?->name ?? 'Unknown')
+                        . ' is assigned to ' . $this->canonicalSubjectList($left, $right) . ' at the same time.';
+                }
+
+                if ($left->classroom_id && $left->classroom_id === $right->classroom_id) {
+                    $room = $left->classroom?->room_number ?? $left->classroom?->name ?? 'Unknown room';
+                    $conflicts[] = "Room conflict: {$room} is double-booked for "
+                        . $this->canonicalSubjectList($left, $right) . ' at the same time.';
+                }
+
+                if ($this->canonicalStudentCohortsOverlap($left, $right)) {
+                    $conflicts[] = 'Student cohort conflict: '
+                        . $this->canonicalGroupName($left) . ' and ' . $this->canonicalGroupName($right)
+                        . ' have overlapping students at the same time.';
+                }
+            }
+        }
+
+        return array_values(array_unique($conflicts));
+    }
+
+    private function canonicalItemsOverlap(AcademicPmcTimetableGenerationItem $left, AcademicPmcTimetableGenerationItem $right, Collection $slotOrders): bool
+    {
+        $leftStart = (int) ($slotOrders[$left->timetable_slot_id] ?? $left->timetable_slot_id);
+        $rightStart = (int) ($slotOrders[$right->timetable_slot_id] ?? $right->timetable_slot_id);
+        $leftEnd = $leftStart + max(1, (int) ($left->duration_slots ?? 1)) - 1;
+        $rightEnd = $rightStart + max(1, (int) ($right->duration_slots ?? 1)) - 1;
+
+        return $leftStart <= $rightEnd && $rightStart <= $leftEnd;
+    }
+
+    private function canonicalStudentCohortsOverlap(AcademicPmcTimetableGenerationItem $left, AcademicPmcTimetableGenerationItem $right): bool
+    {
+        if ($left->course_group_id && $left->course_group_id === $right->course_group_id) {
+            return true;
+        }
+
+        $leftMembers = $left->courseGroup?->members
+            ? $left->courseGroup->members->where('status', 'active')->pluck('student_id')->filter()->unique()
+            : collect();
+        $rightMembers = $right->courseGroup?->members
+            ? $right->courseGroup->members->where('status', 'active')->pluck('student_id')->filter()->unique()
+            : collect();
+
+        if ($leftMembers->isNotEmpty() || $rightMembers->isNotEmpty()) {
+            return $leftMembers->intersect($rightMembers)->isNotEmpty();
+        }
+
+        return ! $left->course_group_id
+            && ! $right->course_group_id
+            && $left->batch_id
+            && $left->batch_id === $right->batch_id;
+    }
+
+    private function canonicalSubjectList(AcademicPmcTimetableGenerationItem $left, AcademicPmcTimetableGenerationItem $right): string
+    {
+        return collect([$left, $right])
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Unknown subject')
+            ->unique()
+            ->join(', ');
+    }
+
+    private function canonicalGroupName(AcademicPmcTimetableGenerationItem $item): string
+    {
+        return $item->courseGroup?->name ?? $item->batch?->name ?? 'Unknown group';
     }
 
     /**

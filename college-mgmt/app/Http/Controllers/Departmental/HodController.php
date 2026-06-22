@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ApprovalWorkflow, Applicant, Program, Department, Teacher, Student, Subject, Exam, ExamResult, Attendance, LeaveApplication, TimetableEntry};
+use App\Models\{AcademicPmcTimetableGenerationItem, ApprovalWorkflow, Applicant, Program, Department, Teacher, Student, Subject, Exam, ExamResult, Attendance, LeaveApplication, TimetableEntry};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 
 class HodController extends Controller
@@ -205,16 +207,12 @@ class HodController extends Controller
 
         if ($request->filled('status')) $query->where('status', $request->status);
 
-        $workloadData = \App\Models\TimetableEntry::selectRaw('teacher_id, COUNT(DISTINCT subject_id) as subject_count, COUNT(*) as weekly_hours')
-            ->where('is_active', true)
-            ->groupBy('teacher_id')
-            ->get()
-            ->keyBy('teacher_id');
+        $workloadData = $this->facultyWorkloadData($teacher?->department_id);
 
         $faculty = $query->get()->map(function ($t) use ($workloadData) {
             $w = $workloadData->get($t->id);
-            $t->subject_count = $w?->subject_count ?? 0;
-            $t->weekly_hours  = $w?->weekly_hours ?? 0;
+            $t->subject_count = $w['subject_count'] ?? 0;
+            $t->weekly_hours  = $w['weekly_hours'] ?? 0;
             return $t;
         });
 
@@ -226,14 +224,16 @@ class HodController extends Controller
         $teacher    = $this->hodTeacher();
         $department = $teacher ? Department::find($teacher->department_id) : null;
 
-        $faculty = Teacher::with(['user', 'timetableEntries.subject'])
+        $workloadData = $this->facultyWorkloadData($teacher?->department_id);
+
+        $faculty = Teacher::with(['user'])
             ->when($teacher, fn($q) => $q->where('department_id', $teacher->department_id))
             ->where('status', 'active')->get()
-            ->map(function ($t) {
-                $entries = $t->timetableEntries->where('is_active', true);
-                $t->weekly_slots    = $entries->count();
-                $t->subject_count   = $entries->pluck('subject_id')->unique()->count();
-                $t->subjects        = $entries->pluck('subject.name')->unique()->values();
+            ->map(function ($t) use ($workloadData) {
+                $w = $workloadData->get($t->id, ['weekly_hours' => 0, 'subject_count' => 0, 'subjects' => collect()]);
+                $t->weekly_slots    = $w['weekly_hours'];
+                $t->subject_count   = $w['subject_count'];
+                $t->subjects        = $w['subjects'];
                 return $t;
             });
 
@@ -338,6 +338,80 @@ class HodController extends Controller
     {
         return Attendance::query()
             ->whereHas('timetableEntry', fn ($query) => $this->publishedTimetableScope($query));
+    }
+
+    private function facultyWorkloadData(?int $departmentId): Collection
+    {
+        $officialItems = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->when($departmentId, function (Builder $query) use ($departmentId) {
+                $query->where(function (Builder $scope) use ($departmentId) {
+                    $scope->whereHas('subject', fn (Builder $subject) => $subject->where('department_id', $departmentId))
+                        ->orWhereHas('courseGroup.subject', fn (Builder $subject) => $subject->where('department_id', $departmentId));
+                });
+            })
+            ->get();
+
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $canonicalRows = $officialItems
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $items, $teacherId) => [
+                'teacher_id' => (int) $teacherId,
+                'weekly_hours' => (int) $items->sum(fn (AcademicPmcTimetableGenerationItem $item) => max(1, (int) ($item->duration_slots ?? 1))),
+                'subject_ids' => $items
+                    ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->subject_id ?: $item->courseGroup?->subject_id)
+                    ->filter()
+                    ->unique()
+                    ->values(),
+                'subjects' => $items
+                    ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->subject?->name ?? $item->courseGroup?->subject?->name)
+                    ->filter()
+                    ->unique()
+                    ->values(),
+            ]);
+
+        $legacyRows = TimetableEntry::with('subject')
+            ->where(fn ($query) => $this->publishedTimetableScope($query))
+            ->when($departmentId, fn ($query) => $query->whereHas('subject', fn ($subject) => $subject->where('department_id', $departmentId)))
+            ->get(['id', 'teacher_id', 'subject_id', 'program_id', 'term_id'])
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)))
+            ->groupBy('teacher_id')
+            ->map(fn (Collection $entries, $teacherId) => [
+                'teacher_id' => (int) $teacherId,
+                'weekly_hours' => $entries->count(),
+                'subject_ids' => $entries->pluck('subject_id')->filter()->unique()->values(),
+                'subjects' => $entries->pluck('subject.name')->filter()->unique()->values(),
+            ]);
+
+        return $canonicalRows
+            ->toBase()
+            ->merge($legacyRows)
+            ->groupBy('teacher_id')
+            ->map(function (Collection $rows) {
+                $subjectIds = $rows->flatMap(fn (array $row) => $row['subject_ids'])->filter()->unique()->values();
+
+                return [
+                    'teacher_id' => $rows->first()['teacher_id'],
+                    'weekly_hours' => (int) $rows->sum('weekly_hours'),
+                    'subject_count' => $subjectIds->count(),
+                    'subjects' => $rows->flatMap(fn (array $row) => $row['subjects'])->filter()->unique()->values(),
+                ];
+            });
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 
     private function publishedTimetableScope($query)

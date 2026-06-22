@@ -50,9 +50,24 @@
       @for($day=1;$day<=6;$day++)
       <td>
         @if(isset($grid[$day][$slot->id]))
-          <div class="cell-subj">{{ $grid[$day][$slot->id]->subject->name }}</div>
-          <div class="cell-tchr">{{ $grid[$day][$slot->id]->teacher->user->name ?? '' }}</div>
-          <div class="cell-room">{{ $grid[$day][$slot->id]->classroom->room_number }}</div>
+          @foreach($grid[$day][$slot->id] as $entry)
+            <div style="margin-bottom:5px;">
+              <div class="cell-subj">
+                {{ $entry->subject?->name ?? 'Subject' }}
+                @if(($entry->duration_slots ?? 1) > 1)
+                  ({{ $entry->duration_slots }} slots)
+                @endif
+              </div>
+              @if($entry->course_group)
+                <div class="cell-room">{{ $entry->course_group->name }}</div>
+              @endif
+              @if($entry->is_continuation ?? false)
+                <div class="cell-room">Continued session</div>
+              @endif
+              <div class="cell-tchr">{{ $entry->teacher?->user?->name ?? '' }}</div>
+              <div class="cell-room">{{ $entry->classroom?->room_number ?? 'Room TBA' }}</div>
+            </div>
+          @endforeach
         @endif
       </td>
       @endfor

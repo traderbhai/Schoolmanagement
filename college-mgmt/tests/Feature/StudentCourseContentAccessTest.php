@@ -4,8 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Batch;
+use App\Models\Classroom;
 use App\Models\Course;
+use App\Models\Program;
 use App\Models\Enrollment;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
@@ -246,6 +252,142 @@ class StudentCourseContentAccessTest extends TestCase
             ->assertSee('Published Faculty Course')
             ->assertSee('Published Course Faculty')
             ->assertDontSee('Draft Staffing Faculty');
+    }
+
+    public function test_student_course_index_uses_canonical_pmc_group_faculty_over_legacy_rows(): void
+    {
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $term = Term::factory()->create(['program_id' => $program->id, 'batch_id' => $batch->id, 'term_number' => 1]);
+        $semester = Semester::factory()->create(['number' => 1, 'name' => 'Term 1']);
+        $student = $this->student();
+        $student->update(['program_id' => $program->id, 'batch_id' => $batch->id]);
+        $subject = Subject::factory()->create(['program_id' => $program->id, 'name' => 'Canonical Course Hub']);
+        $slot = TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1]);
+        $room = Classroom::factory()->create();
+        $canonicalTeacher = Teacher::factory()->create();
+        $canonicalTeacher->user->update(['name' => 'Canonical Hub Faculty']);
+        $otherSectionTeacher = Teacher::factory()->create();
+        $otherSectionTeacher->user->update(['name' => 'Other Section Hub Faculty']);
+        $legacyTeacher = Teacher::factory()->create();
+        $legacyTeacher->user->update(['name' => 'Legacy Hub Faculty']);
+        $draftTeacher = Teacher::factory()->create();
+        $draftTeacher->user->update(['name' => 'Draft Hub Faculty']);
+
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $term->id,
+            'status' => 'active',
+        ]);
+
+        $studentGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Student Section A',
+            'group_type' => 'core_section',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $otherGroup = AcademicPmcCourseGroup::create([
+            'name' => 'Other Section B',
+            'group_type' => 'core_section',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        AcademicPmcCourseGroupMember::create([
+            'course_group_id' => $studentGroup->id,
+            'student_id' => $student->id,
+            'status' => 'active',
+        ]);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $canonicalTeacher->user_id,
+            'published_by' => $canonicalTeacher->user_id,
+            'published_at' => now(),
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $draftTeacher->user_id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Course Hub Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'created_by' => $canonicalTeacher->user_id,
+            'status' => 'published',
+            'scheduled_count' => 2,
+            'quality_score' => 100,
+        ]);
+
+        foreach (
+            [
+                [$studentGroup, $canonicalTeacher, $publishedVersion, 1, 'locked'],
+                [$otherGroup, $otherSectionTeacher, $publishedVersion, 2, 'published'],
+                [$studentGroup, $draftTeacher, $draftVersion, 3, 'scheduled'],
+            ] as [$group, $teacher, $version, $index, $status]
+        ) {
+            AcademicPmcTimetableGenerationItem::create([
+                'generation_run_id' => $run->id,
+                'timetable_version_id' => $version->id,
+                'course_group_id' => $group->id,
+                'program_id' => $program->id,
+                'batch_id' => $batch->id,
+                'term_id' => $term->id,
+                'subject_id' => $subject->id,
+                'session_index' => $index,
+                'session_type' => 'lecture',
+                'duration_slots' => 1,
+                'teacher_id' => $teacher->id,
+                'classroom_id' => $room->id,
+                'day_of_week' => 1,
+                'timetable_slot_id' => $slot->id,
+                'status' => $status,
+                'official_status' => 'published',
+                'source_type' => 'generated',
+                'published_at' => $version->status === 'published' ? now() : null,
+                'published_by' => $version->status === 'published' ? $teacher->user_id : null,
+            ]);
+        }
+
+        TimetableEntry::factory()->create([
+            'teacher_id' => $legacyTeacher->id,
+            'course_id' => Course::factory()->create()->id,
+            'batch_id' => $batch->id,
+            'semester_id' => $semester->id,
+            'term_id' => $term->id,
+            'subject_id' => $subject->id,
+            'timetable_slot_id' => $slot->id,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($student->user)
+            ->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('Canonical Course Hub')
+            ->assertSee('Canonical Hub Faculty')
+            ->assertDontSee('Other Section Hub Faculty')
+            ->assertDontSee('Legacy Hub Faculty')
+            ->assertDontSee('Draft Hub Faculty');
     }
 
     public function test_student_course_hub_supports_legacy_active_enrollments(): void

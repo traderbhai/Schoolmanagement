@@ -175,7 +175,7 @@ Target result:
 - `Issue`: PMC pages already explained the sequence, but the command entry did not clearly label ownership/source context, and attention/approval/timetable panels could look blank or terminal when there were no current rows.
 - `Fix`: PMC Command now shows owner/source badges, attention rows label owner/source/due context, and attention/approval empty states explain the next operating path. PMC Timetable OS now labels owner/source context, gives non-dead-end guidance for missing generation runs/notifications/constraints, and exposes a clickable real-world sequence from student baskets to publish/freeze.
 - `Evidence`: `AcademicsPmcUxGuidanceTest`, `AcademicsPmcFrontendBetaReadinessTest`, and `AcademicsPmcKpiDrilldownConsistencyTest` passed `18 tests / 511 assertions`; adjacent `AcademicsPmcV004Test` and `AcademicsPmcTimetableV041Test` passed `8 tests / 200 assertions`; static scan on the edited PMC command/timetable dashboard found no weak placeholder, mojibake, or fake-link markers; `git diff --check` passed for the edited PMC files.
-- `Status`: PMC command/timetable sequencing slice verified. Latest targeted pass also fixed scoped group diagnostics for PMC managers. Continue with browser-level create/edit interactions and table-density review before marking the full PMC role UX-complete.
+- `Status`: PMC command/timetable sequencing slice verified. Latest targeted passes also fixed scoped group diagnostics for PMC managers and batch-specific generator boundaries. Continue with browser-level create/edit interactions and table-density review before marking the full PMC role UX-complete.
 
 ### CoE / Exam - Official Boundary Ownership Clarity
 

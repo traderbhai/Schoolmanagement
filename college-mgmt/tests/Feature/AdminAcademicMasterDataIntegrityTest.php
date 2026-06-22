@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Batch;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicYear;
 use App\Models\Attendance;
 use App\Models\Classroom;
@@ -19,6 +22,7 @@ use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
 use App\Models\TimetableSlot;
+use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -853,6 +857,126 @@ class AdminAcademicMasterDataIntegrityTest extends TestCase
 
         $this->assertSame(80, $room->fresh()->capacity);
         $this->assertTrue((bool) $room->fresh()->is_active);
+    }
+
+    public function test_classroom_with_official_canonical_pmc_sessions_is_protected_like_active_timetable_history(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs($admin);
+
+        $set = $this->academicSet();
+        $room = Classroom::factory()->create([
+            'room_number' => 'CANON-ROOM-101',
+            'capacity' => 80,
+            'type' => 'lecture',
+            'building' => 'Canonical Block',
+            'floor' => '1',
+            'has_projector' => true,
+            'has_lab' => false,
+            'is_active' => true,
+        ]);
+        $teacher = Teacher::factory()->create(['department_id' => $set['department']->id]);
+        $slot = TimetableSlot::factory()->create();
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Canonical Protected Room Group',
+            'group_type' => 'core_section',
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+            'term_id' => $set['term']->id,
+            'subject_id' => $set['subject']->id,
+            'min_capacity' => 1,
+            'max_capacity' => 80,
+            'current_strength' => 70,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+            'term_id' => $set['term']->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $admin->id,
+            'published_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Canonical Protected Room Run',
+            'strategy' => 'manual',
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+            'term_id' => $set['term']->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $admin->id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $set['program']->id,
+            'batch_id' => $set['batch']->id,
+            'term_id' => $set['term']->id,
+            'subject_id' => $set['subject']->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => 1,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'published',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        $this->delete(route('admin.classrooms.destroy', $room))
+            ->assertSessionHas('error');
+
+        $this->put(route('admin.classrooms.update', $room), [
+            'name' => $room->name,
+            'room_number' => 'CANON-ROOM-999',
+            'capacity' => 80,
+            'type' => 'lab',
+            'building' => 'Changed Block',
+            'floor' => '2',
+            'has_projector' => false,
+            'has_lab' => true,
+            'is_active' => true,
+        ])->assertSessionHasErrors('classroom');
+
+        $this->put(route('admin.classrooms.update', $room), [
+            'name' => $room->name,
+            'room_number' => $room->room_number,
+            'capacity' => 40,
+            'type' => 'lecture',
+            'building' => $room->building,
+            'floor' => $room->floor,
+            'has_projector' => true,
+            'has_lab' => false,
+            'is_active' => true,
+        ])->assertSessionHasErrors('capacity');
+
+        $this->put(route('admin.classrooms.update', $room), [
+            'name' => $room->name,
+            'room_number' => $room->room_number,
+            'capacity' => 80,
+            'type' => 'lecture',
+            'building' => $room->building,
+            'floor' => $room->floor,
+            'has_projector' => true,
+            'has_lab' => false,
+            'is_active' => false,
+        ])->assertSessionHasErrors('is_active');
+
+        $room->refresh();
+        $this->assertSame('CANON-ROOM-101', $room->room_number);
+        $this->assertSame(80, (int) $room->capacity);
+        $this->assertTrue((bool) $room->is_active);
     }
 
     public function test_timetable_slot_with_schedule_history_cannot_be_deleted_or_reshaped(): void

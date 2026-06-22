@@ -2,12 +2,15 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Assignment, AssignmentSubmission, Subject, Term, TimetableEntry, Student};
+use App\Http\Controllers\Teacher\Concerns\UsesOfficialTeachingSubjects;
+use App\Models\{Assignment, AssignmentSubmission, Subject, Term, Student};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
+    use UsesOfficialTeachingSubjects;
+
     private function activeTeacher()
     {
         return auth()->user()->teacher;
@@ -20,16 +23,7 @@ class AssignmentController extends Controller
 
     private function teacherSubjectIds(): array
     {
-        $teacher = auth()->user()->teacher;
-        if (!$teacher) return [];
-        return TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('is_active', true)
-            ->where('status', 'published')
-            ->where(function ($query) {
-                $query->whereNull('timetable_version_id')
-                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
-            })
-            ->pluck('subject_id')->unique()->toArray();
+        return $this->officialTeachingSubjectIds();
     }
 
     private function ensureTeachesSubject(int $subjectId): void

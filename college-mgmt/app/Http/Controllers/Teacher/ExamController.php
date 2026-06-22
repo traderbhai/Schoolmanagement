@@ -1,36 +1,26 @@
 <?php
 namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
-use App\Models\{Exam, ExamResult, Student, TimetableEntry, Semester};
+use App\Http\Controllers\Teacher\Concerns\UsesOfficialTeachingSubjects;
+use App\Models\{Exam, ExamResult, Student, Semester};
 use Illuminate\Http\Request;
 
 class ExamController extends Controller
 {
+    use UsesOfficialTeachingSubjects;
+
     private function ensureTeacherForExam(Exam $exam): void
     {
         $teacher = auth()->user()->teacher;
         abort_unless($teacher, 403);
 
-        $teaches = TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('subject_id', $exam->subject_id)
-            ->where('is_active', true)
-            ->where('status', 'published')
-            ->where(function ($query) {
-                $query->whereNull('timetable_version_id')
-                    ->orWhereHas('version', fn ($version) => $version->where('status', 'published'));
-            })
-            ->when($exam->program_id, fn ($query) => $query->where('program_id', $exam->program_id))
-            ->when($exam->semester_id || $exam->term_id, function ($query) use ($exam) {
-                $query->where(function ($scope) use ($exam) {
-                    if ($exam->term_id) {
-                        $scope->orWhere('term_id', $exam->term_id);
-                    }
-                    if ($exam->semester_id) {
-                        $scope->orWhere('semester_id', $exam->semester_id);
-                    }
-                });
-            })
-            ->exists();
+        $teaches = $this->teachesOfficialSubject(
+            (int) $exam->subject_id,
+            $exam->program_id ? (int) $exam->program_id : null,
+            $exam->term_id ? (int) $exam->term_id : null,
+            $exam->semester_id ? (int) $exam->semester_id : null,
+            $teacher
+        );
         abort_unless($teaches, 403, 'You do not teach this exam subject for the selected program and term.');
     }
 
@@ -77,9 +67,7 @@ class ExamController extends Controller
                 ->with('warning', 'Your teacher profile is not linked yet. Exams will appear after the profile is assigned.');
         }
 
-        // Subjects this teacher teaches (via timetable entries)
-        $subjectIds = TimetableEntry::where('teacher_id', $teacher->id)
-            ->where('is_active', true)->pluck('subject_id')->unique();
+        $subjectIds = $this->officialTeachingSubjectIds($teacher);
 
         $semesters = Semester::orderByDesc('id')->get();
         $exams = Exam::whereIn('subject_id', $subjectIds)

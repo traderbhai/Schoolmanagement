@@ -168,14 +168,21 @@
                             </thead>
                             <tbody>
                                 @foreach($slots as $slot)
-                                    @if(isset($todayClasses[$slot->id]) && $todayClasses[$slot->id])
-                                    @php $entry = $todayClasses[$slot->id]; @endphp
-                                    <tr>
-                                        <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
-                                        <td class="fw-semibold small">{{ $entry->subject->name ?? 'Subject not assigned' }}</td>
-                                        <td class="text-muted small">{{ $entry->teacher?->user?->name ?? 'Faculty not assigned' }}</td>
-                                        <td class="text-muted small">{{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? 'Room not assigned' }}</td>
-                                    </tr>
+                                    @php $slotClasses = collect($todayClasses[$slot->id] ?? [])->filter(); @endphp
+                                    @if($slotClasses->isNotEmpty())
+                                        @foreach($slotClasses as $entry)
+                                        <tr>
+                                            <td class="text-muted small">{{ $slot->start_time ?? $slot->name }}</td>
+                                            <td class="fw-semibold small">
+                                                {{ $entry->subject?->name ?? $entry->courseGroup?->subject?->name ?? 'Subject not assigned' }}
+                                                @if($entry->courseGroup?->name)
+                                                    <span class="badge text-bg-light ms-1">{{ $entry->courseGroup->name }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-muted small">{{ $entry->teacher?->user?->name ?? 'Faculty not assigned' }}</td>
+                                            <td class="text-muted small">{{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? 'Room not assigned' }}</td>
+                                        </tr>
+                                        @endforeach
                                     @endif
                                 @endforeach
                             </tbody>

@@ -4,7 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\AcademicScopeAssignment;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\Attendance;
+use App\Models\Batch;
+use App\Models\Classroom;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamResult;
@@ -322,6 +327,132 @@ class AcademicsProgramLeadershipV005Test extends TestCase
 
         $this->assertSame($before['metrics']['published_slots'] + 1, $after['metrics']['published_slots']);
         $this->assertSame($before['metrics']['draft_timetable'] + 1, $after['metrics']['draft_timetable']);
+    }
+
+    public function test_program_leadership_course_delivery_prefers_canonical_pmc_sessions_for_migrated_scope(): void
+    {
+        $fixture = $this->seedProgramFixture();
+        $leader = User::where('email', 'chair@college.com')->firstOrFail();
+        $course = Course::factory()->create(['department_id' => $fixture['department']->id]);
+        $semester = Semester::where('is_current', true)->firstOrFail();
+        $batch = Batch::factory()->create(['program_id' => $fixture['program']->id]);
+        $term = Term::factory()->create(['program_id' => $fixture['program']->id, 'batch_id' => $batch->id]);
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+        $room = Classroom::factory()->create();
+        $slot = TimetableSlot::factory()->create(['start_time' => '08:00:00', 'end_time' => '09:00:00', 'sort_order' => 1]);
+        $service = app(AcademicProgramLeadershipService::class);
+        $before = $service->courseDelivery($leader);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Program Leadership Canonical Group',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 40,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+
+        $publishedVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $leader->id,
+            'published_by' => $leader->id,
+            'published_at' => now(),
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $leader->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Program Delivery Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'created_by' => $leader->id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $publishedVersion->id,
+            'course_group_id' => $group->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => 1,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'locked',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $leader->id,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'session_index' => 2,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $room->id,
+            'day_of_week' => 2,
+            'timetable_slot_id' => $slot->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+        ]);
+        foreach (range(1, 3) as $day) {
+            TimetableEntry::factory()->create([
+                'semester_id' => $semester->id,
+                'course_id' => $course->id,
+                'program_id' => $fixture['program']->id,
+                'term_id' => $term->id,
+                'subject_id' => $fixture['subject']->id,
+                'teacher_id' => $teacher->id,
+                'timetable_slot_id' => $slot->id,
+                'day_of_week' => $day,
+                'is_active' => true,
+                'status' => 'published',
+            ]);
+        }
+        TimetableEntry::factory()->create([
+            'semester_id' => $semester->id,
+            'course_id' => $course->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => $slot->id,
+            'day_of_week' => 4,
+            'is_active' => true,
+            'status' => 'draft',
+        ]);
+
+        $after = $service->courseDelivery($leader);
+        $draftItem = collect($after['items'])->first(fn (array $item) => ($item['source'] ?? null) === 'canonical_pmc_generation_items' && $item['status'] === 'Draft version');
+
+        $this->assertSame($before['metrics']['published_slots'] + 1, $after['metrics']['published_slots']);
+        $this->assertSame($before['metrics']['draft_timetable'] + 1, $after['metrics']['draft_timetable']);
+        $this->assertNotNull($draftItem);
+        $this->assertSame('Draft version', $draftItem['status']);
     }
 
     public function test_non_academic_user_cannot_access_program_leadership_os(): void

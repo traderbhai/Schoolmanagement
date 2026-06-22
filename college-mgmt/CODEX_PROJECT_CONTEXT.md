@@ -314,3 +314,5 @@ For every new request:
 Do not append long sprint diaries here. If detailed historical notes are needed, add them to `docs/archive/` and keep this file under roughly 150 lines.
 
 - Latest focused PMC real-world sequencing slice: PMC Timetable OS build sequence now links directly through student baskets, groups, faculty allocation, locked slots, generator, and publish/freeze; launch-control group diagnostics now respect PMC manager academic scope instead of counting unrelated program blockers. Focused `AcademicsPmcTimetableV041Test` passed `6 tests / 161 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`; `git diff --check` passed for changed files.
+
+- Latest focused PMC generator-boundary slice: PMC timetable generation now honors selected `batch_id` and actor PMC academic scope when selecting course groups, preventing another batch group from entering a batch-specific generated timetable. Focused `AcademicsPmcTimetableV041Test` passed `7 tests / 164 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`.

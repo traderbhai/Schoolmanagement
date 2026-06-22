@@ -2,7 +2,8 @@
 namespace App\Http\Controllers\Admin;
 use App\Helpers\AccessControl;
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, TimetableEntry, Student, Semester, Course, Term};
+use App\Models\{AcademicPmcCourseGroupMember, Attendance, TimetableEntry, Student, Semester, Course, Term};
+use App\Services\CanonicalTimetableBridgeService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -12,6 +13,10 @@ class AttendanceController extends Controller
         $this->authorizeGlobalAttendanceManagement($request);
 
         $semesters = Semester::with('academicYear')->orderByDesc('id')->get();
+        app(CanonicalTimetableBridgeService::class)->ensureSemesterBridges(
+            Semester::current() ?: $semesters->first(),
+            $request->user()
+        );
         $courses   = Course::where('is_active', true)->orderBy('name')->get();
         $students  = Student::with('user')->orderBy('id')->get();
         return view('admin.attendance.index', compact('semesters', 'courses', 'students'));
@@ -28,6 +33,8 @@ class AttendanceController extends Controller
         ]);
 
         $dayOfWeek = (int) date('N', strtotime($request->date)); // 1=Mon, 7=Sun
+        $semester = Semester::find($request->semester_id);
+        app(CanonicalTimetableBridgeService::class)->ensureSemesterBridges($semester, $request->user());
 
         $entries = \App\Models\TimetableEntry::with(['subject', 'slot', 'classroom'])
             ->where('semester_id', $request->semester_id)
@@ -52,7 +59,7 @@ class AttendanceController extends Controller
         ]);
 
         $dayOfWeek = (int) date('N', strtotime($request->date));
-        $entry = TimetableEntry::with(['course','subject'])
+        $entry = TimetableEntry::with(['course','subject', 'pmcGenerationItem.courseGroup'])
             ->where(fn($query) => $this->publishedTimetableScope($query))
             ->where('day_of_week', $dayOfWeek)
             ->findOrFail($request->timetable_entry_id);
@@ -208,6 +215,15 @@ class AttendanceController extends Controller
 
     private function eligibleStudentsForEntry(TimetableEntry $entry)
     {
+        $pmcGroupId = $entry->pmcGenerationItem?->course_group_id;
+        if ($pmcGroupId) {
+            $studentIds = AcademicPmcCourseGroupMember::where('course_group_id', $pmcGroupId)
+                ->where('status', 'active')
+                ->pluck('student_id');
+
+            return Student::whereIn('id', $studentIds);
+        }
+
         $termIds = $this->termIdsForEntry($entry);
 
         return Student::where(function ($query) use ($entry, $termIds) {

@@ -1,7 +1,8 @@
 <?php
 namespace App\Http\Controllers\Teacher;
 use App\Http\Controllers\Controller;
-use App\Models\{TimetableEntry, Student, Attendance, Semester, Term};
+use App\Models\{AcademicPmcCourseGroupMember, TimetableEntry, Student, Attendance, Semester, Term};
+use App\Services\CanonicalTimetableBridgeService;
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
@@ -13,6 +14,15 @@ class AttendanceController extends Controller
 
     private function enrolledStudentsForEntry(TimetableEntry $entry)
     {
+        $pmcGroupId = $entry->pmcGenerationItem?->course_group_id;
+        if ($pmcGroupId) {
+            $studentIds = AcademicPmcCourseGroupMember::where('course_group_id', $pmcGroupId)
+                ->where('status', 'active')
+                ->pluck('student_id');
+
+            return Student::whereIn('id', $studentIds);
+        }
+
         $termIds = $this->termIdsForEntry($entry);
 
         return Student::where(function ($query) use ($entry, $termIds) {
@@ -76,7 +86,14 @@ class AttendanceController extends Controller
 
         // Teacher's timetable entries for the selected day
         $currentSemester = Semester::current();
-        $entries = TimetableEntry::with(['subject', 'course', 'classroom', 'slot'])
+        app(CanonicalTimetableBridgeService::class)->ensureTeacherDayBridges(
+            $teacher->id,
+            $dayOfWeek,
+            $currentSemester,
+            auth()->user()
+        );
+
+        $entries = TimetableEntry::with(['subject', 'course', 'classroom', 'slot', 'pmcGenerationItem.courseGroup'])
             ->where('teacher_id', $teacher->id)
             ->where('day_of_week', $dayOfWeek)
             ->where(fn($query) => $this->publishedTimetableScope($query))
@@ -87,7 +104,7 @@ class AttendanceController extends Controller
         $students = collect();
 
         if ($request->entry_id) {
-            $entry = TimetableEntry::with(['subject','course','slot','classroom'])
+            $entry = TimetableEntry::with(['subject','course','slot','classroom', 'pmcGenerationItem.courseGroup'])
                 ->where('teacher_id', $teacher->id)
                 ->where('day_of_week', $dayOfWeek)
                 ->where(fn($query) => $this->publishedTimetableScope($query))

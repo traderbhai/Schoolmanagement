@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\{TimetableEntry, TimetableSlot, Batch, Program, Term};
+use App\Models\{AcademicPmcTimetableGenerationItem, TimetableEntry, TimetableSlot, Batch, Program, Term};
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class TimetablePdfService
 {
@@ -23,14 +24,35 @@ class TimetablePdfService
 
         $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
 
-        // Get timetable entries for this batch
-        $entries = TimetableEntry::where('program_id', $programId)
-            ->where('term_id', $termId)
-            ->where('batch_id', $batchId)
-            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
-            ->with(['subject', 'teacher.user', 'classroom', 'slot'])
-            ->get()
-            ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject', 'courseGroup.batch', 'teacher.user', 'classroom', 'slot', 'batch', 'program'])
+            ->where(function (Builder $query) use ($programId) {
+                $query->where('program_id', $programId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('program_id', $programId));
+            })
+            ->where(function (Builder $query) use ($termId) {
+                $query->where('term_id', $termId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+            })
+            ->where(function (Builder $query) use ($batchId) {
+                $query->where('batch_id', $batchId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('batch_id', $batchId));
+            })
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->get();
+
+        $entries = $canonicalItems->isNotEmpty()
+            ? $canonicalItems->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->displayEntryFromPmcItem($item))
+            : TimetableEntry::where('program_id', $programId)
+                ->where('term_id', $termId)
+                ->where('batch_id', $batchId)
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+                ->with(['subject', 'teacher.user', 'classroom', 'slot', 'batch', 'program'])
+                ->get()
+                ->map(fn (TimetableEntry $entry) => $this->displayEntryFromLegacyEntry($entry));
+
+        $entriesBySlot = $entries->groupBy(fn ($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
 
         // Build grid
         $grid = [];
@@ -38,7 +60,7 @@ class TimetablePdfService
             $grid[$day] = [];
             foreach ($slots as $slot) {
                 $key = $day . '-' . $slot->id;
-                $grid[$day][$slot->id] = $entries[$key] ?? null;
+                $grid[$day][$slot->id] = $entriesBySlot->get($key, collect());
             }
         }
 
@@ -64,14 +86,32 @@ class TimetablePdfService
 
         $days = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
 
-        // Get entries for this teacher
-        $entries = TimetableEntry::where('teacher_id', $teacherId)
-            ->where('term_id', $termId)
-            ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
-            ->when($programIds !== null, fn($query) => $query->whereIn('program_id', $programIds))
-            ->with(['subject', 'batch', 'classroom', 'slot', 'program'])
-            ->get()
-            ->keyBy(fn($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with(['subject', 'courseGroup.subject', 'courseGroup.batch', 'teacher.user', 'classroom', 'slot', 'batch', 'program'])
+            ->where('teacher_id', $teacherId)
+            ->where(function (Builder $query) use ($termId) {
+                $query->where('term_id', $termId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('term_id', $termId));
+            })
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->when($programIds !== null, fn($query) => $query->where(function (Builder $scope) use ($programIds) {
+                $scope->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+            }))
+            ->get();
+
+        $entries = $canonicalItems->isNotEmpty()
+            ? $canonicalItems->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->displayEntryFromPmcItem($item))
+            : TimetableEntry::where('teacher_id', $teacherId)
+                ->where('term_id', $termId)
+                ->where(fn (Builder $query) => $this->publishedTimetableScope($query))
+                ->when($programIds !== null, fn($query) => $query->whereIn('program_id', $programIds))
+                ->with(['subject', 'batch', 'classroom', 'slot', 'program', 'teacher.user'])
+                ->get()
+                ->map(fn (TimetableEntry $entry) => $this->displayEntryFromLegacyEntry($entry));
+
+        $entriesBySlot = $entries->groupBy(fn ($e) => $e->day_of_week . '-' . $e->timetable_slot_id);
 
         // Build grid
         $grid = [];
@@ -79,7 +119,7 @@ class TimetablePdfService
             $grid[$day] = [];
             foreach ($slots as $slot) {
                 $key = $day . '-' . $slot->id;
-                $grid[$day][$slot->id] = $entries[$key] ?? null;
+                $grid[$day][$slot->id] = $entriesBySlot->get($key, collect());
             }
         }
 
@@ -140,13 +180,18 @@ class TimetablePdfService
             $html .= '<tr><td class="time-slot">' . $slot->name . '</td>';
 
             foreach (range(1, 6) as $day) {
-                $entry = $grid[$day][$slot->id] ?? null;
+                $entries = collect($grid[$day][$slot->id] ?? [])->filter();
 
-                if ($entry) {
+                if ($entries->isNotEmpty()) {
                     $html .= '<td>';
-                    $html .= '<div class="subject">' . $entry->subject->name . '</div>';
-                    $html .= '<div class="teacher">' . ($entry->teacher?->user->name ?? 'N/A') . '</div>';
-                    $html .= '<div class="room">Room: ' . ($entry->classroom->room_number ?? 'N/A') . '</div>';
+                    foreach ($entries as $entry) {
+                        $html .= '<div class="subject">' . e($entry->subject_name) . '</div>';
+                        if ($entry->group_name) {
+                            $html .= '<div class="teacher">' . e($entry->group_name) . '</div>';
+                        }
+                        $html .= '<div class="teacher">' . e($entry->teacher_name ?? 'N/A') . '</div>';
+                        $html .= '<div class="room">Room: ' . e($entry->room_label ?? 'N/A') . '</div>';
+                    }
                     $html .= '</td>';
                 } else {
                     $html .= '<td class="empty">—</td>';
@@ -217,13 +262,15 @@ class TimetablePdfService
             $html .= '<tr><td class="time-slot">' . $slot->name . '</td>';
 
             foreach (range(1, 6) as $day) {
-                $entry = $grid[$day][$slot->id] ?? null;
+                $entries = collect($grid[$day][$slot->id] ?? [])->filter();
 
-                if ($entry) {
+                if ($entries->isNotEmpty()) {
                     $html .= '<td>';
-                    $html .= '<div class="subject">' . $entry->subject->name . '</div>';
-                    $html .= '<div class="batch">' . $entry->batch->name . '</div>';
-                    $html .= '<div class="room">Room: ' . ($entry->classroom->room_number ?? 'N/A') . '</div>';
+                    foreach ($entries as $entry) {
+                        $html .= '<div class="subject">' . e($entry->subject_name) . '</div>';
+                        $html .= '<div class="batch">' . e($entry->group_name ?: $entry->batch_name ?: 'Batch pending') . '</div>';
+                        $html .= '<div class="room">Room: ' . e($entry->room_label ?? 'N/A') . '</div>';
+                    }
                     $html .= '</td>';
                 } else {
                     $html .= '<td class="empty">—</td>';
@@ -243,6 +290,34 @@ class TimetablePdfService
 </html>';
 
         return $html;
+    }
+
+    private function displayEntryFromPmcItem(AcademicPmcTimetableGenerationItem $item): object
+    {
+        return (object) [
+            'subject_name' => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Subject not assigned',
+            'teacher_name' => $item->teacher?->user?->name,
+            'room_label' => $item->classroom?->room_number ?? $item->classroom?->name,
+            'batch_name' => $item->batch?->name ?? $item->courseGroup?->batch?->name,
+            'group_name' => $item->courseGroup?->name,
+            'program_name' => $item->program?->name,
+            'day_of_week' => $item->day_of_week,
+            'timetable_slot_id' => $item->timetable_slot_id,
+        ];
+    }
+
+    private function displayEntryFromLegacyEntry(TimetableEntry $entry): object
+    {
+        return (object) [
+            'subject_name' => $entry->subject?->name ?? 'Subject not assigned',
+            'teacher_name' => $entry->teacher?->user?->name,
+            'room_label' => $entry->classroom?->room_number ?? $entry->classroom?->name,
+            'batch_name' => $entry->batch?->name,
+            'group_name' => null,
+            'program_name' => $entry->program?->name,
+            'day_of_week' => $entry->day_of_week,
+            'timetable_slot_id' => $entry->timetable_slot_id,
+        ];
     }
 
     private function publishedTimetableScope(Builder $query): Builder

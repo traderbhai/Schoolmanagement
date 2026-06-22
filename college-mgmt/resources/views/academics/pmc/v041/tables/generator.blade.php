@@ -118,6 +118,19 @@
                         <td>
                             <div class="small">Score {{ $item->metadata['placement_score'] ?? $item->confidence ?? '-' }}</div>
                             <div class="small text-muted">{{ collect($item->metadata['placement_reasons'] ?? [])->take(2)->implode(', ') ?: 'No solver reasons recorded' }}</div>
+                            @if($item->status === 'unscheduled' && !empty($item->metadata['unscheduled_diagnostics']))
+                                @php($diagnostics = $item->metadata['unscheduled_diagnostics'])
+                                <div class="small text-danger fw-semibold">Blocked: {{ str_replace('_', ' ', $diagnostics['primary_blocker'] ?? 'no feasible candidate') }}</div>
+                                @if(!empty($diagnostics['recommended_actions'][0]))
+                                    <div class="small text-muted">{{ $diagnostics['recommended_actions'][0] }}</div>
+                                @endif
+                                @if(!empty($diagnostics['sampled_blocked_candidates']))
+                                    <div class="small text-muted">
+                                        Samples:
+                                        {{ collect($diagnostics['sampled_blocked_candidates'])->take(2)->map(fn($candidate) => 'D'.($candidate['day'] ?? '-').'/S'.($candidate['slot_id'] ?? '-').' '.($candidate['reason'] ?? 'blocked'))->implode(' | ') }}
+                                    </div>
+                                @endif
+                            @endif
                             @if(!empty($item->metadata['placement_alternatives']))
                                 <div class="small text-muted">Alt: {{ collect($item->metadata['placement_alternatives'])->take(2)->map(fn($alt) => 'D'.($alt['day'] ?? '-').'/'.($alt['slot_name'] ?? 'slot').' '.$alt['score'])->implode(' | ') }}</div>
                                 <div class="d-flex flex-wrap gap-1 mt-1">

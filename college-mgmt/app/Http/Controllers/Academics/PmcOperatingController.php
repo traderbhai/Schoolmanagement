@@ -1253,11 +1253,20 @@ class PmcOperatingController extends Controller
     {
         $data = $request->validate([
             'timetable_version_id' => 'nullable|exists:timetable_versions,id',
+            'pmc_generation_item_id' => 'nullable|exists:academic_pmc_timetable_generation_items,id',
             'change_type' => 'required|string|max:80',
             'reason' => 'required|string|max:2000',
             'impact_summary' => 'nullable|array',
         ]);
-        if (! empty($data['timetable_version_id'])) {
+        if (! empty($data['pmc_generation_item_id'])) {
+            $item = AcademicPmcTimetableGenerationItem::with(['courseGroup', 'timetableVersion'])->findOrFail($data['pmc_generation_item_id']);
+            $this->pmcPolicy->authorizeWriteScope($request->user(), [
+                'program_id' => $item->program_id ?: $item->courseGroup?->program_id ?: $item->timetableVersion?->program_id,
+                'batch_id' => $item->batch_id ?: $item->courseGroup?->batch_id ?: $item->timetableVersion?->batch_id,
+                'term_id' => $item->term_id ?: $item->courseGroup?->term_id ?: $item->timetableVersion?->term_id,
+                'subject_id' => $item->subject_id ?: $item->courseGroup?->subject_id,
+            ]);
+        } elseif (! empty($data['timetable_version_id'])) {
             $this->authorizeTimetableVersionScope($request, TimetableVersion::findOrFail($data['timetable_version_id']));
         } else {
             $this->pmcPolicy->authorizeWrite($request->user());

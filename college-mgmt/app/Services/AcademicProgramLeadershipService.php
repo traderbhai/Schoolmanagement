@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\Attendance;
 use App\Models\Batch;
 use App\Models\CourseFeedback;
@@ -98,20 +99,50 @@ class AcademicProgramLeadershipService
             $programIds
         )->orderBy('name')->limit(25)->get();
 
-        $draftTimetable = $this->applyProgramScope(
+        $officialItems = $this->officialPmcItems($programIds);
+        $canonicalProgramTermKeys = $officialItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->canonicalProgramTermKey($item))
+            ->unique()
+            ->values();
+        $draftCanonical = $this->draftPmcItems($programIds);
+        $draftLegacy = $this->applyProgramScope(
             TimetableEntry::with(['program', 'subject', 'teacher.user'])
                 ->where('is_active', true)
                 ->where(fn (Builder $query) => $this->unpublishedTimetableScope($query)),
             $programIds
-        )->orderBy('day_of_week')->limit(25)->get();
+        )
+            ->orderBy('day_of_week')
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+        $legacyPublished = $this->applyProgramScope(
+            TimetableEntry::where(fn (Builder $query) => $this->publishedTimetableScope($query)),
+            $programIds
+        )
+            ->get(['id', 'program_id', 'term_id'])
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+        $draftItems = collect($draftCanonical->map(fn (AcademicPmcTimetableGenerationItem $item) => [
+            'title' => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Timetable entry',
+            'subtitle' => ($item->program?->code ?? $item->courseGroup?->program?->code ?? 'Program') . ' - Day ' . $item->day_of_week,
+            'status' => $this->pmcDraftStatus($item),
+            'metric_keys' => ['draft_timetable', 'delivery_gaps'],
+            'action' => route('academics.program-leadership.course-delivery'),
+            'source' => 'canonical_pmc_generation_items',
+        ])->all())->merge(collect($draftLegacy->take(25)->map(fn (TimetableEntry $entry) => [
+            'title' => $entry->subject?->name ?? 'Timetable entry',
+            'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name,
+            'status' => ucfirst($entry->status ?? 'draft'),
+            'metric_keys' => ['draft_timetable', 'delivery_gaps'],
+            'action' => route('academics.program-leadership.course-delivery'),
+            'source' => 'legacy_timetable_entries',
+        ])->all()))->take(25)->values();
 
         return [
             'title' => 'Course Delivery',
             'description' => 'Faculty assignment, timetable readiness, session load, and course-delivery exceptions.',
             'metrics' => [
                 'faculty_gaps' => $facultyGaps->count(),
-                'draft_timetable' => $draftTimetable->count(),
-                'published_slots' => $this->applyProgramScope(TimetableEntry::where(fn (Builder $query) => $this->publishedTimetableScope($query)), $programIds)->count(),
+                'draft_timetable' => $draftCanonical->count() + $draftLegacy->count(),
+                'published_slots' => $officialItems->count() + $legacyPublished->count(),
                 'faculty_assignments' => $this->applyProgramScope(SubjectFacultyAssignment::query(), $programIds)->count(),
             ],
             'items' => collect($facultyGaps->map(fn (Subject $subject) => [
@@ -120,13 +151,7 @@ class AcademicProgramLeadershipService
                 'status' => 'Faculty gap',
                 'metric_keys' => ['faculty_gaps', 'delivery_gaps'],
                 'action' => route('academics.program-leadership.course-delivery'),
-            ])->values())->concat($draftTimetable->map(fn (TimetableEntry $entry) => [
-                'title' => $entry->subject?->name ?? 'Timetable entry',
-                'subtitle' => ($entry->program?->code ?? 'Program') . ' - ' . $entry->day_name,
-                'status' => ucfirst($entry->status ?? 'draft'),
-                'metric_keys' => ['draft_timetable', 'delivery_gaps'],
-                'action' => route('academics.program-leadership.course-delivery'),
-            ])->values())->values(),
+            ])->values())->concat($draftItems)->values(),
         ];
     }
 
@@ -360,6 +385,22 @@ class AcademicProgramLeadershipService
         return $query->whereIn($column, $programIds);
     }
 
+    private function applyPmcItemProgramScope(Builder $query, ?Collection $programIds): Builder
+    {
+        if ($programIds === null) {
+            return $query;
+        }
+
+        if ($programIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $scope) use ($programIds) {
+            $scope->whereIn('program_id', $programIds)
+                ->orWhereHas('courseGroup', fn (Builder $group) => $group->whereIn('program_id', $programIds));
+        });
+    }
+
     private function scopeSummary(User $user): array
     {
         if ($this->hierarchy->canSeeAll($user)) {
@@ -397,6 +438,56 @@ class AcademicProgramLeadershipService
                             ->whereDoesntHave('version', fn (Builder $version) => $version->where('status', 'published'));
                     });
             });
+    }
+
+    private function officialPmcItems(?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with(['program', 'courseGroup.program', 'courseGroup.subject', 'subject', 'timetableVersion'])
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+
+        $this->applyPmcItemProgramScope($query, $programIds);
+
+        return $query->get();
+    }
+
+    private function draftPmcItems(?Collection $programIds): Collection
+    {
+        $query = AcademicPmcTimetableGenerationItem::with(['program', 'courseGroup.program', 'courseGroup.subject', 'subject', 'timetableVersion'])
+            ->where('status', 'scheduled')
+            ->where(function (Builder $draft) {
+                $draft->where('official_status', '!=', 'published')
+                    ->orWhereNull('timetable_version_id')
+                    ->orWhereDoesntHave('timetableVersion', fn (Builder $version) => $version->where('status', 'published'));
+            });
+
+        $this->applyPmcItemProgramScope($query, $programIds);
+
+        return $query->orderBy('day_of_week')->limit(25)->get();
+    }
+
+    private function pmcDraftStatus(AcademicPmcTimetableGenerationItem $item): string
+    {
+        if ($item->official_status === 'published' && $item->timetableVersion?->status !== 'published') {
+            return 'Draft version';
+        }
+
+        return ucfirst($item->official_status ?? 'draft');
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
+    }
+
+    private function canonicalProgramTermKey(AcademicPmcTimetableGenerationItem $item): string
+    {
+        return $this->programTermKey(
+            $item->program_id ?? $item->courseGroup?->program_id,
+            $item->term_id ?? $item->courseGroup?->term_id
+        );
     }
 
     private function studentLabel(?Student $student, mixed $fallbackId): string

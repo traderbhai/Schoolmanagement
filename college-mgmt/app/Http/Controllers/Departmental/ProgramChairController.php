@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
+use App\Models\{AcademicPmcTimetableGenerationItem, Program, Student, Subject, Exam, ExamResult, Attendance, Batch, Term, RoleProgramAssignment, TimetableEntry, ApprovalWorkflow, Applicant, SeatMatrix,
     TimetableVersion, ElectiveRegistrationWindow, LeaveApplication, AttendanceCondonation, StudentGrievance};
 use App\Helpers\AccessControl;
 use App\Services\{FacultyWorkloadService, ClassroomCapacityService, SoftConstraintService, LoadBalancingService};
@@ -135,16 +135,7 @@ class ProgramChairController extends Controller
             })->take(8);
         } catch (\Throwable $e) {}
 
-        // Faculty workload summary
-        $workloadSummary = TimetableEntry::whereIn('program_id', $programIds)
-            ->when($currentTerm ?? null, fn($q) => $q->where('term_id', ($currentTerm = Term::latest('start_date')->first())?->id))
-            ->where('is_active', true)
-            ->selectRaw('teacher_id, COUNT(*) as sessions')
-            ->groupBy('teacher_id')
-            ->with('teacher.user')
-            ->orderByDesc('sessions')
-            ->take(8)
-            ->get();
+        $workloadSummary = $this->dashboardWorkloadSummary($programIds, $currentTerm);
 
         // Timetable versions
         $timetableVersions = TimetableVersion::whereIn('program_id', $programIds)
@@ -288,6 +279,40 @@ class ProgramChairController extends Controller
         ];
     }
 
+    private function dashboardWorkloadSummary(array $programIds, ?Term $term)
+    {
+        if (! $term) {
+            return collect();
+        }
+
+        $rows = collect();
+        $service = app(FacultyWorkloadService::class);
+
+        foreach ($programIds as $programId) {
+            foreach ($service->getWorkloadReport((int) $programId, (int) $term->id) as $row) {
+                $rows->push((object) [
+                    'teacher_name' => $row['teacher_name'] ?? 'Unknown',
+                    'teacher' => (object) [
+                        'user' => (object) [
+                            'name' => $row['teacher_name'] ?? 'Unknown',
+                        ],
+                    ],
+                    'sessions' => (int) ($row['session_count'] ?? 0),
+                    'weekly_load' => (float) ($row['weekly_load'] ?? 0),
+                    'status' => $row['status'] ?? 'unknown',
+                    'source' => collect($row['entries'] ?? [])->pluck('source')->filter()->contains('canonical_pmc_official_sessions')
+                        ? 'canonical_pmc_official_sessions'
+                        : 'legacy_timetable_entries',
+                ]);
+            }
+        }
+
+        return $rows
+            ->sortByDesc('sessions')
+            ->take(8)
+            ->values();
+    }
+
     public function students(Request $request)
     {
         $programIds = $this->getAssignedProgramIds();
@@ -332,15 +357,108 @@ class ProgramChairController extends Controller
     {
         $programIds = $this->getAssignedProgramIds();
 
-        $entries = TimetableEntry::whereHas('subject', fn($q) => $q->whereIn('program_id', $programIds))
-            ->with(['subject', 'teacher.user', 'classroom', 'timetableSlot', 'batch'])
-            ->orderBy('day_of_week')
+        $canonicalItems = AcademicPmcTimetableGenerationItem::with([
+                'subject',
+                'courseGroup.subject',
+                'courseGroup.program',
+                'courseGroup.batch',
+                'teacher.user',
+                'classroom',
+                'slot',
+                'batch',
+                'timetableVersion',
+            ])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+            ->where(function ($query) use ($programIds) {
+                $query->whereIn('program_id', $programIds)
+                    ->orWhereHas('courseGroup', fn ($group) => $group->whereIn('program_id', $programIds));
+            })
+            ->get();
+
+        $canonicalProgramTermKeys = $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->programTermKey(
+                $item->program_id ?? $item->courseGroup?->program_id,
+                $item->term_id ?? $item->courseGroup?->term_id
+            ))
+            ->unique()
+            ->values();
+
+        $legacyRows = TimetableEntry::whereHas('subject', fn ($q) => $q->whereIn('program_id', $programIds))
+            ->where(fn ($query) => $this->publishedTimetableScope($query))
+            ->with(['subject', 'teacher.user', 'classroom', 'slot', 'batch'])
             ->get()
-            ->groupBy('day_of_week');
+            ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)));
+
+        $entries = $canonicalItems
+            ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->displayTimetableRowFromCanonicalItem($item))
+            ->merge($legacyRows->map(fn (TimetableEntry $entry) => $this->displayTimetableRowFromLegacyEntry($entry)))
+            ->sortBy([
+                ['day_number', 'asc'],
+                ['slot_sort', 'asc'],
+                ['subject_name', 'asc'],
+                ['group_name', 'asc'],
+            ])
+            ->groupBy('day_name');
 
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
         return view('departmental.program-chair.timetable', compact('entries', 'days'));
+    }
+
+    private function displayTimetableRowFromCanonicalItem(AcademicPmcTimetableGenerationItem $item): object
+    {
+        $subject = $item->subject ?: $item->courseGroup?->subject;
+        $batch = $item->batch ?: $item->courseGroup?->batch;
+
+        return (object) [
+            'source' => 'canonical_pmc_official_session',
+            'day_number' => (int) $item->day_of_week,
+            'day_name' => $this->dayName((int) $item->day_of_week),
+            'slot_sort' => (int) ($item->slot?->sort_order ?? $item->timetable_slot_id ?? 0),
+            'start_time' => $item->slot?->start_time,
+            'end_time' => $item->slot?->end_time,
+            'subject_name' => $subject?->name ?? 'Subject not linked',
+            'subject_code' => $subject?->code,
+            'teacher_name' => $item->teacher?->user?->name ?? 'Faculty not assigned',
+            'room_name' => $item->classroom?->name ?? 'Room not assigned',
+            'batch_name' => $batch?->name,
+            'group_name' => $item->courseGroup?->name,
+            'session_type' => $item->session_type,
+            'duration_slots' => max(1, (int) ($item->duration_slots ?? 1)),
+        ];
+    }
+
+    private function displayTimetableRowFromLegacyEntry(TimetableEntry $entry): object
+    {
+        return (object) [
+            'source' => 'legacy_timetable_entry',
+            'day_number' => is_numeric($entry->day_of_week) ? (int) $entry->day_of_week : array_search((string) $entry->day_of_week, $this->dayMap(), true),
+            'day_name' => is_numeric($entry->day_of_week) ? $this->dayName((int) $entry->day_of_week) : (string) $entry->day_of_week,
+            'slot_sort' => (int) ($entry->slot?->sort_order ?? $entry->timetable_slot_id ?? 0),
+            'start_time' => $entry->slot?->start_time,
+            'end_time' => $entry->slot?->end_time,
+            'subject_name' => $entry->subject?->name ?? 'Subject not linked',
+            'subject_code' => $entry->subject?->code,
+            'teacher_name' => $entry->teacher?->user?->name ?? 'Faculty not assigned',
+            'room_name' => $entry->classroom?->name ?? 'Room not assigned',
+            'batch_name' => $entry->batch?->name,
+            'group_name' => null,
+            'session_type' => null,
+            'duration_slots' => 1,
+        ];
+    }
+
+    private function dayName(int $day): string
+    {
+        return $this->dayMap()[$day] ?? 'Day ' . $day;
+    }
+
+    private function dayMap(): array
+    {
+        return [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'];
     }
 
     public function exams()
@@ -681,14 +799,37 @@ class ProgramChairController extends Controller
                     app(ClassroomCapacityService::class)->findCapacityViolations($selectedProgram->id, $selectedTerm->id)
                 ),
                 'loadBalance' => app(LoadBalancingService::class)->analyzeLoadBalance($selectedTerm->id, $selectedProgram->id)['stats'],
-                'totalEntries' => TimetableEntry::where('program_id', $selectedProgram->id)
-                    ->where('term_id', $selectedTerm->id)
-                    ->count(),
+                'totalEntries' => $this->officialTimetableSessionCount($selectedProgram->id, $selectedTerm->id),
             ];
         }
 
         return view('departmental.program-chair.analytics', compact(
             'programs', 'terms', 'selectedProgram', 'selectedTerm', 'dashboardData'
         ));
+    }
+
+    private function officialTimetableSessionCount(int $programId, int $termId): int
+    {
+        $canonicalCount = AcademicPmcTimetableGenerationItem::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->count();
+
+        if ($canonicalCount > 0) {
+            return $canonicalCount;
+        }
+
+        return TimetableEntry::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->where(fn ($query) => $this->publishedTimetableScope($query))
+            ->count();
+    }
+
+    private function programTermKey(mixed $programId, mixed $termId): string
+    {
+        return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
     }
 }

@@ -4,6 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Attendance;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\Batch;
+use App\Models\Classroom;
 use App\Models\Course;
 use App\Models\Program;
 use App\Models\Semester;
@@ -305,6 +310,130 @@ class AcademicsCourseDeliveryV006Test extends TestCase
         $this->assertSame($before['published_sessions'] + 1, $after['published_sessions']);
         $this->assertSame($before['draft_sessions'] + 1, $after['draft_sessions']);
         $this->assertSame($before['today_sessions'] + 1, $after['today_sessions']);
+    }
+
+    public function test_course_delivery_session_metrics_prefer_canonical_pmc_official_sessions(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-06-22 09:00:00'));
+
+        $fixture = $this->seedCourseFixture();
+        $dean = User::where('email', 'dean@college.com')->firstOrFail();
+        $batch = Batch::factory()->create(['program_id' => $fixture['program']->id]);
+        $term = \App\Models\Term::factory()->create([
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_number' => 1,
+        ]);
+        $teacher = Teacher::factory()->create(['department_id' => $fixture['department']->id]);
+        $group = AcademicPmcCourseGroup::create([
+            'name' => 'Course Delivery Official Group',
+            'group_type' => 'core_section',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'min_capacity' => 1,
+            'max_capacity' => 60,
+            'current_strength' => 35,
+            'status' => 'active',
+            'is_locked' => true,
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $dean->id,
+            'published_by' => $dean->id,
+            'published_at' => now(),
+        ]);
+        $draftVersion = TimetableVersion::create([
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'batch_id' => $batch->id,
+            'version_number' => 2,
+            'status' => 'draft',
+            'created_by' => $dean->id,
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Course Delivery Canonical Run',
+            'strategy' => 'balanced',
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $dean->id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+            'quality_score' => 100,
+        ]);
+        $officialRoom = Classroom::factory()->create(['name' => 'Official Delivery Room']);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => $fixture['subject']->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => $officialRoom->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['name' => 'Official Delivery Slot', 'sort_order' => 1])->id,
+            'status' => 'locked',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $dean->id,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $draftVersion->id,
+            'course_group_id' => $group->id,
+            'program_id' => $fixture['program']->id,
+            'batch_id' => $batch->id,
+            'term_id' => $term->id,
+            'subject_id' => Subject::factory()->create(['program_id' => $fixture['program']->id, 'name' => 'Draft Delivery Canonical Subject'])->id,
+            'session_index' => 2,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'classroom_id' => Classroom::factory()->create(['name' => 'Draft Delivery Canonical Room'])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 2])->id,
+            'status' => 'scheduled',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+        ]);
+        TimetableEntry::factory()->create([
+            'semester_id' => Semester::where('is_current', true)->firstOrFail()->id,
+            'course_id' => Course::factory()->create(['department_id' => $fixture['department']->id])->id,
+            'program_id' => $fixture['program']->id,
+            'term_id' => $term->id,
+            'subject_id' => Subject::factory()->create(['program_id' => $fixture['program']->id, 'name' => 'Legacy Delivery Flattened Subject'])->id,
+            'teacher_id' => $teacher->id,
+            'timetable_slot_id' => TimetableSlot::factory()->create(['sort_order' => 3])->id,
+            'day_of_week' => now()->dayOfWeekIso,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
+
+        $data = app(AcademicCourseDeliveryService::class)->sessionDelivery($dean);
+        $titles = collect($data['items'])->pluck('title');
+        $subtitles = collect($data['items'])->pluck('subtitle')->join(' | ');
+
+        $this->assertSame(1, $data['metrics']['today_sessions']);
+        $this->assertSame(1, $data['metrics']['published_sessions']);
+        $this->assertSame(0, $data['metrics']['draft_sessions']);
+        $this->assertTrue($titles->contains('Management Foundations'));
+        $this->assertStringContainsString('Official Delivery Room', $subtitles);
+        $this->assertStringContainsString('Course Delivery Official Group', $subtitles);
+        $this->assertFalse($titles->contains('Legacy Delivery Flattened Subject'));
+        $this->assertFalse($titles->contains('Draft Delivery Canonical Subject'));
     }
 
     public function test_non_academic_user_cannot_access_course_delivery_os(): void

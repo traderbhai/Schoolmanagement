@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
+use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\StudyMaterial;
 use App\Models\SubjectAnnouncement;
 use App\Models\Assignment;
@@ -12,6 +14,7 @@ use App\Models\Quiz;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
 use App\Models\TimetableEntry;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -81,8 +84,12 @@ class CourseHubController extends Controller
             return collect();
         }
 
+        $canonicalFacultyBySubject = $this->canonicalFacultyBySubject($student, $subjectIds);
+        $canonicalSubjectIds = $canonicalFacultyBySubject->keys();
+
         $facultyBySubject = TimetableEntry::with('teacher.user')
             ->whereIn('subject_id', $subjectIds)
+            ->whereNotIn('subject_id', $canonicalSubjectIds)
             ->where('is_active', true)
             ->where('status', 'published')
             ->where(function ($query) {
@@ -102,10 +109,41 @@ class CourseHubController extends Controller
         return Subject::whereIn('id', $subjectIds)
             ->orderBy('name')
             ->get()
-            ->map(function (Subject $subject) use ($facultyBySubject) {
-                $subject->faculty_names = $facultyBySubject->get($subject->id, []);
+            ->map(function (Subject $subject) use ($facultyBySubject, $canonicalFacultyBySubject) {
+                $subject->faculty_names = $canonicalFacultyBySubject->get($subject->id, $facultyBySubject->get($subject->id, []));
                 return $subject;
             });
+    }
+
+    private function canonicalFacultyBySubject(Student $student, Collection $subjectIds): Collection
+    {
+        $courseGroupIds = AcademicPmcCourseGroupMember::where('student_id', $student->id)
+            ->where('status', 'active')
+            ->whereHas('courseGroup', fn (Builder $group) => $group->whereIn('subject_id', $subjectIds))
+            ->pluck('course_group_id')
+            ->unique()
+            ->values();
+
+        if ($courseGroupIds->isEmpty()) {
+            return collect();
+        }
+
+        return AcademicPmcTimetableGenerationItem::with(['teacher.user', 'subject', 'courseGroup.subject', 'timetableVersion'])
+            ->whereIn('course_group_id', $courseGroupIds)
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereNotNull('teacher_id')
+            ->whereHas('timetableVersion', fn (Builder $version) => $version->where('status', 'published'))
+            ->get()
+            ->groupBy(fn (AcademicPmcTimetableGenerationItem $item) => $item->subject_id ?: $item->courseGroup?->subject_id)
+            ->map(fn (Collection $items) => $items
+                ->map(fn (AcademicPmcTimetableGenerationItem $item) => $item->teacher?->user?->name)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all()
+            );
     }
 
     private function enrolledSubjectIds(Student $student): Collection
