@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\{AcademicPmcCourseGroup, AcademicPmcFacultyPreference, AcademicPmcLockedSlot, AcademicPmcTimetableGenerationItem, TimetableEntry, TimetableSlot, Teacher, Classroom, Batch, TeacherAvailability};
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcFacultyPreference, AcademicPmcLockedSlot, AcademicPmcRoomCapability, AcademicPmcTimetableGenerationItem, TimetableEntry, TimetableSlot, Teacher, Classroom, Batch, TeacherAvailability};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -554,7 +554,12 @@ class ConflictPreventionService
 
     private function isLabRoom(Classroom $classroom): bool
     {
-        return (bool) ($classroom->has_lab ?? false) || strtolower((string) $classroom->type) === 'lab';
+        return (bool) ($classroom->has_lab ?? false)
+            || strtolower((string) $classroom->type) === 'lab'
+            || AcademicPmcRoomCapability::where('classroom_id', $classroom->id)
+                ->where('is_active', true)
+                ->where('capability_type', 'lab')
+                ->exists();
     }
 
     private function hasCanonicalBatchItems(int $batchId, int $termId): bool

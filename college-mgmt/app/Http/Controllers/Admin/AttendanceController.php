@@ -96,7 +96,10 @@ class AttendanceController extends Controller
         foreach ($request->attendance as $studentId => $status) {
             Attendance::updateOrCreate(
                 ['student_id' => $studentId, 'timetable_entry_id' => $request->timetable_entry_id, 'date' => $request->date],
-                ['status' => $status]
+                [
+                    'pmc_generation_item_id' => $entry->pmc_generation_item_id,
+                    'status' => $status,
+                ]
             );
         }
 

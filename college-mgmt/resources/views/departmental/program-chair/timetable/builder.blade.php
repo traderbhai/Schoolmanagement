@@ -123,6 +123,9 @@
                       @php
                         $canonicalSubject = $canonicalEntry->subject ?: $canonicalEntry->courseGroup?->subject;
                         $canonicalBatch = $canonicalEntry->batch ?: $canonicalEntry->courseGroup?->batch;
+                        $canonicalLabel = $canonicalEntry->official_status === 'published'
+                            ? 'Official published'
+                            : (($canonicalEntry->is_locked || $canonicalEntry->timetable_version_id) ? 'Revision required' : 'Draft canonical');
                       @endphp
                       <button class="btn btn-sm btn-primary w-100 text-start"
                         data-day="{{ $dayNum }}" data-slot="{{ $slot->id }}"
@@ -138,6 +141,7 @@
                         onclick="openSlotModal(this)">
                         <div class="fw-semibold small">{{ $canonicalSubject?->code ?? $canonicalSubject?->name ?? '?' }}</div>
                         <div class="opacity-75 small">{{ $canonicalEntry->courseGroup?->name ?? $canonicalBatch?->name ?? 'Group pending' }}</div>
+                        <div class="small"><span class="badge bg-light text-dark border">{{ $canonicalLabel }}</span></div>
                         <div class="opacity-75 small">{{ $canonicalEntry->teacher->user->name ?? '-' }}</div>
                         <div class="opacity-50 small">{{ $canonicalEntry->classroom->name ?? '' }}</div>
                       </button>

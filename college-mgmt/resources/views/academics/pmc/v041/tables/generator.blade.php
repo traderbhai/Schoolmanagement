@@ -107,7 +107,10 @@
             <tbody>
                 @foreach($items as $item)
                     <tr>
-                        <td>{{ $item->courseGroup?->name }}</td>
+                        <td>
+                            <a class="fw-semibold" href="{{ route('academics.pmc.canonical-sessions.show', $item) }}">{{ $item->courseGroup?->name ?? 'Session #' . $item->id }}</a>
+                            <div class="small text-muted">Canonical #{{ $item->id }}</div>
+                        </td>
                         <td>
                             {{ $item->session_type }} #{{ $item->session_index }}
                             <div class="small text-muted">{{ $item->duration_slots }} slot(s) | {{ $item->operational_timetable_entry_id ? 'synced' : 'draft' }}</div>

@@ -1213,6 +1213,11 @@ class AcademicPmcTimetableV041Service
         ];
     }
 
+    public function selectorOptionsForFilters(): array
+    {
+        return $this->selectorOptions();
+    }
+
     private function selectorOptions(): array
     {
         return [
@@ -1992,156 +1997,20 @@ class AcademicPmcTimetableV041Service
 
     public function generate(User $actor, array $data): AcademicPmcTimetableGenerationRun
     {
-        $groups = $this->applyScope(
-            AcademicPmcCourseGroup::with(['facultyAssignments', 'members'])
-                ->when($data['program_id'] ?? null, fn ($q, $id) => $q->where('program_id', $id))
-                ->when($data['batch_id'] ?? null, fn ($q, $id) => $q->where('batch_id', $id))
-                ->when($data['term_id'] ?? null, fn ($q, $id) => $q->where('term_id', $id)),
-            $actor,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject']
-        )->get();
-        $breakSlotCount = TimetableSlot::where('is_active', true)->where('is_break', true)->count();
-        $slots = TimetableSlot::where('is_active', true)->where('is_break', false)->orderBy('sort_order')->get();
-        $rooms = Classroom::where('is_active', true)->orderBy('capacity')->get();
-
-        if ($groups->isEmpty()) {
-            abort(422, 'Timetable generation requires at least one course section or group in the selected PMC scope. Complete course allocation and section/group setup before generating.');
-        }
-        if ($slots->isEmpty()) {
-            abort(422, 'Timetable generation requires active non-break teaching slots. Configure timetable slots before generating.');
-        }
-        if ($rooms->isEmpty()) {
-            abort(422, 'Timetable generation requires at least one active classroom, lab, or room. Complete room readiness before generating.');
-        }
-
-        $run = AcademicPmcTimetableGenerationRun::create([
-            'title' => $data['title'] ?? 'PMC Generated Timetable',
-            'strategy' => $data['strategy'] ?? 'balanced',
+        $run = app(TimetableOptimizationService::class)->solve($actor, [
             'program_id' => $data['program_id'] ?? null,
             'batch_id' => $data['batch_id'] ?? null,
             'term_id' => $data['term_id'] ?? null,
-            'created_by' => $actor->id,
-            'status' => 'generated',
-            'input_summary' => [
-                'groups' => $groups->count(),
-                'teaching_slots' => $slots->count(),
-                'break_slots' => $breakSlotCount,
-                'rooms' => $rooms->count(),
-                'version' => 'PMC OS v0.062',
-            ],
+        ], [
+            'title' => $data['title'] ?? 'PMC Optimized Timetable',
+            'strategy' => $data['strategy'] ?? 'balanced',
         ]);
-
-        $scheduled = 0;
-        $unscheduled = 0;
-        $occupied = [
-            'teacher' => [],
-            'room' => [],
-            'group' => [],
-            'student' => [],
-        ];
-
-        foreach ($groups as $group) {
-            $primaryAssignment = $group->facultyAssignments->firstWhere('assignment_role', 'primary') ?: $group->facultyAssignments->first();
-            $teacherId = $primaryAssignment?->teacher_id;
-            $locked = AcademicPmcLockedSlot::where('status', 'active')->where('is_hard_lock', true)
-                ->where('course_group_id', $group->id)
-                ->first();
-            $preference = $teacherId ? AcademicPmcFacultyPreference::where('teacher_id', $teacherId)->where(fn ($q) => $q->where('term_id', $group->term_id)->orWhereNull('term_id'))->first() : null;
-            $demands = $this->createSessionDemands($run, $group, $primaryAssignment);
-
-            foreach ($demands as $demand) {
-                $demandScheduled = 0;
-                $demandUnscheduled = 0;
-                for ($sessionIndex = 1; $sessionIndex <= $demand->required_sessions_per_week; $sessionIndex++) {
-                    $placement = $teacherId
-                        ? $this->findFeasiblePlacement($group, $teacherId, $rooms, $slots, $preference, $locked, $demand, $sessionIndex, $occupied, $run->strategy)
-                        : null;
-
-                    if (! $teacherId || ! $placement) {
-                        $failureDiagnostics = $teacherId
-                            ? $this->placementFailureDiagnostics($group, $teacherId, $rooms, $slots, $preference, $occupied, (int) $demand->duration_slots, $run->strategy)
-                            : [
-                                'primary_blocker' => 'missing_primary_faculty',
-                                'blockers' => ['missing_primary_faculty'],
-                                'recommended_actions' => ['Assign a primary faculty member to this course group.'],
-                            ];
-
-                        AcademicPmcTimetableGenerationItem::create([
-                            'generation_run_id' => $run->id,
-                            'course_group_id' => $group->id,
-                            'session_demand_id' => $demand->id,
-                            'session_index' => $sessionIndex,
-                            'session_type' => $demand->session_type,
-                            'duration_slots' => $demand->duration_slots,
-                            'status' => 'unscheduled',
-                            'explanation' => ! $teacherId ? 'Missing primary faculty for required weekly session.' : $failureDiagnostics['summary'],
-                            'metadata' => [
-                                'version' => 'PMC OS v0.066',
-                                'required_sessions_per_week' => $demand->required_sessions_per_week,
-                                'unscheduled_diagnostics' => $failureDiagnostics,
-                            ],
-                        ]);
-                        $unscheduled++;
-                        $demandUnscheduled++;
-                        continue;
-                    }
-
-                    [$chosenDay, $slot, $room, $isLocked] = array_slice($placement, 0, 4);
-                    $placementScore = $placement[4] ?? ($isLocked ? 96 : 86);
-                    $placementReasons = $placement[5] ?? [];
-                    $placementAlternatives = $placement[6] ?? [];
-                    $item = AcademicPmcTimetableGenerationItem::create([
-                        'generation_run_id' => $run->id,
-                        'course_group_id' => $group->id,
-                        'session_demand_id' => $demand->id,
-                        'session_index' => $sessionIndex,
-                        'session_type' => $demand->session_type,
-                        'duration_slots' => $demand->duration_slots,
-                        'teacher_id' => $teacherId,
-                        'classroom_id' => $room->id,
-                        'day_of_week' => $chosenDay,
-                        'timetable_slot_id' => $slot->id,
-                        'status' => 'scheduled',
-                        'is_locked' => $isLocked,
-                        'confidence' => $isLocked ? 96 : $placementScore,
-                        'explanation' => $isLocked ? 'Placed in hard locked slot as required.' : 'Placed by v0.064 strategy-aware generator after ranking feasible day/slot/room options for the selected timetable strategy.',
-                        'metadata' => ['version' => 'PMC OS v0.065', 'required_sessions_per_week' => $demand->required_sessions_per_week, 'placement_score' => $placementScore, 'placement_reasons' => $placementReasons, 'placement_alternatives' => $placementAlternatives],
-                    ]);
-                    $this->markPlacementOccupied($occupied, $item, $group);
-                    $scheduled++;
-                    $demandScheduled++;
-                }
-
-                $demand->update([
-                    'scheduled_sessions' => $demandScheduled,
-                    'unscheduled_sessions' => $demandUnscheduled,
-                    'status' => $demandUnscheduled > 0 ? 'partially_scheduled' : 'scheduled',
-                ]);
-            }
-        }
-
         $quality = $this->refreshConstraintsAndQuality($run);
-        $run->update(['scheduled_count' => $scheduled, 'unscheduled_count' => $unscheduled]);
-        AcademicPmcTimetableSolverAttempt::create([
-            'generation_run_id' => $run->id,
-            'strategy' => $run->strategy,
-            'status' => $quality->hard_conflicts > 0 ? 'completed_with_conflicts' : 'completed',
-            'placements_attempted' => $scheduled + $unscheduled,
-            'placements_scheduled' => $scheduled,
-            'placements_unscheduled' => $unscheduled,
+        AcademicPmcTimetableSolverAttempt::where('generation_run_id', $run->id)->latest()->first()?->update([
+            'status' => $quality->hard_conflicts > 0 ? 'completed_with_conflicts' : ($run->unscheduled_count > 0 ? 'completed_with_unscheduled' : 'completed'),
             'hard_conflicts' => $quality->hard_conflicts,
             'soft_warnings' => $quality->soft_warnings,
             'quality_score' => $quality->overall_score,
-            'diagnostics' => [
-                'strategy' => $run->strategy,
-                'version' => 'PMC OS v0.065',
-                'session_demands' => AcademicPmcTimetableSessionDemand::where('generation_run_id', $run->id)->count(),
-                'teaching_slots' => $slots->count(),
-                'break_slots_excluded' => $breakSlotCount,
-                'multi_slot_blocks_require_contiguous_non_break_slots' => true,
-                'strategy_aware_candidate_scoring' => true,
-                'top_candidate_alternatives_stored' => true,
-            ],
         ]);
         $this->audit($actor, 'academic_pmc_v041_timetable_generated', $run->title, $run);
         return $run->fresh();

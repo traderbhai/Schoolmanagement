@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AcademicPmcCourseGroup, AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, AcademicYear, Course, Department, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcFacultyAssignmentAcknowledgement, AcademicPmcRoomReadinessReview, AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, AcademicPmcTimetableImpactRecord, AcademicPmcTimetablePublishCheck, AcademicYear, Course, Department, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment, Semester};
 use App\Services\{AcademicPmcTimetableV041Service, TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
@@ -81,6 +81,66 @@ class PmcTimetableController extends Controller {
     private function publishedLockMessage(): string
     {
         return 'Published timetable history is locked on legacy Program Chair routes. Use PMC timetable revision/version workflow for changes.';
+    }
+
+    private function canonicalPublishBlockers(int $programId, int $termId, ?int $batchId = null): array
+    {
+        $run = AcademicPmcTimetableGenerationRun::where('program_id', $programId)
+            ->where('term_id', $termId)
+            ->when($batchId, fn ($query) => $query->where('batch_id', $batchId), fn ($query) => $query->whereNull('batch_id'))
+            ->latest()
+            ->first();
+
+        if (! $run) {
+            return ['Generate a canonical PMC timetable run before publishing.'];
+        }
+
+        $blockers = [];
+        if ((int) $run->unscheduled_count > 0) {
+            $blockers[] = "{$run->unscheduled_count} required session(s) are unscheduled.";
+        }
+        if ((int) $run->hard_conflict_count > 0) {
+            $blockers[] = "{$run->hard_conflict_count} hard conflict(s) remain.";
+        }
+
+        $publishChecks = AcademicPmcTimetablePublishCheck::where('generation_run_id', $run->id)
+            ->whereIn('status', ['block', 'blocked', 'pending', 'open'])
+            ->pluck('title')
+            ->filter()
+            ->values()
+            ->all();
+        foreach ($publishChecks as $check) {
+            $blockers[] = 'Publish check blocked: ' . $check;
+        }
+
+        $roomBlockers = AcademicPmcRoomReadinessReview::where('generation_run_id', $run->id)
+            ->where(fn ($query) => $query->whereIn('status', ['review_required', 'revision_required', 'rejected'])
+                ->orWhereIn('readiness_band', ['blocked', 'warning']))
+            ->count();
+        if ($roomBlockers > 0) {
+            $blockers[] = "{$roomBlockers} room/lab readiness review(s) require approval.";
+        }
+
+        $impactPreviewCount = AcademicPmcTimetableImpactRecord::where('metadata->generation_run_id', $run->id)->count();
+        if ((int) $run->scheduled_count > 0 && $impactPreviewCount === 0) {
+            $blockers[] = 'Impact preview must be refreshed before publish.';
+        }
+
+        $groupIds = AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->pluck('course_group_id')
+            ->filter()
+            ->unique()
+            ->values();
+        if ($groupIds->isNotEmpty()) {
+            $openAcknowledgements = AcademicPmcFacultyAssignmentAcknowledgement::whereHas('assignment', fn ($query) => $query->whereIn('course_group_id', $groupIds))
+                ->whereIn('status', ['pending', 'requested', 'concern_raised', 'declined', 'revision_required'])
+                ->count();
+            if ($openAcknowledgements > 0) {
+                $blockers[] = "{$openAcknowledgements} faculty acknowledgement(s) are not cleared.";
+            }
+        }
+
+        return $blockers;
     }
 
     private function validateProgramTermBatchScope(int $programId, int $termId, ?int $batchId = null): ?string
@@ -315,55 +375,9 @@ class PmcTimetableController extends Controller {
             return $this->saveCanonicalCourseGroupSlot($request);
         }
 
-        $program = Program::findOrFail($request->program_id);
-        $term = Term::findOrFail($request->term_id);
-        $semester = $this->legacySemesterForTerm($term);
-        $course = $this->legacyCourseForProgram($program);
-
-        // Conflict check
-        if ($request->filled('subject_id')) {
-            $conflicts = app(TimetableConflictService::class)->check([
-                'teacher_id'        => $request->teacher_id,
-                'classroom_id'      => $request->classroom_id,
-                'batch_id'          => $request->batch_id,
-                'day_of_week'       => $request->day_of_week,
-                'timetable_slot_id' => $request->timetable_slot_id,
-                'term_id'           => $request->term_id,
-            ]);
-
-            if ($conflicts) {
-                return response()->json(['conflicts' => $conflicts], 422);
-            }
-        }
-
-        // Clear existing entry for this slot
-        TimetableEntry::where([
-            'program_id'        => $request->program_id,
-            'term_id'           => $request->term_id,
-            'batch_id'          => $request->batch_id,
-            'day_of_week'       => $request->day_of_week,
-            'timetable_slot_id' => $request->timetable_slot_id,
-        ])->delete();
-
-        // Create new entry if subject is set
-        if ($request->filled('subject_id')) {
-            TimetableEntry::create([
-                'semester_id'       => $semester->id,
-                'course_id'         => $course->id,
-                'program_id'        => $request->program_id,
-                'term_id'           => $request->term_id,
-                'batch_id'          => $request->batch_id,
-                'subject_id'        => $request->subject_id,
-                'teacher_id'        => $request->teacher_id,
-                'classroom_id'      => $request->classroom_id,
-                'day_of_week'       => $request->day_of_week,
-                'timetable_slot_id' => $request->timetable_slot_id,
-                'is_active'         => true,
-                'status'            => 'draft',
-            ]);
-        }
-
-        return response()->json(['message' => 'Saved.']);
+        return response()->json([
+            'message' => 'Canonical timetable editing requires a course group. Legacy timetable rows are now read-only compatibility bridges.',
+        ], 422);
     }
 
     private function saveCanonicalCourseGroupSlot(Request $request)
@@ -484,6 +498,16 @@ class PmcTimetableController extends Controller {
             return back()->with('error', 'Cannot publish — conflicts found: ' . implode(' | ', array_slice($conflicts, 0, 3)));
         }
 
+        $blockers = $this->canonicalPublishBlockers(
+            (int) $request->program_id,
+            (int) $request->term_id,
+            $request->filled('batch_id') ? (int) $request->batch_id : null
+        );
+
+        if ($blockers !== []) {
+            return back()->with('error', 'Cannot publish canonical timetable: ' . implode(' | ', array_slice($blockers, 0, 5)));
+        }
+
         // Archive previous published version
         TimetableVersion::where([
             'program_id' => $request->program_id,
@@ -521,13 +545,6 @@ class PmcTimetableController extends Controller {
         )->get();
         $this->publishCanonicalItems($canonicalItems, $version);
         $this->syncCanonicalItemsToLegacyRows($canonicalItems, $version);
-
-        // Mark entries as published
-        TimetableEntry::where([
-            'program_id' => $request->program_id,
-            'term_id'    => $request->term_id,
-            'batch_id'   => $request->batch_id,
-        ])->update(['status' => 'published', 'timetable_version_id' => $version->id]);
 
         return back()->with('success', "Timetable published as version {$version->version_number}.");
     }
@@ -823,6 +840,7 @@ class PmcTimetableController extends Controller {
 
         TimetableSubstitution::create([
             'timetable_entry_id'    => $request->timetable_entry_id,
+            'pmc_generation_item_id' => $entry->pmc_generation_item_id,
             'date'                  => $request->date,
             'action'                => $request->action,
             'substitute_teacher_id' => $request->substitute_teacher_id,

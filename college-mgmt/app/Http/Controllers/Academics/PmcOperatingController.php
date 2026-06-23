@@ -39,6 +39,9 @@ use App\Services\AcademicPmcOperatingService;
 use App\Services\AcademicPmcTimetableV041Service;
 use App\Services\AcademicPmcV003Service;
 use App\Services\AcademicPmcV004Service;
+use App\Services\CanonicalSessionOperationsService;
+use App\Services\TimetableCohortAuditService;
+use App\Services\TimetableLaunchReadinessService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -50,7 +53,10 @@ class PmcOperatingController extends Controller
         private AcademicPmcV003Service $pmcV003,
         private AcademicPmcV004Service $pmcV004,
         private AcademicPmcAccessPolicyService $pmcPolicy,
-        private AcademicPmcTimetableV041Service $pmcTimetableV041
+        private AcademicPmcTimetableV041Service $pmcTimetableV041,
+        private TimetableLaunchReadinessService $timetableLaunchReadiness,
+        private TimetableCohortAuditService $timetableCohortAudit,
+        private CanonicalSessionOperationsService $canonicalSessions
     ) {}
 
     public function index(Request $request)
@@ -578,6 +584,57 @@ class PmcOperatingController extends Controller
         return view('academics.pmc.v041.surface', $this->pmcTimetableV041->surface($request->user(), $surface, $request->query()));
     }
 
+    public function v110TimetableLaunch(Request $request)
+    {
+        $this->authorizePmc($request);
+
+        return view('academics.pmc.v041.launch-wizard', [
+            'title' => 'Canonical Timetable Launch Wizard',
+            'description' => 'Hard prerequisite gate before canonical timetable generation and publish.',
+            'readiness' => $this->timetableLaunchReadiness->evaluate($request->user(), $request->query()),
+            'selectorOptions' => $this->pmcTimetableV041->selectorOptionsForFilters(),
+        ]);
+    }
+
+    public function v110CanonicalSession(Request $request, AcademicPmcTimetableGenerationItem $item)
+    {
+        $this->authorizePmc($request);
+
+        return view('academics.pmc.v041.canonical-session', $this->canonicalSessions->detail($item));
+    }
+
+    public function v110TimetableClashes(Request $request)
+    {
+        $this->authorizePmc($request);
+
+        return view('academics.pmc.v041.clash-audit', [
+            'title' => 'Canonical Timetable Clash And Cohort Audit',
+            'description' => 'Student-group assignment, elective overlap, and parallel-section audit from canonical sessions.',
+            'audit' => $this->timetableCohortAudit->audit($request->query()),
+            'selectorOptions' => $this->pmcTimetableV041->selectorOptionsForFilters(),
+        ]);
+    }
+
+    public function v110ExportTimetableClashes(Request $request)
+    {
+        $this->authorizePmc($request);
+
+        return $this->timetableCohortAudit->export($request->query());
+    }
+
+    public function v110PostPublishOperations(Request $request)
+    {
+        $this->authorizePmc($request);
+
+        return view('academics.pmc.v041.post-publish-operations', [
+            'title' => 'Canonical Timetable Post-Publish Operations',
+            'description' => 'Operational blockers after publish: acknowledgement, bridge sync, substitutions, room readiness, revisions, and attendance coverage.',
+            'dashboard' => $this->timetableLaunchReadiness->postPublishDashboard($request->user(), $request->query()),
+            'readiness' => $this->timetableLaunchReadiness->evaluate($request->user(), $request->query()),
+            'selectorOptions' => $this->pmcTimetableV041->selectorOptionsForFilters(),
+        ]);
+    }
+
     public function v041ExportSurface(Request $request, string $surface)
     {
         $this->authorizePmc($request);
@@ -1038,6 +1095,10 @@ class PmcOperatingController extends Controller
             'term_id' => 'nullable|exists:terms,id',
         ]);
         $this->pmcPolicy->authorizeWriteScope($request->user(), $data);
+        $blockers = $this->timetableLaunchReadiness->generationBlockers($request->user(), $data);
+        if ($blockers !== []) {
+            return back()->with('error', 'Timetable generation blocked: ' . implode(' ', array_slice($blockers, 0, 3)));
+        }
         $run = $this->pmcTimetableV041->generate($request->user(), $data);
 
         return back()->with('success', "Timetable generated with {$run->scheduled_count} scheduled and {$run->unscheduled_count} unscheduled classes.");
@@ -1113,6 +1174,10 @@ class PmcOperatingController extends Controller
             'decision_reason' => 'nullable|string|max:2000',
             'override_reason' => 'nullable|string|max:2000',
         ]);
+        $blockers = $this->timetableLaunchReadiness->publishBlockers($run, $request->user());
+        if ($blockers !== [] && blank($data['override_reason'] ?? null)) {
+            return back()->with('error', 'Timetable publish blocked: ' . implode(' ', array_slice($blockers, 0, 3)) . ' Dean/Admin override reason is required for allowed exceptions.');
+        }
         $version = $this->pmcTimetableV041->publishRun($request->user(), $run, $data);
 
         return back()->with('success', 'Timetable published as version #' . $version->version_number);

@@ -251,6 +251,11 @@ Route::middleware(['auth'])->prefix('academics')->name('academics.')->group(func
             Route::get('/', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v004PolicyAudit'])->name('index');
         });
         Route::get('timetable-os', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v041Dashboard'])->name('timetable-os.index');
+        Route::get('timetable-launch', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v110TimetableLaunch'])->name('timetable-launch.index');
+        Route::get('canonical-sessions/{item}', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v110CanonicalSession'])->name('canonical-sessions.show');
+        Route::get('timetable-clashes', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v110TimetableClashes'])->name('timetable-clashes.index');
+        Route::get('timetable-clashes/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v110ExportTimetableClashes'])->name('timetable-clashes.export');
+        Route::get('post-publish-operations', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v110PostPublishOperations'])->name('post-publish-operations.index');
         Route::get('official-timetable', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v044OfficialTimetable'])->name('official-timetable.index');
         Route::get('data-reconciliation', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v092DataReconciliation'])->name('data-reconciliation.index');
         Route::get('data-reconciliation/export', [\App\Http\Controllers\Academics\PmcOperatingController::class, 'v095ExportDataReconciliation'])->name('data-reconciliation.export');

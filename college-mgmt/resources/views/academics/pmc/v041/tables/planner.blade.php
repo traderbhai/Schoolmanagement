@@ -1,7 +1,26 @@
 <div class="card shadow-sm mb-3">
     <div class="card-header py-2 fw-semibold">Planning Board Grid</div>
-    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Day</th><th>Slot</th><th>Course Group</th><th>Faculty</th><th>Room</th><th>Quality</th></tr></thead><tbody>
-        @forelse($items as $item)<tr><td>{{ $item->day_of_week }}</td><td>{{ $item->slot?->name ?? $item->timetable_slot_id }}</td><td><div class="fw-semibold">{{ $item->courseGroup?->name }}</div><div class="small text-muted">{{ $item->courseGroup?->subject?->name }}</div></td><td>{{ $item->teacher?->user?->name }}</td><td>{{ $item->classroom?->name }}</td><td>{{ $item->is_locked ? 'locked' : 'movable' }} | {{ $item->confidence }}%</td></tr>@empty<tr><td colspan="6" class="text-muted">No scheduled timetable items.</td></tr>@endforelse
+    @php($plannerCells = collect($items->items())->groupBy(fn($item) => ($item->day_of_week ?: 0) . ':' . ($item->timetable_slot_id ?: 0)))
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Day</th><th>Slot</th><th>Parallel Canonical Sessions</th><th>Utilization</th></tr></thead><tbody>
+        @forelse($plannerCells as $cellKey => $cellItems)
+            @php($first = $cellItems->first())
+            <tr>
+                <td>{{ $first->day_of_week }}</td>
+                <td>{{ $first->slot?->name ?? $first->timetable_slot_id }}</td>
+                <td>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach($cellItems as $item)
+                            <div class="border rounded p-2">
+                                <a class="fw-semibold" href="{{ route('academics.pmc.canonical-sessions.show', $item) }}">{{ $item->courseGroup?->name ?? 'Session #' . $item->id }}</a>
+                                <div class="small text-muted">{{ $item->courseGroup?->subject?->name }} | {{ $item->teacher?->user?->name ?? 'Faculty pending' }} | {{ $item->classroom?->name ?? 'Room pending' }}</div>
+                                <div class="small">{{ $item->session_type }} | {{ $item->is_locked ? 'locked' : 'movable' }} | {{ $item->confidence }}%</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </td>
+                <td><span class="badge text-bg-{{ $cellItems->count() > 1 ? 'primary' : 'light' }}">{{ $cellItems->count() }} session(s)</span></td>
+            </tr>
+        @empty<tr><td colspan="4" class="text-muted">No scheduled timetable items.</td></tr>@endforelse
     </tbody></table></div><div class="card-footer py-2">{{ $items->links() }}</div>
 </div>
 <div class="card shadow-sm"><div class="card-header py-2 d-flex justify-content-between align-items-center"><span class="fw-semibold">Conflict Panel</span><span class="small text-muted">Filtered Source List ({{ $constraints->total() }})</span></div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Type</th><th>Severity</th><th>Issue</th><th>Fix</th><th>Action</th></tr></thead><tbody>@foreach($constraints as $constraint)<tr><td>{{ $constraint->constraint_type }}</td><td>{{ $constraint->severity }}</td><td>{{ $constraint->title }}</td><td>{{ $constraint->recommended_fix }}</td><td><form method="POST" action="{{ route('academics.pmc.timetable-constraints.resolution-actions.store', $constraint) }}" class="d-flex gap-1">@csrf<input type="hidden" name="title" value="Resolve {{ $constraint->title }}"><input type="hidden" name="description" value="{{ $constraint->recommended_fix }}"><button class="btn btn-xs btn-outline-primary py-0 px-1">Create Action</button></form></td></tr>@endforeach</tbody></table></div><div class="card-footer py-2">{{ $constraints->links() }}</div></div>

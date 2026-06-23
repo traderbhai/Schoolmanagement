@@ -6,6 +6,7 @@ use App\Models\Batch;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcTimetableImpactRecord;
 use App\Models\Classroom;
 use App\Models\Course;
 use App\Models\Program;
@@ -123,30 +124,17 @@ class ProgramChairLegacyTimetableIntegrityTest extends TestCase
         $this->assertDatabaseCount('timetable_entries', 0);
     }
 
-    public function test_legacy_save_slot_creates_operational_entry_with_required_legacy_fields(): void
+    public function test_legacy_save_slot_without_course_group_is_rejected_as_read_only_bridge_flow(): void
     {
         $set = $this->academicSet();
 
         $this->actingAs($this->chair($set['program']))
             ->post(route('chair.timetable.save-slot'), $this->saveSlotPayload($set))
-            ->assertOk()
-            ->assertJsonFragment(['message' => 'Saved.']);
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Canonical timetable editing requires a course group. Legacy timetable rows are now read-only compatibility bridges.']);
 
-        $entry = TimetableEntry::where('program_id', $set['program']->id)
-            ->where('term_id', $set['term']->id)
-            ->where('batch_id', $set['batch']->id)
-            ->where('subject_id', $set['subject']->id)
-            ->firstOrFail();
-
-        $this->assertSame($set['teacher']->id, $entry->teacher_id);
-        $this->assertSame($set['room']->id, $entry->classroom_id);
-        $this->assertNotNull($entry->semester_id);
-        $this->assertNotNull($entry->course_id);
-        $this->assertTrue(Semester::whereKey($entry->semester_id)->exists());
-        $this->assertDatabaseHas('courses', [
-            'id' => $entry->course_id,
-            'code' => 'PMCP' . $set['program']->id,
-        ]);
+        $this->assertDatabaseCount('timetable_entries', 0);
+        $this->assertDatabaseCount('academic_pmc_timetable_generation_items', 0);
     }
 
     public function test_save_slot_with_course_group_preserves_parallel_canonical_sessions(): void
@@ -305,6 +293,13 @@ class ProgramChairLegacyTimetableIntegrityTest extends TestCase
             'official_status' => 'draft',
             'source_type' => 'manual',
         ]));
+        AcademicPmcTimetableImpactRecord::create([
+            'impact_type' => 'publish_preview',
+            'title' => 'Publish preview refreshed',
+            'affected_count' => 2,
+            'affected_records' => [],
+            'metadata' => ['generation_run_id' => $run->id],
+        ]);
 
         $this->actingAs($this->chair($set['program']))
             ->post(route('chair.timetable.publish'), [
@@ -1105,9 +1100,20 @@ class ProgramChairLegacyTimetableIntegrityTest extends TestCase
         $assigned = $this->academicSet();
         $other = $this->academicSet();
 
-        $this->actingAs($this->admin())
-            ->post(route('chair.timetable.save-slot'), $this->saveSlotPayload($other))
-            ->assertOk();
+        TimetableEntry::create([
+            'semester_id' => Semester::factory()->create(['number' => $other['term']->term_number, 'name' => $other['term']->name])->id,
+            'course_id' => Course::factory()->create()->id,
+            'program_id' => $other['program']->id,
+            'term_id' => $other['term']->id,
+            'batch_id' => $other['batch']->id,
+            'subject_id' => $other['subject']->id,
+            'teacher_id' => $other['teacher']->id,
+            'classroom_id' => $other['room']->id,
+            'timetable_slot_id' => $other['slot']->id,
+            'day_of_week' => 1,
+            'is_active' => true,
+            'status' => 'published',
+        ]);
 
         $this->actingAs($this->chair($assigned['program']))
             ->post(route('chair.timetable.export-teacher-pdf'), [

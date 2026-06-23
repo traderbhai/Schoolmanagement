@@ -1,6 +1,7 @@
 <div class="d-flex flex-wrap gap-1 justify-content-end">
     @foreach([
         ['OS', 'academics.pmc.timetable-os.index'],
+        ['Launch', 'academics.pmc.timetable-launch.index'],
         ['Allocation', 'academics.pmc.course-allocation.index'],
         ['Groups', 'academics.pmc.course-groups.index'],
         ['Faculty', 'academics.pmc.section-faculty-allocation.index'],
@@ -9,6 +10,8 @@
         ['Planner', 'academics.pmc.timetable-planner.index'],
         ['Freeze', 'academics.pmc.timetable-versions-v041.index'],
         ['Substitute', 'academics.pmc.substitution-intelligence.index'],
+        ['Ops', 'academics.pmc.post-publish-operations.index'],
+        ['Clashes', 'academics.pmc.timetable-clashes.index'],
         ['Reconcile', 'academics.pmc.data-reconciliation.index'],
         ['Reports', 'academics.pmc.timetable-reports.index'],
     ] as [$label, $route])
