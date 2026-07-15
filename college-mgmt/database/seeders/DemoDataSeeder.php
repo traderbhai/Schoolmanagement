@@ -1048,8 +1048,8 @@ class DemoDataSeeder extends Seeder
         }
 
         // ── Feature Access Matrix ─────────────────────────────────────────────
-        $this->call(AdmissionOperatingDemoSeeder::class);
-        $this->call(AcademicsOperatingDemoSeeder::class);
+        $this->call(AdmissionDemoModuleSeeder::class);
+        $this->call(AcademicsPmcDemoModuleSeeder::class);
         $this->seedFeatureAccessMatrix();
 
         $this->command->info('Demo data seeded successfully!');
