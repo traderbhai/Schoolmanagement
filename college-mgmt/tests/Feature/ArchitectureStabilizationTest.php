@@ -20,6 +20,8 @@ class ArchitectureStabilizationTest extends TestCase
 {
     public function test_modular_route_files_register_critical_routes(): void
     {
+        $this->assertCount(1297, Route::getRoutes(), 'Route count changed unexpectedly; preserve URLs/names unless adding a deliberate feature route.');
+
         foreach ([
             'public.php',
             'applicant.php',
@@ -126,6 +128,14 @@ class ArchitectureStabilizationTest extends TestCase
         $this->assertSame('academic_pmc_timetable_generation_items', (new AcademicPmcTimetableGenerationItem())->getTable());
         $this->assertSame('timetable_entries', (new TimetableEntry())->getTable());
         $this->assertTrue(class_exists(PmcTimetableBridgeSyncService::class));
+    }
+
+    public function test_pmc_controller_does_not_write_compatibility_timetable_rows_directly(): void
+    {
+        $controller = file_get_contents(base_path('app/Http/Controllers/Departmental/PmcTimetableController.php'));
+
+        $this->assertStringNotContainsString('TimetableEntry::create', $controller);
+        $this->assertStringNotContainsString('new TimetableEntry', $controller);
     }
 
     private function phpFilesUnder(string $directory): array

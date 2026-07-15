@@ -5,11 +5,13 @@ use App\Http\Controllers\Controller;
 use App\Models\{AcademicPmcCourseGroup, AcademicPmcFacultyAssignmentAcknowledgement, AcademicPmcRoomReadinessReview, AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, AcademicPmcTimetableImpactRecord, AcademicPmcTimetablePublishCheck, AcademicYear, Course, Department, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment, Semester};
-use App\Services\{AcademicPmcTimetableV041Service, TimetableConflictService, TimetableImportService, TimetableCopyService, TimetablePdfService, TeacherWorkloadWarningService, ConflictPreventionService, AutoSchedulingService};
+use App\Services\{AcademicPmcTimetableV041Service, AutoSchedulingService, CanonicalTimetableBridgeService, ConflictPreventionService, TeacherWorkloadWarningService, TimetableConflictService, TimetableCopyService, TimetableImportService, TimetablePdfService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PmcTimetableController extends Controller {
+
+    public function __construct(private CanonicalTimetableBridgeService $canonicalBridge) {}
 
     private function programIds(): array {
         $user = Auth::user();
@@ -617,55 +619,8 @@ class PmcTimetableController extends Controller {
 
     private function syncCanonicalItemsToLegacyRows($items, TimetableVersion $version): void
     {
-        $program = Program::find($version->program_id);
-        $term = Term::find($version->term_id);
-        if (! $program || ! $term) {
-            return;
-        }
-
-        $semester = $this->legacySemesterForTerm($term);
-
         foreach ($items as $item) {
-            if (! $item->teacher_id || ! $item->classroom_id || ! $item->timetable_slot_id || ! $item->day_of_week) {
-                continue;
-            }
-
-            $group = $item->courseGroup;
-            $subjectId = $item->subject_id ?? $group?->subject_id;
-            if (! $subjectId) {
-                continue;
-            }
-
-            $course = $group
-                ? $this->legacyCourseForCourseGroup($group, $program)
-                : $this->legacyCourseForProgram($program);
-            $entry = TimetableEntry::where('pmc_generation_item_id', $item->id)->first() ?: new TimetableEntry();
-            $entry->fill([
-                'semester_id' => $semester->id,
-                'course_id' => $course->id,
-                'program_id' => $item->program_id ?? $group?->program_id ?? $version->program_id,
-                'term_id' => $item->term_id ?? $group?->term_id ?? $version->term_id,
-                'batch_id' => $item->batch_id ?? $group?->batch_id ?? $version->batch_id,
-                'subject_id' => $subjectId,
-                'teacher_id' => $item->teacher_id,
-                'classroom_id' => $item->classroom_id,
-                'timetable_slot_id' => $item->timetable_slot_id,
-                'day_of_week' => $item->day_of_week,
-                'is_active' => true,
-                'status' => 'published',
-                'timetable_version_id' => $version->id,
-                'pmc_generation_item_id' => $item->id,
-            ]);
-            $entry->save();
-
-            $item->update([
-                'operational_timetable_entry_id' => $entry->id,
-                'metadata' => array_merge($item->metadata ?: [], [
-                    'operational_sync' => 'published',
-                    'operational_synced_at' => now()->toDateTimeString(),
-                    'operational_synced_by' => Auth::id(),
-                ]),
-            ]);
+            $this->canonicalBridge->ensureBridgeForOfficialSession($item, Auth::user());
         }
     }
 
@@ -1509,31 +1464,7 @@ class PmcTimetableController extends Controller {
             return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
         }
 
-        foreach ($request->suggestions as $suggestion) {
-            try {
-                TimetableEntry::create([
-                    'program_id' => $request->program_id,
-                    'term_id' => $request->term_id,
-                    'batch_id' => $suggestion['batch_id'],
-                    'subject_id' => $suggestion['subject_id'],
-                    'teacher_id' => $suggestion['teacher_id'],
-                    'classroom_id' => $suggestion['classroom_id'],
-                    'day_of_week' => $suggestion['day_of_week'],
-                    'timetable_slot_id' => $suggestion['timetable_slot_id'],
-                    'is_active' => true,
-                    'status' => 'draft',
-                ]);
-                $created++;
-            } catch (\Exception $e) {
-                $errors[] = $e->getMessage();
-            }
-        }
-
-        if ($created > 0) {
-            return back()->with('success', "Auto-scheduled {$created} entries. Review and adjust as needed.");
-        } else {
-            return back()->with('error', 'Failed to create auto-schedule. ' . implode('; ', array_slice($errors, 0, 2)));
-        }
+        return back()->with('error', 'Legacy direct timetable auto-schedule is disabled. Create PMC course groups and generate canonical sessions before publishing.');
     }
 
     private function sessionTypeForCourseGroup(?AcademicPmcCourseGroup $courseGroup, array $suggestion): string
