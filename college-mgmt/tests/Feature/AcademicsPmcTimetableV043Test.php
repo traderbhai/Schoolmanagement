@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AcademicPmcTimetableNotification;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\Batch;
 use App\Models\Course;
@@ -50,6 +51,34 @@ class AcademicsPmcTimetableV043Test extends TestCase
         $this->actingAs($fixture['chair'])->post(route('academics.pmc.timetable-generator.publish', $fixture['run']), [
             'decision_reason' => 'Try publish with conflicts.',
         ])->assertStatus(422);
+    }
+
+    public function test_seeded_official_timetable_uses_published_canonical_sessions_without_manual_repair(): void
+    {
+        $fixture = $this->seedFixture();
+
+        $this->assertSame(3, AcademicPmcTimetableGenerationItem::where('generation_run_id', $fixture['run']->id)
+            ->where('official_status', 'published')
+            ->where('timetable_version_id', $fixture['version']->id)
+            ->whereNotNull('program_id')
+            ->whereNotNull('batch_id')
+            ->whereNotNull('term_id')
+            ->whereNotNull('subject_id')
+            ->count());
+        $this->assertSame(1, AcademicPmcTimetableGenerationItem::where('generation_run_id', $fixture['run']->id)
+            ->where('status', 'unscheduled')
+            ->where('official_status', 'draft')
+            ->count());
+
+        $this->actingAs($fixture['chair'])
+            ->get(route('academics.pmc.official-timetable.index'))
+            ->assertOk()
+            ->assertSee('PMC Master Official Timetable')
+            ->assertSee('3 assigned groups')
+            ->assertSee('PGDM Core Section A')
+            ->assertSee('Growth Analytics Elective Group 1')
+            ->assertSee('Decision Analytics Lab Group L1')
+            ->assertSee('2 parallel');
     }
 
     public function test_dean_can_override_publish_and_manage_freeze_lifecycle(): void

@@ -166,6 +166,46 @@ class AcademicsPmcTimetableV092Test extends TestCase
             ->assertSee('Sample mismatches');
     }
 
+    public function test_reconciliation_repair_restores_draft_only_canonical_items_before_bridge_sync(): void
+    {
+        $fixture = $this->seedFixture();
+        $run = AcademicPmcTimetableGenerationRun::whereNotNull('timetable_version_id')->firstOrFail();
+
+        AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)->update([
+            'timetable_version_id' => null,
+            'program_id' => null,
+            'batch_id' => null,
+            'term_id' => null,
+            'subject_id' => null,
+            'official_status' => 'draft',
+            'operational_timetable_entry_id' => null,
+            'published_at' => null,
+            'published_by' => null,
+        ]);
+
+        $this->actingAs($fixture['chair'])
+            ->post(route('academics.pmc.data-reconciliation.refresh'))
+            ->assertRedirect();
+
+        $check = AcademicPmcDataReconciliationCheck::where('check_key', 'generated_operational_sync')->firstOrFail();
+        $this->assertGreaterThan(0, $check->mismatch_count);
+
+        $this->actingAs($fixture['chair'])
+            ->post(route('academics.pmc.data-reconciliation.repair', $check))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(3, AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->where('official_status', 'published')
+            ->where('timetable_version_id', $run->timetable_version_id)
+            ->whereNotNull('operational_timetable_entry_id')
+            ->count());
+        $this->assertSame(1, AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->where('status', 'unscheduled')
+            ->where('official_status', 'draft')
+            ->count());
+    }
+
     public function test_repair_links_allocations_to_student_subject_enrollments(): void
     {
         $fixture = $this->seedFixture();

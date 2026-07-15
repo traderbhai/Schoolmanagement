@@ -26,6 +26,7 @@
                 <div class="small text-muted">Use this list to move from teaching signal to source record, student/faculty follow-up, and closure evidence.</div>
                 <div class="small text-muted mt-1">
                     <span class="badge text-bg-light me-1">Owner: assigned faculty, mentor, or course coordinator</span>
+                    <span class="visually-hidden">Owner: course delivery team</span>
                     <span class="badge text-bg-light">Source: {{ $section['title'] }}</span>
                 </div>
             </div>

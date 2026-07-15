@@ -729,6 +729,7 @@ class AcademicPmcTimetableV041Service
 
     private function repairGeneratedOperationalSync(User $actor): array
     {
+        $canonicalRepair = app(TimetableCanonicalRepairService::class)->repairPublishedRunItems($actor);
         $runs = AcademicPmcTimetableGenerationRun::whereIn('timetable_version_id', $this->officialPublishedVersionIds())
             ->with('items')
             ->get();
@@ -742,7 +743,10 @@ class AcademicPmcTimetableV041Service
             $repaired += $this->syncRunToOperationalTimetable($run, $version, $actor);
         }
 
-        return ['repaired' => $repaired, 'message' => "{$repaired} generated timetable items were synced to operational timetable entries."];
+        return [
+            'repaired' => $repaired + (int) $canonicalRepair['repaired'],
+            'message' => "{$canonicalRepair['repaired']} canonical item(s) repaired and {$repaired} generated timetable item(s) synced to operational timetable entries.",
+        ];
     }
 
     private function repairAllocationEnrollmentLinks(User $actor): array
@@ -3030,6 +3034,16 @@ class AcademicPmcTimetableV041Service
 
         return TimetableEntry::where('semester_id', $semester->id)
             ->where('pmc_generation_item_id', $item->id)
+            ->first()
+            ?: TimetableEntry::where('semester_id', $semester->id)
+            ->where('classroom_id', $item->classroom_id)
+            ->where('timetable_slot_id', $item->timetable_slot_id)
+            ->where('day_of_week', $item->day_of_week)
+            ->first()
+            ?: TimetableEntry::where('semester_id', $semester->id)
+            ->where('teacher_id', $item->teacher_id)
+            ->where('timetable_slot_id', $item->timetable_slot_id)
+            ->where('day_of_week', $item->day_of_week)
             ->first();
     }
 
@@ -5802,4 +5816,3 @@ class AcademicPmcTimetableV041Service
             ->all();
     }
 }
-

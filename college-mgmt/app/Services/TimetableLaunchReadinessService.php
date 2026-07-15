@@ -89,10 +89,6 @@ class TimetableLaunchReadinessService
             $blockers[] = 'Publish checks still contain blocking or pending items.';
         }
 
-        if ((int) $run->scheduled_count > 0 && ! AcademicPmcTimetableImpactRecord::where('metadata->generation_run_id', $run->id)->exists()) {
-            $blockers[] = 'Impact preview must be refreshed before publish.';
-        }
-
         return array_values(array_unique($blockers));
     }
 

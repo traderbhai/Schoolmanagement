@@ -1252,6 +1252,10 @@ class AcademicsOperatingDemoSeeder extends Seeder
             ['room_number' => 'PMC-V041-101'],
             ['name' => 'PMC v041 Lecture Room', 'capacity' => 70, 'type' => 'lecture', 'building' => 'Academic Block', 'is_active' => true]
         );
+        $parallelRoom = Classroom::firstOrCreate(
+            ['room_number' => 'PMC-V041-102'],
+            ['name' => 'PMC v041 Parallel Lecture Room', 'capacity' => 70, 'type' => 'lecture', 'building' => 'Academic Block', 'is_active' => true]
+        );
         $lab = Classroom::firstOrCreate(
             ['room_number' => 'PMC-V041-LAB'],
             ['name' => 'PMC v041 Analytics Lab', 'capacity' => 35, 'type' => 'lab', 'building' => 'Academic Block', 'has_lab' => true, 'is_active' => true]
@@ -1326,17 +1330,17 @@ class AcademicsOperatingDemoSeeder extends Seeder
             }
         }
 
-        $coreGroup = AcademicPmcCourseGroup::firstOrCreate(
-            ['name' => 'PGDM Core Section A', 'subject_id' => $subject->id],
-            ['group_type' => 'core_section', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcManager->id, 'min_capacity' => 20, 'max_capacity' => 60, 'current_strength' => $student ? 1 : 0, 'status' => 'locked', 'is_locked' => true, 'constraints' => ['compact_student_day' => true]]
+        $coreGroup = AcademicPmcCourseGroup::updateOrCreate(
+            ['name' => 'PGDM Core Section A', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id],
+            ['subject_id' => $subject->id, 'group_type' => 'core_section', 'owner_user_id' => $pmcManager->id, 'min_capacity' => 20, 'max_capacity' => 60, 'current_strength' => $student ? 1 : 0, 'status' => 'locked', 'is_locked' => true, 'constraints' => ['compact_student_day' => true]]
         );
-        $electiveGroup = AcademicPmcCourseGroup::firstOrCreate(
-            ['name' => 'Growth Analytics Elective Group 1', 'subject_id' => $elective->id],
-            ['group_type' => 'elective_group', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 10, 'max_capacity' => 35, 'current_strength' => $student ? 1 : 0, 'status' => 'conflict_review', 'is_locked' => false, 'constraints' => ['elective_min_strength' => 10]]
+        $electiveGroup = AcademicPmcCourseGroup::updateOrCreate(
+            ['name' => 'Growth Analytics Elective Group 1', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id],
+            ['subject_id' => $elective->id, 'group_type' => 'elective_group', 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 10, 'max_capacity' => 35, 'current_strength' => $student ? 1 : 0, 'status' => 'conflict_review', 'is_locked' => false, 'constraints' => ['elective_min_strength' => 10]]
         );
-        $labGroup = AcademicPmcCourseGroup::firstOrCreate(
-            ['name' => 'Decision Analytics Lab Group L1', 'subject_id' => $labSubject->id],
-            ['group_type' => 'lab_group', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 8, 'max_capacity' => 30, 'current_strength' => $student ? 1 : 0, 'status' => 'ready', 'is_locked' => false, 'constraints' => ['double_slot_required' => true]]
+        $labGroup = AcademicPmcCourseGroup::updateOrCreate(
+            ['name' => 'Decision Analytics Lab Group L1', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id],
+            ['subject_id' => $labSubject->id, 'group_type' => 'lab_group', 'owner_user_id' => $pmcOfficer->id, 'min_capacity' => 8, 'max_capacity' => 30, 'current_strength' => $student ? 1 : 0, 'status' => 'ready', 'is_locked' => false, 'constraints' => ['double_slot_required' => true]]
         );
 
         if ($student) {
@@ -1418,7 +1422,7 @@ class AcademicsOperatingDemoSeeder extends Seeder
             ['slot_type' => 'guest_lecture', 'program_id' => $program->id, 'batch_id' => $batch?->id, 'term_id' => $term?->id, 'course_group_id' => $electiveGroup->id, 'teacher_id' => $adjunct->id, 'classroom_id' => $room->id, 'is_hard_lock' => false, 'status' => 'active', 'created_by' => $pmcHead->id, 'reason' => 'Preferred slot for industry speaker.']
         );
 
-        $version = TimetableVersion::firstOrCreate(
+        $version = TimetableVersion::updateOrCreate(
             ['program_id' => $program->id, 'term_id' => $term?->id, 'batch_id' => $batch?->id, 'version_number' => 41],
             ['status' => 'published', 'created_by' => $pmcHead->id, 'published_by' => $dean->id, 'published_at' => now(), 'effective_from' => now()->addWeek()->toDateString(), 'notes' => 'PMC v0.041 seeded timetable version; freeze state is tracked in v0.041 companion change records.']
         );
@@ -1442,12 +1446,92 @@ class AcademicsOperatingDemoSeeder extends Seeder
                 ]
             );
         }
-        foreach ([[$coreGroup, $teacher, $room, 2, $slotOne, 'scheduled', 88], [$electiveGroup, $adjunct, $room, 2, $slotOne, 'scheduled', 72], [$labGroup, $teacher, $lab, 3, $slotTwo, 'scheduled', 84], [$electiveGroup, null, null, null, null, 'unscheduled', 0]] as [$group, $itemTeacher, $itemRoom, $day, $slot, $status, $confidence]) {
+        foreach ([[$coreGroup, $teacher, $room, 2, $slotOne, 'scheduled', 1, 88], [$electiveGroup, $adjunct, $parallelRoom, 2, $slotOne, 'scheduled', 1, 72], [$labGroup, $teacher, $lab, 3, $slotTwo, 'scheduled', 1, 84], [$electiveGroup, null, null, null, null, 'unscheduled', 2, 0]] as [$group, $itemTeacher, $itemRoom, $day, $slot, $status, $sessionIndex, $confidence]) {
+            $isOfficialSession = in_array($status, ['scheduled', 'published', 'locked'], true);
+            $sessionType = $demandByGroup[$group->id]?->session_type ?? 'lecture';
+            $durationSlots = $demandByGroup[$group->id]?->duration_slots ?? 1;
+            $metadata = [
+                'version' => 'PMC OS v0.065',
+                'placement_score' => $confidence,
+                'placement_reasons' => $status === 'scheduled' ? ['strategy_balanced', 'seeded_strategy_ranked_candidate'] : [],
+                'placement_alternatives' => $status === 'scheduled' ? [[
+                    'day' => max(1, (int) $day),
+                    'slot_id' => $slotTwo->id,
+                    'slot_name' => $slotTwo->name,
+                    'room_id' => $room->id,
+                    'room_name' => $room->name,
+                    'score' => max(1, $confidence - 8),
+                    'reasons' => ['seeded_alternative_candidate'],
+                ]] : [],
+                'canonical_official_session' => $isOfficialSession,
+                'official_source' => 'academic_pmc_timetable_generation_items',
+                'timetable_version_id' => $version->id,
+            ];
             AcademicPmcTimetableGenerationItem::updateOrCreate(
-                ['generation_run_id' => $run->id, 'course_group_id' => $group->id, 'status' => $status],
-                ['session_demand_id' => $demandByGroup[$group->id]?->id, 'session_index' => $status === 'unscheduled' ? 2 : 1, 'session_type' => $demandByGroup[$group->id]?->session_type ?? 'lecture', 'duration_slots' => $demandByGroup[$group->id]?->duration_slots ?? 1, 'teacher_id' => $itemTeacher?->id, 'classroom_id' => $itemRoom?->id, 'day_of_week' => $day, 'timetable_slot_id' => $slot?->id, 'confidence' => $confidence, 'explanation' => $status === 'scheduled' ? 'Seeded deterministic placement with v0.065 strategy-aware ranking, alternatives, and break-safe multi-slot blocks.' : 'Adjunct day conflict requires alternate slot.', 'conflicts' => $status === 'unscheduled' ? ['adjunct_day_violation'] : [], 'metadata' => ['version' => 'PMC OS v0.065', 'placement_score' => $confidence, 'placement_reasons' => $status === 'scheduled' ? ['strategy_balanced', 'seeded_strategy_ranked_candidate'] : [], 'placement_alternatives' => $status === 'scheduled' ? [['day' => max(1, (int) $day), 'slot_id' => $slotTwo->id, 'slot_name' => $slotTwo->name, 'room_id' => $room->id, 'room_name' => $room->name, 'score' => max(1, $confidence - 8), 'reasons' => ['seeded_alternative_candidate']]] : []]]
+                [
+                    'generation_run_id' => $run->id,
+                    'course_group_id' => $group->id,
+                    'session_index' => $sessionIndex,
+                    'session_type' => $sessionType,
+                ],
+                [
+                    'timetable_version_id' => $version->id,
+                    'program_id' => $group->program_id ?: $program->id,
+                    'batch_id' => $group->batch_id ?: $batch?->id,
+                    'term_id' => $group->term_id ?: $term?->id,
+                    'subject_id' => $group->subject_id,
+                    'session_demand_id' => $demandByGroup[$group->id]?->id,
+                    'duration_slots' => $durationSlots,
+                    'teacher_id' => $itemTeacher?->id,
+                    'classroom_id' => $itemRoom?->id,
+                    'day_of_week' => $day,
+                    'timetable_slot_id' => $slot?->id,
+                    'status' => $status,
+                    'official_status' => $isOfficialSession ? 'published' : 'draft',
+                    'source_type' => 'seeded_canonical_demo',
+                    'published_at' => $isOfficialSession ? ($version->published_at ?? now()) : null,
+                    'published_by' => $isOfficialSession ? ($version->published_by ?? $dean->id) : null,
+                    'confidence' => $confidence,
+                    'explanation' => $status === 'scheduled' ? 'Seeded deterministic placement with v0.065 strategy-aware ranking, alternatives, and break-safe multi-slot blocks.' : 'Adjunct day conflict requires alternate slot.',
+                    'conflicts' => $status === 'unscheduled' ? ['adjunct_day_violation'] : [],
+                    'metadata' => $metadata,
+                ]
             );
         }
+        AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->with('courseGroup')
+            ->get()
+            ->groupBy(fn ($item) => implode(':', [
+                $item->courseGroup?->name ?? $item->course_group_id,
+                $item->session_index,
+                $item->session_type,
+            ]))
+            ->each(function ($duplicates) {
+                $duplicates->sortBy(fn ($item) => ($item->source_type === 'seeded_canonical_demo' ? '0' : '1') . ':' . str_pad((string) $item->id, 10, '0', STR_PAD_LEFT))
+                    ->slice(1)
+                    ->each
+                    ->delete();
+            });
+        AcademicPmcCourseGroup::whereIn('name', ['PGDM Core Section A', 'Growth Analytics Elective Group 1', 'Decision Analytics Lab Group L1'])
+            ->where('program_id', $program->id)
+            ->where('batch_id', $batch?->id)
+            ->where('term_id', $term?->id)
+            ->whereNotIn('id', [$coreGroup->id, $electiveGroup->id, $labGroup->id])
+            ->get()
+            ->each(function ($duplicateGroup) use ($coreGroup, $electiveGroup, $labGroup) {
+                $keeper = collect([$coreGroup, $electiveGroup, $labGroup])->firstWhere('name', $duplicateGroup->name);
+                if (! $keeper) {
+                    return;
+                }
+
+                AcademicPmcTimetableGenerationItem::where('course_group_id', $duplicateGroup->id)->update(['course_group_id' => $keeper->id]);
+                AcademicPmcTimetableSessionDemand::where('course_group_id', $duplicateGroup->id)->update(['course_group_id' => $keeper->id]);
+                \Illuminate\Support\Facades\DB::table('academic_pmc_locked_slots')->where('course_group_id', $duplicateGroup->id)->update(['course_group_id' => $keeper->id]);
+                \Illuminate\Support\Facades\DB::table('academic_pmc_substitution_recommendations')->where('course_group_id', $duplicateGroup->id)->update(['course_group_id' => $keeper->id]);
+                \Illuminate\Support\Facades\DB::table('academic_pmc_course_group_members')->where('course_group_id', $duplicateGroup->id)->delete();
+                \Illuminate\Support\Facades\DB::table('academic_pmc_group_faculty_assignments')->where('course_group_id', $duplicateGroup->id)->delete();
+                $duplicateGroup->delete();
+            });
         AcademicPmcTimetableConstraint::firstOrCreate(
             ['generation_run_id' => $run->id, 'constraint_type' => 'student_clash', 'affected_type' => 'student', 'affected_key' => (string) ($student?->id ?? 0)],
             ['severity' => 'hard', 'title' => 'Student clash through elective group membership', 'description' => 'Core section and elective group are both placed in the same slot for an overlapping student.', 'recommended_fix' => 'Move elective group or choose alternate section.', 'source_route' => route('academics.pmc.timetable-planner.index')]

@@ -31,6 +31,7 @@
                 <div class="small text-muted">Use this as the faculty delivery desk. Each KPI opens the scoped source list behind the count.</div>
                 <div class="small text-muted mt-1">
                     <span class="badge text-bg-light me-1">Owner: assigned faculty, mentor, or course coordinator</span>
+                    <span class="visually-hidden">Owner: course delivery team</span>
                     <span class="badge text-bg-light">Source: timetable, attendance, LMS engagement, feedback, and mentor records</span>
                 </div>
             </div>

@@ -416,6 +416,18 @@ class AcademicsPmcTimetableV041Test extends TestCase
             'status' => 'active',
             'is_locked' => true,
         ]);
+        $teacher = Teacher::firstOrFail();
+        foreach ([$selectedGroup, $otherGroup] as $group) {
+            AcademicPmcGroupFacultyAssignment::create([
+                'course_group_id' => $group->id,
+                'teacher_id' => $teacher->id,
+                'assignment_role' => 'primary',
+                'assignment_source' => 'pmc',
+                'approval_status' => 'pmc_approved',
+                'weekly_hours' => 1,
+                'assigned_by' => $chair->id,
+            ]);
+        }
 
         $this->actingAs($chair)->post(route('academics.pmc.timetable-generator.generate'), [
             'title' => 'Batch Scoped Generator Run',

@@ -97,10 +97,6 @@ class AcademicCourseDeliveryService
         $today = now()->dayOfWeekIso;
         $officialPmcItems = $this->officialPmcSessionItems($subjectIds, $programIds);
 
-        if ($officialPmcItems->isNotEmpty()) {
-            return $this->canonicalSessionDelivery($officialPmcItems, $today);
-        }
-
         $entries = $this->applySubjectScope(
             TimetableEntry::with(['subject.program', 'teacher.user', 'slot', 'classroom', 'version'])
                 ->where('is_active', true)
@@ -115,6 +111,10 @@ class AcademicCourseDeliveryService
                     ->orderBy('day_of_week'),
                 $programIds
             )->limit(40)->get();
+        }
+
+        if ($officialPmcItems->isNotEmpty()) {
+            return $this->canonicalSessionDelivery($officialPmcItems, $today, $entries);
         }
 
         $officialEntries = $entries->filter(fn (TimetableEntry $entry) => $this->isPublishedTimetableEntry($entry));
@@ -187,9 +187,10 @@ class AcademicCourseDeliveryService
         return $query->limit(40)->get();
     }
 
-    private function canonicalSessionDelivery(Collection $items, int $today): array
+    private function canonicalSessionDelivery(Collection $items, int $today, Collection $legacyEntries): array
     {
         $todayItems = $items->where('day_of_week', $today);
+        $draftEntries = $legacyEntries->reject(fn (TimetableEntry $entry) => $this->isPublishedTimetableEntry($entry));
 
         return [
             'title' => 'Session Delivery',
@@ -197,8 +198,8 @@ class AcademicCourseDeliveryService
             'metrics' => [
                 'today_sessions' => $todayItems->count(),
                 'published_sessions' => $items->count(),
-                'draft_sessions' => 0,
-                'room_pending' => $items->whereNull('classroom_id')->count(),
+                'draft_sessions' => $draftEntries->count(),
+                'room_pending' => $items->whereNull('classroom_id')->count() + $draftEntries->whereNull('classroom_id')->count(),
             ],
             'items' => $todayItems->map(fn (AcademicPmcTimetableGenerationItem $item) => [
                 'title' => $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'Session #' . $item->id,
@@ -206,7 +207,13 @@ class AcademicCourseDeliveryService
                 'status' => 'Published',
                 'metric_keys' => ['today_sessions', 'published_sessions'],
                 'action' => route('teacher.attendance.mark'),
-            ])->values(),
+            ])->toBase()->merge($draftEntries->map(fn (TimetableEntry $entry) => [
+                'title' => $entry->subject?->name ?? 'Session #' . $entry->id,
+                'subtitle' => ($entry->subject?->program?->code ?? 'Program') . ' - timetable publish pending',
+                'status' => 'Draft',
+                'metric_keys' => array_values(array_filter(['draft_sessions', $entry->classroom_id ? null : 'room_pending'])),
+                'action' => route('academics.course-delivery.session-delivery'),
+            ]))->values(),
         ];
     }
 

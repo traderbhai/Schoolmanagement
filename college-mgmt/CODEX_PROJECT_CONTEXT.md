@@ -27,6 +27,37 @@ This is the short active project memory. Detailed historical sprint notes are ar
 $env:PHPRC='C:\tmp\php-8.5.7-codex-ini'; C:\tmp\php-8.5.7\php.exe artisan test
 ```
 
+### Local Browser Runbook
+
+For browser testing in this Codex desktop workspace, the verified working local URL is:
+
+```text
+http://127.0.0.1:8000
+```
+
+Start the Laravel app from the `public` directory with Laravel's router script. Do not use `php -S 127.0.0.1:8000 -t public public\index.php`; that serves assets such as `/css/app.css` through the app and makes pages look broken/unstyled.
+
+```powershell
+cd C:\Users\mohd.naved\Documents\SchoolManagement\college-mgmt\public
+$phpDir = Split-Path (Get-Command php).Source
+php -d "extension_dir=$phpDir\ext" -d extension=mbstring -d extension=pdo_sqlite -d extension=sqlite3 -d extension=openssl -S 127.0.0.1:8000 -t . ..\vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php
+```
+
+Use the same extension flags for local Artisan/Tinker commands when using the system `php`; plain `php artisan` may fail with missing `mb_strimwidth()` or SQLite driver errors.
+
+```powershell
+$phpDir = Split-Path (Get-Command php).Source
+php -d "extension_dir=$phpDir\ext" -d extension=mbstring -d extension=pdo_sqlite -d extension=sqlite3 -d extension=openssl artisan <command>
+```
+
+PMC timetable local-data note:
+
+- The correct official PMC master timetable route is `/academics/pmc/official-timetable`.
+- If the page is styled but empty, verify canonical published rows before assuming a UI bug.
+- The local ignored SQLite database once had `academic_pmc_timetable_generation_items` seeded as `official_status = draft` with no `timetable_version_id`, even though `timetable_versions.id = 1` was `published`.
+- Repair used for local testing only: scope the seed run titled `PMC v0.041 Balanced Draft`, copy `timetable_version_id`, `program_id`, `batch_id`, `term_id`, and `subject_id` from the run/course group/version, mark only `scheduled`/`published`/`locked` items as `official_status = published`, and leave `unscheduled` diagnostics as `draft`.
+- Expected local verification after repair: 3 official published canonical sessions, including 2 parallel sessions in the Tuesday `PMC v041 Period 1` slot.
+
 ## Release Control Files
 
 Use these files instead of rereading long history:
@@ -316,3 +347,5 @@ Do not append long sprint diaries here. If detailed historical notes are needed,
 - Latest focused PMC real-world sequencing slice: PMC Timetable OS build sequence now links directly through student baskets, groups, faculty allocation, locked slots, generator, and publish/freeze; launch-control group diagnostics now respect PMC manager academic scope instead of counting unrelated program blockers. Focused `AcademicsPmcTimetableV041Test` passed `6 tests / 161 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`; `git diff --check` passed for changed files.
 
 - Latest focused PMC generator-boundary slice: PMC timetable generation now honors selected `batch_id` and actor PMC academic scope when selecting course groups, preventing another batch group from entering a batch-specific generated timetable. Focused `AcademicsPmcTimetableV041Test` passed `7 tests / 164 assertions`; adjacent `AcademicsPmcFrontendBetaReadinessTest` passed `8 tests / 345 assertions`.
+
+- Latest canonical PMC timetable completion: seeded demo canonical sessions are idempotent and publish-ready, `academics:pmc-repair-canonical-timetable` repairs existing demo/local canonical rows, course delivery and teacher feedback prefer canonical official sessions, and `/academics/pmc/official-timetable` was browser-verified locally with `3 assigned groups`, `2 parallel`, corrected parallel room, and no console errors. Verified chunks: focused timetable/downstream `125 tests / 996 assertions`, course delivery `15 tests / 204 assertions`, attendance/student/admin chunks `43 tests / 324 assertions`, `npm run frontend:build`, `npm run frontend:smoke` `135 tests / 3978 assertions`, and `npm run frontend:smoke:mobile` `29 tests / 1473 assertions`. Full `artisan test` was attempted with the documented PHP runtime and exceeded the 10-minute local timeout before producing a result.

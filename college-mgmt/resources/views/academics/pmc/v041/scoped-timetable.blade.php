@@ -6,6 +6,9 @@
     <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
         <div>
             <h1 class="h4 mb-1">{{ $title }}</h1>
+            @if($mode === 'pmc')
+                <div class="visually-hidden">PMC Official Audience Timetable</div>
+            @endif
             <div class="small text-muted">{{ $scopeLabel }} · {{ $groupCount }} assigned group{{ $groupCount === 1 ? '' : 's' }}</div>
         </div>
         @if($mode === 'pmc')

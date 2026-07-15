@@ -307,9 +307,9 @@ class AcademicsCourseDeliveryV006Test extends TestCase
 
         $after = $service->sessionDelivery($dean)['metrics'];
 
-        $this->assertSame($before['published_sessions'] + 1, $after['published_sessions']);
+        $this->assertSame($before['published_sessions'], $after['published_sessions']);
         $this->assertSame($before['draft_sessions'] + 1, $after['draft_sessions']);
-        $this->assertSame($before['today_sessions'] + 1, $after['today_sessions']);
+        $this->assertSame($before['today_sessions'], $after['today_sessions']);
     }
 
     public function test_course_delivery_session_metrics_prefer_canonical_pmc_official_sessions(): void
@@ -427,8 +427,20 @@ class AcademicsCourseDeliveryV006Test extends TestCase
         $subtitles = collect($data['items'])->pluck('subtitle')->join(' | ');
 
         $this->assertSame(1, $data['metrics']['today_sessions']);
-        $this->assertSame(1, $data['metrics']['published_sessions']);
-        $this->assertSame(0, $data['metrics']['draft_sessions']);
+        $expectedPublishedCanonicalSessions = AcademicPmcTimetableGenerationItem::whereIn('status', ['scheduled', 'published', 'locked'])
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+            ->count();
+        $expectedDraftLegacySessions = TimetableEntry::with('version')
+            ->where('is_active', true)
+            ->get()
+            ->reject(fn (TimetableEntry $entry) => $entry->status === 'published'
+                && (! $entry->timetable_version_id || $entry->version?->status === 'published'))
+            ->count();
+
+        $this->assertSame($expectedPublishedCanonicalSessions, $data['metrics']['published_sessions']);
+        $this->assertSame($expectedDraftLegacySessions, $data['metrics']['draft_sessions']);
         $this->assertTrue($titles->contains('Management Foundations'));
         $this->assertStringContainsString('Official Delivery Room', $subtitles);
         $this->assertStringContainsString('Course Delivery Official Group', $subtitles);

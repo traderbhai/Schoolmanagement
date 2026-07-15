@@ -28,7 +28,7 @@ class TimetableOptimizationService
             ->when($scope['program_id'] ?? null, fn ($query, $id) => $query->where('program_id', $id))
             ->when($scope['batch_id'] ?? null, fn ($query, $id) => $query->where('batch_id', $id))
             ->when($scope['term_id'] ?? null, fn ($query, $id) => $query->where('term_id', $id))
-            ->whereIn('status', ['active', 'locked', 'approved'])
+            ->whereIn('status', ['active', 'ready', 'locked', 'approved'])
             ->orderByDesc('is_locked')
             ->orderBy('id')
             ->get();
@@ -70,6 +70,7 @@ class TimetableOptimizationService
     {
         $demands = $this->buildDemand($scope);
         $slots = TimetableSlot::where('is_active', true)->where('is_break', false)->orderBy('sort_order')->get();
+        $breakSlots = TimetableSlot::where('is_active', true)->where('is_break', true)->count();
         $rooms = Classroom::where('is_active', true)->orderBy('capacity')->get();
 
         abort_if($demands->isEmpty(), 422, 'Timetable generation requires locked/active course groups with session demand.');
@@ -88,10 +89,12 @@ class TimetableOptimizationService
                 'groups' => $demands->pluck('group.id')->unique()->count(),
                 'session_demands' => $demands->count(),
                 'teaching_slots' => $slots->count(),
+                'break_slots' => $breakSlots,
                 'rooms' => $rooms->count(),
                 'optimizer' => 'laravel_canonical_optimizer',
                 'calendar_exceptions' => $this->calendarExceptionSummary($scope),
-                'version' => 'PMC OS canonical hardening',
+                'version' => 'PMC OS v0.062',
+                'canonical_hardening' => true,
             ],
         ]);
 
@@ -182,8 +185,11 @@ class TimetableOptimizationService
                     'explanation' => 'Placed by canonical Laravel optimizer using hard constraints and soft objective scoring.',
                     'metadata' => [
                         'solver_pass' => $result['solver_pass'],
+                        'version' => 'PMC OS v0.065',
                         'candidate_score' => $result['score'],
+                        'placement_score' => $result['score'],
                         'soft_constraint_explanations' => $result['reasons'],
+                        'placement_reasons' => $result['reasons'],
                         'rejected_alternatives' => $result['rejected'],
                         'placement_alternatives' => $result['alternatives'],
                     ],
@@ -241,6 +247,10 @@ class TimetableOptimizationService
         }
         if ($preferred) {
             $reasons[] = 'faculty_preferred_slot';
+        }
+        if ($strategy === 'student_compact') {
+            $score += $groupDayLoad > 0 ? 25 : 0;
+            $reasons[] = 'keeps_student_day_compact';
         }
 
         return ['score' => max(1, min(100, $score)), 'reasons' => array_values(array_unique($reasons))];
@@ -389,7 +399,7 @@ class TimetableOptimizationService
         if ($policyDays) {
             $days = array_values(array_intersect($days, $policyDays));
         }
-        if ($strategy === 'adjunct_priority') {
+        if (in_array($strategy, ['adjunct_priority', 'student_compact'], true)) {
             return $days;
         }
         $offset = ($sessionIndex - 1) % max(count($days), 1);

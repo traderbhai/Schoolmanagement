@@ -3,7 +3,8 @@ namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Teacher\Concerns\UsesOfficialTeachingSubjects;
-use App\Models\{CourseFeedback, Subject, Term};
+use App\Models\{AcademicPmcTimetableGenerationItem, CourseFeedback, Subject, Term};
+use Illuminate\Database\Eloquent\Builder;
 
 class FeedbackViewController extends Controller
 {
@@ -25,8 +26,9 @@ class FeedbackViewController extends Controller
 
         $feedbackBySubject = Subject::whereIn('id', $subjectIds)
             ->get()
-            ->map(function ($subject) use ($currentTerm) {
-                $feedback = $this->enrolledFeedbackQuery($subject->id, $currentTerm)->get();
+            ->map(function ($subject) use ($teacher, $currentTerm) {
+                $feedbackTerm = $this->officialTeachingTermForSubject($teacher, $subject->id) ?? $currentTerm;
+                $feedback = $this->enrolledFeedbackQuery($subject->id, $feedbackTerm)->get();
 
                 if ($feedback->isEmpty()) {
                     $subject->feedback_stats = null;
@@ -69,5 +71,18 @@ class FeedbackViewController extends Controller
                         ->when($currentTerm, fn($q) => $q->where('enrollments.term_id', $currentTerm->id));
                 });
             });
+    }
+
+    private function officialTeachingTermForSubject($teacher, int $subjectId): ?Term
+    {
+        $termId = $this->officialPmcTeachingItems($teacher)
+            ->where(function (Builder $query) use ($subjectId) {
+                $query->where('subject_id', $subjectId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('subject_id', $subjectId));
+            })
+            ->orderByDesc('published_at')
+            ->value('term_id');
+
+        return $termId ? Term::find($termId) : null;
     }
 }
