@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
 use App\Models\{ActivityLog, FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand};
+use App\Services\FinanceAccessPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -12,8 +13,12 @@ class AccountsController extends Controller
 {
     private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
 
+    public function __construct(private FinanceAccessPolicyService $financeAccess) {}
+
     public function dashboard()
     {
+        $this->financeAccess->authorizeView(auth()->user());
+
         $totalDemanded  = FeeDemand::sum('final_amount');
         $totalPenalty   = FeeDemand::whereIn('status', self::ACTIVE_DEMAND_STATUSES)->sum('penalty_amount');
         $totalBilled    = $totalDemanded + $totalPenalty;
@@ -76,6 +81,8 @@ class AccountsController extends Controller
 
     public function feeCollections(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         $query = FeePayment::with(['student.user', 'student.program', 'student.batch', 'feeStructure']);
 
         if ($request->filled('program_id')) {
@@ -99,6 +106,8 @@ class AccountsController extends Controller
 
     public function outstanding(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         if ($request->query('mode') === 'overdue_demands') {
             $overdueDemands = $this->overdueDemandQuery()
                 ->with(['student.user', 'student.program', 'student.batch', 'term'])
@@ -123,6 +132,8 @@ class AccountsController extends Controller
 
     public function admissionPayments()
     {
+        $this->financeAccess->authorizeView(auth()->user());
+
         $payments = AdmissionPayment::with(['applicant.user', 'applicant.program'])
             ->where('status', 'pending')
             ->latest()
@@ -133,6 +144,8 @@ class AccountsController extends Controller
 
     public function reports()
     {
+        $this->financeAccess->authorizeView(auth()->user());
+
         $demandByProgram = $this->demandFinancialsBy('program_id');
         $paymentByProgram = $this->paymentFinancialsBy('program_id');
 
@@ -169,6 +182,8 @@ class AccountsController extends Controller
 
     public function demandLetter(FeeDemand $feeDemand)
     {
+        $this->financeAccess->authorizeView(auth()->user());
+
         $feeDemand->load(['student.user', 'student.program', 'term']);
 
         if (! $feeDemand->student || $feeDemand->student->status !== 'active') {
@@ -194,6 +209,8 @@ class AccountsController extends Controller
 
     public function reconciliation(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         $programs = \App\Models\Program::where('is_active', true)->orderBy('name')->get();
         $selectedProgram = $request->filled('program_id')
             ? \App\Models\Program::find($request->program_id)
@@ -227,6 +244,8 @@ class AccountsController extends Controller
 
     public function exportFeeCollections(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         $query = FeePayment::with(['student.user', 'student.program', 'student.batch', 'feeStructure']);
         if ($request->filled('program_id')) {
             $ids = \App\Models\Student::where('program_id', $request->program_id)->pluck('id');
@@ -269,6 +288,8 @@ class AccountsController extends Controller
 
     public function exportAdmissionPayments(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         $query = AdmissionPayment::with(['applicant.user', 'applicant.program'])
             ->where('status', 'verified');
         if ($request->filled('program_id')) {
@@ -303,6 +324,8 @@ class AccountsController extends Controller
 
     public function exportOutstanding(Request $request)
     {
+        $this->financeAccess->authorizeView($request->user());
+
         if ($request->query('mode') === 'overdue_demands') {
             $demands = $this->overdueDemandQuery()
                 ->with(['student.user', 'student.program', 'student.batch', 'term'])
