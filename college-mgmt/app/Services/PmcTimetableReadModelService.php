@@ -2,8 +2,207 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcTimetableGenerationItem;
+use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcGroupFacultyAssignment;
+use App\Models\Batch;
+use App\Models\Classroom;
+use App\Models\Program;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\Term;
+use App\Models\TimetableVersion;
+use App\Models\TimetableSlot;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
 class PmcTimetableReadModelService
 {
     public const RESPONSIBILITY = 'Official timetable, scoped audience views, dashboards, filters, and timetable report read models.';
-}
 
+    public function __construct(private AcademicPmcAccessPolicyService $policy) {}
+
+    public function facultyScopedTimetable(User $user, array $filters = []): array
+    {
+        $teacher = $user->teacher;
+        abort_unless($teacher, 403);
+
+        $groupIds = AcademicPmcGroupFacultyAssignment::where('teacher_id', $teacher->id)->pluck('course_group_id');
+        $items = $this->officialTimetableItemsQuery()
+            ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
+            ->whereIn('course_group_id', $groupIds)
+            ->where('teacher_id', $teacher->id)
+            ->when($filters['day_of_week'] ?? null, fn ($q, $day) => $q->where('day_of_week', $day))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return [
+            'title' => 'My PMC Teaching Timetable',
+            'scopeLabel' => $teacher->user?->name ?? 'Faculty',
+            'items' => $items,
+            'groupCount' => $groupIds->count(),
+            'filters' => $filters,
+            'mode' => 'faculty',
+            'selectorOptions' => $this->selectorOptions(),
+        ];
+    }
+
+    public function officialTimetableAudience(User $user, array $filters = []): array
+    {
+        $this->policy->authorizeRead($user);
+        $itemsQuery = $this->applyScope(
+            $this->officialTimetableItemsQuery()
+                ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion']),
+            $user,
+            [],
+            [
+                'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+                'timetableVersion' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+            ]
+        )
+            ->when($filters['program_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('program_id', $id)))
+            ->when($filters['batch_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('batch_id', $id)))
+            ->when($filters['term_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('term_id', $id)))
+            ->when($filters['teacher_id'] ?? null, fn ($q, $id) => $q->where('teacher_id', $id))
+            ->when($filters['classroom_id'] ?? null, fn ($q, $id) => $q->where('classroom_id', $id))
+            ->when($filters['subject_id'] ?? null, fn ($q, $id) => $q->whereHas('courseGroup', fn ($group) => $group->where('subject_id', $id)))
+            ->when($filters['course_group_id'] ?? null, fn ($q, $id) => $q->where('course_group_id', $id))
+            ->when($filters['session_type'] ?? null, fn ($q, $type) => $q->where('session_type', $type))
+            ->when($filters['day_of_week'] ?? null, fn ($q, $day) => $q->where('day_of_week', $day))
+            ->orderBy('day_of_week')
+            ->orderBy('timetable_slot_id');
+
+        $allItems = (clone $itemsQuery)->get();
+        $items = $itemsQuery->paginate(30)->withQueryString();
+
+        return [
+            'title' => 'PMC Master Official Timetable',
+            'scopeLabel' => $this->policy->scopeLabel($user),
+            'items' => $items,
+            'parallelSlotGroups' => $this->parallelSlotGroups($allItems),
+            'groupCount' => $this->applyScope(AcademicPmcCourseGroup::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->count(),
+            'filters' => $filters,
+            'mode' => 'pmc',
+            'selectorOptions' => $this->selectorOptions(),
+        ];
+    }
+
+    public function selectorOptions(): array
+    {
+        return [
+            'programs' => Program::orderBy('name')->limit(100)->get(['id', 'name', 'code']),
+            'batches' => Batch::with('program')->orderByDesc('id')->limit(150)->get(['id', 'program_id', 'name', 'code']),
+            'terms' => Term::with(['program', 'batch'])->orderByDesc('id')->limit(150)->get(['id', 'program_id', 'batch_id', 'name', 'term_number', 'is_current']),
+            'subjects' => Subject::with('program')->where('is_active', true)->orderBy('name')->limit(200)->get(['id', 'program_id', 'name', 'code', 'credits', 'type']),
+            'students' => Student::with('user')->orderByDesc('id')->limit(200)->get(['id', 'user_id', 'program_id', 'batch_id', 'student_id', 'roll_number']),
+            'teachers' => Teacher::with('user')->where('status', 'active')->orderBy('employee_id')->limit(150)->get(['id', 'user_id', 'employee_id', 'designation', 'employment_type', 'status']),
+            'courseGroups' => AcademicPmcCourseGroup::with(['subject', 'program'])->orderBy('name')->limit(200)->get(['id', 'name', 'group_type', 'program_id', 'subject_id', 'current_strength', 'max_capacity']),
+            'classrooms' => Classroom::where('is_active', true)->orderBy('name')->limit(150)->get(['id', 'name', 'room_number', 'capacity', 'type']),
+            'slots' => TimetableSlot::where('is_active', true)->orderBy('sort_order')->orderBy('start_time')->get(['id', 'name', 'start_time', 'end_time']),
+            'timetableVersions' => TimetableVersion::with(['program', 'term'])->latest()->limit(100)->get(['id', 'program_id', 'term_id', 'batch_id', 'version_number', 'status']),
+            'officialTimetableItems' => $this->officialTimetableItemsQuery()
+                ->with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'timetableVersion'])
+                ->where('status', 'scheduled')
+                ->latest()
+                ->limit(200)
+                ->get(),
+        ];
+    }
+
+    public function officialPublishedVersionIds(): array
+    {
+        return TimetableVersion::where('status', 'published')->pluck('id')->all();
+    }
+
+    public function officialPublishedGenerationRunIds(): array
+    {
+        return AcademicPmcTimetableGenerationRun::whereIn('timetable_version_id', $this->officialPublishedVersionIds())->pluck('id')->all();
+    }
+
+    public function officialTimetableItemsQuery(): Builder
+    {
+        return AcademicPmcTimetableGenerationItem::query()
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereHas('timetableVersion', fn (Builder $query) => $query->where('status', 'published'));
+    }
+
+    public function parallelSlotGroups(Collection $items): Collection
+    {
+        return $items
+            ->sortBy([
+                ['day_of_week', 'asc'],
+                ['timetable_slot_id', 'asc'],
+                ['course_group_id', 'asc'],
+            ])
+            ->groupBy(fn ($item) => (int) $item->day_of_week . '-' . (int) $item->timetable_slot_id)
+            ->map(function (Collection $slotItems) {
+                $first = $slotItems->first();
+
+                return [
+                    'day_of_week' => (int) $first->day_of_week,
+                    'slot_id' => (int) $first->timetable_slot_id,
+                    'slot' => $first->slot,
+                    'sessions' => $slotItems->values(),
+                    'session_count' => $slotItems->count(),
+                    'rooms' => $slotItems->pluck('classroom_id')->filter()->unique()->count(),
+                    'faculty' => $slotItems->pluck('teacher_id')->filter()->unique()->count(),
+                ];
+            })
+            ->values();
+    }
+
+    private function applyScope(Builder $query, User $user, array $directMap = [], array $relationMap = []): Builder
+    {
+        if ($this->policy->canIgnorePmcScope($user)) {
+            return $query;
+        }
+
+        $scopes = [
+            'program' => $this->policy->scopedProgramIds($user),
+            'batch' => $this->policy->scopedBatchIds($user),
+            'term' => $this->policy->scopedTermIds($user),
+            'subject' => $this->policy->scopedSubjectIds($user),
+        ];
+
+        foreach ($directMap as $column => $scopeType) {
+            if (! array_key_exists($scopeType, $scopes)) {
+                continue;
+            }
+            $ids = $scopes[$scopeType];
+            if ($ids === null) {
+                continue;
+            }
+            if (! is_array($ids) || empty($ids)) {
+                return $query->whereRaw('1 = 0');
+            }
+            $query->whereIn($column, $ids);
+        }
+
+        foreach ($relationMap as $relation => $mapping) {
+            $query->whereHas($relation, function (Builder $relatedQuery) use ($mapping, $scopes): void {
+                foreach ($mapping as $column => $scopeType) {
+                    if (! array_key_exists($scopeType, $scopes)) {
+                        continue;
+                    }
+                    $ids = $scopes[$scopeType];
+                    if ($ids === null) {
+                        continue;
+                    }
+                    if (! is_array($ids) || empty($ids)) {
+                        $relatedQuery->whereRaw('1 = 0');
+                        continue;
+                    }
+                    $relatedQuery->whereIn($column, $ids);
+                }
+            });
+        }
+
+        return $query;
+    }
+}
