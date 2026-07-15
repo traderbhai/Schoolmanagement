@@ -1,1 +1,8 @@
 .claude/
+.codex/
+.cursor/
+.dev-context/
+CODEX_PROJECT_CONTEXT.md
+CLAUDE.md
+tmp_*.txt
+*_CONTEXT_FULL_ARCHIVE_*.md
