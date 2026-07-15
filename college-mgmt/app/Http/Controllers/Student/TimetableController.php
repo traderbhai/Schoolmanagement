@@ -8,11 +8,16 @@ use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
 use App\Models\TimetableEntry;
+use App\Services\PortalAccessPolicyService;
 
 class TimetableController extends Controller
 {
+    public function __construct(private PortalAccessPolicyService $portalAccess) {}
+
     public function index()
     {
+        abort_unless($this->portalAccess->canUseStudentPortal(auth()->user()), 403);
+
         $student = Student::where('user_id', auth()->id())->first();
 
         if (!$student) {

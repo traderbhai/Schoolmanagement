@@ -3,12 +3,17 @@ namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\{AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, Term, TimetableSlot, TimetableEntry, TimetableSubstitution};
+use App\Services\PortalAccessPolicyService;
 use Illuminate\Database\Eloquent\Builder;
 
 class TimetableController extends Controller
 {
+    public function __construct(private PortalAccessPolicyService $portalAccess) {}
+
     public function index()
     {
+        abort_unless($this->portalAccess->canUseTeacherPortal(auth()->user()), 403);
+
         $teacher = auth()->user()->teacher;
         $currentTerm = Term::latest('start_date')->first();
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();

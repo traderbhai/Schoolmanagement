@@ -2,23 +2,20 @@
 
 namespace App\Services;
 
-use App\Models\User;
-
 class PortalAccessPolicyService
 {
-    public function canUseStudentPortal(User $user): bool
+    public function canUseStudentPortal(?\App\Models\User $user): bool
     {
-        return $user->hasAnyRole(['student', 'admin']);
+        return (bool) $user?->hasAnyRole(['student', 'admin']);
     }
 
-    public function canUseTeacherPortal(User $user): bool
+    public function canUseTeacherPortal(?\App\Models\User $user): bool
     {
-        return $user->hasAnyRole(['teacher', 'faculty', 'admin']);
+        return (bool) $user?->hasAnyRole(['teacher', 'faculty', 'admin']);
     }
 
-    public function canUseParentPortal(User $user): bool
+    public function canUseParentPortal(?\App\Models\User $user): bool
     {
-        return $user->hasAnyRole(['parent', 'admin']);
+        return (bool) $user?->hasAnyRole(['parent', 'admin']);
     }
 }
-
