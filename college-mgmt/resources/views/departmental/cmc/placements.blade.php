@@ -34,15 +34,18 @@
                         @forelse($placements as $p)
                         <tr>
                             <td class="ps-3">
-                                <div class="fw-medium">{{ $p->student->user->name ?? '—' }}</div>
+                                <div class="fw-medium">{{ $p->student->user->name ?? '-' }}</div>
                                 <div class="text-muted small">{{ $p->student->enrollment_number ?? '' }}</div>
                             </td>
-                            <td>{{ $p->drive->company->name ?? $p->drive->title ?? '—' }}</td>
+                            <td>
+                                <div class="fw-medium">{{ $p->drive->title ?? '-' }}</div>
+                                <div class="text-muted small">{{ $p->drive->company->name ?? 'Company not linked' }}</div>
+                            </td>
                             <td class="small">
                                 @if($p->offered_package)
-                                <span class="badge bg-success-subtle text-success">₹{{ $p->offered_package }} LPA</span>
+                                <span class="badge bg-success-subtle text-success">INR {{ number_format((float) $p->offered_package, 0) }}</span>
                                 @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">-</span>
                                 @endif
                             </td>
                             <td class="small text-muted">{{ $p->created_at->format('d M Y') }}</td>

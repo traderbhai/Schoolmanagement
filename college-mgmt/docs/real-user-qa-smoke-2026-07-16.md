@@ -724,6 +724,37 @@ Focused verification:
 FeePaymentTest and AccountsDashboardGuidanceTest filtered fee/payment/receipt/accounts checks: 27 tests passed, 194 assertions
 ```
 
+## Converted Student Placement And CMC Recheck
+
+Manual placement drive, student application, CMC status update, and export checks were exercised against enrolled student id=24:
+
+```text
+Existing demo placement drives were status-visible but had 2025 application deadlines, so a real student could not apply in the 2026 local test window.
+cmc@college.com: GET /cmc/drives/create loaded successfully.
+cmc@college.com: POST /cmc/drives created placement drive id=3, title=QA Converted Student Drive 225631, status=upcoming, min_cgpa=0, last_apply_date=2026-08-01.
+meenakshi.rao@applicant.demo: GET /student/placements returned clean HTML and showed the QA drive.
+meenakshi.rao@applicant.demo: POST /student/placements/3/apply created placement application id=4, status=applied.
+meenakshi.rao@applicant.demo: GET /student/placements/my-applications returned clean HTML and showed the QA drive.
+cmc@college.com: GET /cmc/drives/3/applications showed the converted student's application.
+cmc@college.com: PATCH /cmc/placements/4/status updated the application to shortlisted.
+cmc@college.com: GET /cmc/drives/3/applications/export returned CSV containing ENR-2026-PGDM-00005.
+cmc@college.com: PATCH /cmc/placements/4/status updated the application to selected with offered_package=650000.
+cmc@college.com: GET /cmc/placements returned clean HTML showing the student, drive title, and INR 650,000 package.
+cmc@college.com: GET /cmc/placements/export returned CSV containing ENR-2026-PGDM-00005, QA Converted Student Drive 225631, and 650000.
+```
+
+Fix applied:
+
+```text
+Cleaned CMC placed-students view to remove mojibake fallback characters, show both drive title and company, and format offered package as INR amount.
+```
+
+Focused verification:
+
+```text
+StudentPlacementGuidanceTest, PlacementLifecycleIntegrityTest, and CmcDashboardGuidanceTest filtered placement checks: 33 tests passed, 257 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -738,6 +769,7 @@ FeePaymentTest and AccountsDashboardGuidanceTest filtered fee/payment/receipt/ac
 - Fixed applicant offer-letter accept/decline form handling so real portal users return to HTML pages with flash messages instead of raw JSON, while JSON callers remain supported.
 - Fixed enrollment lifecycle status so completed admission enrollment marks the applicant as enrolled while creating the student, confirmation, and Academics handoff.
 - Added an explicit admission enrollment status repair command for existing databases with completed confirmations whose applicants were left non-enrolled before the lifecycle fix.
+- Cleaned CMC placed-students output so selected placement records show readable drive, company, and package details without mojibake.
 
 ## Feedback
 
