@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\ApplicationWindow;
 use App\Models\Batch;
+use App\Models\Applicant;
 use App\Models\Program;
 use App\Models\User;
+use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
@@ -44,6 +46,68 @@ class LaunchRouteSmokeTest extends TestCase
         ]);
 
         $this->get(route('apply.program', $program))->assertStatus(200);
+    }
+
+    public function test_seeded_demo_public_apply_flow_can_register_new_applicant(): void
+    {
+        $this->seed(DemoDataSeeder::class);
+
+        $program = Program::where('code', 'PGDM')->firstOrFail();
+        $window = ApplicationWindow::where('program_id', $program->id)
+            ->where('is_active', true)
+            ->where('opens_at', '<=', now())
+            ->where('closes_at', '>', now())
+            ->firstOrFail();
+        $beforeCount = (int) $window->current_applications;
+
+        $email = 'qa-public-apply@example.test';
+
+        $this->get(route('apply.program', $program))
+            ->assertOk()
+            ->assertSee('Create Your Application');
+
+        $this->post(route('apply.program.register', $program), [
+            'name' => 'QA Public Applicant',
+            'email' => $email,
+            'phone' => '9876500000',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+            ->assertRedirect(route('applicant.dashboard'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('users', ['email' => $email]);
+        $this->assertDatabaseHas('applicants', [
+            'program_id' => $program->id,
+            'batch_id' => $window->batch_id,
+            'status' => 'draft',
+        ]);
+        $this->assertSame($beforeCount + 1, (int) $window->fresh()->current_applications);
+        $applicant = Applicant::whereHas('user', fn ($query) => $query->where('email', $email))->firstOrFail();
+
+        $this->post(route('applicant.application.section', 'personal'), [
+            'father_name' => 'QA Father',
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'Male',
+            'category' => 'General',
+            'domicile_state' => 'Delhi',
+            'entrance_exam_type' => 'CAT',
+            'entrance_exam_score' => '91',
+            'entrance_exam_roll_number' => 'QA123',
+            'entrance_exam_year' => '2025',
+            'phone' => '9876500000',
+            'address' => 'QA Address',
+        ])
+            ->assertRedirect(route('applicant.application.show', ['step' => 1]))
+            ->assertSessionHas('success');
+
+        $applicant->refresh();
+        $this->assertSame('general', $applicant->category);
+        $this->assertSame('Delhi', $applicant->domicile_state);
+        $this->assertSame('cat', $applicant->entrance_exam_type);
+        $this->assertSame(91.0, $applicant->entrance_exam_score);
+        $this->assertSame('QA123', $applicant->entrance_exam_roll_number);
+        $this->assertSame(2025, $applicant->entrance_exam_year);
     }
 
     public function test_closed_public_program_application_redirects_to_apply_index(): void

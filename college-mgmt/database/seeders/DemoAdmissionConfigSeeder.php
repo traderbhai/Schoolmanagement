@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\AdmissionFeeInstallment;
 use App\Models\AdmissionFormConfig;
+use App\Models\ApplicationWindow;
+use App\Models\Batch;
 use App\Models\Program;
 use App\Models\ProgramSeatMatrix;
 use App\Models\RequiredDocument;
@@ -89,6 +91,24 @@ class DemoAdmissionConfigSeeder extends Seeder
 
         AdmissionFormConfig::firstOrCreate(['program_id' => $program->id], [
             'form_sections' => AdmissionFormConfig::getDefaultSections(),
+            'is_active' => true,
+        ]);
+
+        $batch = Batch::where('program_id', $program->id)
+            ->where('status', 'active')
+            ->orderByDesc('start_date')
+            ->first();
+
+        ApplicationWindow::updateOrCreate([
+            'program_id' => $program->id,
+            'batch_id' => $batch?->id,
+        ], [
+            'opens_at' => now()->subDays(7),
+            'closes_at' => now()->addDays(45),
+            'capacity_limit' => 500,
+            'current_applications' => ApplicationWindow::where('program_id', $program->id)
+                ->where('batch_id', $batch?->id)
+                ->value('current_applications') ?? 0,
             'is_active' => true,
         ]);
 

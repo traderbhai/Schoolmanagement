@@ -548,6 +548,33 @@ Focused verification:
 StudentTeacherAttendanceCanonicalWorkflowTest, AttendanceWorkflowTest, AttendanceFeatureTest, TeacherScopeWorkflowTest, TeacherDashboardGuidanceTest, TeacherStudentListTest, TeacherProfileMissingGracefulTest: 62 tests passed, 515 assertions
 ```
 
+## Public Applicant Apply Recheck
+
+Manual public applicant testing caught two launch blockers:
+
+```text
+The local demo had no open application_windows row, so /apply could render but a real public applicant could not register for any program.
+DemoAdmissionConfigSeeder now creates an idempotent open PGDM application window tied to the active PGDM batch with dynamic open/close dates.
+Applicant personal-section saves were dropping entrance_exam_type and related direct metadata because Applicant::$fillable did not include all category/admission metadata columns.
+Applicant::$fillable now includes category_certificate_verified, pwd_percentage, domicile_state, is_state_quota, entrance_exam_type, and entrance_exam_year.
+```
+
+Manual public flow:
+
+```text
+DemoAdmissionConfigSeeder rerun on local database: open PGDM window id=1, batch_id=1, capacity_limit=500, current_applications=0
+POST /apply/1 created qa-public-20260716221509@example.test, applicant id=7, status=draft, then all four application sections were saved and final POST /applicant/application/submit moved status to submitted.
+POST /apply/1 created qa-public-meta-20260716221812@example.test, applicant id=8, then draft personal-section save persisted category=general, domicile_state=Delhi, entrance_exam_type=cat, entrance_exam_score=91, entrance_exam_roll_number=QA123, entrance_exam_year=2025.
+```
+
+Focused verification:
+
+```text
+LaunchRouteSmokeTest, ApplicationWindowTest, AdmissionApplicantReadinessTest: 50 tests passed, 299 assertions
+Temporary fresh SQLite migrate:fresh --seed: passed
+Fresh SQLite public apply readiness: open_application_windows=1, program=PGDM, capacity_limit=500
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -558,6 +585,7 @@ StudentTeacherAttendanceCanonicalWorkflowTest, AttendanceWorkflowTest, Attendanc
 - Patched Composer dependency advisories in Guzzle packages and re-ran dependency, frontend, timetable, production-readiness, Admission, Finance, Portal, and live role smoke checks.
 - Fixed legacy demo attendance seeding so rerunning `db:seed` on an existing demo database does not create duplicate attendance keys or crash.
 - Fixed legacy demo canonical scope seeding so legacy student services can create program-scoped records such as grievances without database exceptions.
+- Fixed public applicant demo readiness by seeding an open application window and allowing applicant category/entrance metadata to persist from application form saves.
 
 ## Feedback
 
