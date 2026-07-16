@@ -14,14 +14,14 @@ use Illuminate\Support\Collection;
 
 class AdmissionKpiService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function summaryFor(User $user, array $filters = []): array
     {
         $leadQuery = Lead::query();
-        $this->hierarchy->applyLeadVisibility($leadQuery, $user, 'ADM');
+        $this->accessPolicy->applyLeadVisibility($leadQuery, $user);
         $applicantQuery = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($applicantQuery, $user, 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($applicantQuery, $user);
 
         foreach ([$leadQuery, $applicantQuery] as $query) {
             $query
@@ -58,9 +58,9 @@ class AdmissionKpiService
 
     public function rollupByUser(User $viewer, array $filters = []): Collection
     {
-        $visibleIds = $viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')
-            ? User::whereHas('roles', fn ($q) => $q->whereIn('name', DepartmentHierarchyService::ADMISSION_ROLE_NAMES))->pluck('id')
-            : $this->hierarchy->visibleUserIds($viewer, 'ADM');
+        $visibleIds = $this->accessPolicy->canSeeAll($viewer)
+            ? User::whereHas('roles', fn ($q) => $q->whereIn('name', $this->accessPolicy->admissionRoleNames()))->pluck('id')
+            : $this->accessPolicy->visibleUserIds($viewer);
 
         return User::whereIn('id', $visibleIds)->orderBy('name')->get()
             ->map(fn (User $user) => array_merge(['user_id' => $user->id, 'name' => $user->name], $this->summaryFor($viewer, $filters + ['counsellor_id' => $user->id])));

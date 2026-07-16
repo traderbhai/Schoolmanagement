@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 
 class AdmissionManagerReviewService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function create(Model $subject, array $data, ?User $actor = null): AdmissionManagerReview
     {
@@ -41,8 +41,8 @@ class AdmissionManagerReviewService
             ->orderByRaw("case severity when 'critical' then 1 when 'high' then 2 when 'normal' then 3 else 4 end")
             ->orderBy('due_at');
 
-        if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
-            $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+        if (!$this->accessPolicy->canSeeAll($viewer)) {
+            $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
             $query->whereIn('assigned_manager_id', $visibleIds);
         }
 
@@ -51,11 +51,11 @@ class AdmissionManagerReviewService
 
     public function canAccess(AdmissionManagerReview $review, User $viewer): bool
     {
-        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+        if ($this->accessPolicy->canSeeAll($viewer)) {
             return true;
         }
 
-        $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+        $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
 
         return $visibleIds->contains($review->assigned_manager_id);
     }

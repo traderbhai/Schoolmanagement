@@ -65,6 +65,11 @@ class AdmissionAccessPolicyService
         return app(DepartmentHierarchyService::class)->isAdmissionUser($user);
     }
 
+    public function admissionRoleNames(): array
+    {
+        return DepartmentHierarchyService::ADMISSION_ROLE_NAMES;
+    }
+
     public function visibleUserIds(User $user)
     {
         return app(DepartmentHierarchyService::class)->visibleUserIds($user, 'ADM');
