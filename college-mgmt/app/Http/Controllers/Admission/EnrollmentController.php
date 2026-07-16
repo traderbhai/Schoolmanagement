@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\{Applicant, EnrollmentConfirmation, Program, Batch, RequiredDocument, Specialization, Term};
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\EnrollmentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class EnrollmentController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function index(Request $request)
     {
@@ -146,10 +146,7 @@ class EnrollmentController extends Controller
 
     private function guardApplicantScope(Applicant $applicant): void
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $applicant->assigned_to, false),
-            403
-        );
+        $this->accessPolicy->authorizeViewAssignedUser(auth()->user(), $applicant->assigned_to, false);
     }
 
     private function guardConfirmationScope(EnrollmentConfirmation $confirmation): void
@@ -163,7 +160,7 @@ class EnrollmentController extends Controller
         return EnrollmentConfirmation::query()
             ->where('status', 'completed')
             ->whereHas('applicant', function ($query) {
-                $this->hierarchy->applyApplicantVisibility($query, auth()->user(), 'ADM');
+                $this->accessPolicy->applyApplicantVisibility($query, auth()->user());
             });
     }
 }

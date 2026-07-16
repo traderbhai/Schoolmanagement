@@ -8,8 +8,8 @@ use App\Models\EnrollmentConfirmation;
 use App\Models\Lead;
 use App\Models\Program;
 use App\Models\SeatMatrix;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionKpiService;
-use App\Services\DepartmentHierarchyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +18,7 @@ class ReportingController extends Controller
 {
     public function __construct(
         private AdmissionKpiService $kpis,
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
     ) {}
 
     public function index(Request $request)
@@ -207,7 +207,7 @@ class ReportingController extends Controller
     private function visibleLeadQuery(Request $request)
     {
         $query = Lead::query();
-        $this->hierarchy->applyLeadVisibility($query, $request->user(), 'ADM');
+        $this->accessPolicy->applyLeadVisibility($query, $request->user());
         $this->applyReportFilters($query, $request);
 
         return $query;
@@ -216,7 +216,7 @@ class ReportingController extends Controller
     private function visibleApplicantQuery(Request $request)
     {
         $query = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($query, $request->user());
         $this->applyReportFilters($query, $request);
 
         return $query;
