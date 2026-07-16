@@ -144,6 +144,26 @@ class ArchitectureStabilizationTest extends TestCase
         }
     }
 
+    public function test_no_new_oversized_demo_seeders_are_added(): void
+    {
+        $allowedLargeSeeders = [
+            'AcademicsOperatingDemoSeeder.php',
+            'AdmissionOperatingDemoSeeder.php',
+            'MasterDataSeeder.php',
+        ];
+
+        $oversized = collect(glob(base_path('database/seeders/*.php')))
+            ->map(fn (string $path) => [
+                'name' => basename($path),
+                'lines' => count(file($path)),
+            ])
+            ->filter(fn (array $file) => $file['lines'] > 1000 && ! in_array($file['name'], $allowedLargeSeeders, true))
+            ->values()
+            ->all();
+
+        $this->assertSame([], $oversized, 'New demo seeder growth should be split into module seeders.');
+    }
+
     public function test_timetable_canonical_source_boundary_is_explicit(): void
     {
         $this->assertSame('academic_pmc_timetable_generation_items', (new AcademicPmcTimetableGenerationItem())->getTable());
