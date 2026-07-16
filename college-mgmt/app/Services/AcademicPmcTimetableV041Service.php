@@ -2855,177 +2855,20 @@ class AcademicPmcTimetableV041Service
 
     private function facultyAllocationDiagnostics(?User $user = null): array
     {
-        $assignments = $this->applyScope(
-            AcademicPmcGroupFacultyAssignment::with(['teacher', 'acknowledgements']),
-            $user,
-            [],
-            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-        )->get();
-        $assignedGroupIds = $assignments->pluck('course_group_id')->filter()->unique();
-        $groups = $this->applyScope(
-            AcademicPmcCourseGroup::with('facultyAssignments'),
-            $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        )->get();
-        $assignedTeacherIds = $assignments->pluck('teacher_id')->filter()->unique();
-        $preferenceTeacherIds = $this->applyScope(
-            AcademicPmcFacultyPreference::query(),
-            $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        )
-            ->whereIn('teacher_id', $assignedTeacherIds)
-            ->pluck('teacher_id')
-            ->unique();
-
-        $groupsMissingPrimary = $groups->filter(fn (AcademicPmcCourseGroup $group) => $group->facultyAssignments->whereIn('assignment_role', ['primary', 'co_faculty', 'lab_faculty', 'tutorial_faculty'])->isEmpty())->count();
-        $groupsWithoutBackup = $groups->filter(fn (AcademicPmcCourseGroup $group) => $group->facultyAssignments->where('is_backup', true)->isEmpty())->count();
-        $scopedAssignmentIds = $assignments->pluck('id')->filter()->values();
-        $pendingAcknowledgements = $user && ! $this->policy->canIgnorePmcScope($user)
-            ? AcademicPmcFacultyAssignmentAcknowledgement::whereIn('group_faculty_assignment_id', $scopedAssignmentIds)->whereIn(
-                'status',
-                ['pending', 'requested', 'concern_raised', 'declined', 'revision_required']
-            )->count()
-            : AcademicPmcFacultyAssignmentAcknowledgement::whereIn(
-                'status',
-                ['pending', 'requested', 'concern_raised', 'declined', 'revision_required']
-            )->count();
-        $assignmentsWithoutAcknowledgement = $assignments->filter(fn (AcademicPmcGroupFacultyAssignment $assignment) => $assignment->acknowledgements->isEmpty())->count();
-        $teachersMissingPreference = $assignedTeacherIds->diff($preferenceTeacherIds)->count();
-        $unapprovedAssignments = $assignments->whereNotIn('approval_status', ['pmc_approved', 'faculty_accepted', 'accepted', 'approved'])->count();
-        $scopedTeacherIds = $assignments->pluck('teacher_id')->filter()->values();
-        $loadReviewBlockers = AcademicPmcFacultyLoadReview::query()
-            ->when($user && ! $this->policy->canIgnorePmcScope($user), function ($query) use ($scopedTeacherIds) {
-                if ($scopedTeacherIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                    return;
-                }
-                $query->whereIn('teacher_id', $scopedTeacherIds);
-            })
-            ->whereIn('status', ['review_required', 'approval_required', 'revision_required'])
-            ->orWhere(fn ($query) => $query->whereIn('load_band', ['overload', 'critical'])->whereNotIn('status', ['approved_overload', 'approved']))
-            ->count();
-        $overloadReviews = AcademicPmcFacultyLoadReview::query()
-            ->when($user && ! $this->policy->canIgnorePmcScope($user), function ($query) use ($scopedTeacherIds) {
-                if ($scopedTeacherIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                    return;
-                }
-                $query->whereIn('teacher_id', $scopedTeacherIds);
-            })
-            ->whereIn('load_band', ['overload', 'critical'])->count();
-        $blockerTotal = $groupsMissingPrimary + $pendingAcknowledgements + $assignmentsWithoutAcknowledgement + $teachersMissingPreference + $unapprovedAssignments + $loadReviewBlockers;
-
-        return [
-            'total_assignments' => $assignments->count(),
-            'ready_assignments' => $assignments->filter(fn (AcademicPmcGroupFacultyAssignment $assignment) => in_array($assignment->approval_status, ['pmc_approved', 'faculty_accepted', 'accepted', 'approved'], true))->count(),
-            'assigned_groups' => $assignedGroupIds->count(),
-            'groups_missing_primary' => $groupsMissingPrimary,
-            'groups_without_backup' => $groupsWithoutBackup,
-            'pending_acknowledgements' => $pendingAcknowledgements,
-            'assignments_without_acknowledgement' => $assignmentsWithoutAcknowledgement,
-            'teachers_missing_preference' => $teachersMissingPreference,
-            'unapproved_assignments' => $unapprovedAssignments,
-            'load_review_blockers' => $loadReviewBlockers,
-            'overload_reviews' => $overloadReviews,
-            'blocker_total' => $blockerTotal,
-            'status' => $blockerTotal === 0 && $assignments->isNotEmpty() ? 'ready' : 'attention_required',
-            'recommended_action' => $blockerTotal === 0 ? 'Faculty allocation is ready for timetable generation.' : 'Resolve faculty assignment, acknowledgement, preference, and load-review blockers before timetable generation.',
-        ];
+        return $this->readinessGate->facultyAllocationDiagnostics(
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (User $scopeUser) => $this->policy->canIgnorePmcScope($scopeUser),
+            $user
+        );
     }
 
     private function facultySuitabilityDiagnostics(?AcademicPmcTimetableGenerationRun $run = null, ?User $user = null): array
     {
-        $courseGroupIds = $run
-            ? AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)->pluck('course_group_id')->filter()->unique()->values()
-            : collect();
-        $assignments = AcademicPmcGroupFacultyAssignment::with(['courseGroup.subject', 'teacher.user', 'acknowledgements'])
-            ->when($run && $courseGroupIds->isNotEmpty(), fn ($query) => $query->whereIn('course_group_id', $courseGroupIds))
-            ->when($run && $courseGroupIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
-            ->when(! $run && $user, function ($query) use ($user) {
-                return $this->applyScope(
-                    $query,
-                    $user,
-                    [],
-                    ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-                );
-            })
-            ->get();
-        $teacherIds = $assignments->pluck('teacher_id')->filter()->unique();
-        $preferences = AcademicPmcFacultyPreference::whereIn('teacher_id', $teacherIds)->get()->groupBy('teacher_id');
-        $loadReviews = AcademicPmcFacultyLoadReview::whereIn('teacher_id', $teacherIds)->latest()->get()->groupBy('teacher_id');
-
-        $missingExpertise = 0;
-        $adjunctDayRisk = 0;
-        $restrictionRisks = 0;
-        $ackConcernRisks = 0;
-        $declinedAssignments = 0;
-        $overloadRisks = 0;
-        $unapprovedSuitability = 0;
-        $backupOnlyPrimaryGap = 0;
-        $suitableAssignments = 0;
-
-        foreach ($assignments as $assignment) {
-            $teacherPreferences = $preferences->get($assignment->teacher_id, collect());
-            $preference = $teacherPreferences->firstWhere('term_id', $assignment->courseGroup?->term_id)
-                ?: $teacherPreferences->firstWhere('term_id', null);
-            $teacherLoadReviews = $loadReviews->get($assignment->teacher_id, collect());
-            $latestLoad = ($run ? $teacherLoadReviews->firstWhere('generation_run_id', $run->id) : null)
-                ?: $teacherLoadReviews->firstWhere('term_id', $assignment->courseGroup?->term_id)
-                ?: $teacherLoadReviews->firstWhere('term_id', null);
-            $subjectId = $assignment->courseGroup?->subject_id;
-            $expertise = collect($preference?->subject_expertise ?? [])->map(fn ($value) => (string) $value);
-            $hasExpertise = ! $subjectId || $expertise->isEmpty() || $expertise->contains((string) $subjectId) || $expertise->contains($assignment->courseGroup?->subject?->code);
-            $isAdjunct = in_array($preference?->faculty_type, ['adjunct', 'visiting', 'guest'], true);
-            $hasAllowedDays = ! $isAdjunct || ! empty($preference?->available_days);
-            $hasRestriction = filled($preference?->restriction_notes) || ! empty($preference?->unavailable_slots);
-            $ackStatuses = $assignment->acknowledgements->pluck('status')->merge($assignment->acknowledgements->pluck('response_type'))->filter();
-            $hasConcern = $ackStatuses->intersect(['concern_raised', 'decline', 'declined', 'revision_required'])->isNotEmpty();
-            $isDeclined = $ackStatuses->intersect(['decline', 'declined'])->isNotEmpty();
-            $loadBlocked = $latestLoad && (in_array($latestLoad->load_band, ['overload', 'critical'], true) || in_array($latestLoad->status, ['approval_required', 'revision_required'], true));
-            $approved = in_array($assignment->approval_status, ['pmc_approved', 'faculty_accepted', 'accepted', 'approved'], true);
-            $primaryGap = $assignment->is_backup && ! AcademicPmcGroupFacultyAssignment::where('course_group_id', $assignment->course_group_id)
-                ->whereIn('assignment_role', ['primary', 'co_faculty', 'lab_faculty', 'tutorial_faculty'])
-                ->exists();
-
-            $missingExpertise += $hasExpertise ? 0 : 1;
-            $adjunctDayRisk += $hasAllowedDays ? 0 : 1;
-            $restrictionRisks += $hasRestriction ? 1 : 0;
-            $ackConcernRisks += $hasConcern ? 1 : 0;
-            $declinedAssignments += $isDeclined ? 1 : 0;
-            $overloadRisks += $loadBlocked ? 1 : 0;
-            $unapprovedSuitability += $approved ? 0 : 1;
-            $backupOnlyPrimaryGap += $primaryGap ? 1 : 0;
-
-            if ($hasExpertise && $hasAllowedDays && ! $hasConcern && ! $loadBlocked && $approved && ! $primaryGap) {
-                $suitableAssignments++;
-            }
-        }
-
-        $blockerTotal = $missingExpertise
-            + $adjunctDayRisk
-            + $ackConcernRisks
-            + $declinedAssignments
-            + $overloadRisks
-            + $unapprovedSuitability
-            + $backupOnlyPrimaryGap;
-
-        return [
-            'total_assignments' => $assignments->count(),
-            'suitable_assignments' => $suitableAssignments,
-            'missing_expertise' => $missingExpertise,
-            'adjunct_day_risk' => $adjunctDayRisk,
-            'restriction_risks' => $restrictionRisks,
-            'acknowledgement_concerns' => $ackConcernRisks,
-            'declined_assignments' => $declinedAssignments,
-            'overload_risks' => $overloadRisks,
-            'unapproved_suitability' => $unapprovedSuitability,
-            'backup_only_primary_gap' => $backupOnlyPrimaryGap,
-            'blocker_total' => $blockerTotal,
-            'status' => $blockerTotal === 0 && $assignments->isNotEmpty() ? 'ready' : 'attention_required',
-            'recommended_action' => $blockerTotal === 0
-                ? 'Faculty suitability is ready for timetable generation.'
-                : 'Resolve subject expertise gaps, adjunct-day constraints, acknowledgement concerns, overload approvals, and backup-only primary gaps before final timetable generation.',
-        ];
+        return $this->readinessGate->facultySuitabilityDiagnostics(
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            $run,
+            $user
+        );
     }
 
     private function courseGroupDiagnostics(?User $user = null): array
