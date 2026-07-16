@@ -6,7 +6,6 @@ use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcCourseGroupAdjustment;
-use App\Models\AcademicPmcCourseGroupMember;
 use App\Models\AcademicPmcDataReconciliationCheck;
 use App\Models\AcademicPmcDataReconciliationRun;
 use App\Models\AcademicPmcElectiveChoice;
@@ -30,29 +29,19 @@ use App\Models\AcademicPmcTimetableNotification;
 use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableQualityScore;
 use App\Models\AcademicPmcTimetableResolutionAction;
-use App\Models\AcademicPmcTimetableSessionDemand;
-use App\Models\AcademicPmcTimetableSolverAttempt;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\AcademicPmcWorkloadRule;
 use App\Models\AcademicYear;
 use App\Models\Batch;
-use App\Models\Classroom;
-use App\Models\Course;
 use App\Models\Department;
 use App\Models\DepartmentActivityLog;
-use App\Models\ElectiveRegistrationWindow;
 use App\Models\Program;
 use App\Models\Semester;
 use App\Models\Student;
-use App\Models\StudentSubjectEnrollment;
 use App\Models\Subject;
-use App\Models\Teacher;
 use App\Models\Term;
-use App\Models\TimetableEntry;
-use App\Models\TimetableSlot;
 use App\Models\TimetableVersion;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -465,41 +454,6 @@ class AcademicPmcTimetableV041Service
     public function rollbackVersion(User $actor, TimetableVersion $version, array $data): TimetableVersion
     {
         return $this->publishService->rollbackVersion($actor, $version, $data);
-    }
-
-    private function archiveOperationalVersion(TimetableVersion $version): void
-    {
-        $this->publishService->archiveOperationalVersion($version);
-    }
-
-    private function officialPublishedVersionIds(): array
-    {
-        return $this->readModels->officialPublishedVersionIds();
-    }
-
-    private function officialPublishedGenerationRunIds(): array
-    {
-        return $this->readModels->officialPublishedGenerationRunIds();
-    }
-
-    private function officialTimetableItemsQuery(): Builder
-    {
-        return $this->readModels->officialTimetableItemsQuery();
-    }
-
-    private function parallelSlotGroups(Collection $items): Collection
-    {
-        return $this->readModels->parallelSlotGroups($items);
-    }
-
-    private function markRunItemsOfficial(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): void
-    {
-        $this->bridgeSync->markRunItemsOfficial($run, $version, $actor);
-    }
-
-    private function syncRunToOperationalTimetable(AcademicPmcTimetableGenerationRun $run, TimetableVersion $version, User $actor): int
-    {
-        return $this->bridgeSync->syncRunToOperationalTimetable($run, $version, $actor);
     }
 
     public function createResolutionAction(User $actor, AcademicPmcTimetableConstraint $constraint, array $data): AcademicPmcTimetableResolutionAction
@@ -994,136 +948,6 @@ class AcademicPmcTimetableV041Service
                 $row->confidence,
             ]),
         ];
-    }
-
-    private function wouldCreateConsecutivePressure(array $occupied, string $type, int $id, int $day, int $slotId, int $durationSlots, int $maxConsecutive, Collection $slots): bool
-    {
-        $slotOrders = TimetableSlot::where('is_active', true)->pluck('sort_order', 'id');
-        $orders = collect();
-
-        foreach (array_keys($occupied[$type][$id] ?? []) as $key) {
-            [$occupiedDay, $occupiedSlotId] = array_map('intval', explode('-', (string) $key) + [0, 0]);
-            if ($occupiedDay === $day && isset($slotOrders[$occupiedSlotId])) {
-                $orders->push((int) $slotOrders[$occupiedSlotId]);
-            }
-        }
-
-        foreach ($this->blockSlotIds($slots, $slotId, $durationSlots) as $blockSlotId) {
-            if (isset($slotOrders[$blockSlotId])) {
-                $orders->push((int) $slotOrders[$blockSlotId]);
-            }
-        }
-
-        $orders = $orders->unique()->sort()->values();
-        $current = 0;
-        $previous = null;
-        foreach ($orders as $order) {
-            $current = $previous !== null && ((int) $order === ((int) $previous + 1)) ? $current + 1 : 1;
-            if ($current > $maxConsecutive) {
-                return true;
-            }
-            $previous = $order;
-        }
-
-        return false;
-    }
-
-    private function markPlacementOccupied(array &$occupied, AcademicPmcTimetableGenerationItem $item, AcademicPmcCourseGroup $group): void
-    {
-        $slots = TimetableSlot::where('is_active', true)->where('is_break', false)->orderBy('sort_order')->get();
-        foreach ($this->blockSlotIds($slots, (int) $item->timetable_slot_id, (int) $item->duration_slots) as $slotId) {
-            $key = $item->day_of_week . '-' . $slotId;
-            if ($item->teacher_id) {
-                $occupied['teacher'][$item->teacher_id][$key] = true;
-            }
-            if ($item->classroom_id) {
-                $occupied['room'][$item->classroom_id][$key] = true;
-            }
-            if ($item->course_group_id) {
-                $occupied['group'][$item->course_group_id][$key] = true;
-            }
-            foreach ($group->members as $member) {
-                $occupied['student'][$member->student_id][$key] = true;
-            }
-        }
-    }
-
-    private function blockSlotIds(Collection $slots, int $startSlotId, int $durationSlots = 1): array
-    {
-        $ordered = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get()->values();
-        $startIndex = $ordered->search(fn ($slot) => (int) $slot->id === (int) $startSlotId);
-        if ($startIndex === false || $durationSlots < 1) {
-            return [];
-        }
-
-        $block = $ordered->slice($startIndex, $durationSlots)->values();
-        if ($block->count() < $durationSlots || $block->contains(fn ($slot) => (bool) $slot->is_break)) {
-            return [];
-        }
-
-        return $block->pluck('id')->map(fn ($id) => (int) $id)->all();
-    }
-
-    private function nextFeasibleSlot(Collection $slots, ?AcademicPmcFacultyPreference $preference, int $fallbackDay, int $slotIndex): array
-    {
-        $slot = $slots->get($slotIndex % max($slots->count(), 1));
-        $availableDays = array_map('intval', $preference?->available_days ?: range(1, 6));
-        $day = $availableDays[$slotIndex % max(count($availableDays), 1)] ?? $fallbackDay;
-
-        $unavailable = collect($preference?->unavailable_slots ?: []);
-        if ($slot && $unavailable->contains(fn ($blocked) => (int) ($blocked['day'] ?? 0) === (int) $day && (int) ($blocked['slot_id'] ?? 0) === (int) $slot->id)) {
-            foreach ($slots as $candidate) {
-                foreach ($availableDays as $candidateDay) {
-                    if (! $unavailable->contains(fn ($blocked) => (int) ($blocked['day'] ?? 0) === (int) $candidateDay && (int) ($blocked['slot_id'] ?? 0) === (int) $candidate->id)) {
-                        return [$candidateDay, $candidate];
-                    }
-                }
-            }
-        }
-
-        return [$day, $slot];
-    }
-
-    private function expandedSlotOrdersForItems(Collection $items): Collection
-    {
-        $slotOrders = TimetableSlot::where('is_active', true)->pluck('sort_order', 'id');
-        $activeSlots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
-
-        return $items
-            ->flatMap(function ($item) use ($slotOrders, $activeSlots) {
-                if (! $item->timetable_slot_id) {
-                    return [];
-                }
-
-                $block = $this->blockSlotIds($activeSlots, (int) $item->timetable_slot_id, max(1, (int) ($item->duration_slots ?? 1)));
-                if (empty($block)) {
-                    $block = [(int) $item->timetable_slot_id];
-                }
-
-                return collect($block)
-                    ->map(fn ($slotId) => $slotOrders[$slotId] ?? null)
-                    ->filter(fn ($order) => $order !== null);
-            })
-            ->unique()
-            ->sort()
-            ->values();
-    }
-
-    private function maxConsecutiveForItems(Collection $items): int
-    {
-        $max = 0;
-        foreach ($items->groupBy('day_of_week') as $dayItems) {
-            $slots = $this->expandedSlotOrdersForItems($dayItems);
-            $current = 0;
-            $previous = null;
-            foreach ($slots as $slot) {
-                $current = $previous !== null && ((int) $slot === ((int) $previous + 1)) ? $current + 1 : 1;
-                $max = max($max, $current);
-                $previous = $slot;
-            }
-        }
-
-        return $max;
     }
 
     private function audit(User $actor, string $action, string $description, mixed $subject = null, array $metadata = []): void
