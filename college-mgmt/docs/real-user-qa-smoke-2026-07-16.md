@@ -533,6 +533,21 @@ Fresh SQLite legacy scope integrity: legacy_students_missing_scope=0, legacy_tim
 GrievanceWorkflowGuidanceTest, DemoCredentialsTest, PortalFrontendBetaReadinessTest, StudentDashboardGuidanceTest: 51 tests passed, 912 assertions
 ```
 
+## Teacher Operations Manual Recheck
+
+Low-risk teacher operational submissions were exercised against the running local app:
+
+```text
+ravi@college.com: POST /teacher/pmc-availability created submitted availability request id=3 with term_id=7, max/day=4, max/week=18, max consecutive=3
+ravi@college.com: POST /teacher/attendance/store for timetable_entry_id=1 on 2026-07-13 saved 5 present attendance rows, all marked_by=2
+```
+
+Focused verification:
+
+```text
+StudentTeacherAttendanceCanonicalWorkflowTest, AttendanceWorkflowTest, AttendanceFeatureTest, TeacherScopeWorkflowTest, TeacherDashboardGuidanceTest, TeacherStudentListTest, TeacherProfileMissingGracefulTest: 62 tests passed, 515 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
