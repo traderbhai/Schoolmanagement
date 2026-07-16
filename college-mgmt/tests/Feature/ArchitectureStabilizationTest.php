@@ -165,6 +165,29 @@ class ArchitectureStabilizationTest extends TestCase
         $this->assertSame([], $oversized, 'New demo seeder growth should be split into module seeders.');
     }
 
+    public function test_admission_controllers_route_visibility_through_policy_service(): void
+    {
+        $allowedConstantOnlyUsers = [
+            'app/Http/Controllers/Admission/AssignmentRuleController.php',
+            'app/Http/Controllers/Admission/LeadFollowUpController.php',
+            'app/Http/Controllers/Admission/WorkbenchController.php',
+        ];
+
+        $violations = collect($this->phpFilesUnder(base_path('app/Http/Controllers/Admission')))
+            ->mapWithKeys(function (string $path) {
+                $relativePath = str_replace(str_replace('\\', '/', base_path()).'/', '', str_replace('\\', '/', $path));
+
+                return [$relativePath => file_get_contents($path)];
+            })
+            ->reject(fn (string $contents, string $relativePath) => in_array($relativePath, $allowedConstantOnlyUsers, true))
+            ->filter(fn (string $contents) => str_contains($contents, 'DepartmentHierarchyService'))
+            ->keys()
+            ->values()
+            ->all();
+
+        $this->assertSame([], $violations, 'Admission controllers should use AdmissionAccessPolicyService for visibility and authorization decisions.');
+    }
+
     public function test_timetable_canonical_source_boundary_is_explicit(): void
     {
         $this->assertSame('academic_pmc_timetable_generation_items', (new AcademicPmcTimetableGenerationItem())->getTable());
