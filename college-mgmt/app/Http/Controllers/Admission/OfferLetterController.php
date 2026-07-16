@@ -9,15 +9,15 @@ use App\Models\Batch;
 use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionSeatCapacityService;
-use App\Services\DepartmentHierarchyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
 class OfferLetterController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Program $program)
     {
@@ -350,19 +350,16 @@ class OfferLetterController extends Controller
     private function guardOfferScope(OfferLetter $offerLetter): void
     {
         $offerLetter->loadMissing('applicant');
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $offerLetter->applicant?->assigned_to, false),
-            403
-        );
+        $this->policy->authorizeViewAssignedUser(request()->user(), $offerLetter->applicant?->assigned_to, false);
     }
 
     private function applyOfferApplicantVisibility($query, $user): void
     {
-        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+        if ($this->policy->canSeeAll($user)) {
             return;
         }
 
-        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+        $visibleUserIds = $this->policy->visibleUserIds($user);
 
         $query->where(function ($scope) use ($visibleUserIds) {
             $scope->whereIn('assigned_to', $visibleUserIds)

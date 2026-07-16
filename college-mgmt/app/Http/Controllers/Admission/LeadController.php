@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\Program;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionNextActionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
@@ -24,7 +24,7 @@ class LeadController extends Controller
         $search = request('search');
 
         $query = Lead::query();
-        $this->hierarchy->applyLeadVisibility($query, $request->user(), 'ADM');
+        $this->policy->applyLeadVisibility($query, $request->user());
 
         if ($search) {
             $query->where(function ($scope) use ($search) {
@@ -66,7 +66,7 @@ class LeadController extends Controller
             ->withQueryString();
 
         $statsQuery = Lead::query();
-        $this->hierarchy->applyLeadVisibility($statsQuery, $request->user(), 'ADM');
+        $this->policy->applyLeadVisibility($statsQuery, $request->user());
         $totalLeads = (clone $statsQuery)->count();
         $convertedLeads = (clone $statsQuery)->where('status', 'converted')->count();
         $stats = [
@@ -83,9 +83,7 @@ class LeadController extends Controller
 
     public function show(Lead $lead, AdmissionNextActionService $nextActions)
     {
-        if (!$this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $lead->assigned_to, true)) {
-            abort(403);
-        }
+        $this->policy->authorizeViewAssignedUser(request()->user(), $lead->assigned_to, true);
 
         $lead->load(['program', 'convertedApplicant', 'assignmentEvents.fromUser', 'assignmentEvents.toUser', 'assignmentEvents.assignedBy', 'tags', 'assignedTo']);
         $actionCenter = $nextActions->forLead($lead);

@@ -6,12 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\AdmissionTag;
 use App\Models\Applicant;
 use App\Models\Lead;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class TagController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function tagLead(Request $request, Lead $lead)
     {
@@ -69,6 +69,6 @@ class TagController extends Controller
 
     private function guard(Request $request, ?int $assignedTo): void
     {
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $assignedTo, true), 403);
+        $this->policy->authorizeViewAssignedUser($request->user(), $assignedTo, true);
     }
 }
