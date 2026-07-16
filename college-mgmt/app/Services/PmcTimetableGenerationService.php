@@ -10,6 +10,7 @@ use App\Models\AcademicPmcLockedSlot;
 use App\Models\AcademicPmcRoomReadinessReview;
 use App\Models\AcademicPmcStudentCourseAllocation;
 use App\Models\AcademicPmcTimetableConstraint;
+use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcTimetableImpactRecord;
 use App\Models\AcademicPmcTimetablePublishCheck;
@@ -526,6 +527,208 @@ class PmcTimetableGenerationService
         };
     }
 
+    private function resourceConflictBuckets(Collection $items): array
+    {
+        $buckets = [
+            'faculty_clash' => [
+                'type' => 'faculty_clash',
+                'label' => 'Faculty',
+                'affected_type' => 'teacher',
+                'fix' => 'Move one class, change faculty, or approve a formal substitution.',
+                'items' => [],
+            ],
+            'room_clash' => [
+                'type' => 'room_clash',
+                'label' => 'Room',
+                'affected_type' => 'classroom',
+                'fix' => 'Move one class to a different room or slot.',
+                'items' => [],
+            ],
+            'group_clash' => [
+                'type' => 'group_clash',
+                'label' => 'Course group',
+                'affected_type' => 'course_group',
+                'fix' => 'Move one session for this section/group to a different slot.',
+                'items' => [],
+            ],
+            'student_clash' => [
+                'type' => 'student_clash',
+                'label' => 'Student',
+                'affected_type' => 'student',
+                'fix' => 'Move one elective/core group to a different slot.',
+                'items' => [],
+            ],
+        ];
+
+        $scheduled = $items->where('status', 'scheduled');
+        $membersByGroup = AcademicPmcCourseGroupMember::whereIn('course_group_id', $scheduled->pluck('course_group_id')->filter()->unique())
+            ->where('status', 'active')
+            ->get()
+            ->groupBy('course_group_id');
+
+        foreach ($scheduled as $item) {
+            if (! $item->day_of_week || ! $item->timetable_slot_id) {
+                continue;
+            }
+
+            $blockSlotIds = $this->blockSlotIds((int) $item->timetable_slot_id, max(1, (int) ($item->duration_slots ?? 1)));
+            if (empty($blockSlotIds)) {
+                $blockSlotIds = [(int) $item->timetable_slot_id];
+            }
+
+            foreach ($blockSlotIds as $slotId) {
+                $key = (int) $item->day_of_week . '-' . (int) $slotId;
+
+                if ($item->teacher_id) {
+                    $buckets['faculty_clash']['items'][$key][$item->teacher_id][] = $item->id;
+                }
+                if ($item->classroom_id) {
+                    $buckets['room_clash']['items'][$key][$item->classroom_id][] = $item->id;
+                }
+                if ($item->course_group_id) {
+                    $buckets['group_clash']['items'][$key][$item->course_group_id][] = $item->id;
+                }
+
+                foreach ($membersByGroup->get($item->course_group_id, collect()) as $member) {
+                    $buckets['student_clash']['items'][$key][$member->student_id][] = $item->id;
+                }
+            }
+        }
+
+        return collect($buckets)
+            ->map(function (array $bucket) {
+                return collect($bucket['items'])->map(function (array $resourceItems, string $key) use ($bucket) {
+                    [$day, $slotId] = array_map('intval', explode('-', $key));
+                    $duplicates = collect($resourceItems)
+                        ->filter(fn (array $itemIds) => count(array_unique($itemIds)) > 1)
+                        ->all();
+
+                    return [
+                        'type' => $bucket['type'],
+                        'label' => $bucket['label'],
+                        'affected_type' => $bucket['affected_type'],
+                        'fix' => $bucket['fix'],
+                        'day' => $day,
+                        'slot_id' => $slotId,
+                        'duplicates' => $duplicates,
+                    ];
+                })->values();
+            })
+            ->collapse()
+            ->filter(fn (array $bucket) => ! empty($bucket['duplicates']))
+            ->values()
+            ->all();
+    }
+
+    private function constraint(AcademicPmcTimetableGenerationRun $run, string $type, string $severity, string $title, string $description, ?string $affectedType, ?string $affectedKey, string $fix): AcademicPmcTimetableConstraint
+    {
+        return AcademicPmcTimetableConstraint::create([
+            'generation_run_id' => $run->id,
+            'constraint_type' => $type,
+            'severity' => $severity,
+            'title' => $title,
+            'description' => $description,
+            'affected_type' => $affectedType,
+            'affected_key' => $affectedKey,
+            'recommended_fix' => $fix,
+            'source_route' => route('academics.pmc.timetable-planner.index'),
+        ]);
+    }
+
+    private function studentCompactnessScore(Collection $items): int
+    {
+        $score = 100;
+        foreach ($items->where('status', 'scheduled')->groupBy(fn ($item) => $item->course_group_id . '-' . $item->day_of_week) as $dayItems) {
+            $orders = $this->expandedSlotOrdersForItems($dayItems);
+            if ($orders->count() <= 1) {
+                continue;
+            }
+            $gaps = 0;
+            for ($i = 1; $i < $orders->count(); $i++) {
+                if (($orders[$i] - $orders[$i - 1]) > 1) {
+                    $gaps++;
+                }
+            }
+            $score -= $gaps * 5;
+        }
+
+        return max(40, min(100, $score));
+    }
+
+    private function dayGapCount(Collection $items): int
+    {
+        $orders = $this->expandedSlotOrdersForItems($items);
+        if ($orders->count() <= 1) {
+            return 0;
+        }
+
+        $gaps = 0;
+        for ($i = 1; $i < $orders->count(); $i++) {
+            if (($orders[$i] - $orders[$i - 1]) > 1) {
+                $gaps += max(1, (int) ($orders[$i] - $orders[$i - 1] - 1));
+            }
+        }
+
+        return $gaps;
+    }
+
+    private function expandedSlotOrdersForItems(Collection $items): Collection
+    {
+        $slotOrders = TimetableSlot::where('is_active', true)->pluck('sort_order', 'id');
+
+        return $items
+            ->flatMap(function ($item) use ($slotOrders) {
+                if (! $item->timetable_slot_id) {
+                    return [];
+                }
+
+                $block = $this->blockSlotIds((int) $item->timetable_slot_id, max(1, (int) ($item->duration_slots ?? 1)));
+                if (empty($block)) {
+                    $block = [(int) $item->timetable_slot_id];
+                }
+
+                return collect($block)
+                    ->map(fn ($slotId) => $slotOrders[$slotId] ?? null)
+                    ->filter(fn ($order) => $order !== null);
+            })
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    private function roomUtilizationScore(Collection $items): int
+    {
+        $scheduled = $items->where('status', 'scheduled')->filter(fn ($item) => $item->classroom_id && $item->courseGroup);
+        if ($scheduled->isEmpty()) {
+            return 40;
+        }
+
+        $ratios = $scheduled->map(function ($item) {
+            $capacity = max(1, (int) ($item->classroom?->capacity ?? 1));
+            $strength = max(1, (int) ($item->courseGroup?->current_strength ?? 1));
+            return min(1, $strength / $capacity);
+        });
+
+        return max(40, min(100, (int) round($ratios->avg() * 100)));
+    }
+
+    private function maxConsecutiveForItems(Collection $items): int
+    {
+        $max = 0;
+        foreach ($items->groupBy('day_of_week') as $dayItems) {
+            $slots = $this->expandedSlotOrdersForItems($dayItems);
+            $current = 0;
+            $previous = null;
+            foreach ($slots as $slot) {
+                $current = $previous !== null && ((int) $slot === ((int) $previous + 1)) ? $current + 1 : 1;
+                $max = max($max, $current);
+                $previous = $slot;
+            }
+        }
+
+        return $max;
+    }
+
     public function refreshPublishChecks(AcademicPmcTimetableGenerationRun $run, int $hard, int $soft, int $score, array $facultySuitabilityDiagnostics): void
     {
         AcademicPmcTimetablePublishCheck::where('generation_run_id', $run->id)->delete();
@@ -572,6 +775,128 @@ class PmcTimetableGenerationService
                 ],
             ]
         );
+    }
+
+    public function refreshConstraintsAndQuality(AcademicPmcTimetableGenerationRun $run, callable $refreshPublishChecks): AcademicPmcTimetableQualityScore
+    {
+        AcademicPmcTimetableConstraint::where('generation_run_id', $run->id)->delete();
+        $items = AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)->get();
+        $hard = 0;
+        $soft = 0;
+
+        foreach ($this->resourceConflictBuckets($items) as $bucket) {
+            foreach ($bucket['duplicates'] as $id => $duplicates) {
+                $this->constraint(
+                    $run,
+                    $bucket['type'],
+                    'hard',
+                    str($bucket['type'])->headline()->toString(),
+                    "{$bucket['label']} {$id} is booked more than once on day {$bucket['day']} in slot {$bucket['slot_id']}.",
+                    $bucket['affected_type'],
+                    (string) $id,
+                    $bucket['fix']
+                );
+                $hard++;
+            }
+        }
+
+        foreach ($items->where('status', 'unscheduled') as $item) {
+            AcademicPmcTimetableConstraint::create(['generation_run_id' => $run->id, 'constraint_type' => 'unscheduled_class', 'severity' => 'hard', 'title' => 'Unscheduled class', 'description' => $item->explanation, 'affected_type' => 'course_group', 'affected_key' => (string) $item->course_group_id, 'recommended_fix' => 'Assign missing faculty/room or relax constraint.', 'source_route' => route('academics.pmc.timetable-generator.index')]);
+            $hard++;
+        }
+
+        foreach ($items->where('status', 'scheduled') as $item) {
+            $group = $item->courseGroup;
+            $room = $item->classroom;
+            $slot = $item->slot;
+            $preference = $item->teacher_id ? AcademicPmcFacultyPreference::where('teacher_id', $item->teacher_id)->where(fn ($q) => $q->where('term_id', $group?->term_id)->orWhereNull('term_id'))->first() : null;
+
+            if ($slot?->is_break) {
+                $this->constraint($run, 'break_slot_used', 'hard', 'Break slot used for teaching', 'A teaching session was placed into a break/lunch slot.', 'timetable_slot', (string) $slot->id, 'Move this session to a non-break teaching slot.');
+                $hard++;
+            }
+
+            if (($item->duration_slots ?? 1) > 1) {
+                $block = $this->blockSlotIds((int) $item->timetable_slot_id, (int) $item->duration_slots);
+                if (count($block) < (int) $item->duration_slots) {
+                    $this->constraint($run, 'multi_slot_block_incomplete', 'hard', 'Multi-slot session lacks contiguous teaching slots', 'A lab/practical/tutorial block cannot fit into the remaining non-break slots.', 'generation_item', (string) $item->id, 'Move the session earlier or configure a valid block slot.');
+                    $hard++;
+                }
+            }
+
+            if ($group && $room && ($room->capacity ?? 0) > 0 && $room->capacity < $group->current_strength) {
+                $this->constraint($run, 'room_capacity_mismatch', 'hard', 'Room capacity mismatch', "Room capacity {$room->capacity} is below group strength {$group->current_strength}.", 'classroom', (string) $room->id, 'Move to a larger room or split the group.');
+                $hard++;
+            }
+
+            if ($group && str_contains($group->group_type, 'lab') && $room && ! ($room->has_lab || $room->type === 'lab')) {
+                $this->constraint($run, 'room_type_mismatch', 'hard', 'Lab group in non-lab room', 'Lab/practical group requires a lab-capable room.', 'course_group', (string) $group->id, 'Assign a lab room or change group type.');
+                $hard++;
+            }
+
+            if ($preference && $preference->available_days && ! in_array((int) $item->day_of_week, array_map('intval', $preference->available_days), true)) {
+                $this->constraint($run, 'faculty_day_unavailable', 'hard', 'Faculty unavailable on scheduled day', 'Faculty is scheduled outside available teaching days.', 'teacher', (string) $item->teacher_id, 'Move class to one of the faculty available days or reassign faculty.');
+                $hard++;
+            }
+
+            $unavailableSlots = collect($preference?->unavailable_slots ?: []);
+            if ($unavailableSlots->contains(fn ($slot) => (int) ($slot['day'] ?? 0) === (int) $item->day_of_week && (int) ($slot['slot_id'] ?? 0) === (int) $item->timetable_slot_id)) {
+                $this->constraint($run, 'faculty_slot_unavailable', 'hard', 'Faculty unavailable in slot', 'Faculty has marked this slot unavailable.', 'teacher', (string) $item->teacher_id, 'Move class or override availability with Dean/PMC approval.');
+                $hard++;
+            }
+        }
+
+        foreach ($items->where('status', 'scheduled')->groupBy(fn ($item) => $item->teacher_id . '-' . $item->day_of_week) as $teacherDayItems) {
+            $first = $teacherDayItems->first();
+            $preference = $first?->teacher_id ? AcademicPmcFacultyPreference::where('teacher_id', $first->teacher_id)->where(fn ($q) => $q->whereNull('term_id')->orWhere('term_id', $first->courseGroup?->term_id))->first() : null;
+            $max = $preference?->max_classes_per_day ?: 4;
+            if ($teacherDayItems->count() > $max) {
+                $this->constraint($run, 'faculty_daily_load', 'soft', 'Faculty daily load warning', "Faculty has {$teacherDayItems->count()} classes in one day; configured max is {$max}.", 'teacher', (string) $first->teacher_id, 'Distribute classes across the week or approve overload.');
+                $soft++;
+            }
+
+            $maxConsecutive = (int) ($preference?->max_consecutive_classes ?: 3);
+            $consecutive = $this->maxConsecutiveForItems($teacherDayItems);
+            if ($consecutive > $maxConsecutive) {
+                $this->constraint($run, 'faculty_consecutive_load', 'soft', 'Faculty consecutive teaching pressure', "Faculty has {$consecutive} consecutive teaching slot(s); configured max is {$maxConsecutive}.", 'teacher', (string) $first->teacher_id, 'Move one class away from the block or approve the exception.');
+                $soft++;
+            }
+        }
+
+        foreach ($items->where('status', 'scheduled')->groupBy(fn ($item) => $item->course_group_id . '-' . $item->day_of_week) as $groupDayItems) {
+            $first = $groupDayItems->first();
+            $group = $first?->courseGroup;
+            $constraints = $group?->constraints ?: [];
+            $maxDaily = (int) ($constraints['max_student_classes_per_day'] ?? $constraints['max_daily_classes'] ?? 4);
+            $sessionLoad = (int) $groupDayItems->sum(fn ($item) => max(1, (int) ($item->duration_slots ?? 1)));
+            if ($sessionLoad > $maxDaily) {
+                $this->constraint($run, 'student_group_daily_load', 'soft', 'Student group daily load pressure', "Group has {$sessionLoad} teaching slot(s) in one day; configured max is {$maxDaily}.", 'course_group', (string) $first->course_group_id, 'Spread the group classes across more days or approve a compact-day exception.');
+                $soft++;
+            }
+
+            $gapCount = $this->dayGapCount($groupDayItems);
+            if ($gapCount > 1) {
+                $this->constraint($run, 'student_group_day_gaps', 'soft', 'Student group day has avoidable gaps', "Group has {$gapCount} empty teaching gap(s) between scheduled classes on the same day.", 'course_group', (string) $first->course_group_id, 'Move classes closer together or use a saved compact-student strategy.');
+                $soft++;
+            }
+        }
+
+        foreach (AcademicPmcLockedSlot::where('is_hard_lock', false)->where('status', 'active')->limit(3)->get() as $locked) {
+            AcademicPmcTimetableConstraint::create(['generation_run_id' => $run->id, 'constraint_type' => 'soft_locked_slot_preference', 'severity' => 'soft', 'title' => 'Soft locked slot preference', 'description' => $locked->title, 'affected_type' => 'locked_slot', 'affected_key' => (string) $locked->id, 'recommended_fix' => 'Review preference before publishing.', 'source_route' => route('academics.pmc.locked-slots.index')]);
+            $soft++;
+        }
+
+        $studentCompactness = $this->studentCompactnessScore($items);
+        $facultyBalance = max(40, 100 - ($items->where('status', 'scheduled')->groupBy(fn ($item) => $item->teacher_id . '-' . $item->day_of_week)->filter(fn ($group) => $group->count() > 4)->count() * 12));
+        $roomUtilization = $this->roomUtilizationScore($items);
+        $score = max(0, min(100, (int) round((100 - ($hard * 12) - ($soft * 3) + $studentCompactness + $facultyBalance + $roomUtilization) / 4)));
+        $quality = AcademicPmcTimetableQualityScore::updateOrCreate(
+            ['generation_run_id' => $run->id],
+            ['overall_score' => $score, 'hard_conflicts' => $hard, 'soft_warnings' => $soft, 'student_compactness_score' => $studentCompactness, 'faculty_balance_score' => $facultyBalance, 'room_utilization_score' => $roomUtilization, 'details' => ['formula' => 'avg(conflict-adjusted, student compactness, faculty balance, room utilization)', 'version' => 'PMC OS v0.063', 'faculty_consecutive_checked' => true, 'student_group_day_gaps_checked' => true]]
+        );
+        $run->update(['hard_conflict_count' => $hard, 'soft_warning_count' => $soft, 'quality_score' => $score]);
+        $refreshPublishChecks($run, $hard, $soft, $score);
+        return $quality;
     }
 
     public function generationValidationDiagnostics(?User $user = null, ?callable $syncFacultySuitabilityPublishCheck = null): array
