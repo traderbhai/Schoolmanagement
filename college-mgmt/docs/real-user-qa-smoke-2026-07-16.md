@@ -813,6 +813,45 @@ Focused verification:
 StudentCareerEventWorkflowTest and CmcDashboardGuidanceTest filtered career-event checks: 24 tests passed, 141 assertions
 ```
 
+## Internship Lifecycle Recheck
+
+Manual CMC internship and student visibility checks were exercised against the running local server:
+
+```text
+cmc@college.com: GET /cmc/internships/create loaded successfully.
+cmc@college.com: POST /cmc/internships created internship id=2, role=QA Internship Analyst 231845, student_id=11, company=InfoSys Ltd, status=ongoing.
+cmc@college.com: GET /cmc/internships showed the QA internship.
+cmc@college.com: GET /cmc/internships/2 showed the role and supervisor details.
+arjun.k@demo.edu: GET /student/internships showed the QA internship and "Internship currently in progress" priority.
+cmc@college.com: POST /cmc/internships/2/complete marked the internship completed with feedback and rating=5.
+arjun.k@demo.edu: GET /student/internships showed "Internship record completed", QA completion feedback, and rating 5/5.
+```
+
+Focused verification:
+
+```text
+InternshipWorkflowGuidanceTest: 8 tests passed, 58 assertions
+```
+
+## Alumni Network Recheck
+
+Manual CMC alumni profile and student alumni-network checks were exercised against the running local server:
+
+```text
+cmc@college.com: GET /cmc/alumni/create loaded successfully.
+cmc@college.com: POST /cmc/alumni created alumni profile id=1 for Sneha Reddy, employer=QA Alumni Employer, role=Product Manager.
+cmc@college.com: GET /cmc/alumni showed Sneha Reddy and QA Alumni Employer.
+arjun.k@demo.edu: GET /student/alumni did not show the unverified QA alumni profile.
+cmc@college.com: POST /cmc/alumni/1/verify marked the profile verified.
+arjun.k@demo.edu: GET /student/alumni showed Sneha Reddy, QA Alumni Employer, and Product Manager.
+```
+
+Focused verification:
+
+```text
+AlumniWorkflowGuidanceTest: 4 tests passed, 32 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
