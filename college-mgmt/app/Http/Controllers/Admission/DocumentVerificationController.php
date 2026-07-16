@@ -10,8 +10,8 @@ use App\Models\ApplicantDocument;
 use App\Models\Batch;
 use App\Models\DocumentVerificationRequest;
 use App\Models\Program;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionKpiDrilldownService;
-use App\Services\DepartmentHierarchyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 
 class DocumentVerificationController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function pendingQueue(Request $request, AdmissionKpiDrilldownService $drilldowns)
     {
@@ -33,11 +33,11 @@ class DocumentVerificationController extends Controller
             'all_pending'     => $drilldowns->pendingDocumentQuery($request->user())->count(),
             'verified_today'  => ApplicantDocument::where('status', 'verified')
                 ->whereDate('verified_at', today())
-                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM'))
+                ->whereHas('applicant', fn ($q) => $this->accessPolicy->applyApplicantVisibility($q, $request->user()))
                 ->count(),
             'rejected_today'  => ApplicantDocument::where('status', 'rejected')
                 ->whereDate('verified_at', today())
-                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM'))
+                ->whereHas('applicant', fn ($q) => $this->accessPolicy->applyApplicantVisibility($q, $request->user()))
                 ->count(),
         ];
 
@@ -220,8 +220,8 @@ class DocumentVerificationController extends Controller
         $user = Auth::user();
 
         // Admission team / admin
-        if (($user->hasRole('admin') || $this->hierarchy->isAdmissionUser($user))
-            && $this->hierarchy->canViewAssignedUser($user, 'ADM', $document->applicant?->assigned_to, false)) {
+        if (($user->hasRole('admin') || $this->accessPolicy->isAdmissionUser($user))
+            && $this->accessPolicy->canViewAssignedUser($user, $document->applicant?->assigned_to, false)) {
             return;
         }
 
@@ -238,8 +238,8 @@ class DocumentVerificationController extends Controller
     {
         $document->loadMissing('applicant');
 
-        if (!$this->hierarchy->canVerifyAdmissionDocuments(Auth::user())
-            || !$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $document->applicant?->assigned_to, false)) {
+        if (!$this->accessPolicy->canVerifyAdmissionDocuments(Auth::user())
+            || !$this->accessPolicy->canViewAssignedUser(Auth::user(), $document->applicant?->assigned_to, false)) {
             abort(403);
         }
     }
@@ -251,7 +251,7 @@ class DocumentVerificationController extends Controller
             ->orderByDesc('uploaded_at');
 
         $query->whereHas('applicant', function ($q) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($q, $request->user(), 'ADM');
+            $this->accessPolicy->applyApplicantVisibility($q, $request->user());
         });
 
         if ($request->filled('program_id')) {

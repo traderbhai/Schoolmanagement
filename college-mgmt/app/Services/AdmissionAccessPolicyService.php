@@ -60,6 +60,11 @@ class AdmissionAccessPolicyService
         return $user->hasRole('admin') || app(DepartmentHierarchyService::class)->canSeeAll($user, 'ADM');
     }
 
+    public function isAdmissionUser(User $user): bool
+    {
+        return app(DepartmentHierarchyService::class)->isAdmissionUser($user);
+    }
+
     public function visibleUserIds(User $user)
     {
         return app(DepartmentHierarchyService::class)->visibleUserIds($user, 'ADM');
@@ -93,6 +98,16 @@ class AdmissionAccessPolicyService
     public function canApproveAdmission(User $user): bool
     {
         return app(DepartmentHierarchyService::class)->canApproveAdmission($user);
+    }
+
+    public function canVerifyAdmissionDocuments(User $user): bool
+    {
+        return app(DepartmentHierarchyService::class)->canVerifyAdmissionDocuments($user);
+    }
+
+    public function authorizeVerifyAdmissionDocuments(User $user): void
+    {
+        abort_unless($this->canVerifyAdmissionDocuments($user), 403);
     }
 
     public function authorizeApproveAdmission(User $user): void

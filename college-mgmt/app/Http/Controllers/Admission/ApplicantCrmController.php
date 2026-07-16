@@ -12,7 +12,7 @@ use App\Models\AdmissionTeamNote;
 use App\Models\CounsellingLog;
 use App\Models\Program;
 use App\Models\Batch;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionNextActionService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ApplicantCrmController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     // Allowed status transitions
     private const TRANSITIONS = [
@@ -38,7 +38,7 @@ class ApplicantCrmController extends Controller
         $query = Applicant::with(['user', 'program', 'batch',
             'counsellingLogs' => fn($q) => $q->latest()->limit(1),
         ]);
-        $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($query, $request->user());
 
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
@@ -103,9 +103,7 @@ class ApplicantCrmController extends Controller
 
     public function show(Applicant $applicant, AdmissionNextActionService $nextActions)
     {
-        if (!$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $applicant->assigned_to, false)) {
-            abort(403);
-        }
+        $this->accessPolicy->authorizeViewAssignedUser(Auth::user(), $applicant->assigned_to, false);
 
         $applicant->load([
             'user', 'program', 'batch',
@@ -118,7 +116,7 @@ class ApplicantCrmController extends Controller
             'tags',
         ]);
 
-        $canChangeStatus = $this->hierarchy->canApproveAdmission(Auth::user());
+        $canChangeStatus = $this->accessPolicy->canApproveAdmission(Auth::user());
         $allowedTransitions = self::TRANSITIONS[$applicant->status] ?? [];
         $actionCenter = $nextActions->forApplicant($applicant);
 
@@ -127,9 +125,7 @@ class ApplicantCrmController extends Controller
 
     public function updateStatus(Request $request, Applicant $applicant)
     {
-        if (!$this->hierarchy->canApproveAdmission($request->user())) {
-            abort(403, 'Only authorized admission leadership can change status.');
-        }
+        abort_unless($this->accessPolicy->canApproveAdmission($request->user()), 403, 'Only authorized admission leadership can change status.');
 
         if ($applicant->isEnrolled()) {
             return back()->with('error', 'Completed enrollments are locked. Use the academic student lifecycle or audited cancellation workflow instead of changing applicant status.');
@@ -154,9 +150,7 @@ class ApplicantCrmController extends Controller
 
     public function storeCounsellingLog(Request $request, Applicant $applicant)
     {
-        if (!$this->hierarchy->canViewAssignedUser(Auth::user(), 'ADM', $applicant->assigned_to, false)) {
-            abort(403);
-        }
+        $this->accessPolicy->authorizeViewAssignedUser(Auth::user(), $applicant->assigned_to, false);
 
         $request->validate([
             'interaction_type'   => 'required|in:call,email,whatsapp,walk_in,other',
@@ -181,10 +175,10 @@ class ApplicantCrmController extends Controller
 
     public function verifyDocument(Request $request, ApplicantDocument $document)
     {
-        abort_unless($this->hierarchy->canVerifyAdmissionDocuments($request->user()), 403);
+        $this->accessPolicy->authorizeVerifyAdmissionDocuments($request->user());
 
         $document->loadMissing('applicant');
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $document->applicant?->assigned_to, false), 403);
+        $this->accessPolicy->authorizeViewAssignedUser($request->user(), $document->applicant?->assigned_to, false);
 
         if ($document->status !== 'pending') {
             return back()->with('error', 'Only pending applicant documents can be verified or rejected.');
@@ -213,9 +207,7 @@ class ApplicantCrmController extends Controller
             'applicant_ids.*' => 'integer|exists:applicants,id',
         ]);
 
-        if (!$this->hierarchy->canApproveAdmission($request->user())) {
-            abort(403);
-        }
+        $this->accessPolicy->authorizeApproveAdmission($request->user());
 
         $count = 0;
         foreach ($request->applicant_ids as $id) {
@@ -240,9 +232,7 @@ class ApplicantCrmController extends Controller
 
     public function storeNote(Request $request, Applicant $applicant)
     {
-        if (!$this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $applicant->assigned_to, false)) {
-            abort(403);
-        }
+        $this->accessPolicy->authorizeViewAssignedUser($request->user(), $applicant->assigned_to, false);
 
         $request->validate(['note' => 'required|string']);
 
@@ -258,6 +248,7 @@ class ApplicantCrmController extends Controller
     public function exportCsv(Request $request)
     {
         $query = Applicant::with(['user', 'program', 'batch']);
+        $this->accessPolicy->applyApplicantVisibility($query, $request->user());
 
         if ($request->program_id) {
             $query->where('program_id', $request->program_id);
