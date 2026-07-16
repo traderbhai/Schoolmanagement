@@ -4,21 +4,19 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdmissionPayment;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Support\InstitutionSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class FeeReceiptController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function receipt(AdmissionPayment $payment)
     {
         $payment->loadMissing('applicant');
 
-        if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $payment->applicant?->assigned_to, false)) {
-            abort(403);
-        }
+        $this->policy->authorizeViewAssignedUser(auth()->user(), $payment->applicant?->assigned_to, false);
 
         if ($payment->status !== 'verified') {
             return back()->with('error', 'Receipt is only available for verified payments.');

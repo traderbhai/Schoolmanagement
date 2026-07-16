@@ -3,12 +3,12 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class RegistrationFeeController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function show(Applicant $applicant)
     {
@@ -65,9 +65,6 @@ class RegistrationFeeController extends Controller
 
     private function guardApplicantScope(Applicant $applicant): void
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $applicant->assigned_to, false),
-            403
-        );
+        $this->policy->authorizeViewAssignedUser(auth()->user(), $applicant->assigned_to, false);
     }
 }
