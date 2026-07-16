@@ -14,7 +14,9 @@ class PmcTimetableReadinessScopeService
 {
     public const RESPONSIBILITY = 'Scoped readiness existence checks for launch and publish readiness views.';
 
-    public function readinessChecklistScopedExists(string $check, ?User $user, callable $applyScope): bool
+    public function __construct(private PmcTimetableScopeService $scope) {}
+
+    public function readinessChecklistScopedExists(string $check, ?User $user): bool
     {
         if (! $user) {
             return match ($check) {
@@ -29,29 +31,29 @@ class PmcTimetableReadinessScopeService
         }
 
         return match ($check) {
-            'allocations' => $applyScope(
+            'allocations' => $this->scope->applyScope(
                 AcademicPmcStudentCourseAllocation::query(),
                 $user,
                 [],
                 ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
             )->whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists(),
-            'groups' => $applyScope(
+            'groups' => $this->scope->applyScope(
                 AcademicPmcCourseGroup::query(),
                 $user,
                 ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
             )->exists(),
-            'faculty_assignments' => $applyScope(
+            'faculty_assignments' => $this->scope->applyScope(
                 AcademicPmcGroupFacultyAssignment::query(),
                 $user,
                 [],
                 ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
             )->exists(),
-            'faculty_preferences' => $applyScope(
+            'faculty_preferences' => $this->scope->applyScope(
                 AcademicPmcFacultyPreference::query(),
                 $user,
                 ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
             )->exists(),
-            'locked_slots' => $applyScope(
+            'locked_slots' => $this->scope->applyScope(
                 AcademicPmcLockedSlot::query(),
                 $user,
                 ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']

@@ -62,6 +62,7 @@ class AcademicPmcTimetableV041Service
         private PmcTimetableRevisionService $revisionService,
         private PmcTimetableReadinessGateService $readinessGate,
         private PmcTimetableReadinessScopeService $readinessScope,
+        private PmcTimetableScopeService $scope,
         private PmcTimetableGenerationService $generationService,
     ) {}
 
@@ -560,7 +561,7 @@ class AcademicPmcTimetableV041Service
             $user,
             $filters,
             fn (Builder $query, array $surfaceFilters) => $this->exportReadModels->applyTimetableItemSort($query, $surfaceFilters),
-            fn (Builder $query, User $scopedUser, Builder $scopeQuery, array $directMap) => $this->constrainConstraintsByUserScope($query, $scopedUser, $scopeQuery, $directMap)
+            fn (Builder $query, User $scopedUser, Builder $scopeQuery, array $directMap) => $this->scope->constrainConstraintsByUserScope($query, $scopedUser, $scopeQuery, $directMap)
         );
     }
 
@@ -591,11 +592,7 @@ class AcademicPmcTimetableV041Service
     {
         return $this->readinessGate->readinessChecklist(
             fn (?AcademicPmcTimetableGenerationRun $run = null, ?User $scopedUser = null) => $this->facultySuitabilityDiagnostics($run, $scopedUser),
-            fn (string $check, ?User $scopedUser = null) => $this->readinessScope->readinessChecklistScopedExists(
-                $check,
-                $scopedUser,
-                fn (Builder $query, User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap)
-            ),
+            fn (string $check, ?User $scopedUser = null) => $this->readinessScope->readinessChecklistScopedExists($check, $scopedUser),
             $user
         );
     }
@@ -634,7 +631,7 @@ class AcademicPmcTimetableV041Service
     private function readinessInputDiagnostics(?User $user = null): array
     {
         return $this->readinessGate->readinessInputDiagnostics(
-            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->scope->applyScope($query, $scopeUser, $directMap, $relationMap),
             $user
         );
     }
@@ -642,7 +639,7 @@ class AcademicPmcTimetableV041Service
     private function facultyAllocationDiagnostics(?User $user = null): array
     {
         return $this->readinessGate->facultyAllocationDiagnostics(
-            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->scope->applyScope($query, $scopeUser, $directMap, $relationMap),
             fn (User $scopeUser) => $this->policy->canIgnorePmcScope($scopeUser),
             $user
         );
@@ -651,7 +648,7 @@ class AcademicPmcTimetableV041Service
     private function facultySuitabilityDiagnostics(?AcademicPmcTimetableGenerationRun $run = null, ?User $user = null): array
     {
         return $this->readinessGate->facultySuitabilityDiagnostics(
-            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->scope->applyScope($query, $scopeUser, $directMap, $relationMap),
             $run,
             $user
         );
@@ -659,12 +656,16 @@ class AcademicPmcTimetableV041Service
 
     private function courseGroupDiagnostics(?User $user = null): array
     {
-        $scopeIds = $user && ! $this->policy->canIgnorePmcScope($user) ? [
-            'program_id' => $this->policy->scopedProgramIds($user),
-            'batch_id' => $this->policy->scopedBatchIds($user),
-            'term_id' => $this->policy->scopedTermIds($user),
-            'subject_id' => $this->policy->scopedSubjectIds($user),
-        ] : null;
+        $scopeIds = null;
+        if ($user && ! $this->policy->canIgnorePmcScope($user)) {
+            $scope = $this->scope->scopeIds($user);
+            $scopeIds = [
+                'program_id' => $scope['program'],
+                'batch_id' => $scope['batch'],
+                'term_id' => $scope['term'],
+                'subject_id' => $scope['subject'],
+            ];
+        }
 
         return $this->readinessGate->courseGroupDiagnostics($scopeIds);
     }
@@ -672,7 +673,7 @@ class AcademicPmcTimetableV041Service
     private function courseBasketDiagnostics(?User $user = null): array
     {
         return $this->readinessGate->courseBasketDiagnostics(
-            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->scope->applyScope($query, $scopeUser, $directMap, $relationMap),
             fn (User $scopeUser) => $this->policy->canIgnorePmcScope($scopeUser),
             $user
         );
@@ -681,88 +682,6 @@ class AcademicPmcTimetableV041Service
     private function allocationPressureDiagnostics(?User $user = null): array
     {
         return $this->readinessGate->allocationPressureDiagnostics($user);
-    }
-
-    private function applyScope(Builder $query, User $user, array $directMap = [], array $relationMap = []): Builder
-    {
-        if ($this->policy->canIgnorePmcScope($user)) {
-            return $query;
-        }
-
-        $scopes = [
-            'program' => $this->policy->scopedProgramIds($user),
-            'batch' => $this->policy->scopedBatchIds($user),
-            'term' => $this->policy->scopedTermIds($user),
-            'subject' => $this->policy->scopedSubjectIds($user),
-        ];
-
-        foreach ($directMap as $column => $scopeType) {
-            if (! array_key_exists($scopeType, $scopes)) {
-                continue;
-            }
-            $ids = $scopes[$scopeType];
-            if ($ids === null) {
-                continue;
-            }
-            if (! is_array($ids) || empty($ids)) {
-                return $query->whereRaw('1 = 0');
-            }
-            $query->whereIn($column, $ids);
-        }
-
-        foreach ($relationMap as $relation => $mapping) {
-            $query->whereHas($relation, function (Builder $relatedQuery) use ($mapping, $scopes): void {
-                foreach ($mapping as $column => $scopeType) {
-                    if (! array_key_exists($scopeType, $scopes)) {
-                        continue;
-                    }
-                    $ids = $scopes[$scopeType];
-                    if ($ids === null) {
-                        continue;
-                    }
-                    if (! is_array($ids) || empty($ids)) {
-                        $relatedQuery->whereRaw('1 = 0');
-                        continue;
-                    }
-                    $relatedQuery->whereIn($column, $ids);
-                }
-            });
-        }
-
-        return $query;
-    }
-
-    private function scopedGenerationRunIdsByUser(User $user): \Illuminate\Support\Collection
-    {
-        if ($this->policy->canIgnorePmcScope($user)) {
-            return AcademicPmcTimetableGenerationRun::query()->pluck('id');
-        }
-
-        $scopes = $this->applyScope(
-            AcademicPmcTimetableGenerationRun::query(),
-            $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        );
-
-        return (clone $scopes)->pluck('id');
-    }
-
-    private function constrainConstraintsByUserScope(
-        Builder $query,
-        User $user,
-        Builder $generationRunQuery,
-        array $generationRunScopeMap = ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-    ): Builder {
-        if ($this->policy->canIgnorePmcScope($user)) {
-            return $query;
-        }
-
-        $runIds = (clone $this->applyScope($generationRunQuery, $user, $generationRunScopeMap))->pluck('id');
-        if ($runIds->isEmpty()) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        return $query->whereIn('generation_run_id', $runIds);
     }
 
     private function audit(User $actor, string $action, string $description, mixed $subject = null, array $metadata = []): void
