@@ -7,6 +7,7 @@ use App\Models\TimetableEntry;
 use App\Services\DashboardViewModelService;
 use App\Services\FinanceAccessPolicyService;
 use App\Services\PmcTimetableBridgeSyncService;
+use App\Services\PmcTimetableExportReadModelService;
 use App\Services\PmcTimetableGenerationService;
 use App\Services\PmcTimetablePublishService;
 use App\Services\PmcTimetableReadinessGateService;
@@ -91,6 +92,7 @@ class ArchitectureStabilizationTest extends TestCase
             PmcTimetableBridgeSyncService::class,
             PmcTimetableRevisionService::class,
             PmcTimetableReadModelService::class,
+            PmcTimetableExportReadModelService::class,
             PmcTimetableReadinessGateService::class,
         ] as $serviceClass) {
             $this->assertTrue(class_exists($serviceClass), "Expected structural service [{$serviceClass}] to exist.");
@@ -136,6 +138,7 @@ class ArchitectureStabilizationTest extends TestCase
             'app/Services/PmcTimetablePublishService.php' => 522,
             'app/Services/PmcTimetableReadinessGateService.php' => 666,
             'app/Services/PmcTimetableReadModelService.php' => 688,
+            'app/Services/PmcTimetableExportReadModelService.php' => 220,
             'app/Services/PmcTimetableRevisionService.php' => 509,
             'app/Services/PmcTimetableBridgeSyncService.php' => 208,
         ];
