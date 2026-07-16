@@ -126,7 +126,9 @@ class ArchitectureStabilizationTest extends TestCase
     public function test_pmc_timetable_services_do_not_regress_past_current_size_budgets(): void
     {
         $budgets = [
-            'app/Services/AcademicPmcTimetableV041Service.php' => 2887,
+            'app/Services/AcademicPmcTimetableV041Service.php' => 2232,
+            'app/Services/PmcTimetableDashboardReadModelService.php' => 126,
+            'app/Services/PmcTimetableDataReconciliationService.php' => 723,
             'app/Services/PmcTimetableGenerationService.php' => 1181,
             'app/Services/PmcTimetablePublishService.php' => 522,
             'app/Services/PmcTimetableReadinessGateService.php' => 666,
