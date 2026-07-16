@@ -8,6 +8,7 @@ use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcTimetableNotification;
+use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\Department;
 use App\Models\DepartmentActivityLog;
@@ -15,12 +16,96 @@ use App\Models\TimetableEntry;
 use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 
 class PmcTimetablePublishService
 {
     public const RESPONSIBILITY = 'Publish, freeze, unfreeze, rollback, publish checks, impact previews, and official version lifecycle.';
 
     public function __construct(private PmcTimetableBridgeSyncService $bridgeSync) {}
+
+    public function publishRun(User $actor, AcademicPmcTimetableGenerationRun $run, array $data, callable $refreshConstraintsAndQuality, callable $refreshGenerationImpactPreview): TimetableVersion
+    {
+        $refreshConstraintsAndQuality($run);
+        $blocking = AcademicPmcTimetablePublishCheck::where('generation_run_id', $run->id)->where('status', 'block')->get();
+        $canOverride = $actor->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']);
+
+        if ($blocking->isNotEmpty() && ! ($canOverride && ! empty($data['override_reason']))) {
+            $blockedChecks = $blocking->pluck('title')->filter()->implode(', ');
+            abort(422, 'Publish is blocked by hard timetable checks: ' . ($blockedChecks ?: 'unresolved publish checks') . '. Dean/Admin override requires a reason.');
+        }
+
+        $impactRecords = $refreshGenerationImpactPreview($actor, $run);
+        $impactSummary = $run->fresh()->input_summary['impact_preview'] ?? [];
+
+        $lastVersion = TimetableVersion::where('program_id', $run->program_id)
+            ->where('term_id', $run->term_id)
+            ->when($run->batch_id, fn ($q) => $q->where('batch_id', $run->batch_id))
+            ->max('version_number') ?: 0;
+
+        TimetableVersion::where('program_id', $run->program_id)
+            ->where('term_id', $run->term_id)
+            ->when($run->batch_id, fn ($q) => $q->where('batch_id', $run->batch_id))
+            ->where('status', 'published')
+            ->get()
+            ->each(fn (TimetableVersion $publishedVersion) => $this->archiveOperationalVersion($publishedVersion));
+
+        $version = TimetableVersion::create([
+            'program_id' => $run->program_id,
+            'term_id' => $run->term_id,
+            'batch_id' => $run->batch_id,
+            'version_number' => $lastVersion + 1,
+            'status' => 'published',
+            'created_by' => $actor->id,
+            'published_by' => $actor->id,
+            'published_at' => now(),
+            'effective_from' => $data['effective_from'] ?? now()->toDateString(),
+            'notes' => $data['decision_reason'] ?? 'Published from PMC timetable generation run #' . $run->id,
+        ]);
+
+        $run->update(['timetable_version_id' => $version->id, 'status' => $blocking->isNotEmpty() ? 'published_with_dean_override' : 'published']);
+        $this->bridgeSync->markRunItemsOfficial($run->fresh(), $version, $actor);
+        $syncedEntries = $this->bridgeSync->syncRunToOperationalTimetable($run->fresh(), $version, $actor);
+
+        AcademicPmcTimetableVersionWorkflow::create([
+            'timetable_version_id' => $version->id,
+            'generation_run_id' => $run->id,
+            'lifecycle_status' => 'published',
+            'approval_status' => $blocking->isNotEmpty() ? 'dean_override_published' : 'pmc_published',
+            'published_by' => $actor->id,
+            'published_at' => now(),
+            'decision_reason' => $data['decision_reason'] ?? null,
+            'override_reason' => $data['override_reason'] ?? null,
+            'publish_summary' => [
+                'scheduled' => $run->scheduled_count,
+                'unscheduled' => $run->unscheduled_count,
+                'hard_conflicts' => $run->hard_conflict_count,
+                'soft_warnings' => $run->soft_warning_count,
+                'quality_score' => $run->quality_score,
+                'blocking_checks' => $blocking->pluck('title')->values(),
+                'operational_entries_synced' => $syncedEntries,
+                'impact_preview' => array_merge($impactSummary, ['impact_records' => $impactRecords->count(), 'version' => 'PMC OS v0.070']),
+            ],
+        ]);
+
+        $publishNotificationMetadata = [
+            'version' => 'PMC OS v0.071',
+            'generation_run_id' => $run->id,
+            'impact_preview' => array_merge($impactSummary, ['impact_records' => $impactRecords->count(), 'version' => 'PMC OS v0.070']),
+            'scheduled' => $run->scheduled_count,
+            'unscheduled' => $run->unscheduled_count,
+            'hard_conflicts' => $run->hard_conflict_count,
+            'soft_warnings' => $run->soft_warning_count,
+            'quality_score' => $run->quality_score,
+            'operational_entries_synced' => $syncedEntries,
+        ];
+        $recipientNotificationCounts = $this->logPublishRecipientNotifications($version, $run->fresh(), $publishNotificationMetadata);
+        $this->logLifecycleNotification($version, 'publish', 'Timetable version published', 'students', $publishNotificationMetadata + ['audience_count' => $impactSummary['affected_students'] ?? 0]);
+        $this->logLifecycleNotification($version, 'publish', 'Timetable version published', 'faculty', $publishNotificationMetadata + ['audience_count' => $impactSummary['affected_faculty'] ?? 0]);
+        $this->audit($actor, 'academic_pmc_v043_timetable_published', 'Published timetable version #' . $version->version_number, $version, ['run_id' => $run->id, 'recipient_notifications' => $recipientNotificationCounts]);
+
+        return $version;
+    }
 
     public function freezeVersion(User $actor, TimetableVersion $version, array $data): AcademicPmcTimetableVersionWorkflow
     {
@@ -154,6 +239,76 @@ class PmcTimetablePublishService
             'source_key' => (string) $version->id,
             'metadata' => $metadata,
         ]);
+    }
+
+    private function logPublishRecipientNotifications(TimetableVersion $version, AcademicPmcTimetableGenerationRun $run, array $baseMetadata): array
+    {
+        $items = AcademicPmcTimetableGenerationItem::with(['courseGroup', 'teacher.user'])
+            ->where('generation_run_id', $run->id)
+            ->where('status', 'scheduled')
+            ->get();
+        $facultyCreated = 0;
+        $studentCreated = 0;
+
+        $items->whereNotNull('teacher_id')
+            ->groupBy('teacher_id')
+            ->each(function (Collection $teacherItems) use ($version, $baseMetadata, &$facultyCreated) {
+                $teacher = $teacherItems->first()?->teacher;
+                if (! $teacher?->user_id) {
+                    return;
+                }
+
+                AcademicPmcTimetableNotification::create([
+                    'notification_type' => 'publish',
+                    'recipient_type' => 'faculty',
+                    'recipient_user_id' => $teacher->user_id,
+                    'title' => 'Timetable version published for your assigned classes',
+                    'message' => 'Your assigned course groups are included in timetable version #' . $version->version_number . '.',
+                    'status' => 'queued',
+                    'source_type' => 'timetable_version',
+                    'source_key' => (string) $version->id,
+                    'metadata' => array_merge($baseMetadata, [
+                        'version' => 'PMC OS v0.073',
+                        'recipient_scope' => 'individual_faculty',
+                        'audience_count' => 1,
+                        'course_group_ids' => $teacherItems->pluck('course_group_id')->filter()->unique()->values()->all(),
+                    ]),
+                ]);
+                $facultyCreated++;
+            });
+
+        $groupIds = $items->pluck('course_group_id')->filter()->unique()->values();
+        AcademicPmcCourseGroupMember::with('student.user')
+            ->whereIn('course_group_id', $groupIds)
+            ->where('status', 'active')
+            ->get()
+            ->groupBy('student.user_id')
+            ->each(function (Collection $members, mixed $userId) use ($version, $baseMetadata, &$studentCreated) {
+                if (! $userId) {
+                    return;
+                }
+
+                AcademicPmcTimetableNotification::create([
+                    'notification_type' => 'publish',
+                    'recipient_type' => 'student',
+                    'recipient_user_id' => (int) $userId,
+                    'title' => 'Timetable version published for your enrolled groups',
+                    'message' => 'Your course groups are included in timetable version #' . $version->version_number . '.',
+                    'status' => 'queued',
+                    'source_type' => 'timetable_version',
+                    'source_key' => (string) $version->id,
+                    'metadata' => array_merge($baseMetadata, [
+                        'version' => 'PMC OS v0.073',
+                        'recipient_scope' => 'individual_student',
+                        'audience_count' => 1,
+                        'course_group_ids' => $members->pluck('course_group_id')->filter()->unique()->values()->all(),
+                        'student_ids' => $members->pluck('student_id')->filter()->unique()->values()->all(),
+                    ]),
+                ]);
+                $studentCreated++;
+            });
+
+        return ['faculty' => $facultyCreated, 'students' => $studentCreated];
     }
 
     private function repointRollbackOperationalEntries(User $actor, TimetableVersion $source, TimetableVersion $rollback): int
