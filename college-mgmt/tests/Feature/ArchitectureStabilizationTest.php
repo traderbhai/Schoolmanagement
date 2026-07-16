@@ -148,7 +148,6 @@ class ArchitectureStabilizationTest extends TestCase
     {
         $allowedLargeSeeders = [
             'AcademicsOperatingDemoSeeder.php',
-            'AdmissionOperatingDemoSeeder.php',
             'MasterDataSeeder.php',
         ];
 
