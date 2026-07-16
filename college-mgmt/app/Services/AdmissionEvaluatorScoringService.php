@@ -14,7 +14,7 @@ class AdmissionEvaluatorScoringService
 {
     public function __construct(
         private AdmissionRubricService $rubrics,
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
     ) {}
 
     public function visibleAssignments(User $viewer): Builder
@@ -22,7 +22,7 @@ class AdmissionEvaluatorScoringService
         $query = AdmissionAssessmentPanelAssignment::with(['panel.rubric.criteria', 'panel.session', 'applicant.user', 'evaluator'])
             ->latest();
 
-        if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
+        if (!$this->accessPolicy->canSeeAll($viewer)) {
             $query->where('evaluator_user_id', $viewer->id);
         }
 
@@ -36,7 +36,7 @@ class AdmissionEvaluatorScoringService
 
     public function submitFinal(AdmissionAssessmentPanelAssignment $assignment, User $evaluator, array $criteria, ?string $recommendation = null): ApplicantScore
     {
-        if (in_array($assignment->score_status, ['finalized', 'overridden'], true) && !$this->hierarchy->canApproveAdmission($evaluator)) {
+        if (in_array($assignment->score_status, ['finalized', 'overridden'], true) && !$this->accessPolicy->canApproveAdmission($evaluator)) {
             throw ValidationException::withMessages(['score' => 'Finalized score is locked.']);
         }
 
@@ -91,7 +91,7 @@ class AdmissionEvaluatorScoringService
             throw ValidationException::withMessages(['rubric' => 'No active rubric is available for this panel.']);
         }
 
-        if (!$evaluator->hasRole('admin') && !$this->hierarchy->canSeeAll($evaluator, 'ADM') && (int) $assignment->evaluator_user_id !== (int) $evaluator->id) {
+        if (!$this->accessPolicy->canSeeAll($evaluator) && (int) $assignment->evaluator_user_id !== (int) $evaluator->id) {
             abort(403);
         }
 

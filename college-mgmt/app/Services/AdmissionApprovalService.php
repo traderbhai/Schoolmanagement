@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AdmissionApprovalService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function request(Model $subject, string $action, User $requester, array $after = [], ?string $reason = null): AdmissionApproval
     {
@@ -30,7 +30,7 @@ class AdmissionApprovalService
 
     public function approve(AdmissionApproval $approval, User $approver): AdmissionApproval
     {
-        abort_unless($this->hierarchy->canApproveAdmission($approver), 403);
+        $this->accessPolicy->authorizeApproveAdmission($approver);
         abort_unless($approval->status === 'pending', 422, 'Approval is not pending.');
 
         $subject = $approval->approvable;
@@ -45,7 +45,7 @@ class AdmissionApprovalService
 
     public function reject(AdmissionApproval $approval, User $approver, ?string $reason = null): AdmissionApproval
     {
-        abort_unless($this->hierarchy->canApproveAdmission($approver), 403);
+        $this->accessPolicy->authorizeApproveAdmission($approver);
         abort_unless($approval->status === 'pending', 422, 'Approval is not pending.');
         $approval->update([
             'status' => 'rejected',

@@ -8,13 +8,16 @@ use App\Models\User;
 
 class AdmissionDuplicateMergeService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(
+        private AdmissionAccessPolicyService $accessPolicy,
+        private DepartmentHierarchyService $hierarchy,
+    ) {}
 
     public function merge(Lead $primary, Lead $duplicate, User $actor): Lead
     {
         abort_if($primary->id === $duplicate->id, 422, 'Choose two different leads.');
-        abort_unless($this->hierarchy->canViewAssignedUser($actor, 'ADM', $primary->assigned_to, true), 403);
-        abort_unless($this->hierarchy->canViewAssignedUser($actor, 'ADM', $duplicate->assigned_to, true), 403);
+        $this->accessPolicy->authorizeViewAssignedUser($actor, $primary->assigned_to, true);
+        $this->accessPolicy->authorizeViewAssignedUser($actor, $duplicate->assigned_to, true);
 
         $duplicate->followUps()->update(['lead_id' => $primary->id]);
         AdmissionAssignmentEvent::where('subject_type', Lead::class)
