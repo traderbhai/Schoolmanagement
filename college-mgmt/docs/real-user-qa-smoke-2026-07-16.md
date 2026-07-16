@@ -334,6 +334,18 @@ Demo credentials + seeded official timetable + attendance focused regression: 22
 double-seeded temporary server smoke on http://127.0.0.1:8013: 9 critical pages passed with HTTP 200 and no service-error/debug text
 ```
 
+Post-fix broad launch gates were then rerun:
+
+```text
+php artisan test: 1800 tests passed, 29685 assertions
+npm run test:production-readiness: 57 tests passed, 12464 assertions
+npm run frontend:build: passed
+npm run frontend:smoke: 137 tests passed, 4008 assertions
+npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
+fresh migrate/seed plus second db:seed idempotency recheck: passed
+double-seed integrity recheck: users=62, attendances=106, official_items=3, missing_scope=0, missing_bridge_link=0, duplicate_emails=0, duplicate_attendance_keys=0
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
