@@ -2778,15 +2778,12 @@ class AcademicPmcTimetableV041Service
 
     private function lockedSlotSurface(User $user, array $filters): array
     {
-        $lockedSlots = $this->applyScope(AcademicPmcLockedSlot::with(['slot', 'courseGroup']), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest();
-
-        return [
-            'title' => 'PMC Locked Slots And Timetable Readiness',
-            'description' => 'Manual slot reservations and readiness checklist respected by timetable generation.',
-            'lockedSlots' => $lockedSlots->paginate(15),
-            'readiness' => $this->readinessChecklist($user),
-            'readinessInputDiagnostics' => $this->readinessInputDiagnostics($user),
-        ];
+        return $this->readModels->lockedSlotSurface(
+            $user,
+            $filters,
+            $this->readinessChecklist($user),
+            $this->readinessInputDiagnostics($user)
+        );
     }
 
     private function generatorSurface(User $user, string $surface, array $filters): array

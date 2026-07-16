@@ -6,6 +6,7 @@ use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcGroupFacultyAssignment;
+use App\Models\AcademicPmcLockedSlot;
 use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Program;
@@ -89,6 +90,23 @@ class PmcTimetableReadModelService
             'filters' => $filters,
             'mode' => 'pmc',
             'selectorOptions' => $this->selectorOptions(),
+        ];
+    }
+
+    public function lockedSlotSurface(User $user, array $filters, array $readiness, array $readinessInputDiagnostics): array
+    {
+        $lockedSlots = $this->applyScope(
+            AcademicPmcLockedSlot::with(['slot', 'courseGroup']),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->latest();
+
+        return [
+            'title' => 'PMC Locked Slots And Timetable Readiness',
+            'description' => 'Manual slot reservations and readiness checklist respected by timetable generation.',
+            'lockedSlots' => $lockedSlots->paginate(15),
+            'readiness' => $readiness,
+            'readinessInputDiagnostics' => $readinessInputDiagnostics,
         ];
     }
 
