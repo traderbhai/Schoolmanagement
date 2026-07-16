@@ -612,6 +612,27 @@ The reschedule path correctly validates ownership of the slot assignment before 
 No blocker was found in this pass.
 ```
 
+## Applicant Offer Letter Recheck
+
+Manual applicant offer-letter actions were exercised against disposable local offers:
+
+```text
+Initial live check found a real browser-form bug: applicant offer accept/decline forms posted successfully, but the controller returned application/json instead of redirecting back to an HTML page.
+Applicant OfferLetterController now returns JSON only for requests that expect JSON; normal portal form posts redirect back with flash success/error messages.
+qa-public-20260716221509@example.test: GET /applicant/offer-letters loaded issued offer id=3, POST /applicant/offer-letters/3/accept returned HTML at /applicant/offer-letters with the success message instead of raw JSON.
+rahul.verma@applicant.demo: GET /applicant/offer-letters loaded issued offer id=4, POST /applicant/offer-letters/4/decline returned HTML at /applicant/offer-letters with the success message instead of raw JSON.
+qa-public-20260716221509@example.test: GET /applicant/offer-letters/3/pdf returned application/pdf, 5734 bytes, header=%PDF-1.7.
+Offer id=3 persisted status=accepted and applicant status=selected.
+Offer id=4 persisted status=declined, declined_reason=QA smoke decline after redirect fix, and applicant status=rejected.
+```
+
+Focused verification:
+
+```text
+OfferLetterTest: 23 tests passed, 122 assertions
+The regression now covers browser form redirects and preserves JSON responses for JSON callers.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -623,6 +644,7 @@ No blocker was found in this pass.
 - Fixed legacy demo attendance seeding so rerunning `db:seed` on an existing demo database does not create duplicate attendance keys or crash.
 - Fixed legacy demo canonical scope seeding so legacy student services can create program-scoped records such as grievances without database exceptions.
 - Fixed public applicant demo readiness by seeding an open application window and allowing applicant category/entrance metadata to persist from application form saves.
+- Fixed applicant offer-letter accept/decline form handling so real portal users return to HTML pages with flash messages instead of raw JSON, while JSON callers remain supported.
 
 ## Feedback
 

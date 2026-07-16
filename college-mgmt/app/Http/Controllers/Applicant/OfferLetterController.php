@@ -71,19 +71,19 @@ class OfferLetterController extends Controller
         $applicant = auth()->user()->applicant;
 
         if (!$applicant || $offerLetter->applicant_id !== $applicant->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return $this->offerResponse($request, 'Unauthorized.', false, 403);
         }
 
         if ($offerLetter->status !== 'issued') {
-            return response()->json(['error' => 'This offer cannot be accepted.'], 400);
+            return $this->offerResponse($request, 'This offer cannot be accepted.', false, 400);
         }
 
         if ($this->applicantHasTerminalStatus($offerLetter)) {
-            return response()->json(['error' => 'This applicant is in a final admission state and the offer cannot be changed.'], 400);
+            return $this->offerResponse($request, 'This applicant is in a final admission state and the offer cannot be changed.', false, 400);
         }
 
         if (now()->toDateString() > $offerLetter->acceptance_deadline) {
-            return response()->json(['error' => 'Acceptance deadline has passed.'], 400);
+            return $this->offerResponse($request, 'Acceptance deadline has passed.', false, 400);
         }
 
         $offerLetter->update([
@@ -93,7 +93,7 @@ class OfferLetterController extends Controller
 
         $applicant->update(['status' => 'selected']);
 
-        return response()->json(['success' => true, 'message' => 'Offer accepted successfully!']);
+        return $this->offerResponse($request, 'Offer accepted successfully!');
     }
 
     public function decline(Request $request, OfferLetter $offerLetter)
@@ -103,15 +103,15 @@ class OfferLetterController extends Controller
         $applicant = auth()->user()->applicant;
 
         if (!$applicant || $offerLetter->applicant_id !== $applicant->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return $this->offerResponse($request, 'Unauthorized.', false, 403);
         }
 
         if ($offerLetter->status !== 'issued') {
-            return response()->json(['error' => 'This offer cannot be declined.'], 400);
+            return $this->offerResponse($request, 'This offer cannot be declined.', false, 400);
         }
 
         if ($this->applicantHasTerminalStatus($offerLetter)) {
-            return response()->json(['error' => 'This applicant is in a final admission state and the offer cannot be changed.'], 400);
+            return $this->offerResponse($request, 'This applicant is in a final admission state and the offer cannot be changed.', false, 400);
         }
 
         $offerLetter->update([
@@ -125,7 +125,7 @@ class OfferLetterController extends Controller
         // Promote waitlisted applicant
         $this->promoteFromWaitlist($offerLetter->program_id, $offerLetter->batch_id, $offerLetter->applicant_id);
 
-        return response()->json(['success' => true, 'message' => 'Offer declined successfully.']);
+        return $this->offerResponse($request, 'Offer declined successfully.');
     }
 
     protected function promoteFromWaitlist($programId, $batchId, ?int $releasedApplicantId = null)
@@ -164,5 +164,19 @@ class OfferLetterController extends Controller
         $status = $offerLetter->applicant()->value('status');
 
         return in_array($status, ['rejected', 'withdrawn', 'enrolled'], true);
+    }
+
+    private function offerResponse(Request $request, string $message, bool $success = true, int $status = 200)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(
+                $success
+                    ? ['success' => true, 'message' => $message]
+                    : ['error' => $message],
+                $status
+            );
+        }
+
+        return back()->with($success ? 'success' : 'error', $message);
     }
 }

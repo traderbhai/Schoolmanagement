@@ -258,7 +258,9 @@ class OfferLetterTest extends TestCase
 
         $response = $this->actingAs($applicantUser)->post(route('applicant.offer-letters.accept', $offer));
 
-        $response->assertStatus(200);
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Offer accepted successfully!');
         $this->assertDatabaseHas('offer_letters', [
             'id' => $offer->id,
             'status' => 'accepted',
@@ -290,7 +292,9 @@ class OfferLetterTest extends TestCase
 
         $response = $this->actingAs($applicantUser)->post(route('applicant.offer-letters.accept', $offer));
 
-        $response->assertStatus(400);
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Acceptance deadline has passed.');
     }
 
     public function test_applicant_can_decline_offer(): void
@@ -324,7 +328,9 @@ class OfferLetterTest extends TestCase
             'reason' => 'Chose another program',
         ]);
 
-        $response->assertStatus(200);
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Offer declined successfully.');
         $this->assertDatabaseHas('offer_letters', [
             'id' => $offer->id,
             'status' => 'declined',
@@ -358,10 +364,41 @@ class OfferLetterTest extends TestCase
 
         $response = $this->actingAs($applicantUser)->post(route('applicant.offer-letters.accept', $offer));
 
-        $response->assertStatus(400);
+        $response
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This applicant is in a final admission state and the offer cannot be changed.');
         $this->assertSame('issued', $offer->fresh()->status);
         $this->assertSame('withdrawn', $applicant->fresh()->status);
-        $response->assertJson(['error' => 'This applicant is in a final admission state and the offer cannot be changed.']);
+    }
+
+    public function test_applicant_offer_actions_still_support_json_callers(): void
+    {
+        $applicantUser = User::factory()->create();
+        $applicantUser->assignRole('applicant');
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+
+        $applicant = Applicant::factory()->create([
+            'user_id' => $applicantUser->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'withdrawn',
+        ]);
+
+        $offer = OfferLetter::create([
+            'applicant_id' => $applicant->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'status' => 'issued',
+            'acceptance_deadline' => now()->addDays(14),
+            'issued_by' => User::factory()->create()->id,
+        ]);
+
+        $this->actingAs($applicantUser)
+            ->postJson(route('applicant.offer-letters.accept', $offer))
+            ->assertStatus(400)
+            ->assertJson(['error' => 'This applicant is in a final admission state and the offer cannot be changed.']);
     }
 
     public function test_staff_cannot_decline_stale_offer_after_final_admission_status(): void
@@ -588,7 +625,9 @@ class OfferLetterTest extends TestCase
 
         $this->actingAs($selectedUser)->post(route('applicant.offer-letters.decline', $offer), [
             'reason' => 'Going elsewhere',
-        ])->assertOk();
+        ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Offer declined successfully.');
 
         $this->assertSame('waitlisted', $entry->fresh()->decision);
         $this->assertDatabaseMissing('offer_letters', ['applicant_id' => $waitlisted->id]);
