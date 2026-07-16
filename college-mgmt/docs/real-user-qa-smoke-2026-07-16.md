@@ -594,6 +594,24 @@ Admission-fee proof remains correctly gated to shortlisted/selected applicants.
 No blocker was found in this pass.
 ```
 
+## Applicant Admission Operations Recheck
+
+Manual shortlisted-applicant operations were exercised against the running local app:
+
+```text
+sneha.patel@applicant.demo: GET /applicant/admission-operations loaded successfully with existing assessment slot assignment id=3.
+sneha.patel@applicant.demo: POST /applicant/admission-operations/consent saved admission_consent_records id=5, channel=whatsapp, status=opt_out, reason=QA smoke preference.
+sneha.patel@applicant.demo: POST /applicant/admission-operations/reschedule saved admission_assessment_reschedule_requests id=2, slot_assignment_id=3, status=pending, reason=QA smoke reschedule request.
+```
+
+Observed behavior:
+
+```text
+Shortlisted applicants can view admission operations, update communication consent, and request assessment rescheduling.
+The reschedule path correctly validates ownership of the slot assignment before creating the request.
+No blocker was found in this pass.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
