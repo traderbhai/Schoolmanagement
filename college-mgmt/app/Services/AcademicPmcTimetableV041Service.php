@@ -2746,99 +2746,16 @@ class AcademicPmcTimetableV041Service
 
     private function substitutionSurface(User $user, array $filters): array
     {
-        $versionIds = (clone $this->applyScope(
-            TimetableVersion::query(),
+        return $this->readModels->substitutionSurface(
             $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        ))->pluck('id');
-
-        return [
-            'title' => 'PMC Substitution And Change Intelligence',
-            'description' => 'Substitute recommendation, uncovered class queue, repeated substitution risk, and notification readiness.',
-            'recommendations' => $this->applyScope(
-                AcademicPmcSubstitutionRecommendation::with(['courseGroup.subject', 'originalTeacher.user', 'substituteTeacher.user']),
-                $user,
-                [],
-                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15),
-            'changes' => AcademicPmcTimetableChangeRequest::with(['pmcGenerationItem.courseGroup.subject', 'pmcGenerationItem.slot', 'pmcGenerationItem.teacher.user'])
-                ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($versionIds) {
-                    if ($versionIds->isEmpty()) {
-                        $query->whereRaw('1 = 0');
-                    } else {
-                        $query->whereIn('timetable_version_id', $versionIds);
-                    }
-                })
-                ->latest()
-                ->paginate(15),
-            'notifications' => AcademicPmcTimetableNotification::latest()->paginate(15),
-            'substitutionEmergencyDiagnostics' => $this->substitutionEmergencyDiagnostics($user),
-        ];
+            $filters,
+            $this->substitutionEmergencyDiagnostics($user)
+        );
     }
 
     private function reportsSurface(User $user, array $filters): array
     {
-        $notificationQuery = AcademicPmcTimetableNotification::query()
-            ->when($filters['notification_type'] ?? null, fn ($q, $type) => $q->where('notification_type', $type))
-            ->when($filters['recipient_type'] ?? null, fn ($q, $type) => $q->where('recipient_type', $type))
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status));
-        $generationRunIds = (clone $this->applyScope(
-            AcademicPmcTimetableGenerationRun::query(),
-            $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        ))->pluck('id');
-        $qualityQuery = AcademicPmcTimetableQualityScore::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($generationRunIds) {
-                if ($generationRunIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('generation_run_id', $generationRunIds);
-                }
-            });
-
-        return [
-            'title' => 'PMC Timetable Reports And Notifications',
-            'description' => 'Allocation completeness, group strength, faculty load, conflicts, quality score, room utilization, substitutions, and revision audit.',
-            'notifications' => $notificationQuery->latest()->paginate(20)->withQueryString(),
-            'notificationFilters' => $filters,
-            'sessionDemands' => $this->applyScope(
-                AcademicPmcTimetableSessionDemand::with('courseGroup.subject'),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
-                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'session_demands_page'),
-            'quality' => $qualityQuery->latest()->paginate(10),
-            'constraints' => $this->applyScope(
-                AcademicPmcTimetableConstraint::query(),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15),
-            'publishChecks' => $this->applyScope(
-                AcademicPmcTimetablePublishCheck::query(),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'publish_checks_page'),
-            'solverAttempts' => $this->applyScope(
-                AcademicPmcTimetableSolverAttempt::query(),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(10, ['*'], 'solver_page'),
-            'resolutionActions' => $this->applyScope(
-                AcademicPmcTimetableResolutionAction::with(['constraint', 'owner']),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'resolution_page'),
-            'roomReadinessReviews' => $this->applyScope(
-                AcademicPmcRoomReadinessReview::with(['classroom', 'generationRun', 'reviewer']),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'room_readiness_page'),
-        ];
+        return $this->readModels->reportsSurface($user, $filters);
     }
 
     private function readinessChecklist(?User $user = null): array
