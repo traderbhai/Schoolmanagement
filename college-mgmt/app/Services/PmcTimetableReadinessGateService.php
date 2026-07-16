@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcFacultyPreference;
+use App\Models\AcademicPmcLockedSlot;
+use App\Models\AcademicPmcRoomReadinessReview;
 use App\Models\AcademicPmcSubstitutionRecommendation;
 use App\Models\AcademicPmcTimetableChangeRequest;
 use App\Models\AcademicPmcTimetableNotification;
@@ -9,6 +12,7 @@ use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\TimetableVersion;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class PmcTimetableReadinessGateService
 {
@@ -186,5 +190,82 @@ class PmcTimetableReadinessGateService
             'status' => $blockerTotal === 0 ? 'ready' : 'attention_required',
             'recommended_action' => $blockerTotal === 0 ? 'No urgent substitution blockers for today/tomorrow.' : 'Resolve uncovered classes, weak recommendations, same-day changes, and failed substitution notifications before class time.',
         ];
+    }
+
+    public function readinessInputDiagnostics(callable $applyScope, ?User $user = null): array
+    {
+        $preferences = $applyScope(
+            AcademicPmcFacultyPreference::query(),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->get();
+        $lockedSlots = $applyScope(
+            AcademicPmcLockedSlot::query(),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->where('status', 'active')->get();
+        $roomReviews = $applyScope(
+            AcademicPmcRoomReadinessReview::query(),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->get();
+
+        $incompletePreferences = $preferences->filter(function (AcademicPmcFacultyPreference $preference) {
+            return empty($preference->available_days) && empty($preference->preferred_slots) && empty($preference->unavailable_slots);
+        })->count();
+        $restrictivePreferences = $preferences->filter(function (AcademicPmcFacultyPreference $preference) {
+            return (int) $preference->max_classes_per_day <= 2 || (int) $preference->max_weekly_load <= 8 || ! empty($preference->unavailable_slots);
+        })->count();
+
+        $lockedMissingContext = $lockedSlots->filter(function (AcademicPmcLockedSlot $slot) {
+            return ! $slot->timetable_slot_id || ($slot->slot_type === 'lab_block' && ! $slot->classroom_id) || ($slot->slot_type === 'faculty_fixed' && ! $slot->teacher_id);
+        })->count();
+        $hardLockCollisions = $this->hardLockCollisionCount($lockedSlots);
+
+        $roomReviewBlockers = AcademicPmcRoomReadinessReview::whereIn('status', ['review_required', 'revision_required', 'rejected'])
+            ->orWhereIn('readiness_band', ['blocked', 'warning'])
+            ->count();
+        $labNotReady = $roomReviews->filter(fn (AcademicPmcRoomReadinessReview $review) => $review->lab_required && ! $review->lab_ready)->count();
+        $capacityExceptions = $roomReviews->filter(fn (AcademicPmcRoomReadinessReview $review) => ! $review->capacity_ok)->count();
+
+        $blockerTotal = $incompletePreferences + $lockedMissingContext + $hardLockCollisions + $roomReviewBlockers + $labNotReady + $capacityExceptions;
+
+        return [
+            'total_preferences' => $preferences->count(),
+            'complete_preferences' => $preferences->count() - $incompletePreferences,
+            'incomplete_preferences' => $incompletePreferences,
+            'restrictive_preferences' => $restrictivePreferences,
+            'active_locked_slots' => $lockedSlots->count(),
+            'hard_locked_slots' => $lockedSlots->where('is_hard_lock', true)->count(),
+            'soft_locked_slots' => $lockedSlots->where('is_hard_lock', false)->count(),
+            'locked_slots_missing_context' => $lockedMissingContext,
+            'hard_lock_collisions' => $hardLockCollisions,
+            'room_reviews' => $roomReviews->count(),
+            'approved_room_reviews' => $roomReviews->whereIn('status', ['approved', 'approved_with_exception'])->count(),
+            'room_review_blockers' => $roomReviewBlockers,
+            'lab_not_ready' => $labNotReady,
+            'capacity_exceptions' => $capacityExceptions,
+            'ready_inputs' => $preferences->count() + $lockedSlots->count() + $roomReviews->whereIn('status', ['approved', 'approved_with_exception'])->count(),
+            'blocker_total' => $blockerTotal,
+            'status' => $blockerTotal === 0 && ($preferences->isNotEmpty() || $lockedSlots->isNotEmpty() || $roomReviews->isNotEmpty()) ? 'ready' : 'attention_required',
+            'recommended_action' => $blockerTotal === 0 ? 'Readiness inputs are ready for generation.' : 'Resolve preference, locked-slot, and room/lab readiness blockers before timetable generation.',
+        ];
+    }
+
+    private function hardLockCollisionCount(Collection $lockedSlots): int
+    {
+        $hardLocks = $lockedSlots->where('is_hard_lock', true);
+        $collisionKeys = collect();
+
+        foreach (['teacher_id', 'classroom_id', 'course_group_id'] as $field) {
+            $hardLocks
+                ->filter(fn (AcademicPmcLockedSlot $slot) => filled($slot->{$field}))
+                ->groupBy(fn (AcademicPmcLockedSlot $slot) => $field . ':' . $slot->day_of_week . ':' . $slot->timetable_slot_id . ':' . $slot->{$field})
+                ->filter(fn (Collection $group) => $group->count() > 1)
+                ->keys()
+                ->each(fn ($key) => $collisionKeys->push($key));
+        }
+
+        return $collisionKeys->unique()->count();
     }
 }
