@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Applicant;
 use App\Models\Lead;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -67,6 +68,23 @@ class AdmissionAccessPolicyService
     public function authorizeApproveAdmission(User $user): void
     {
         abort_unless($this->canApproveAdmission($user), 403);
+    }
+
+    public function canViewAssignedUser(User $user, ?int $assignedTo, bool $isLead = false): bool
+    {
+        return app(DepartmentHierarchyService::class)->canViewAssignedUser($user, 'ADM', $assignedTo, $isLead);
+    }
+
+    public function authorizeViewAssignedUser(User $user, ?int $assignedTo, bool $isLead = false): void
+    {
+        abort_unless($this->canViewAssignedUser($user, $assignedTo, $isLead), 403);
+    }
+
+    public function applyApplicantVisibility(Builder $query, User $user): Builder
+    {
+        app(DepartmentHierarchyService::class)->applyApplicantVisibility($query, $user, 'ADM');
+
+        return $query;
     }
 
     public function evaluatorScope(User $user): ?User

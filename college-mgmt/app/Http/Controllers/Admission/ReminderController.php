@@ -8,6 +8,7 @@ use App\Models\AdmissionCommunicationTemplate;
 use App\Models\AdmissionReminderSchedule;
 use App\Models\Applicant;
 use App\Models\Lead;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionCadenceService;
 use App\Services\AdmissionReminderService;
 use Illuminate\Http\Request;
@@ -82,7 +83,8 @@ class ReminderController extends Controller
 
     public function cadence(Request $request, AdmissionCadenceService $cadences)
     {
-        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
+        app(AdmissionAccessPolicyService::class)->authorizeApproveAdmission($request->user());
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'target_type' => ['required', 'string', 'max:40'],
