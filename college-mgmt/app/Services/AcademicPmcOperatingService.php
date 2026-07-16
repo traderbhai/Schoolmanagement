@@ -489,7 +489,7 @@ class AcademicPmcOperatingService
 
     private function canonicalTeacherConflicts(Collection $items): Collection
     {
-        return $items
+        return collect($items
             ->filter(fn (AcademicPmcTimetableGenerationItem $item) => $item->teacher_id && $item->day_of_week && $item->timetable_slot_id)
             ->groupBy(fn (AcademicPmcTimetableGenerationItem $item) => $item->teacher_id . ':' . $item->day_of_week . ':' . $item->timetable_slot_id)
             ->filter(fn (Collection $group) => $group->count() > 1)
@@ -504,12 +504,13 @@ class AcademicPmcOperatingService
                     'source' => 'canonical_pmc_official_sessions',
                 ];
             })
-            ->values();
+            ->values()
+            ->all());
     }
 
     private function legacyTeacherConflicts(Collection $entries): Collection
     {
-        return $entries
+        return collect($entries
             ->filter(fn (TimetableEntry $entry) => $entry->teacher_id && $entry->day_of_week && $entry->timetable_slot_id)
             ->groupBy(fn (TimetableEntry $entry) => $entry->teacher_id . ':' . $entry->day_of_week . ':' . $entry->timetable_slot_id)
             ->filter(fn (Collection $group) => $group->count() > 1)
@@ -524,7 +525,8 @@ class AcademicPmcOperatingService
                     'source' => 'legacy_timetable_entries',
                 ];
             })
-            ->values();
+            ->values()
+            ->all());
     }
 
     private function programTermKey(mixed $programId, mixed $termId): string
