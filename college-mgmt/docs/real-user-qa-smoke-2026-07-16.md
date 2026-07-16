@@ -443,6 +443,36 @@ aarav@college.com: /student/dashboard, /student/timetable, /student/pmc-timetabl
 
 The attempted `/student/courses/24` page returned HTTP 403 for `aarav@college.com`; this was the correct ownership guard because that subject was not linked from Aarav's course hub. Valid linked course pages used subject `2`.
 
+## Accounts Fees Recheck
+
+Accounts, fee demand, payment, hostel fee, admission receipt, and payment-verification workflow chunk:
+
+```text
+Accounts dashboard guidance, fee demand/payment, hostel fee workflow, admission fee receipt branding, and admission payment verification: 110 tests passed, 728 assertions
+```
+
+Authenticated HTTP sweep covered 10 pages with HTTP 200 and no service-error/debug text:
+
+```text
+accounts@college.com: /accounts/dashboard, /accounts/fee-collections, /accounts/outstanding, /accounts/reconciliation, /accounts/reports, /accounts/admission-payments, /accounts/scholarship-disbursements
+aarav@college.com: /student/fees, /student/fee-payment, /student/fee-payment/create
+```
+
+## CMC Placement Recheck
+
+CMC, placement, career event, resume, internship, and alumni workflow chunk:
+
+```text
+CMC dashboard guidance, placement lifecycle, student placement guidance, student career events, student resume, internship guidance, and alumni guidance: 78 tests passed, 570 assertions
+```
+
+Authenticated HTTP sweep covered 21 pages with HTTP 200 and no service-error/debug text:
+
+```text
+cmc@college.com: /cmc/dashboard, /cmc/companies, /cmc/companies/create, /cmc/companies/1/edit, /cmc/drives, /cmc/drives/create, /cmc/drives/1/applications, /cmc/placements, /cmc/placement-stats, /cmc/internships, /cmc/internships/1, /cmc/alumni, /cmc/events, /cmc/events/create, /cmc/analytics
+aarav@college.com: /student/placements, /student/placements/my-applications, /student/resume, /student/internships, /student/career-events, /student/alumni
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
