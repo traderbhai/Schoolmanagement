@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class AdmissionKpiDrilldownService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function applicantQuery(User $user): Builder
     {
@@ -24,7 +24,7 @@ class AdmissionKpiDrilldownService
 
     public function applyApplicantVisibility($query, User $user): void
     {
-        $this->hierarchy->applyApplicantVisibility($query, $user, 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($query, $user);
     }
 
     public function leadQuery(User $user): Builder
@@ -37,7 +37,7 @@ class AdmissionKpiDrilldownService
 
     public function applyLeadVisibility($query, User $user): void
     {
-        $this->hierarchy->applyLeadVisibility($query, $user, 'ADM');
+        $this->accessPolicy->applyLeadVisibility($query, $user);
     }
 
     public function pendingDocumentQuery(User $user): Builder

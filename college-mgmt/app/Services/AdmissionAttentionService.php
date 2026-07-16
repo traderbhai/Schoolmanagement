@@ -14,18 +14,18 @@ use Illuminate\Support\Collection;
 class AdmissionAttentionService
 {
     public function __construct(
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
         private AdmissionApplicantReadinessService $readiness,
     ) {}
 
     public function queuesFor(User $user, array $filters = []): array
     {
         $leads = Lead::query();
-        $this->hierarchy->applyLeadVisibility($leads, $user, 'ADM');
+        $this->accessPolicy->applyLeadVisibility($leads, $user);
         $this->applyFilters($leads, $filters);
 
         $applicants = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($applicants, $user, 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($applicants, $user);
         $this->applyFilters($applicants, $filters);
 
         $leadRows = (clone $leads)->with(['program', 'assignedTo'])->latest()->limit(150)->get();

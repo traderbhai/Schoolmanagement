@@ -13,7 +13,7 @@ class AdmissionPipelineService
     private const LEAD_STAGES = ['new', 'contacted', 'interested', 'not_interested', 'converted'];
     private const APPLICANT_STAGES = ['draft', 'submitted', 'under_review', 'shortlisted', 'selected', 'rejected', 'withdrawn'];
 
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function board(string $objectType = 'lead'): AdmissionPipelineBoard
     {
@@ -31,8 +31,8 @@ class AdmissionPipelineService
         $board = $this->board($objectType);
         $query = $objectType === 'lead' ? Lead::with(['program', 'assignedTo']) : Applicant::with(['user', 'program', 'assignedCounsellor']);
         $objectType === 'lead'
-            ? $this->hierarchy->applyLeadVisibility($query, $viewer, 'ADM')
-            : $this->hierarchy->applyApplicantVisibility($query, $viewer, 'ADM');
+            ? $this->accessPolicy->applyLeadVisibility($query, $viewer)
+            : $this->accessPolicy->applyApplicantVisibility($query, $viewer);
 
         $records = $query
             ->when($filters['program_id'] ?? null, fn ($q, $id) => $q->where('program_id', $id))

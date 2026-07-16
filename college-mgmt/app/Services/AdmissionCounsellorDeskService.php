@@ -11,7 +11,7 @@ use App\Models\User;
 class AdmissionCounsellorDeskService
 {
     public function __construct(
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
         private AdmissionConversationTimelineService $timeline,
         private AdmissionCounsellorPlaybookService $playbooks,
     ) {}
@@ -19,9 +19,9 @@ class AdmissionCounsellorDeskService
     public function dashboard(User $user, array $filters = []): array
     {
         $leadQuery = Lead::with(['program', 'assignedTo', 'counsellingProfile'])->latest();
-        $this->hierarchy->applyLeadVisibility($leadQuery, $user, 'ADM');
+        $this->accessPolicy->applyLeadVisibility($leadQuery, $user);
         $applicantQuery = Applicant::with(['user', 'program', 'assignedCounsellor', 'counsellingProfile'])->latest();
-        $this->hierarchy->applyApplicantVisibility($applicantQuery, $user, 'ADM');
+        $this->accessPolicy->applyApplicantVisibility($applicantQuery, $user);
 
         $assignedLeadIds = (clone $leadQuery)->where('assigned_to', $user->id)->pluck('id');
         $assignedApplicantIds = (clone $applicantQuery)->where('assigned_to', $user->id)->pluck('id');
