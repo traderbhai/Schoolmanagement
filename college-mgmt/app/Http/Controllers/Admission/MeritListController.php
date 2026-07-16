@@ -10,13 +10,13 @@ use App\Models\MeritListEntry;
 use App\Models\OfferLetter;
 use App\Models\Program;
 use App\Models\ProgramSeatMatrix;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 class MeritListController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Program $program)
     {
@@ -47,7 +47,7 @@ class MeritListController extends Controller
 
     public function generate(Request $request, Program $program)
     {
-        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+        $this->policy->authorizeApproveAdmission($request->user());
 
         $request->validate([
             'batch_id'              => 'nullable|exists:batches,id',
@@ -338,7 +338,7 @@ class MeritListController extends Controller
 
     public function updateDecision(Request $request, MeritListEntry $entry)
     {
-        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+        $this->policy->authorizeApproveAdmission($request->user());
         $this->guardEntryScope($entry);
 
         $request->validate([
@@ -375,7 +375,7 @@ class MeritListController extends Controller
 
     public function bulkDecide(Request $request, Program $program)
     {
-        abort_unless($this->hierarchy->canApproveAdmission($request->user()), 403);
+        $this->policy->authorizeApproveAdmission($request->user());
 
         $request->validate([
             'accept_top'   => 'required|integer|min:1',
@@ -528,19 +528,16 @@ class MeritListController extends Controller
     private function guardEntryScope(MeritListEntry $entry): void
     {
         $entry->loadMissing('applicant');
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $entry->applicant?->assigned_to, true),
-            403
-        );
+        $this->policy->authorizeViewAssignedUser(request()->user(), $entry->applicant?->assigned_to, true);
     }
 
     private function applyMeritApplicantVisibility($query, $user): void
     {
-        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+        if ($this->policy->canSeeAll($user)) {
             return;
         }
 
-        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+        $visibleUserIds = $this->policy->visibleUserIds($user);
 
         $query->where(function ($scope) use ($visibleUserIds) {
             $scope->whereIn('assigned_to', $visibleUserIds)

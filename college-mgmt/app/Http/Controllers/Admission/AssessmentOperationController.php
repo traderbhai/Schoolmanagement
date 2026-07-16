@@ -26,7 +26,8 @@ class AssessmentOperationController extends Controller
 
     public function assign(Request $request, AdmissionAssessmentPanelService $service)
     {
-        abort_unless($this->policy->canApproveAdmission($request->user()), 403);
+        $this->policy->authorizeApproveAdmission($request->user());
+
         $data = $request->validate([
             'panel_id' => ['required', 'exists:admission_assessment_panels,id'],
             'applicant_id' => ['required', 'exists:applicants,id'],
@@ -52,7 +53,8 @@ class AssessmentOperationController extends Controller
 
     public function override(Request $request, ApplicantScore $score, AdmissionAssessmentPanelService $service)
     {
-        abort_unless($this->policy->canApproveAdmission($request->user()), 403);
+        $this->policy->authorizeApproveAdmission($request->user());
+
         $data = $request->validate([
             'override_reason' => ['required', 'string', 'min:5'],
             'recommendation' => ['nullable', 'string', 'max:80'],
