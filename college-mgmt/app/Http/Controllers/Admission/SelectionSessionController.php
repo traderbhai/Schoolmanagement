@@ -10,14 +10,14 @@ use App\Models\Program;
 use App\Models\SelectionProcessStep;
 use App\Models\SelectionSession;
 use App\Models\SessionApplicant;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class SelectionSessionController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function index(Request $request)
     {
@@ -307,7 +307,7 @@ class SelectionSessionController extends Controller
 
     public function completeSession(SelectionSession $session)
     {
-        if (!$this->hierarchy->canApproveAdmission(auth()->user())) {
+        if (!$this->accessPolicy->canApproveAdmission(auth()->user())) {
             return back()->with('error', 'Only authorized admission leadership can complete a session.');
         }
 
@@ -435,11 +435,11 @@ class SelectionSessionController extends Controller
 
     private function applySessionApplicantVisibility($query, $user): void
     {
-        if ($user->hasRole('admin') || $this->hierarchy->canSeeAll($user, 'ADM')) {
+        if ($this->accessPolicy->canSeeAll($user)) {
             return;
         }
 
-        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
+        $visibleUserIds = $this->accessPolicy->visibleUserIds($user);
 
         $query->where(function ($scope) use ($visibleUserIds) {
             $scope->whereIn('assigned_to', $visibleUserIds)
@@ -449,16 +449,13 @@ class SelectionSessionController extends Controller
 
     private function guardApplicantScope(Applicant $applicant): void
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, true),
-            403
-        );
+        $this->accessPolicy->authorizeViewAssignedUser(request()->user(), $applicant->assigned_to, true);
     }
 
     private function canViewApplicantId(int $applicantId, $user): bool
     {
         $assignedTo = Applicant::whereKey($applicantId)->value('assigned_to');
 
-        return $this->hierarchy->canViewAssignedUser($user, 'ADM', $assignedTo, true);
+        return $this->accessPolicy->canViewAssignedUser($user, $assignedTo, true);
     }
 }
