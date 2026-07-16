@@ -2686,30 +2686,12 @@ class AcademicPmcTimetableV041Service
 
     private function groupSurface(User $user, array $filters): array
     {
-        $groups = $this->applyScope($this->filter(AcademicPmcCourseGroup::with(['program', 'subject', 'owner']), $filters), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest();
-        $memberships = $this->applyScope(
-            \App\Models\AcademicPmcCourseGroupMember::with(['courseGroup', 'student.user']),
+        return $this->readModels->groupSurface(
             $user,
-            [],
-            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject']]
-        )->latest();
-        $buildRuns = $this->applyScope(AcademicPmcGroupBuildRun::with(['subject', 'creator']), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest();
-        $groupAdjustments = $this->applyScope(
-            AcademicPmcCourseGroupAdjustment::with(['courseGroup', 'targetCourseGroup', 'student.user', 'requester', 'decider']),
-            $user,
-            [],
-            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject'], 'targetCourseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject'], 'student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-        )->latest();
-
-        return [
-            'title' => 'PMC Section And Group Builder',
-            'description' => 'Core sections, elective groups, lab/tutorial/project groups, and student membership.',
-            'groups' => $groups->paginate(15),
-            'memberships' => $memberships->paginate(15),
-            'buildRuns' => $buildRuns->paginate(10, ['*'], 'build_runs_page'),
-            'groupAdjustments' => $groupAdjustments->paginate(15, ['*'], 'adjustments_page'),
-            'groupDiagnostics' => $this->courseGroupDiagnostics($user),
-        ];
+            $filters,
+            $this->courseGroupDiagnostics($user),
+            fn (Builder $query, array $surfaceFilters) => $this->filter($query, $surfaceFilters)
+        );
     }
 
     private function facultySurface(User $user, string $surface, array $filters): array

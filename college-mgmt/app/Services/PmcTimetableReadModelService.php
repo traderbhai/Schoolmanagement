@@ -8,6 +8,9 @@ use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcElectiveChoice;
+use App\Models\AcademicPmcCourseGroupAdjustment;
+use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcGroupBuildRun;
 use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcLockedSlot;
 use App\Models\AcademicPmcStudentCourseAllocation;
@@ -172,6 +175,46 @@ class PmcTimetableReadModelService
             'electiveChoices' => $electiveChoices->paginate(15, ['*'], 'choices_page'),
             'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
             'allocationPressureDiagnostics' => $allocationPressureDiagnostics,
+        ];
+    }
+
+    public function groupSurface(User $user, array $filters, array $groupDiagnostics, callable $filter): array
+    {
+        $groups = $this->applyScope(
+            $filter(AcademicPmcCourseGroup::with(['program', 'subject', 'owner']), $filters),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->latest();
+        $memberships = $this->applyScope(
+            AcademicPmcCourseGroupMember::with(['courseGroup', 'student.user']),
+            $user,
+            [],
+            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject']]
+        )->latest();
+        $buildRuns = $this->applyScope(
+            AcademicPmcGroupBuildRun::with(['subject', 'creator']),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->latest();
+        $groupAdjustments = $this->applyScope(
+            AcademicPmcCourseGroupAdjustment::with(['courseGroup', 'targetCourseGroup', 'student.user', 'requester', 'decider']),
+            $user,
+            [],
+            [
+                'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject'],
+                'targetCourseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term', 'subject_id' => 'subject'],
+                'student' => ['program_id' => 'program', 'batch_id' => 'batch'],
+            ]
+        )->latest();
+
+        return [
+            'title' => 'PMC Section And Group Builder',
+            'description' => 'Core sections, elective groups, lab/tutorial/project groups, and student membership.',
+            'groups' => $groups->paginate(15),
+            'memberships' => $memberships->paginate(15),
+            'buildRuns' => $buildRuns->paginate(10, ['*'], 'build_runs_page'),
+            'groupAdjustments' => $groupAdjustments->paginate(15, ['*'], 'adjustments_page'),
+            'groupDiagnostics' => $groupDiagnostics,
         ];
     }
 
