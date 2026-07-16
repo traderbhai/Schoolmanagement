@@ -148,7 +148,6 @@ class ArchitectureStabilizationTest extends TestCase
     {
         $allowedLargeSeeders = [
             'AcademicsOperatingDemoSeeder.php',
-            'MasterDataSeeder.php',
         ];
 
         $oversized = collect(glob(base_path('database/seeders/*.php')))
