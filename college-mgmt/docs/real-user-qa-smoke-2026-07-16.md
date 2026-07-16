@@ -386,6 +386,28 @@ arjun.k@demo.edu: /student/promotion-status, /student/notifications, /notificati
 parent@demo.edu: /parent/dashboard, /notifications
 ```
 
+## Leadership Academic OS Recheck
+
+Leadership and academic operating-system workflow chunks:
+
+```text
+Leadership dashboard guidance + Dean KPI chunk: 38 tests passed, 230 assertions
+Dean OS chunk: 31 tests passed, 326 assertions
+Program Leadership + Course Delivery chunk: 32 tests passed, 399 assertions
+IQAC/CoE/PMC frontend guidance chunk: 41 tests passed, 1056 assertions
+```
+
+Authenticated HTTP sweep covered 24 pages with HTTP 200 and no service-error/debug text:
+
+```text
+dean@college.com: /dean/dashboard, /academics/dean-os, /academics/dean-os/attention/critical_attention, /academics/dean-os/exam-readiness, /academics/course-delivery
+director@college.com: /director/dashboard
+hod@college.com: /hod/dashboard, /academics/program-leadership
+chair@college.com: /program-chair/dashboard, /academics/pmc/command, /academics/pmc/official-timetable, /academics/program-leadership, /academics/course-delivery
+exam@college.com: /exam-cell/dashboard, /academics/coe, /academics/coe/exam-readiness, /academics/coe/marks-results, /academics/coe/hall-ticket-readiness
+iqac.head@college.com: /academics/iqac, /academics/iqac/obe-readiness, /academics/iqac/attainment-monitoring, /academics/iqac/feedback-quality, /academics/iqac/audit-compliance, /academics/iqac/reports
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
