@@ -2693,27 +2693,13 @@ class AcademicPmcTimetableV041Service
 
     private function studentBasketSurface(User $user, array $filters): array
     {
-        $allocations = $this->applyScope(
-            $this->filter(AcademicPmcStudentCourseAllocation::with(['student.user', 'subject', 'term']), $filters),
+        return $this->readModels->studentBasketSurface(
             $user,
-            [],
-            ['term' => ['id' => 'term'], 'student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-        )->latest();
-        $allocationExceptions = $this->applyScope(
-            AcademicPmcCourseAllocationException::with(['student.user', 'subject', 'term', 'requester', 'decider']),
-            $user,
-            [],
-            ['student' => ['program_id' => 'program', 'batch_id' => 'batch'], 'term' => ['id' => 'term']]
-        )->latest();
-
-        return [
-            'title' => 'PMC Student Course Baskets',
-            'description' => 'Student-wise allocated term course basket, approval state, validation flags, and group linkage.',
-            'allocations' => $allocations->paginate(20),
-            'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
-            'basketDiagnostics' => $this->courseBasketDiagnostics($user),
-            'allocationPressureDiagnostics' => $this->allocationPressureDiagnostics($user),
-        ];
+            $filters,
+            $this->courseBasketDiagnostics($user),
+            $this->allocationPressureDiagnostics($user),
+            fn (Builder $query, array $surfaceFilters) => $this->filter($query, $surfaceFilters)
+        );
     }
 
     private function groupSurface(User $user, array $filters): array

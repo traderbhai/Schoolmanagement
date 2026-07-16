@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcLockedSlot;
+use App\Models\AcademicPmcStudentCourseAllocation;
 use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Program;
@@ -107,6 +109,31 @@ class PmcTimetableReadModelService
             'lockedSlots' => $lockedSlots->paginate(15),
             'readiness' => $readiness,
             'readinessInputDiagnostics' => $readinessInputDiagnostics,
+        ];
+    }
+
+    public function studentBasketSurface(User $user, array $filters, array $basketDiagnostics, array $allocationPressureDiagnostics, callable $filter): array
+    {
+        $allocations = $this->applyScope(
+            $filter(AcademicPmcStudentCourseAllocation::with(['student.user', 'subject', 'term']), $filters),
+            $user,
+            [],
+            ['term' => ['id' => 'term'], 'student' => ['program_id' => 'program', 'batch_id' => 'batch']]
+        )->latest();
+        $allocationExceptions = $this->applyScope(
+            AcademicPmcCourseAllocationException::with(['student.user', 'subject', 'term', 'requester', 'decider']),
+            $user,
+            [],
+            ['student' => ['program_id' => 'program', 'batch_id' => 'batch'], 'term' => ['id' => 'term']]
+        )->latest();
+
+        return [
+            'title' => 'PMC Student Course Baskets',
+            'description' => 'Student-wise allocated term course basket, approval state, validation flags, and group linkage.',
+            'allocations' => $allocations->paginate(20),
+            'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
+            'basketDiagnostics' => $basketDiagnostics,
+            'allocationPressureDiagnostics' => $allocationPressureDiagnostics,
         ];
     }
 
