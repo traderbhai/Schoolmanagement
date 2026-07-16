@@ -52,64 +52,16 @@
 
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-lg-3">
-            <a href="{{ route('cmc.drives', ['status' => 'active']) }}" class="text-decoration-none">
-                <div class="kpi-card kpi-blue">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
-                        <div>
-                            <div class="kpi-value">{{ $activeDrives }}</div>
-                            <div class="kpi-label">Active Drives</div>
-                        </div>
-                    </div>
-                    <div class="kpi-trend {{ $activeDrives > 0 ? 'up' : '' }}">
-                        <i class="bi bi-arrow-{{ $activeDrives > 0 ? 'up' : 'right' }} me-1"></i>Open active drives
-                    </div>
-                </div>
-            </a>
+            <x-ui.kpi-card href="{{ route('cmc.drives', ['status' => 'active']) }}" tone="blue" icon="bi-briefcase-fill" :value="$activeDrives" label="Active Drives" trend="Open active drives" :trend-icon="$activeDrives > 0 ? 'bi-arrow-up' : 'bi-arrow-right'" :trend-tone="$activeDrives > 0 ? 'up' : null" />
         </div>
         <div class="col-sm-6 col-lg-3">
-            <a href="{{ route('cmc.placements') }}" class="text-decoration-none">
-                <div class="kpi-card kpi-green">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="kpi-icon"><i class="bi bi-trophy-fill"></i></div>
-                        <div>
-                            <div class="kpi-value">{{ $totalPlacements }}</div>
-                            <div class="kpi-label">Total Placed</div>
-                        </div>
-                    </div>
-                    <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open selected placements</div>
-                </div>
-            </a>
+            <x-ui.kpi-card href="{{ route('cmc.placements') }}" tone="green" icon="bi-trophy-fill" :value="$totalPlacements" label="Total Placed" trend="Open selected placements" trend-icon="bi-arrow-up" trend-tone="up" />
         </div>
         <div class="col-sm-6 col-lg-3">
-            <a href="{{ route('cmc.analytics') }}" class="text-decoration-none">
-                <div class="kpi-card kpi-cyan">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-                        <div>
-                            <div class="kpi-value">{{ $totalStudents }}</div>
-                            <div class="kpi-label">Total Students</div>
-                        </div>
-                    </div>
-                    <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Open placement analytics</div>
-                </div>
-            </a>
+            <x-ui.kpi-card href="{{ route('cmc.analytics') }}" tone="cyan" icon="bi-people-fill" :value="$totalStudents" label="Total Students" trend="Open placement analytics" trend-icon="bi-mortarboard" />
         </div>
         <div class="col-sm-6 col-lg-3">
-            <a href="{{ route('cmc.analytics') }}" class="text-decoration-none">
-                <div class="kpi-card {{ $placementRate >= 70 ? 'kpi-green' : ($placementRate >= 40 ? 'kpi-amber' : 'kpi-red') }}">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="kpi-icon"><i class="bi bi-percent"></i></div>
-                        <div>
-                            <div class="kpi-value">{{ $placementRate }}%</div>
-                            <div class="kpi-label">Placement Rate</div>
-                        </div>
-                    </div>
-                    <div class="kpi-trend {{ $placementRate >= 70 ? 'up' : 'down' }}">
-                        <i class="bi bi-arrow-{{ $placementRate >= 70 ? 'up' : 'down' }} me-1"></i>Open analytics
-                    </div>
-                </div>
-            </a>
+            <x-ui.kpi-card href="{{ route('cmc.analytics') }}" :tone="$placementRate >= 70 ? 'green' : ($placementRate >= 40 ? 'amber' : 'red')" icon="bi-percent" value="{{ $placementRate }}%" label="Placement Rate" trend="Open analytics" :trend-icon="$placementRate >= 70 ? 'bi-arrow-up' : 'bi-arrow-down'" :trend-tone="$placementRate >= 70 ? 'up' : 'down'" />
         </div>
     </div>
 
