@@ -488,6 +488,20 @@ admin@college.com: /admin/dashboard, /admin/assets, /admin/library, /admin/libra
 aarav@college.com: /student/documents, /student/documents/request, /student/grievances, /student/grievances/create, /student/hostel/complaints, /student/hostel/outpass, /student/library, /student/transport
 ```
 
+## Aggregate Readiness Recheck
+
+Current committed state was rechecked with the broad readiness gates:
+
+```text
+npm run test:production-readiness: 57 tests passed, 12464 assertions
+npm audit --audit-level=high: 0 vulnerabilities
+PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe C:\composer\composer.phar audit: no security vulnerability advisories found
+npm run frontend:build: passed
+npm run frontend:smoke: 137 tests passed, 4008 assertions
+npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
+PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test: 1800 tests passed, 29685 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
