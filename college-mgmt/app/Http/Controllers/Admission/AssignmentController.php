@@ -8,13 +8,11 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Services\AdmissionAssignmentService;
 use App\Services\AdmissionWorkflowService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class AssignmentController extends Controller
 {
     public function __construct(
-        private DepartmentHierarchyService $hierarchy,
         private AdmissionAssignmentService $assignments,
         private AdmissionWorkflowService $workflow,
     ) {}

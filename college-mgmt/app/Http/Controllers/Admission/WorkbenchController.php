@@ -13,6 +13,7 @@ use App\Models\Program;
 use App\Models\SelectionSession;
 use App\Models\User;
 use App\Services\AdmissionApplicantReadinessService;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAttentionService;
 use App\Services\AdmissionKpiService;
 use App\Services\DepartmentHierarchyService;
@@ -22,7 +23,7 @@ class WorkbenchController extends Controller
 {
     public function __construct(
         private AdmissionApplicantReadinessService $readiness,
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
         private AdmissionAttentionService $attention,
         private AdmissionKpiService $kpis,
     ) {}
@@ -46,10 +47,10 @@ class WorkbenchController extends Controller
 
         $leadScope = Lead::query();
         $applicantScope = Applicant::query();
-        $visibleUserIds = $this->hierarchy->visibleUserIds($user, 'ADM');
-        $canSeeAllByHierarchy = $this->hierarchy->canSeeAll($user, 'ADM');
+        $visibleUserIds = $this->accessPolicy->visibleUserIds($user);
+        $canSeeAllByHierarchy = $this->accessPolicy->canSeeAll($user);
 
-        if ($canSeeAllByHierarchy || $user->hasRole('admin')) {
+        if ($canSeeAllByHierarchy) {
             if ($counsellorId) {
                 $leadScope->where('assigned_to', $counsellorId);
                 $applicantScope->where('assigned_to', $counsellorId);
