@@ -161,6 +161,24 @@ class ArchitectureStabilizationTest extends TestCase
         }
     }
 
+    public function test_pmc_timetable_views_do_not_regress_past_current_size_budgets(): void
+    {
+        $budgets = [
+            'resources/views/academics/pmc/v041/dashboard.blade.php' => 375,
+            'resources/views/academics/pmc/v041/surface.blade.php' => 322,
+            'resources/views/academics/pmc/v041/partials/diagnostic-card.blade.php' => 27,
+            'resources/views/academics/pmc/v041/partials/diagnostic-grid-card.blade.php' => 39,
+        ];
+
+        foreach ($budgets as $relativePath => $maxLines) {
+            $this->assertLessThanOrEqual(
+                $maxLines,
+                count(file(base_path($relativePath))),
+                "{$relativePath} exceeded its current stabilization line budget; extract repeated Blade markup into a focused component or partial instead."
+            );
+        }
+    }
+
     public function test_no_new_oversized_demo_seeders_are_added(): void
     {
         $allowedLargeSeeders = [];
