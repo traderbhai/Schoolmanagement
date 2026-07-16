@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcElectiveChoice;
 use App\Models\AcademicPmcFacultyAssignmentAcknowledgement;
 use App\Models\AcademicPmcFacultyLoadReview;
 use App\Models\AcademicPmcFacultyPreference;
@@ -18,6 +20,7 @@ use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcTimetableNotification;
 use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
+use App\Models\Student;
 use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -496,6 +499,91 @@ class PmcTimetableReadinessGateService
             'blocker_total' => $blockerTotal,
             'status' => $blockerTotal === 0 && $allocations->isNotEmpty() ? 'ready' : 'attention_required',
             'recommended_action' => $blockerTotal === 0 ? 'Course baskets are ready for group locking.' : 'Review basket blockers before section/group locking.',
+        ];
+    }
+
+    public function allocationPressureDiagnostics(?User $user = null): array
+    {
+        $choices = AcademicPmcElectiveChoice::query();
+        $allocations = AcademicPmcStudentCourseAllocation::query();
+        $exceptions = AcademicPmcCourseAllocationException::query();
+
+        $submittedChoices = (clone $choices)->whereIn('status', ['submitted', 'pending'])->count();
+        $allocatedChoices = (clone $choices)->where('status', 'allocated')->count();
+        $waitlistedChoices = (clone $choices)->where('status', 'waitlisted')->count();
+        $rejectedChoices = (clone $choices)->where('status', 'rejected')->count();
+        $unprocessedChoiceStudents = (clone $choices)
+            ->whereIn('status', ['submitted', 'pending', 'waitlisted'])
+            ->whereNotNull('student_id')
+            ->distinct('student_id')
+            ->count('student_id');
+        $waitlistSubjects = AcademicPmcStudentCourseAllocation::query()
+            ->select('subject_id')
+            ->where('waitlisted', true)
+            ->whereNotNull('subject_id')
+            ->groupBy('subject_id')
+            ->get()
+            ->count();
+        $duplicateStudentSubjectAllocations = AcademicPmcStudentCourseAllocation::query()
+            ->selectRaw('student_id, subject_id, term_id, COUNT(*) as allocation_count')
+            ->whereNotNull('student_id')
+            ->whereNotNull('subject_id')
+            ->groupBy('student_id', 'subject_id', 'term_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->get()
+            ->count();
+        $studentsWithoutBasket = Student::where('status', 'active')
+            ->whereNotIn('id', AcademicPmcStudentCourseAllocation::query()
+                ->select('student_id')
+                ->whereNotNull('student_id')
+                ->whereNotIn('basket_status', ['dropped', 'withdrawn']))
+            ->count();
+        $singleCourseBaskets = AcademicPmcStudentCourseAllocation::query()
+            ->selectRaw('student_id, term_id, COUNT(*) as allocation_count')
+            ->whereNotNull('student_id')
+            ->whereNotIn('basket_status', ['dropped', 'withdrawn'])
+            ->groupBy('student_id', 'term_id')
+            ->havingRaw('COUNT(*) <= 1')
+            ->get()
+            ->count();
+        $pendingAddDrop = (clone $exceptions)->whereIn('exception_type', ['add', 'drop', 'open_elective'])->whereIn('status', ['requested', 'pending', 'under_review'])->count();
+        $pendingRepeatBacklog = (clone $exceptions)->whereIn('exception_type', ['repeat', 'backlog', 'improvement'])->whereIn('status', ['requested', 'pending', 'under_review'])->count();
+        $deanApprovalPending = (clone $exceptions)->where('requires_dean_approval', true)->whereIn('status', ['requested', 'pending', 'under_review'])->count();
+        $manualOverrides = (clone $allocations)->where(function ($query) {
+            $query->whereNotNull('override_reason')->orWhere('allocation_source', 'manual_override');
+        })->count();
+        $recentAllocationRounds = AcademicPmcCourseAllocationBatch::where('created_at', '>=', now()->subDays(14))->count();
+
+        $pressureTotal = $submittedChoices
+            + $waitlistedChoices
+            + $pendingAddDrop
+            + $pendingRepeatBacklog
+            + $deanApprovalPending
+            + $duplicateStudentSubjectAllocations
+            + $studentsWithoutBasket
+            + $singleCourseBaskets;
+
+        return [
+            'elective_choices_total' => (clone $choices)->count(),
+            'submitted_choices' => $submittedChoices,
+            'allocated_choices' => $allocatedChoices,
+            'waitlisted_choices' => $waitlistedChoices,
+            'rejected_choices' => $rejectedChoices,
+            'unprocessed_choice_students' => $unprocessedChoiceStudents,
+            'waitlist_subjects' => $waitlistSubjects,
+            'duplicate_student_subject_allocations' => $duplicateStudentSubjectAllocations,
+            'students_without_basket' => $studentsWithoutBasket,
+            'single_course_baskets' => $singleCourseBaskets,
+            'pending_add_drop' => $pendingAddDrop,
+            'pending_repeat_backlog' => $pendingRepeatBacklog,
+            'dean_approval_pending' => $deanApprovalPending,
+            'manual_overrides' => $manualOverrides,
+            'recent_allocation_rounds' => $recentAllocationRounds,
+            'pressure_total' => $pressureTotal,
+            'status' => $pressureTotal === 0 ? 'ready' : 'attention_required',
+            'recommended_action' => $pressureTotal === 0
+                ? 'Allocation rounds are settled for section/group locking.'
+                : 'Resolve pending elective choices, waitlists, add/drop exceptions, repeat/backlog cases, duplicate baskets, and incomplete student baskets before locking sections.',
         ];
     }
 }
