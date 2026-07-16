@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcCourseGroup;
+use App\Models\AcademicPmcCourseGroupAdjustment;
 use App\Models\AcademicPmcElectiveChoice;
 use App\Models\AcademicPmcFacultyAssignmentAcknowledgement;
 use App\Models\AcademicPmcFacultyLoadReview;
@@ -23,6 +24,7 @@ use App\Models\AcademicPmcTimetableVersionWorkflow;
 use App\Models\Student;
 use App\Models\TimetableVersion;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class PmcTimetableReadinessGateService
@@ -499,6 +501,81 @@ class PmcTimetableReadinessGateService
             'blocker_total' => $blockerTotal,
             'status' => $blockerTotal === 0 && $allocations->isNotEmpty() ? 'ready' : 'attention_required',
             'recommended_action' => $blockerTotal === 0 ? 'Course baskets are ready for group locking.' : 'Review basket blockers before section/group locking.',
+        ];
+    }
+
+    public function courseGroupDiagnostics(?array $scopeIds = null): array
+    {
+        $applyAnyCourseGroupScope = function (Builder $query) use ($scopeIds): Builder {
+            if ($scopeIds === null) {
+                return $query;
+            }
+
+            $hasAnyConcreteScope = collect($scopeIds)->contains(fn ($ids) => is_array($ids) && ! empty($ids));
+            if (! $hasAnyConcreteScope) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where(function (Builder $scopeQuery) use ($scopeIds): void {
+                foreach ($scopeIds as $column => $ids) {
+                    if (is_array($ids) && ! empty($ids)) {
+                        $scopeQuery->orWhereIn($column, $ids);
+                    }
+                }
+            });
+        };
+
+        $groups = $applyAnyCourseGroupScope(AcademicPmcCourseGroup::with(['members', 'facultyAssignments']))->get();
+        $pendingAdjustments = AcademicPmcCourseGroupAdjustment::whereIn('status', ['requested', 'pending', 'under_review'])
+            ->when($scopeIds !== null, fn ($query) => $query->whereHas('courseGroup', fn (Builder $groupQuery) => $applyAnyCourseGroupScope($groupQuery)))
+            ->count();
+        $ungroupedAllocations = AcademicPmcStudentCourseAllocation::whereIn('basket_status', ['approved', 'locked', 'allocated'])
+            ->when($scopeIds !== null, function ($query) use ($scopeIds) {
+                $hasAnyConcreteScope = collect($scopeIds)->contains(fn ($ids) => is_array($ids) && ! empty($ids));
+                if (! $hasAnyConcreteScope) {
+                    return $query->whereRaw('1 = 0');
+                }
+
+                return $query->where(function (Builder $scopeQuery) use ($scopeIds): void {
+                    if (! empty($scopeIds['term_id'])) {
+                        $scopeQuery->orWhereIn('term_id', $scopeIds['term_id']);
+                    }
+                    if (! empty($scopeIds['subject_id'])) {
+                        $scopeQuery->orWhereIn('subject_id', $scopeIds['subject_id']);
+                    }
+                    if (! empty($scopeIds['program_id'])) {
+                        $scopeQuery->orWhereHas('student', fn (Builder $studentQuery) => $studentQuery->whereIn('program_id', $scopeIds['program_id']));
+                    }
+                    if (! empty($scopeIds['batch_id'])) {
+                        $scopeQuery->orWhereHas('student', fn (Builder $studentQuery) => $studentQuery->whereIn('batch_id', $scopeIds['batch_id']));
+                    }
+                });
+            })
+            ->whereDoesntHave('groupMemberships', fn ($query) => $query->where('status', 'active'))
+            ->count();
+
+        $underMin = $groups->filter(fn (AcademicPmcCourseGroup $group) => (int) $group->current_strength < (int) $group->min_capacity)->count();
+        $overCapacity = $groups->filter(fn (AcademicPmcCourseGroup $group) => (int) $group->current_strength > (int) $group->max_capacity)->count();
+        $withoutFaculty = $groups->filter(fn (AcademicPmcCourseGroup $group) => $group->facultyAssignments->isEmpty())->count();
+        $unlocked = $groups->where('is_locked', false)->count();
+        $draft = $groups->whereNotIn('status', ['active', 'locked', 'approved'])->count();
+        $strengthMismatch = $groups->filter(fn (AcademicPmcCourseGroup $group) => $group->members->where('status', 'active')->count() !== (int) $group->current_strength)->count();
+        $blockerTotal = $underMin + $overCapacity + $withoutFaculty + $ungroupedAllocations + $pendingAdjustments + $strengthMismatch;
+
+        return [
+            'total_groups' => $groups->count(),
+            'ready_groups' => $groups->filter(fn (AcademicPmcCourseGroup $group) => $group->is_locked && $group->facultyAssignments->isNotEmpty() && (int) $group->current_strength >= (int) $group->min_capacity && (int) $group->current_strength <= (int) $group->max_capacity)->count(),
+            'unlocked_groups' => $unlocked,
+            'draft_groups' => $draft,
+            'under_min_groups' => $underMin,
+            'over_capacity_groups' => $overCapacity,
+            'groups_without_faculty' => $withoutFaculty,
+            'ungrouped_allocations' => $ungroupedAllocations,
+            'pending_adjustments' => $pendingAdjustments,
+            'strength_mismatch_groups' => $strengthMismatch,
+            'blocker_total' => $blockerTotal,
+            'status' => $blockerTotal === 0 && $groups->isNotEmpty() ? 'ready' : 'attention_required',
+            'recommended_action' => $blockerTotal === 0 ? 'Sections and groups are ready for timetable generation.' : 'Resolve group capacity, locking, faculty, and membership blockers before timetable generation.',
         ];
     }
 
