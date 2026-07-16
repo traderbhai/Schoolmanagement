@@ -897,6 +897,25 @@ Focused verification:
 LibraryCirculationWorkflowTest and AdminLibraryAccessControlTest: 32 tests passed, 332 assertions
 ```
 
+## CMC, Portal, Admin, Library, Transport Regression Chunk
+
+After the placement, career-event, internship, alumni, transport, and library live checks, the adjacent focused regression chunk passed:
+
+```text
+CmcDashboardGuidanceTest
+PlacementLifecycleIntegrityTest
+StudentCareerEventWorkflowTest
+InternshipWorkflowGuidanceTest
+AlumniWorkflowGuidanceTest
+TransportWorkflowTest
+LibraryCirculationWorkflowTest
+AdminLibraryAccessControlTest
+PortalFrontendBetaReadinessTest
+AdminOperationsFrontendBetaReadinessTest
+
+Result: 140 tests passed, 2436 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
