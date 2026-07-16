@@ -552,7 +552,7 @@ class AcademicsOperatingDemoSeeder extends Seeder
         $this->seedPmcV003Signals($department, $pmcHead, $program, $subject, $student, $termId);
         $this->seedPmcV004Signals($department, $pmcHead, $program, $subject, $student, $termId);
         $this->seedPmcTimetableV041Signals($department, $dean, $pmcHead, $program, $subject, $student, $termId);
-        $this->seedIqacOperatingSignals($department, $iqacHead, $program, $subject, $student, $termId);
+        app(AcademicsIqacOperatingDemoSeeder::class)->seedIqacOperatingSignals($department, $iqacHead, $program, $subject, $student, $termId);
         app(AcademicsCourseDeliveryDemoSeeder::class)->seedCourseDeliverySignals($department, $pmcHead, $program, $subject, $student, $semester, $termId);
         $this->seedDeanOperatingSignals($department, $dean, $pmcHead, $coe, $iqacHead, $program);
         app(AcademicsDeanV008DemoSeeder::class)->seedDeanV008Signals($department, $dean, $pmcHead, $coe, $iqacHead, $program, $subject, $student);
@@ -1833,130 +1833,6 @@ class AcademicsOperatingDemoSeeder extends Seeder
         DepartmentActivityLog::firstOrCreate(
             ['department_id' => $department->id, 'action' => 'academics_pmc_timetable_v041_seeded', 'description' => 'Seeded PMC OS v0.041 timetable allocation, section/group, faculty load, constraints, versioning, substitution, and notification data.'],
             ['actor_user_id' => $pmcHead->id, 'metadata' => ['version' => 'PMC OS v0.041']]
-        );
-    }
-
-    private function seedIqacOperatingSignals(Department $department, User $iqacHead, ?Program $program, ?Subject $subject, ?Student $student, ?int $termId): void
-    {
-        if (! $program || ! $subject) {
-            return;
-        }
-
-        if (! $termId) {
-            $batch = Batch::firstOrCreate(
-                ['code' => ($program->code ?: 'ACAD') . '-IQAC-DEMO'],
-                [
-                    'program_id' => $program->id,
-                    'name' => ($program->code ?: $program->name) . ' IQAC Demo Batch',
-                    'start_date' => now()->startOfYear()->toDateString(),
-                    'end_date' => now()->addYear()->endOfYear()->toDateString(),
-                    'intake_capacity' => 60,
-                    'status' => 'active',
-                ]
-            );
-
-            $termId = Term::firstOrCreate(
-                ['batch_id' => $batch->id, 'term_number' => 1],
-                [
-                    'program_id' => $program->id,
-                    'name' => 'Term 1',
-                    'start_date' => now()->startOfMonth()->toDateString(),
-                    'end_date' => now()->addMonths(4)->toDateString(),
-                    'is_current' => true,
-                    'sort_order' => 1,
-                ]
-            )->id;
-        }
-
-        $po = ProgramOutcome::firstOrCreate(
-            ['program_id' => $program->id, 'code' => 'PO-IQAC-1'],
-            ['description' => 'Apply analytical thinking and ethical decision-making in professional contexts.', 'category' => 'management', 'is_active' => true]
-        );
-
-        ProgramSpecificOutcome::firstOrCreate(
-            ['program_id' => $program->id, 'code' => 'PSO-IQAC-1'],
-            ['description' => 'Demonstrate industry-ready problem solving in management practice.', 'is_active' => true]
-        );
-
-        $coMapped = CourseOutcome::firstOrCreate(
-            ['subject_id' => $subject->id, 'code' => 'CO-IQAC-1'],
-            ['description' => 'Analyze management cases using structured frameworks.', 'bloom_level' => 'analyze', 'is_active' => true]
-        );
-
-        $coGap = CourseOutcome::firstOrCreate(
-            ['subject_id' => $subject->id, 'code' => 'CO-IQAC-GAP'],
-            ['description' => 'Prepare decision recommendations for complex scenarios.', 'bloom_level' => 'evaluate', 'is_active' => true]
-        );
-
-        CoPoMapping::firstOrCreate(
-            ['course_outcome_id' => $coMapped->id, 'program_outcome_id' => $po->id],
-            ['program_specific_outcome_id' => null, 'correlation_level' => 3]
-        );
-
-        CoAttainment::firstOrCreate(
-            ['course_outcome_id' => $coMapped->id, 'term_id' => $termId, 'batch_id' => null],
-            [
-                'subject_id' => $subject->id,
-                'direct_attainment' => 52,
-                'indirect_attainment' => 58,
-                'final_attainment' => 54,
-                'target_attainment' => 60,
-                'target_met' => false,
-                'students_assessed' => 42,
-                'students_attained' => 22,
-            ]
-        );
-
-        PoAttainment::firstOrCreate(
-            ['program_outcome_id' => $po->id, 'program_id' => $program->id, 'term_id' => $termId],
-            ['attainment_value' => 55, 'target_value' => 60, 'target_met' => false]
-        );
-
-        $survey = ObeSurvey::firstOrCreate(
-            ['subject_id' => $subject->id, 'term_id' => $termId, 'title' => 'IQAC Indirect Attainment Survey'],
-            ['is_published' => true, 'closes_at' => now()->addDays(14)->toDateString()]
-        );
-
-        if ($student) {
-            ObeSurveyResponse::firstOrCreate(
-                ['obe_survey_id' => $survey->id, 'student_id' => $student->id, 'course_outcome_id' => $coMapped->id],
-                ['rating' => 3]
-            );
-
-            CourseFeedback::firstOrCreate(
-                ['student_id' => $student->id, 'subject_id' => $subject->id, 'term_id' => $termId],
-                [
-                    'teaching_rating' => 3,
-                    'content_rating' => 3,
-                    'overall_rating' => 3,
-                    'comments' => 'Needs more applied quality evidence and feedback closure.',
-                    'is_anonymous' => true,
-                ]
-            );
-        }
-
-        DepartmentActivityLog::firstOrCreate(
-            [
-                'department_id' => $department->id,
-                'action' => 'quality_audit_review',
-                'description' => 'IQAC reviewed OBE mapping, attainment target misses, and feedback action-plan evidence.',
-            ],
-            [
-                'actor_user_id' => $iqacHead->id,
-                'metadata' => ['version' => 'Academics OS v0.04'],
-            ]
-        );
-
-        DepartmentActivityLog::firstOrCreate(
-            [
-                'department_id' => $department->id,
-                'action' => 'academics_os_v004_seeded',
-                'description' => 'Seeded Academics OS v0.04 IQAC operating data for OBE, attainment, surveys, feedback, and audit compliance.',
-            ],
-            [
-                'actor_user_id' => $iqacHead->id,
-                'metadata' => ['version' => 'Academics OS v0.04'],
-            ]
         );
     }
 
