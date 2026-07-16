@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcFacultyAssignmentAcknowledgement;
 use App\Models\AcademicPmcFacultyLoadReview;
@@ -9,6 +10,7 @@ use App\Models\AcademicPmcFacultyPreference;
 use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcLockedSlot;
 use App\Models\AcademicPmcRoomReadinessReview;
+use App\Models\AcademicPmcStudentCourseAllocation;
 use App\Models\AcademicPmcSubstitutionRecommendation;
 use App\Models\AcademicPmcTimetableChangeRequest;
 use App\Models\AcademicPmcTimetableGenerationItem;
@@ -447,6 +449,53 @@ class PmcTimetableReadinessGateService
             'recommended_action' => $blockerTotal === 0
                 ? 'Faculty suitability is ready for timetable generation.'
                 : 'Resolve subject expertise gaps, adjunct-day constraints, acknowledgement concerns, overload approvals, and backup-only primary gaps before final timetable generation.',
+        ];
+    }
+
+    public function courseBasketDiagnostics(callable $applyScope, callable $canIgnorePmcScope, ?User $user = null): array
+    {
+        $allocations = AcademicPmcStudentCourseAllocation::with(['subject', 'allocationBatch', 'groupMemberships'])
+            ->when($user && ! $canIgnorePmcScope($user), function ($query) use ($user, $applyScope) {
+                return $applyScope(
+                    $query,
+                    $user,
+                    [],
+                    ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
+                );
+            })
+            ->whereNotIn('basket_status', ['dropped', 'withdrawn'])
+            ->get();
+
+        $ungrouped = $allocations->filter(fn (AcademicPmcStudentCourseAllocation $allocation) => $allocation->groupMemberships->where('status', 'active')->isEmpty())->count();
+        $unapproved = $allocations->whereNotIn('basket_status', ['approved', 'locked', 'allocated'])->count();
+        $waitlisted = $allocations->where('waitlisted', true)->count();
+        $flagged = $allocations->filter(fn (AcademicPmcStudentCourseAllocation $allocation) => filled($allocation->validation_flags))->count();
+        $pendingExceptions = AcademicPmcCourseAllocationException::whereIn('status', ['requested', 'pending', 'under_review'])->count();
+
+        $creditOverload = $allocations
+            ->groupBy(fn (AcademicPmcStudentCourseAllocation $allocation) => ($allocation->student_id ?: 'missing') . '-' . ($allocation->term_id ?: 'missing'))
+            ->filter(function (Collection $studentTermAllocations) {
+                $credits = (int) $studentTermAllocations->sum(fn (AcademicPmcStudentCourseAllocation $allocation) => (int) ($allocation->subject?->credits ?? 0));
+                $maxCredits = (int) data_get($studentTermAllocations->first()?->allocationBatch?->rules, 'max_credits', 30);
+
+                return $credits > $maxCredits;
+            })
+            ->count();
+
+        $blockerTotal = $unapproved + $waitlisted + $flagged + $pendingExceptions + $ungrouped + $creditOverload;
+
+        return [
+            'total_allocations' => $allocations->count(),
+            'ready_allocations' => $allocations->whereIn('basket_status', ['approved', 'locked', 'allocated'])->count(),
+            'unapproved_allocations' => $unapproved,
+            'waitlisted_allocations' => $waitlisted,
+            'flagged_allocations' => $flagged,
+            'pending_exceptions' => $pendingExceptions,
+            'ungrouped_allocations' => $ungrouped,
+            'credit_overload_baskets' => $creditOverload,
+            'blocker_total' => $blockerTotal,
+            'status' => $blockerTotal === 0 && $allocations->isNotEmpty() ? 'ready' : 'attention_required',
+            'recommended_action' => $blockerTotal === 0 ? 'Course baskets are ready for group locking.' : 'Review basket blockers before section/group locking.',
         ];
     }
 }

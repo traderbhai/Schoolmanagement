@@ -2954,49 +2954,11 @@ class AcademicPmcTimetableV041Service
 
     private function courseBasketDiagnostics(?User $user = null): array
     {
-        $allocations = AcademicPmcStudentCourseAllocation::with(['subject', 'allocationBatch', 'groupMemberships'])
-            ->when($user && ! $this->policy->canIgnorePmcScope($user), function ($query) use ($user) {
-                return $this->applyScope(
-                    $query,
-                    $user,
-                    [],
-                    ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-                );
-            })
-            ->whereNotIn('basket_status', ['dropped', 'withdrawn'])
-            ->get();
-
-        $ungrouped = $allocations->filter(fn (AcademicPmcStudentCourseAllocation $allocation) => $allocation->groupMemberships->where('status', 'active')->isEmpty())->count();
-        $unapproved = $allocations->whereNotIn('basket_status', ['approved', 'locked', 'allocated'])->count();
-        $waitlisted = $allocations->where('waitlisted', true)->count();
-        $flagged = $allocations->filter(fn (AcademicPmcStudentCourseAllocation $allocation) => filled($allocation->validation_flags))->count();
-        $pendingExceptions = AcademicPmcCourseAllocationException::whereIn('status', ['requested', 'pending', 'under_review'])->count();
-
-        $creditOverload = $allocations
-            ->groupBy(fn (AcademicPmcStudentCourseAllocation $allocation) => ($allocation->student_id ?: 'missing') . '-' . ($allocation->term_id ?: 'missing'))
-            ->filter(function (Collection $studentTermAllocations) {
-                $credits = (int) $studentTermAllocations->sum(fn (AcademicPmcStudentCourseAllocation $allocation) => (int) ($allocation->subject?->credits ?? 0));
-                $maxCredits = (int) data_get($studentTermAllocations->first()?->allocationBatch?->rules, 'max_credits', 30);
-
-                return $credits > $maxCredits;
-            })
-            ->count();
-
-        $blockerTotal = $unapproved + $waitlisted + $flagged + $pendingExceptions + $ungrouped + $creditOverload;
-
-        return [
-            'total_allocations' => $allocations->count(),
-            'ready_allocations' => $allocations->whereIn('basket_status', ['approved', 'locked', 'allocated'])->count(),
-            'unapproved_allocations' => $unapproved,
-            'waitlisted_allocations' => $waitlisted,
-            'flagged_allocations' => $flagged,
-            'pending_exceptions' => $pendingExceptions,
-            'ungrouped_allocations' => $ungrouped,
-            'credit_overload_baskets' => $creditOverload,
-            'blocker_total' => $blockerTotal,
-            'status' => $blockerTotal === 0 && $allocations->isNotEmpty() ? 'ready' : 'attention_required',
-            'recommended_action' => $blockerTotal === 0 ? 'Course baskets are ready for group locking.' : 'Review basket blockers before section/group locking.',
-        ];
+        return $this->readinessGate->courseBasketDiagnostics(
+            fn (Builder $query, ?User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap),
+            fn (User $scopeUser) => $this->policy->canIgnorePmcScope($scopeUser),
+            $user
+        );
     }
 
     private function allocationPressureDiagnostics(?User $user = null): array
