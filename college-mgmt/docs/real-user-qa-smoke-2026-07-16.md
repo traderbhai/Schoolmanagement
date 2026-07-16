@@ -188,6 +188,19 @@ PMC publish/timetable plus student-teacher attendance action pack: 34 tests pass
 Accounts fee/payment action pack: 81 tests passed, 529 assertions
 ```
 
+Production-style Laravel cache and fresh-smoke gates on commit `edfd9b1`:
+
+```text
+php artisan config:cache: passed
+php artisan route:cache: passed
+php artisan view:cache: passed
+php artisan optimize:clear: passed after cache verification
+fresh isolated migrate:fresh --seed: passed
+fresh seeded live smoke on http://127.0.0.1:8010: 16 critical pages passed with HTTP 200 and no service-error/debug text
+```
+
+Fresh seeded live smoke covered Exam Cell exam creation, unified approvals inbox, Admin dashboard, Accounts dashboard/admission payments/scholarship disbursements/reconciliation, Admission workbench/document queue/dashboard, PMC official timetable/command, Teacher attendance/timetable, and Student timetable/fees.
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
