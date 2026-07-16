@@ -8,6 +8,7 @@ use App\Services\DashboardViewModelService;
 use App\Services\FinanceAccessPolicyService;
 use App\Services\PmcTimetableBridgeSyncService;
 use App\Services\PmcTimetableExportReadModelService;
+use App\Services\PmcTimetableGenerationDiagnosticsService;
 use App\Services\PmcTimetableGenerationService;
 use App\Services\PmcTimetablePublishService;
 use App\Services\PmcTimetableReadinessGateService;
@@ -95,6 +96,7 @@ class ArchitectureStabilizationTest extends TestCase
             PmcTimetableRevisionService::class,
             PmcTimetableReadModelService::class,
             PmcTimetableExportReadModelService::class,
+            PmcTimetableGenerationDiagnosticsService::class,
             PmcTimetableReadinessGateService::class,
             PmcTimetableReadinessScopeService::class,
             PmcTimetableScopeService::class,
@@ -139,6 +141,7 @@ class ArchitectureStabilizationTest extends TestCase
             'app/Services/PmcTimetableFacultyReadinessService.php' => 423,
             'app/Services/PmcTimetableStudentPortalService.php' => 359,
             'app/Services/PmcTimetableGenerationService.php' => 1181,
+            'app/Services/PmcTimetableGenerationDiagnosticsService.php' => 130,
             'app/Services/PmcTimetablePublishService.php' => 522,
             'app/Services/PmcTimetableReadinessGateService.php' => 666,
             'app/Services/PmcTimetableReadinessScopeService.php' => 120,
