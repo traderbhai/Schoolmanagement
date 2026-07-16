@@ -188,6 +188,29 @@ class ArchitectureStabilizationTest extends TestCase
         $this->assertSame([], $violations, 'Admission controllers should use AdmissionAccessPolicyService for visibility and authorization decisions.');
     }
 
+    public function test_admission_services_keep_hierarchy_usage_behind_policy_or_audit_helpers(): void
+    {
+        $allowedHierarchyUsers = [
+            'app/Services/AdmissionAccessPolicyService.php',
+            'app/Services/AdmissionAssignmentService.php',
+            'app/Services/AdmissionDuplicateMergeService.php',
+        ];
+
+        $violations = collect(glob(base_path('app/Services/Admission*.php')))
+            ->mapWithKeys(function (string $path) {
+                $relativePath = str_replace(str_replace('\\', '/', base_path()).'/', '', str_replace('\\', '/', $path));
+
+                return [$relativePath => file_get_contents($path)];
+            })
+            ->reject(fn (string $contents, string $relativePath) => in_array($relativePath, $allowedHierarchyUsers, true))
+            ->filter(fn (string $contents) => str_contains($contents, 'DepartmentHierarchyService'))
+            ->keys()
+            ->values()
+            ->all();
+
+        $this->assertSame([], $violations, 'Admission service visibility and authorization checks should flow through AdmissionAccessPolicyService; only policy and audit helpers may use DepartmentHierarchyService directly.');
+    }
+
     public function test_timetable_canonical_source_boundary_is_explicit(): void
     {
         $this->assertSame('academic_pmc_timetable_generation_items', (new AcademicPmcTimetableGenerationItem())->getTable());
