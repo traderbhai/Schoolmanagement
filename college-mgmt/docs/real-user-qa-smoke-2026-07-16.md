@@ -473,6 +473,21 @@ cmc@college.com: /cmc/dashboard, /cmc/companies, /cmc/companies/create, /cmc/com
 aarav@college.com: /student/placements, /student/placements/my-applications, /student/resume, /student/internships, /student/career-events, /student/alumni
 ```
 
+## Campus Admin Operations Recheck
+
+Admin operations, campus services, access control, and student service workflow chunk:
+
+```text
+Admin operations frontend/KPI/UX, admin record lifecycle, asset workflow/access, hostel guidance/access, library circulation/access, transport workflow/access, official report/global export access, and student document requests: 164 tests passed, 2437 assertions
+```
+
+Authenticated HTTP sweep covered 28 pages with HTTP 200 and no service-error/debug text:
+
+```text
+admin@college.com: /admin/dashboard, /admin/assets, /admin/library, /admin/library/books, /admin/library/issues, /admin/library/memberships, /admin/library/reservations, /admin/library/fines, /admin/transport, /admin/document-requests, /admin/students, /admin/teachers, /admin/attendance, /admin/attendance/report, /admin/enrollments, /admin/exams, /admin/fees, /admin/fee-payment-requests, /admin/hostel/fees, /admin/audit-log
+aarav@college.com: /student/documents, /student/documents/request, /student/grievances, /student/grievances/create, /student/hostel/complaints, /student/hostel/outpass, /student/library, /student/transport
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
