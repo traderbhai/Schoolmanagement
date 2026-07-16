@@ -260,6 +260,25 @@ accounts@college.com: /accounts/dashboard, /accounts/reconciliation
 head@college.com: /admission/dashboard, /admission/documents/queue
 ```
 
+## Action Workflow And Release Preflight Recheck
+
+Action-oriented workflow chunks were re-run after the dependency patch and full regression pass:
+
+```text
+Admission/payment/scholarship workflow chunk: 54 tests passed, 415 assertions
+PMC timetable/canonical attendance/student-teacher workflow chunk: 59 tests passed, 568 assertions
+Accounts fee/payment workflow chunk: 92 tests passed, 616 assertions
+```
+
+Release preflight checks:
+
+```text
+composer check-platform-reqs: passed on PHP 8.5.7
+php artisan migrate:status: all migrations ran on the local database
+php artisan route:list --json: 1298 registered routes
+Critical routes present: academics.pmc.command, academics.pmc.official-timetable.index, admin.dashboard, teacher.timetable.index, student.timetable, accounts.dashboard, admission.dashboard
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
