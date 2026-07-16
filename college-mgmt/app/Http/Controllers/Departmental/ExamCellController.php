@@ -354,14 +354,45 @@ class ExamCellController extends Controller
         $programs = Program::where('is_active', true)->orderBy('name')->get();
         $exams    = Exam::with(['subject', 'program'])->where('exam_date', '>', now())->orderBy('exam_date')->get();
         $students = collect();
+        $registrations = collect();
         $selectedExam = null;
 
         if ($request->filled('exam_id')) {
             $selectedExam = Exam::with(['subject', 'program', 'classroom'])->findOrFail($request->exam_id);
             $students = $this->hallTicketEligibleStudentQuery($selectedExam)->with('user')->get();
+            $registrations = ExamRegistration::with(['student.user', 'student.program', 'approver'])
+                ->where('exam_id', $selectedExam->id)
+                ->orderByRaw("case status when 'pending' then 0 when 'approved' then 1 else 2 end")
+                ->latest()
+                ->get();
         }
 
-        return view('departmental.exam-cell.hall-tickets', compact('programs', 'exams', 'students', 'selectedExam'));
+        return view('departmental.exam-cell.hall-tickets', compact('programs', 'exams', 'students', 'registrations', 'selectedExam'));
+    }
+
+    public function reviewRegistration(Request $request, ExamRegistration $registration)
+    {
+        $data = $request->validate([
+            'action' => 'required|in:approved,rejected',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $registration->load('exam');
+        if ($registration->exam?->published_at) {
+            return back()->with('error', 'Registrations for a published exam cannot be reviewed.');
+        }
+
+        if ($data['action'] === 'approved' && (! $registration->attendance_eligible || ! $registration->fee_cleared)) {
+            return back()->with('error', 'Only fee-cleared and attendance-eligible registrations can be approved for hall tickets.');
+        }
+
+        $registration->update([
+            'status' => $data['action'],
+            'remarks' => $data['remarks'] ?? null,
+            'approved_by' => auth()->id(),
+        ]);
+
+        return back()->with('success', 'Exam registration ' . $data['action'] . '.');
     }
 
     public function downloadHallTicket(Exam $exam, Student $student)

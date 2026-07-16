@@ -755,6 +755,38 @@ Focused verification:
 StudentPlacementGuidanceTest, PlacementLifecycleIntegrityTest, and CmcDashboardGuidanceTest filtered placement checks: 33 tests passed, 257 assertions
 ```
 
+## Exam Registration, Review, And Hall-Ticket Recheck
+
+Manual Exam Cell and student exam-registration checks were exercised against the running local server:
+
+```text
+Initial finding: demo academic years, semesters, and terms were stale for 2026 local testing. Exam Cell could open /exam-cell/exams/create, but POST /exam-cell/exams rejected a realistic 2026 exam with "Exam date must fall within the selected semester window."
+Fix applied: DemoDataSeeder now creates a rolling current academic session; LegacyCollegeDemoSeeder no longer marks the legacy engineering semester current; demo:repair-academic-calendar repairs existing local databases.
+Ran demo:repair-academic-calendar locally, producing academic session 2026-27 with Semester I from 2026-07-01 to 2026-11-30 and PGDM term 1 current.
+exam@college.com: POST /exam-cell/exams created exam id=17, title=QA Live Exam Registration 230803, subject_id=18, term_id=1, semester_id=4, exam_date=2026-08-10.
+arjun.k@demo.edu: GET /student/exam-registration returned clean HTML and showed the QA exam.
+arjun.k@demo.edu: POST /student/exam-registration/17/register created exam registration id=3, status=pending, attendance_eligible=true, fee_cleared=true.
+exam@college.com: GET /exam-cell/hall-tickets?exam_id=17 showed the pending registration under Registration Review.
+exam@college.com: PATCH /exam-cell/registrations/3 approved the registration with remarks.
+exam@college.com: GET /exam-cell/hall-tickets?exam_id=17 showed the registration as approved and hall-ticket ready.
+exam@college.com: GET /exam-cell/hall-tickets/17/11/download returned application/pdf.
+arjun.k@demo.edu: GET /student/admit-cards showed the QA exam and download action.
+arjun.k@demo.edu: GET /student/admit-cards/17/download returned application/pdf.
+```
+
+Fix applied:
+
+```text
+Added Exam Cell registration review from the hall-ticket screen so submitted student exam registrations can be approved or rejected before PDF generation.
+Cleaned hall-ticket page mojibake and preserved the approved-only PDF gate.
+```
+
+Focused verification:
+
+```text
+StudentExamRegistrationWorkflowTest and ExamCellDashboardGuidanceTest: 28 tests passed, 287 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -770,6 +802,7 @@ StudentPlacementGuidanceTest, PlacementLifecycleIntegrityTest, and CmcDashboardG
 - Fixed enrollment lifecycle status so completed admission enrollment marks the applicant as enrolled while creating the student, confirmation, and Academics handoff.
 - Added an explicit admission enrollment status repair command for existing databases with completed confirmations whose applicants were left non-enrolled before the lifecycle fix.
 - Cleaned CMC placed-students output so selected placement records show readable drive, company, and package details without mojibake.
+- Repaired rolling demo academic calendar data and added Exam Cell registration review so future exams, student registrations, approvals, hall tickets, and student admit-card downloads work in local real-user testing.
 
 ## Feedback
 

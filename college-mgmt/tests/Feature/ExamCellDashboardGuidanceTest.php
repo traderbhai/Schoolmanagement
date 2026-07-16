@@ -1115,7 +1115,8 @@ class ExamCellDashboardGuidanceTest extends TestCase
             ->get(route('exam-cell.hall-tickets', ['exam_id' => $exam->id]))
             ->assertStatus(200)
             ->assertSee('HALL-001')
-            ->assertDontSee('HALL-PENDING')
+            ->assertSee('HALL-PENDING')
+            ->assertSee('Registration Review')
             ->assertDontSee('HALL-OUT');
 
         $this->actingAs($user)
@@ -1131,7 +1132,8 @@ class ExamCellDashboardGuidanceTest extends TestCase
         $this->actingAs($user)
             ->get(route('exam-cell.hall-tickets', ['exam_id' => $exam->id]))
             ->assertStatus(200)
-            ->assertDontSee('HALL-001');
+            ->assertSee('0 hall-ticket ready')
+            ->assertSee('HALL-001');
 
         $this->actingAs($user)
             ->get(route('exam-cell.hall-ticket.download', [$exam, $eligible]))

@@ -85,7 +85,7 @@ class LegacyCollegeDemoSeeder extends Seeder
             'end_year'   => 2026,
             'start_date' => '2025-08-01',
             'end_date'   => '2026-06-30',
-            'is_current' => true,
+            'is_current' => false,
         ]);
 
         // Semester
@@ -94,7 +94,7 @@ class LegacyCollegeDemoSeeder extends Seeder
             'number'           => 5,
             'start_date'       => '2025-08-01',
             'end_date'         => '2025-12-31',
-            'is_current'       => true,
+            'is_current'       => false,
         ]);
 
         $programs = [];
@@ -133,7 +133,7 @@ class LegacyCollegeDemoSeeder extends Seeder
                 'name' => $semester->name,
                 'start_date' => $semester->start_date,
                 'end_date' => $semester->end_date,
-                'is_current' => true,
+                'is_current' => false,
                 'sort_order' => $semester->number,
             ]);
         }

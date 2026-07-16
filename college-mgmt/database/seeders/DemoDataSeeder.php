@@ -42,14 +42,22 @@ class DemoDataSeeder extends Seeder
         ]);
         $admin->assignRole('admin');
 
-        // 1. Academic Years (2 years)
-        $ay1 = AcademicYear::firstOrCreate(['name' => '2023-24'], [
-            'start_date' => '2023-06-01', 'end_date' => '2024-05-31', 'is_current' => false,
-            'start_year' => 2023, 'end_year' => 2024,
+        // 1. Academic Years (rolling demo session)
+        $sessionStartYear = now()->month >= 7 ? now()->year : now()->year - 1;
+        $sessionEndYear = $sessionStartYear + 1;
+        $sessionLabel = $sessionStartYear . '-' . substr((string) $sessionEndYear, -2);
+        $previousLabel = ($sessionStartYear - 1) . '-' . substr((string) $sessionStartYear, -2);
+
+        AcademicYear::where('is_current', true)->update(['is_current' => false]);
+        Semester::where('is_current', true)->update(['is_current' => false]);
+
+        $ay1 = AcademicYear::updateOrCreate(['name' => $previousLabel], [
+            'start_date' => ($sessionStartYear - 1) . '-06-01', 'end_date' => $sessionStartYear . '-05-31', 'is_current' => false,
+            'start_year' => $sessionStartYear - 1, 'end_year' => $sessionStartYear,
         ]);
-        $ay2 = AcademicYear::firstOrCreate(['name' => '2024-25'], [
-            'start_date' => '2024-06-01', 'end_date' => '2025-05-31', 'is_current' => true,
-            'start_year' => 2024, 'end_year' => 2025,
+        $ay2 = AcademicYear::updateOrCreate(['name' => $sessionLabel], [
+            'start_date' => $sessionStartYear . '-06-01', 'end_date' => $sessionEndYear . '-05-31', 'is_current' => true,
+            'start_year' => $sessionStartYear, 'end_year' => $sessionEndYear,
         ]);
 
         // 2. Departments (3)
@@ -107,34 +115,35 @@ class DemoDataSeeder extends Seeder
         // 4. Semesters (legacy)
         $sems = [];
         foreach ([
-            ['name' => 'Semester I (2024-25)', 'number' => 1, 'academic_year_id' => $ay2->id, 'start_date' => '2024-07-01', 'end_date' => '2024-11-30', 'is_current' => false],
-            ['name' => 'Semester II (2024-25)', 'number' => 2, 'academic_year_id' => $ay2->id, 'start_date' => '2025-01-01', 'end_date' => '2025-05-31', 'is_current' => true],
+            ['name' => "Semester I ({$sessionLabel})", 'number' => 1, 'academic_year_id' => $ay2->id, 'start_date' => $sessionStartYear . '-07-01', 'end_date' => $sessionStartYear . '-11-30', 'is_current' => true],
+            ['name' => "Semester II ({$sessionLabel})", 'number' => 2, 'academic_year_id' => $ay2->id, 'start_date' => $sessionEndYear . '-01-01', 'end_date' => $sessionEndYear . '-05-31', 'is_current' => false],
         ] as $s) {
-            $sems[] = Semester::firstOrCreate(['name' => $s['name']], $s);
+            $sems[] = Semester::updateOrCreate(['name' => $s['name']], $s);
         }
-        $currentSem = $sems[1];
+        $currentSem = $sems[0];
         $sem1 = $sems[0];
 
         // 4b. Batches + Terms (new structure)
-        $pgdmBatch = Batch::firstOrCreate(['code' => 'PGDM-24'], [
+        $pgdmBatch = Batch::updateOrCreate(['code' => 'PGDM-24'], [
             'program_id' => $pgdm->id,
             'academic_year_id' => $ay2->id,
-            'name' => 'PGDM Batch 2024-26',
-            'start_date' => '2024-07-01',
-            'end_date' => '2026-06-30',
+            'name' => "PGDM Batch {$sessionStartYear}-" . substr((string) ($sessionStartYear + 2), -2),
+            'start_date' => $sessionStartYear . '-07-01',
+            'end_date' => ($sessionStartYear + 2) . '-06-30',
             'intake_capacity' => 60,
             'status' => 'active',
         ]);
         $termLabels = ['Semester I', 'Semester II', 'Semester III', 'Semester IV'];
+        Term::where('batch_id', $pgdmBatch->id)->where('is_current', true)->update(['is_current' => false]);
         $termDates  = [
-            ['2024-07-01','2024-11-30',false],
-            ['2025-01-01','2025-05-31',true],
-            ['2025-07-01','2025-11-30',false],
-            ['2026-01-01','2026-05-31',false],
+            [$sessionStartYear . '-07-01', $sessionStartYear . '-11-30', true],
+            [$sessionEndYear . '-01-01', $sessionEndYear . '-05-31', false],
+            [$sessionEndYear . '-07-01', $sessionEndYear . '-11-30', false],
+            [($sessionEndYear + 1) . '-01-01', ($sessionEndYear + 1) . '-05-31', false],
         ];
         $terms = [];
         foreach ($termLabels as $i => $label) {
-            $terms[] = Term::firstOrCreate(['batch_id' => $pgdmBatch->id, 'term_number' => $i + 1], [
+            $terms[] = Term::updateOrCreate(['batch_id' => $pgdmBatch->id, 'term_number' => $i + 1], [
                 'program_id'  => $pgdm->id,
                 'name'        => $label,
                 'start_date'  => $termDates[$i][0],
@@ -143,7 +152,7 @@ class DemoDataSeeder extends Seeder
                 'sort_order'  => $i + 1,
             ]);
         }
-        $currentTerm = $terms[1]; // Semester II
+        $currentTerm = $terms[0]; // Semester I in the rolling demo session
 
         // 5. Subjects (8 subjects)
         $subjects = [];

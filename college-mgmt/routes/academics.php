@@ -589,6 +589,7 @@ Route::middleware(['auth', 'role:exam_cell|dean_academics|admin'])->prefix('exam
     });
     Route::middleware('department.feature:EXAM,exam.hall_tickets')->group(function () {
         Route::get('hall-tickets', [Departmental\ExamCellController::class, 'hallTickets'])->name('hall-tickets');
+        Route::patch('registrations/{registration}', [Departmental\ExamCellController::class, 'reviewRegistration'])->name('registrations.review');
         Route::get('hall-tickets/{exam}/{student}/download', [Departmental\ExamCellController::class, 'downloadHallTicket'])->name('hall-ticket.download');
     });
     Route::middleware('department.feature:EXAM,exam.appeals_anomalies')->group(function () {
