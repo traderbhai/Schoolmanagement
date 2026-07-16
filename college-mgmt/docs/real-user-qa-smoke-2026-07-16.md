@@ -366,6 +366,26 @@ arjun.k@demo.edu: /student/documents, /student/documents/request, /student/admit
 admin@college.com: /admin/assets, /admin/document-requests, /admin/applicants, /admin/parents
 ```
 
+## Public Auth Notification Recheck
+
+Public access, auth/profile, notification, and status workflow chunks:
+
+```text
+Application/public/applicant notification/status chunk: 72 tests passed, 436 assertions
+Notification/shared inbox/profile/promotion chunk: 21 tests passed, 143 assertions
+Auth/profile/role redirect chunk: 94 tests passed, 290 assertions
+```
+
+Public and authenticated HTTP sweep covered 15 pages with HTTP 200 and no service-error/debug text:
+
+```text
+public: /, /apply, /login, /forgot-password
+admin@college.com: /dashboard, /notifications, /profile
+priya.sharma@applicant.demo: /applicant/status, /applicant/notifications, /notifications
+arjun.k@demo.edu: /student/promotion-status, /student/notifications, /notifications
+parent@demo.edu: /parent/dashboard, /notifications
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
