@@ -123,6 +123,27 @@ class ArchitectureStabilizationTest extends TestCase
         $this->assertSame([], $oversized);
     }
 
+    public function test_pmc_timetable_services_do_not_regress_past_current_size_budgets(): void
+    {
+        $budgets = [
+            'app/Services/AcademicPmcTimetableV041Service.php' => 2887,
+            'app/Services/PmcTimetableGenerationService.php' => 1181,
+            'app/Services/PmcTimetablePublishService.php' => 522,
+            'app/Services/PmcTimetableReadinessGateService.php' => 666,
+            'app/Services/PmcTimetableReadModelService.php' => 688,
+            'app/Services/PmcTimetableRevisionService.php' => 509,
+            'app/Services/PmcTimetableBridgeSyncService.php' => 208,
+        ];
+
+        foreach ($budgets as $relativePath => $maxLines) {
+            $this->assertLessThanOrEqual(
+                $maxLines,
+                count(file(base_path($relativePath))),
+                "{$relativePath} exceeded its current stabilization line budget; extract new behavior into a focused service instead."
+            );
+        }
+    }
+
     public function test_timetable_canonical_source_boundary_is_explicit(): void
     {
         $this->assertSame('academic_pmc_timetable_generation_items', (new AcademicPmcTimetableGenerationItem())->getTable());
