@@ -9,14 +9,14 @@ use App\Models\Program;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionKpiDrilldownService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class PaymentVerificationController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function pendingQueue(Request $r, AdmissionKpiDrilldownService $drilldowns)
     {
@@ -41,7 +41,7 @@ class PaymentVerificationController extends Controller
             'all_pending'     => $drilldowns->pendingPaymentQuery($r->user())->count(),
             'verified_today'  => AdmissionPayment::where('status', 'verified')
                 ->whereDate('verified_at', today())
-                ->whereHas('applicant', fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM'))
+                ->whereHas('applicant', fn ($q) => $this->policy->applyApplicantVisibility($q, $r->user()))
                 ->count(),
             'amount_pending'  => (clone $scopedPending)->sum('amount_paid'),
         ];
@@ -213,7 +213,7 @@ class PaymentVerificationController extends Controller
 
         $visibleApplicants = Applicant::where('program_id', $program->id)
             ->whereIn('status', ['shortlisted', 'selected'])
-            ->tap(fn ($q) => $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM'));
+            ->tap(fn ($q) => $this->policy->applyApplicantVisibility($q, $r->user()));
 
         $installmentBreakdown = $installments->map(function ($inst) use ($program, $r, $visibleApplicants) {
             $paymentsForInst = $this->visibleProgramPaymentQuery($program, $r->user())
@@ -243,9 +243,7 @@ class PaymentVerificationController extends Controller
 
     public function applicantPayments(Applicant $applicant)
     {
-        if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $applicant->assigned_to, false)) {
-            abort(403);
-        }
+        $this->policy->authorizeViewAssignedUser(auth()->user(), $applicant->assigned_to, false);
 
         $applicant->load(['program', 'user', 'payments.installment', 'payments.verifiedBy']);
 
@@ -266,9 +264,7 @@ class PaymentVerificationController extends Controller
     {
         $payment->loadMissing('applicant');
 
-        if (!$this->hierarchy->canViewAssignedUser(auth()->user(), 'ADM', $payment->applicant?->assigned_to, false)) {
-            abort(403);
-        }
+        $this->policy->authorizeViewAssignedUser(auth()->user(), $payment->applicant?->assigned_to, false);
     }
 
     private function visibleProgramPaymentQuery(Program $program, User $user)
@@ -276,7 +272,7 @@ class PaymentVerificationController extends Controller
         return AdmissionPayment::query()
             ->whereHas('applicant', function ($q) use ($program, $user) {
                 $q->where('program_id', $program->id);
-                $this->hierarchy->applyApplicantVisibility($q, $user, 'ADM');
+                $this->policy->applyApplicantVisibility($q, $user);
             });
     }
 
@@ -287,7 +283,7 @@ class PaymentVerificationController extends Controller
             ->orderBy('admission_payments.created_at');
 
         $query->whereHas('applicant', function ($q) use ($r) {
-            $this->hierarchy->applyApplicantVisibility($q, $r->user(), 'ADM');
+            $this->policy->applyApplicantVisibility($q, $r->user());
         });
 
         if ($r->filled('program_id')) {
