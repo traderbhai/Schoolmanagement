@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, ProgramSeatMatrix};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, RequiredDocument, SelectionProcessStep, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation};
 use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
@@ -379,78 +379,9 @@ class DemoDataSeeder extends Seeder
         }
 
         // 15b. Admission configuration for PGDM
-        // Default documents
-        foreach (RequiredDocument::defaults() as $doc) {
-            RequiredDocument::firstOrCreate(['program_id' => $pgdm->id, 'name' => $doc['name']], array_merge($doc, ['program_id' => $pgdm->id]));
-        }
-
-        // Selection process: WAT → GD → PI
-        $wat = SelectionProcessStep::firstOrCreate(['program_id' => $pgdm->id, 'step_order' => 1], [
-            'name' => 'Written Ability Test', 'type' => 'wat', 'max_score' => 30,
-            'weightage' => 20, 'instructions' => 'Candidates write a 300-word essay on a given topic in 20 minutes.',
-        ]);
-        $gd = SelectionProcessStep::firstOrCreate(['program_id' => $pgdm->id, 'step_order' => 2], [
-            'name' => 'Group Discussion', 'type' => 'gd', 'max_score' => 40,
-            'weightage' => 30, 'instructions' => 'Groups of 8-10 candidates. 15-minute topic discussion.',
-        ]);
-        $pi = SelectionProcessStep::firstOrCreate(['program_id' => $pgdm->id, 'step_order' => 3], [
-            'name' => 'Personal Interview', 'type' => 'pi', 'max_score' => 100,
-            'weightage' => 50, 'instructions' => 'Individual 20-minute interview with 2 evaluators.',
-        ]);
-
-        // GD scoring parameters
-        foreach ([
-            ['name' => 'Communication Skills', 'max_score' => 10],
-            ['name' => 'Leadership Qualities', 'max_score' => 10],
-            ['name' => 'Subject Knowledge', 'max_score' => 10],
-            ['name' => 'Body Language & Confidence', 'max_score' => 10],
-        ] as $i => $p) {
-            ScoringParameter::firstOrCreate(['selection_process_step_id' => $gd->id, 'name' => $p['name']], array_merge($p, ['selection_process_step_id' => $gd->id, 'sort_order' => $i + 1]));
-        }
-
-        // PI scoring parameters
-        foreach ([
-            ['name' => 'Subject Knowledge', 'max_score' => 20],
-            ['name' => 'Problem Solving', 'max_score' => 20],
-            ['name' => 'Communication', 'max_score' => 20],
-            ['name' => 'Career Clarity', 'max_score' => 20],
-            ['name' => 'Overall Impression', 'max_score' => 20],
-        ] as $i => $p) {
-            ScoringParameter::firstOrCreate(['selection_process_step_id' => $pi->id, 'name' => $p['name']], array_merge($p, ['selection_process_step_id' => $pi->id, 'sort_order' => $i + 1]));
-        }
-
-        // Admission fee installments
-        AdmissionFeeInstallment::firstOrCreate(['program_id' => $pgdm->id, 'installment_number' => 1], [
-            'name' => 'Registration Fee', 'amount' => 10000, 'due_date' => '2024-03-31',
-            'description' => 'Non-refundable registration fee to confirm your seat',
-        ]);
-        AdmissionFeeInstallment::firstOrCreate(['program_id' => $pgdm->id, 'installment_number' => 2], [
-            'name' => 'First Semester Fee', 'amount' => 140000, 'due_date' => '2024-06-15',
-            'description' => 'First semester tuition and other fees',
-        ]);
-
-        // Form config
-        AdmissionFormConfig::firstOrCreate(['program_id' => $pgdm->id], [
-            'form_sections' => AdmissionFormConfig::getDefaultSections(),
-            'is_active' => true,
-        ]);
-
-        // A2: Seat Matrix for PGDM
-        ProgramSeatMatrix::firstOrCreate(['program_id' => $pgdm->id, 'batch_id' => null], [
-            'general_seats'          => 60,
-            'obc_seats'              => 16,
-            'obc_nc_seats'           => 11,
-            'sc_seats'               => 15,
-            'st_seats'               => 7,
-            'ews_seats'              => 12,
-            'pwd_seats'              => 3,
-            'nri_seats'              => 6,
-            'management_quota_seats' => 12,
-            'total_seats'            => 139,
-            'state_quota_percentage' => 0,
-            'is_active'              => true,
-        ]);
-
+        $this->call(DemoAdmissionConfigSeeder::class);
+        $wat = SelectionProcessStep::where('program_id', $pgdm->id)->where('type', 'wat')->firstOrFail();
+        $gd = SelectionProcessStep::where('program_id', $pgdm->id)->where('type', 'gd')->firstOrFail();
         // 16. Admission enquiries
         $admissionData = [
             ['applicant_name' => 'Karan Malhotra', 'email' => 'karan.m@gmail.com', 'phone' => '9876543210', 'status' => 'applied'],
