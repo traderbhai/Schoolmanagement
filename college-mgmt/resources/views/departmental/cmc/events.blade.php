@@ -30,8 +30,8 @@
           <td class="ps-3 fw-medium">{{ $e->title }}</td>
           <td class="small text-muted">{{ \App\Models\CareerEvent::TYPE_LABELS[$e->event_type] ?? ucwords(str_replace('_',' ',$e->event_type)) }}</td>
           <td class="small">{{ $e->event_date->format('d M Y') }}</td>
-          <td class="small text-muted">{{ $e->venue ?? '—' }}</td>
-          <td>{{ $e->seats ?? '∞' }}</td>
+          <td class="small text-muted">{{ $e->venue ?? '-' }}</td>
+          <td>{{ $e->seats ?? 'Open' }}</td>
           <td><span class="badge bg-{{ $e->is_published ? 'success' : 'secondary' }}">{{ $e->is_published ? 'Yes' : 'Draft' }}</span></td>
           <td class="text-end pe-3">
             <a href="{{ route('cmc.events.registrations', $e) }}" class="btn btn-sm btn-outline-info py-0 px-2" title="Registrations">

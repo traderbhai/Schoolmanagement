@@ -787,6 +787,32 @@ Focused verification:
 StudentExamRegistrationWorkflowTest and ExamCellDashboardGuidanceTest: 28 tests passed, 287 assertions
 ```
 
+## Career Event Registration And CMC Attendance Recheck
+
+Manual CMC career-event and student registration checks were exercised against the running local server:
+
+```text
+cmc@college.com: POST /cmc/events created published event id=2, title=QA Career Event 231449, event_date=2026-07-16, seats=2.
+arjun.k@demo.edu: GET /student/career-events returned clean HTML and showed the QA event.
+arjun.k@demo.edu: POST /student/career-events/2/register registered the student for the event.
+cmc@college.com: GET /cmc/events/2/registrations showed Arjun Kapoor with registered status.
+cmc@college.com: PATCH /cmc/events/2/registrations/{registration}/attendance marked the student attended.
+cmc@college.com: GET /cmc/events/2/registrations/export returned CSV containing Arjun Kapoor and attended=Yes.
+cmc@college.com: GET /cmc/events returned clean HTML with the QA event and no mojibake fallback text.
+```
+
+Fix applied:
+
+```text
+Cleaned CMC career event list fallbacks so venue and open-seat values render as readable text without mojibake.
+```
+
+Focused verification:
+
+```text
+StudentCareerEventWorkflowTest and CmcDashboardGuidanceTest filtered career-event checks: 24 tests passed, 141 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -803,6 +829,7 @@ StudentExamRegistrationWorkflowTest and ExamCellDashboardGuidanceTest: 28 tests 
 - Added an explicit admission enrollment status repair command for existing databases with completed confirmations whose applicants were left non-enrolled before the lifecycle fix.
 - Cleaned CMC placed-students output so selected placement records show readable drive, company, and package details without mojibake.
 - Repaired rolling demo academic calendar data and added Exam Cell registration review so future exams, student registrations, approvals, hall tickets, and student admit-card downloads work in local real-user testing.
+- Verified CMC career-event creation, student registration, attendance marking, export, and cleaned career-event list mojibake.
 
 ## Feedback
 
