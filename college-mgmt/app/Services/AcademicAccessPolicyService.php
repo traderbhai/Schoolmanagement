@@ -57,6 +57,11 @@ class AcademicAccessPolicyService
             || $user->hasAnyRole(['admin', 'director', 'dean_academics']);
     }
 
+    public function canUseDeanOperatingSystem(User $user): bool
+    {
+        return $user->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']);
+    }
+
     public function canManageCurriculum(User $user): bool
     {
         return $this->canConfigureGovernance($user)
@@ -106,6 +111,11 @@ class AcademicAccessPolicyService
     public function authorizeAcademicGovernanceReview(User $user): void
     {
         abort_unless($this->canReviewAcademicGovernance($user), 403);
+    }
+
+    public function authorizeDeanOperatingSystem(User $user): void
+    {
+        abort_unless($this->canUseDeanOperatingSystem($user), 403);
     }
 
     public function authorizeCurriculum(User $user): void

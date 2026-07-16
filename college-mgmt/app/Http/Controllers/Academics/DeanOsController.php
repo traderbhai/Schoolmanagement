@@ -35,6 +35,7 @@ use App\Services\AcademicDeanRiskMitigationService;
 use App\Services\AcademicDeanRiskService;
 use App\Services\AcademicDeanRiskSnapshotService;
 use App\Services\AcademicDeanSavedViewService;
+use App\Services\AcademicAccessPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -46,7 +47,8 @@ class DeanOsController extends Controller
         private AcademicDeanRiskService $risk,
         private AcademicDeanReviewService $reviews,
         private AcademicDeanCalendarService $calendar,
-        private AcademicDeanExportService $exports
+        private AcademicDeanExportService $exports,
+        private AcademicAccessPolicyService $academicPolicy
     ) {}
 
     public function index(Request $request)
@@ -462,6 +464,9 @@ class DeanOsController extends Controller
 
     private function authorizeDeanOs(Request $request, bool $write = false): void
     {
-        abort_unless($request->user()?->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']), 403);
+        $user = $request->user();
+        abort_unless($user, 403);
+
+        $this->academicPolicy->authorizeDeanOperatingSystem($user);
     }
 }
