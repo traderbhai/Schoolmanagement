@@ -33,14 +33,7 @@
             ['label' => 'Student Risk', 'value' => $kpis['student_risk'], 'route' => route('academics.pmc.student-monitoring', ['metric' => 'student_risk'])],
         ] as $metric)
             <div class="col-6 col-xl-3">
-                <a class="text-decoration-none d-block h-100" href="{{ $metric['route'] }}">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $metric['label'] }}</div>
-                            <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                        </div>
-                    </div>
-                </a>
+                <x-ui.metric-card :href="$metric['route']" :label="$metric['label']" :value="$metric['value']" />
             </div>
         @endforeach
     </div>

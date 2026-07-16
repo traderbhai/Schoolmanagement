@@ -54,12 +54,7 @@
             ['label' => 'Critical Attention', 'value' => $kpis['critical_attention'], 'route' => route('academics.dean-os.attention', 'critical_attention')],
         ] as $metric)
             <div class="col-6 col-xl">
-                <a href="{{ $metric['route'] }}" class="card shadow-sm text-decoration-none h-100" aria-label="Open {{ $metric['label'] }} source list">
-                    <div class="card-body py-2">
-                        <div class="small text-muted">{{ $metric['label'] }}</div>
-                        <div class="h4 mb-0">{{ $metric['value'] }}</div>
-                    </div>
-                </a>
+                <x-ui.metric-card :href="$metric['route']" :label="$metric['label']" :value="$metric['value']" />
             </div>
         @endforeach
     </div>
