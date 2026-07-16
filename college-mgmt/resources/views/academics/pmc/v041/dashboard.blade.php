@@ -38,22 +38,12 @@
             ['Quality Score', $kpis['quality_score'] . '%', route('academics.pmc.timetable-quality.index'), true],
         ] as [$label, $value, $url, $clickable])
             <div class="col-6 col-md-3 col-xl">
-                @if($clickable)
-                    <a href="{{ $url }}" class="card h-100 shadow-sm text-decoration-none" aria-label="Open {{ $label }} source list">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="h4 mb-0">{{ $value }}</div>
-                        </div>
-                    </a>
-                @else
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="h4 mb-0">{{ $value }}</div>
-                            <div class="small text-muted">Summary score</div>
-                        </div>
-                    </div>
-                @endif
+                <x-ui.metric-card
+                    :href="$clickable ? $url : null"
+                    :label="$label"
+                    :value="$value"
+                    :aria-label="'Open ' . $label . ' source list'"
+                />
             </div>
         @endforeach
     </div>
@@ -183,72 +173,49 @@
         'sourceLabel' => 'Open faculty allocation source list',
     ])
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-                <div class="fw-semibold">Faculty Suitability Diagnostics</div>
-                <div class="small text-muted">Subject expertise, adjunct availability, acknowledgement concerns, overload approvals, and backup-only primary gaps before timetable generation.</div>
-            </div>
-            <span class="badge text-bg-{{ ($facultySuitabilityDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $facultySuitabilityDiagnostics['status'] ?? 'attention_required') }}</span>
-        </div>
-        <div class="row g-0 text-center">
-            @foreach([
-                ['Assignments', $facultySuitabilityDiagnostics['total_assignments'] ?? 0],
-                ['Suitable', $facultySuitabilityDiagnostics['suitable_assignments'] ?? 0],
-                ['Expertise Gaps', $facultySuitabilityDiagnostics['missing_expertise'] ?? 0],
-                ['Adjunct Day Risk', $facultySuitabilityDiagnostics['adjunct_day_risk'] ?? 0],
-                ['Restrictions', $facultySuitabilityDiagnostics['restriction_risks'] ?? 0],
-                ['Ack Concerns', $facultySuitabilityDiagnostics['acknowledgement_concerns'] ?? 0],
-                ['Declined', $facultySuitabilityDiagnostics['declined_assignments'] ?? 0],
-                ['Overload Risk', $facultySuitabilityDiagnostics['overload_risks'] ?? 0],
-                ['Unapproved', $facultySuitabilityDiagnostics['unapproved_suitability'] ?? 0],
-                ['Backup-Only Gap', $facultySuitabilityDiagnostics['backup_only_primary_gap'] ?? 0],
-                ['Blockers', $facultySuitabilityDiagnostics['blocker_total'] ?? 0],
-            ] as [$label, $value])
-                <div class="col-6 col-md-4 col-xl border-top border-end py-2">
-                    <div class="small text-muted">{{ $label }}</div>
-                    <div class="fw-semibold">{{ $value }}</div>
-                </div>
-            @endforeach
-        </div>
-        <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
-            <span>{{ $facultySuitabilityDiagnostics['recommended_action'] ?? 'Review faculty suitability before timetable generation.' }}</span>
-            <a href="{{ route('academics.pmc.section-faculty-allocation.index') }}">Open suitability source list</a>
-        </div>
-    </div>
+    @include('academics.pmc.v041.partials.diagnostic-card', [
+        'title' => 'Faculty Suitability Diagnostics',
+        'subtitle' => 'Subject expertise, adjunct availability, acknowledgement concerns, overload approvals, and backup-only primary gaps before timetable generation.',
+        'status' => $facultySuitabilityDiagnostics['status'] ?? 'attention_required',
+        'metricColumnClass' => 'col-6 col-md-4 col-xl',
+        'metrics' => [
+            ['Assignments', $facultySuitabilityDiagnostics['total_assignments'] ?? 0],
+            ['Suitable', $facultySuitabilityDiagnostics['suitable_assignments'] ?? 0],
+            ['Expertise Gaps', $facultySuitabilityDiagnostics['missing_expertise'] ?? 0],
+            ['Adjunct Day Risk', $facultySuitabilityDiagnostics['adjunct_day_risk'] ?? 0],
+            ['Restrictions', $facultySuitabilityDiagnostics['restriction_risks'] ?? 0],
+            ['Ack Concerns', $facultySuitabilityDiagnostics['acknowledgement_concerns'] ?? 0],
+            ['Declined', $facultySuitabilityDiagnostics['declined_assignments'] ?? 0],
+            ['Overload Risk', $facultySuitabilityDiagnostics['overload_risks'] ?? 0],
+            ['Unapproved', $facultySuitabilityDiagnostics['unapproved_suitability'] ?? 0],
+            ['Backup-Only Gap', $facultySuitabilityDiagnostics['backup_only_primary_gap'] ?? 0],
+            ['Blockers', $facultySuitabilityDiagnostics['blocker_total'] ?? 0],
+        ],
+        'recommendedAction' => $facultySuitabilityDiagnostics['recommended_action'] ?? 'Review faculty suitability before timetable generation.',
+        'sourceUrl' => route('academics.pmc.section-faculty-allocation.index'),
+        'sourceLabel' => 'Open suitability source list',
+    ])
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-                <div class="fw-semibold">Readiness Input Diagnostics</div>
-                <div class="small text-muted">Faculty availability, locked/manual slots, hard-lock collisions, and room/lab readiness before generation.</div>
-            </div>
-            <span class="badge text-bg-{{ ($readinessInputDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $readinessInputDiagnostics['status'] ?? 'attention_required') }}</span>
-        </div>
-        <div class="row g-0 text-center">
-            @foreach([
-                ['Preferences', $readinessInputDiagnostics['total_preferences'] ?? 0],
-                ['Incomplete Pref', $readinessInputDiagnostics['incomplete_preferences'] ?? 0],
-                ['Restrictive Pref', $readinessInputDiagnostics['restrictive_preferences'] ?? 0],
-                ['Active Locks', $readinessInputDiagnostics['active_locked_slots'] ?? 0],
-                ['Hard Locks', $readinessInputDiagnostics['hard_locked_slots'] ?? 0],
-                ['Missing Context', $readinessInputDiagnostics['locked_slots_missing_context'] ?? 0],
-                ['Lock Collisions', $readinessInputDiagnostics['hard_lock_collisions'] ?? 0],
-                ['Room Blockers', $readinessInputDiagnostics['room_review_blockers'] ?? 0],
-                ['Lab Not Ready', $readinessInputDiagnostics['lab_not_ready'] ?? 0],
-                ['Capacity Exceptions', $readinessInputDiagnostics['capacity_exceptions'] ?? 0],
-            ] as [$label, $value])
-                <div class="col-6 col-md border-top border-end py-2">
-                    <div class="small text-muted">{{ $label }}</div>
-                    <div class="fw-semibold">{{ $value }}</div>
-                </div>
-            @endforeach
-        </div>
-        <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
-            <span>{{ $readinessInputDiagnostics['recommended_action'] ?? 'Review readiness inputs.' }}</span>
-            <a href="{{ route('academics.pmc.locked-slots.index') }}">Open readiness source list</a>
-        </div>
-    </div>
+    @include('academics.pmc.v041.partials.diagnostic-card', [
+        'title' => 'Readiness Input Diagnostics',
+        'subtitle' => 'Faculty availability, locked/manual slots, hard-lock collisions, and room/lab readiness before generation.',
+        'status' => $readinessInputDiagnostics['status'] ?? 'attention_required',
+        'metrics' => [
+            ['Preferences', $readinessInputDiagnostics['total_preferences'] ?? 0],
+            ['Incomplete Pref', $readinessInputDiagnostics['incomplete_preferences'] ?? 0],
+            ['Restrictive Pref', $readinessInputDiagnostics['restrictive_preferences'] ?? 0],
+            ['Active Locks', $readinessInputDiagnostics['active_locked_slots'] ?? 0],
+            ['Hard Locks', $readinessInputDiagnostics['hard_locked_slots'] ?? 0],
+            ['Missing Context', $readinessInputDiagnostics['locked_slots_missing_context'] ?? 0],
+            ['Lock Collisions', $readinessInputDiagnostics['hard_lock_collisions'] ?? 0],
+            ['Room Blockers', $readinessInputDiagnostics['room_review_blockers'] ?? 0],
+            ['Lab Not Ready', $readinessInputDiagnostics['lab_not_ready'] ?? 0],
+            ['Capacity Exceptions', $readinessInputDiagnostics['capacity_exceptions'] ?? 0],
+        ],
+        'recommendedAction' => $readinessInputDiagnostics['recommended_action'] ?? 'Review readiness inputs.',
+        'sourceUrl' => route('academics.pmc.locked-slots.index'),
+        'sourceLabel' => 'Open readiness source list',
+    ])
 
     <div class="card shadow-sm mb-3">
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
