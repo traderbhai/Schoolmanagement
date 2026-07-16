@@ -63,6 +63,7 @@ class AcademicPmcTimetableV041Service
     public function __construct(
         private AcademicPmcAccessPolicyService $policy,
         private PmcTimetableReadModelService $readModels,
+        private PmcTimetableDashboardReadModelService $dashboardReadModel,
         private PmcTimetableBridgeSyncService $bridgeSync,
         private PmcTimetablePublishService $publishService,
         private PmcTimetableRevisionService $revisionService,
@@ -72,60 +73,19 @@ class AcademicPmcTimetableV041Service
 
     public function dashboard(User $user): array
     {
-        $scopedAllocationBatches = $this->applyScope(AcademicPmcCourseAllocationBatch::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']);
-        $scopedAllocations = $this->applyScope(AcademicPmcStudentCourseAllocation::query(), $user, [], [
-            'term' => ['id' => 'term'],
-            'student' => ['program_id' => 'program', 'batch_id' => 'batch'],
-        ]);
-        $scopedGroups = $this->applyScope(AcademicPmcCourseGroup::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']);
-        $scopedFacultyAssignments = $this->applyScope(AcademicPmcGroupFacultyAssignment::query(), $user, [], ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]);
-        $scopedLocks = $this->applyScope(AcademicPmcLockedSlot::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']);
-        $scopedRuns = $this->applyScope(AcademicPmcTimetableGenerationRun::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']);
-        $scopedGenerationRunIds = (clone $scopedRuns)->pluck('id');
-        $scopedConstraints = AcademicPmcTimetableConstraint::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedGenerationRunIds) {
-                if ($scopedGenerationRunIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('generation_run_id', $scopedGenerationRunIds);
-                }
-            });
-        $scopedQuality = AcademicPmcTimetableQualityScore::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedGenerationRunIds) {
-                if ($scopedGenerationRunIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('generation_run_id', $scopedGenerationRunIds);
-                }
-            });
-
-        return [
-            'scopeLabel' => $this->policy->scopeLabel($user),
-            'kpis' => [
-                'allocation_batches' => $scopedAllocationBatches->count(),
-                'student_allocations' => $scopedAllocations->count(),
-                'course_groups' => $scopedGroups->count(),
-                'faculty_assignments' => $scopedFacultyAssignments->count(),
-                'locked_slots' => $scopedLocks->where('status', 'active')->count(),
-                'hard_conflicts' => (clone $scopedConstraints)->where('severity', 'hard')->count(),
-                'soft_warnings' => (clone $scopedConstraints)->where('severity', 'soft')->count(),
-                'quality_score' => (int) round((clone $scopedQuality)->avg('overall_score') ?: 0),
-            ],
+        return $this->dashboardReadModel->dashboard($user, [
             'readiness' => $this->readinessChecklist($user),
-            'launchControl' => $this->launchControl($user),
-            'basketDiagnostics' => $this->courseBasketDiagnostics($user),
-            'allocationPressureDiagnostics' => $this->allocationPressureDiagnostics($user),
-            'groupDiagnostics' => $this->courseGroupDiagnostics($user),
-            'facultyDiagnostics' => $this->facultyAllocationDiagnostics($user),
-            'facultySuitabilityDiagnostics' => $this->facultySuitabilityDiagnostics(null, $user),
-            'readinessInputDiagnostics' => $this->readinessInputDiagnostics($user),
-            'generationDiagnostics' => $this->generationValidationDiagnostics($user),
-            'publishReadinessDiagnostics' => $this->publishFreezeReadinessDiagnostics($user),
-            'substitutionEmergencyDiagnostics' => $this->substitutionEmergencyDiagnostics($user),
-            'latestRun' => $scopedRuns->latest()->first(),
-            'constraints' => $scopedConstraints->latest()->limit(8)->get(),
-            'notifications' => AcademicPmcTimetableNotification::latest()->limit(8)->get(),
-        ];
+            'launch_control' => $this->launchControl($user),
+            'basket' => $this->courseBasketDiagnostics($user),
+            'allocation_pressure' => $this->allocationPressureDiagnostics($user),
+            'group' => $this->courseGroupDiagnostics($user),
+            'faculty' => $this->facultyAllocationDiagnostics($user),
+            'faculty_suitability' => $this->facultySuitabilityDiagnostics(null, $user),
+            'readiness_input' => $this->readinessInputDiagnostics($user),
+            'generation' => $this->generationValidationDiagnostics($user),
+            'publish_readiness' => $this->publishFreezeReadinessDiagnostics($user),
+            'substitution_emergency' => $this->substitutionEmergencyDiagnostics($user),
+        ]);
     }
 
     public function surface(User $user, string $surface, array $filters = []): array
