@@ -129,6 +129,16 @@ Fresh seeded smoke on temporary server `http://127.0.0.1:8010` passed for:
 
 After fixing the fresh seed bridge gap, `npm run test:timetable` passed `126 tests / 1000 assertions`.
 
+Post-fix release gates on commit `2d0a05f` also passed:
+
+```text
+npm run test:production-readiness: 57 tests passed, 12456 assertions
+php artisan test tests\Feature: 1771 tests passed, 29576 assertions
+npm run frontend:build: passed
+npm run frontend:smoke: 135 tests passed, 3977 assertions
+npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
