@@ -179,6 +179,15 @@ npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
 npm run test:production-readiness: 57 tests passed, 12464 assertions
 ```
 
+Complete PHP suite and action-focused launch workflow pack were then run on commit `27c69d5`:
+
+```text
+php artisan test: 1800 tests passed, 29685 assertions
+Admission lifecycle/payment/scholarship action pack: 56 tests passed, 431 assertions
+PMC publish/timetable plus student-teacher attendance action pack: 34 tests passed, 343 assertions
+Accounts fee/payment action pack: 81 tests passed, 529 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
