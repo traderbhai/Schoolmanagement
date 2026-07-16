@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 
 class AdmissionWalkInService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function record(array $data, ?User $actor = null): AdmissionWalkIn
     {
@@ -101,8 +101,8 @@ class AdmissionWalkInService
             ->orderBy($sortMap[$sort] ?? 'visited_at', $direction)
             ->orderBy('id', 'desc');
 
-        if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
-            $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+        if (!$this->accessPolicy->canSeeAll($viewer)) {
+            $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
             $query->where(function ($scope) use ($visibleIds) {
                 $scope->whereIn('assigned_counsellor_id', $visibleIds)
                     ->orWhereNull('assigned_counsellor_id');
@@ -114,10 +114,10 @@ class AdmissionWalkInService
 
     public function canAccess(AdmissionWalkIn $walkIn, User $viewer): bool
     {
-        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+        if ($this->accessPolicy->canSeeAll($viewer)) {
             return true;
         }
 
-        return $this->hierarchy->canViewAssignedUser($viewer, 'ADM', $walkIn->assigned_counsellor_id, true);
+        return $this->accessPolicy->canViewAssignedUser($viewer, $walkIn->assigned_counsellor_id, true);
     }
 }

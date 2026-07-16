@@ -96,8 +96,8 @@ class AdmissionCallingDeskService
 
     private function visibleSubjectIds(User $user): array
     {
-        $visibleUserIds = app(DepartmentHierarchyService::class)
-            ->visibleUserIds($user, 'ADM')
+        $visibleUserIds = app(AdmissionAccessPolicyService::class)
+            ->visibleUserIds($user)
             ->push($user->id)
             ->unique();
 

@@ -65,8 +65,8 @@ class AdmissionCallQueueSelectorService
             return true;
         }
 
-        $visibleIds = app(DepartmentHierarchyService::class)
-            ->visibleUserIds($user, 'ADM')
+        $visibleIds = app(AdmissionAccessPolicyService::class)
+            ->visibleUserIds($user)
             ->push($user->id)
             ->unique();
 
@@ -119,6 +119,6 @@ class AdmissionCallQueueSelectorService
 
     public function seesAll(User $user): bool
     {
-        return method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['admin', 'admission_head', 'director']);
+        return app(AdmissionAccessPolicyService::class)->canSeeAll($user);
     }
 }
