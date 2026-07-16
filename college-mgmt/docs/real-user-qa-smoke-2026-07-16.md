@@ -201,6 +201,31 @@ fresh seeded live smoke on http://127.0.0.1:8010: 16 critical pages passed with 
 
 Fresh seeded live smoke covered Exam Cell exam creation, unified approvals inbox, Admin dashboard, Accounts dashboard/admission payments/scholarship disbursements/reconciliation, Admission workbench/document queue/dashboard, PMC official timetable/command, Teacher attendance/timetable, and Student timetable/fees.
 
+## Real-User Continuation Pass
+
+Continuation pass on the same local server at `http://127.0.0.1:8000`:
+
+```text
+composer validate --strict: passed
+composer audit: initially found 3 medium Guzzle advisories
+composer update guzzlehttp/guzzle guzzlehttp/psr7 --with-dependencies: upgraded guzzlehttp/guzzle 7.11.0 -> 7.14.2, guzzlehttp/psr7 2.11.0 -> 2.12.5, guzzlehttp/promises 2.5.0 -> 2.5.1
+composer audit after update: passed, no advisories
+npm audit --audit-level=high: passed, 0 vulnerabilities
+npm run frontend:build: passed
+Focused PMC timetable regression: 18 tests passed, 155 assertions
+npm run test:timetable: 126 tests passed, 1000 assertions
+npm run test:production-readiness: 57 tests passed, 12464 assertions
+npm run frontend:smoke: 137 tests passed, 4008 assertions
+npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
+npm run test:admission: 101 tests passed, 1093 assertions
+npm run test:finance: 57 tests passed, 438 assertions
+npm run test:portal: 51 tests passed, 439 assertions
+```
+
+Live authenticated real-user sweep covered 43 pages across Admin, PMC, Dean, Admission, Accounts, Exam Cell, Teacher, Student, Parent, and Admission Partner. All returned HTTP 200 with no service-error/debug text.
+
+The smoke script initially checked `/approvals`, which is not a valid registered route. The real shared approval inbox is `/approvals/inbox`; it passed for Admin and Dean.
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -208,6 +233,7 @@ Fresh seeded live smoke covered Exam Cell exam creation, unified approvals inbox
 - Fixed the KPI component markup spacing issue that affected the admin operations KPI drilldown assertion.
 - Fixed fresh PMC demo seed bridge integrity: published canonical sessions now create compatibility bridge rows during seeding, matching the reconciliation baseline and downstream attendance/reporting expectations.
 - Fixed navigation-crawl blockers in Exam Cell, unified approvals, Admission document file actions, and Accounts finance links.
+- Patched Composer dependency advisories in Guzzle packages and re-ran dependency, frontend, timetable, production-readiness, Admission, Finance, Portal, and live role smoke checks.
 
 ## Feedback
 
