@@ -7,16 +7,17 @@ use App\Models\AdmissionAssignmentRule;
 use App\Models\DepartmentRole;
 use App\Models\DepartmentTeam;
 use App\Models\User;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class AssignmentRuleController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
-        abort_unless($this->hierarchy->hasPermission($request->user(), 'ADM', 'assign_work'), 403);
+        $this->policy->authorizePermission($request->user(), 'assign_work');
 
         $rules = AdmissionAssignmentRule::with(['targetUser', 'targetTeam', 'targetRole'])
             ->orderBy('priority')
@@ -30,7 +31,7 @@ class AssignmentRuleController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($this->hierarchy->hasPermission($request->user(), 'ADM', 'assign_work'), 403);
+        $this->policy->authorizePermission($request->user(), 'assign_work');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -54,7 +55,7 @@ class AssignmentRuleController extends Controller
 
     public function toggle(Request $request, AdmissionAssignmentRule $rule)
     {
-        abort_unless($this->hierarchy->hasPermission($request->user(), 'ADM', 'assign_work'), 403);
+        $this->policy->authorizePermission($request->user(), 'assign_work');
         $rule->update(['is_active' => !$rule->is_active]);
 
         return back()->with('success', 'Assignment rule updated.');

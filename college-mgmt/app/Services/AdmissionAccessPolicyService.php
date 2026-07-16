@@ -65,6 +65,31 @@ class AdmissionAccessPolicyService
         return app(DepartmentHierarchyService::class)->visibleUserIds($user, 'ADM');
     }
 
+    public function hasPermission(User $user, string $permission): bool
+    {
+        return app(DepartmentHierarchyService::class)->hasPermission($user, 'ADM', $permission);
+    }
+
+    public function canManageSettings(User $user): bool
+    {
+        return app(DepartmentHierarchyService::class)->canManageDepartmentSettings($user, 'ADM');
+    }
+
+    public function authorizePermission(User $user, string $permission): void
+    {
+        abort_unless($this->hasPermission($user, $permission), 403);
+    }
+
+    public function authorizeAnyPermission(User $user, array $permissions): void
+    {
+        abort_unless(collect($permissions)->contains(fn (string $permission) => $this->hasPermission($user, $permission)), 403);
+    }
+
+    public function authorizeSettingsOrPermission(User $user, string $permission): void
+    {
+        abort_unless($this->canManageSettings($user) || $this->hasPermission($user, $permission), 403);
+    }
+
     public function canApproveAdmission(User $user): bool
     {
         return app(DepartmentHierarchyService::class)->canApproveAdmission($user);

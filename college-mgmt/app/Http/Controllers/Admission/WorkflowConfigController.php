@@ -5,17 +5,17 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\AdmissionTag;
 use App\Models\AdmissionWorkflowConfig;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class WorkflowConfigController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
-        abort_unless($this->hierarchy->canManageDepartmentSettings($request->user(), 'ADM') || $this->hierarchy->hasPermission($request->user(), 'ADM', 'configure_process'), 403);
+        $this->policy->authorizeSettingsOrPermission($request->user(), 'configure_process');
 
         $configs = AdmissionWorkflowConfig::orderBy('type')->orderBy('sort_order')->get()->groupBy('type');
         $tags = AdmissionTag::orderBy('name')->get();
@@ -25,7 +25,7 @@ class WorkflowConfigController extends Controller
 
     public function storeConfig(Request $request)
     {
-        abort_unless($this->hierarchy->canManageDepartmentSettings($request->user(), 'ADM') || $this->hierarchy->hasPermission($request->user(), 'ADM', 'configure_process'), 403);
+        $this->policy->authorizeSettingsOrPermission($request->user(), 'configure_process');
 
         $validated = $request->validate([
             'type' => ['required', 'in:lead_stage,outcome,reason,sla_profile,attention_rule'],
@@ -46,7 +46,7 @@ class WorkflowConfigController extends Controller
 
     public function storeTag(Request $request)
     {
-        abort_unless($this->hierarchy->hasPermission($request->user(), 'ADM', 'assign_work') || $this->hierarchy->hasPermission($request->user(), 'ADM', 'configure_process'), 403);
+        $this->policy->authorizeAnyPermission($request->user(), ['assign_work', 'configure_process']);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
