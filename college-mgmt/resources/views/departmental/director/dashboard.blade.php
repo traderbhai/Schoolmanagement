@@ -35,60 +35,22 @@
 {{-- KPI Row --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-blue">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-                <div><div class="kpi-value">{{ $totalStudents }}</div><div class="kpi-label">Total Students</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>All programs</div>
-        </div>
+        <x-ui.kpi-card tone="blue" icon="bi-people-fill" :value="$totalStudents" label="Total Students" trend="All programs" trend-icon="bi-mortarboard" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-cyan">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
-                <div><div class="kpi-value">{{ $totalFaculty }}</div><div class="kpi-label">Faculty</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-building me-1"></i>Active staff</div>
-        </div>
+        <x-ui.kpi-card tone="cyan" icon="bi-person-badge-fill" :value="$totalFaculty" label="Faculty" trend="Active staff" trend-icon="bi-building" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-green">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
-                <div><div class="kpi-value">{{ $totalPrograms }}</div><div class="kpi-label">Programs</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-journal me-1"></i>Active programs</div>
-        </div>
+        <x-ui.kpi-card tone="green" icon="bi-mortarboard-fill" :value="$totalPrograms" label="Programs" trend="Active programs" trend-icon="bi-journal" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-purple">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-briefcase-fill"></i></div>
-                <div><div class="kpi-value">{{ $placedThisYear }}</div><div class="kpi-label">Placed {{ now()->year }}</div></div>
-            </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Placement count</div>
-        </div>
+        <x-ui.kpi-card tone="purple" icon="bi-briefcase-fill" :value="$placedThisYear" label="Placed {{ now()->year }}" trend="Placement count" trend-icon="bi-arrow-up" trend-tone="up" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-amber">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-clipboard-check-fill"></i></div>
-                <div><div class="kpi-value">{{ $activeDrives }}</div><div class="kpi-label">Active Drives</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-buildings me-1"></i>Open to students</div>
-        </div>
+        <x-ui.kpi-card tone="amber" icon="bi-clipboard-check-fill" :value="$activeDrives" label="Active Drives" trend="Open to students" trend-icon="bi-buildings" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card {{ $overallAttendance >= 75 ? 'kpi-green' : 'kpi-red' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
-                <div><div class="kpi-value">{{ $overallAttendance }}%</div><div class="kpi-label">Attendance</div></div>
-            </div>
-            <div class="kpi-trend {{ $overallAttendance >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $overallAttendance >= 75 ? 'up' : 'down' }} me-1"></i>Institute-wide
-            </div>
-        </div>
+        <x-ui.kpi-card :tone="$overallAttendance >= 75 ? 'green' : 'red'" icon="bi-check2-square" value="{{ $overallAttendance }}%" label="Attendance" trend="Institute-wide" :trend-icon="$overallAttendance >= 75 ? 'bi-arrow-up' : 'bi-arrow-down'" :trend-tone="$overallAttendance >= 75 ? 'up' : 'down'" />
     </div>
 </div>
 
