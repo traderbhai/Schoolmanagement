@@ -168,6 +168,17 @@ npm run test:finance: 57 tests passed, 438 assertions
 npm run test:admission: 101 tests passed, 1093 assertions
 ```
 
+Full release gates after the route snapshot was updated for the intentional Accounts scholarship route:
+
+```text
+Architecture route guard: passed with 1298 registered routes
+php artisan test tests\Feature: 1773 tests passed, 29615 assertions
+npm run frontend:build: passed
+npm run frontend:smoke: 137 tests passed, 4008 assertions
+npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
+npm run test:production-readiness: 57 tests passed, 12464 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
