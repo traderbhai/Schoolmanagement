@@ -2727,41 +2727,12 @@ class AcademicPmcTimetableV041Service
 
     private function plannerSurface(User $user, array $filters): array
     {
-        $items = $this->applyScope(
-            AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot']),
+        return $this->readModels->plannerSurface(
             $user,
-            [],
-            ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-        )
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status), fn (Builder $query) => $query->where('status', 'scheduled'))
-            ->when($filters['subject_id'] ?? null, fn (Builder $query, string $subjectId) => $query->whereHas('courseGroup', fn (Builder $group) => $group->where('subject_id', $subjectId)))
-            ->when($filters['search'] ?? null, function (Builder $query, string $search) {
-                $query->where(function (Builder $inner) use ($search) {
-                    $inner->whereHas('courseGroup', fn (Builder $group) => $group->where('name', 'like', "%{$search}%")
-                        ->orWhereHas('subject', fn (Builder $subject) => $subject->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")))
-                        ->orWhereHas('teacher.user', fn (Builder $teacher) => $teacher->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('classroom', fn (Builder $room) => $room->where('name', 'like', "%{$search}%")->orWhere('room_number', 'like', "%{$search}%"));
-                });
-            });
-
-        $this->applyTimetableItemSort($items, $filters);
-
-        return [
-            'title' => 'PMC Timetable Planning Board',
-            'description' => 'Batch, faculty, room, and group grid view with conflict and lock indicators.',
-            'items' => $items->paginate(30),
-            'constraints' => $this->constrainConstraintsByUserScope(
-                AcademicPmcTimetableConstraint::query(),
-                $user,
-                AcademicPmcTimetableGenerationRun::query(),
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )
-                ->when($filters['severity'] ?? null, fn (Builder $query, string $severity) => $query->where('severity', $severity))
-                ->latest()
-                ->paginate(15)
-                ->withQueryString(),
-            'resolutionActions' => $this->applyScope(AcademicPmcTimetableResolutionAction::with(['constraint', 'owner']), $user, [], ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']])->latest()->paginate(15, ['*'], 'resolution_page'),
-        ];
+            $filters,
+            fn (Builder $query, array $surfaceFilters) => $this->applyTimetableItemSort($query, $surfaceFilters),
+            fn (Builder $query, User $scopedUser, Builder $scopeQuery, array $directMap) => $this->constrainConstraintsByUserScope($query, $scopedUser, $scopeQuery, $directMap)
+        );
     }
 
     private function versionSurface(User $user, array $filters): array

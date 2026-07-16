@@ -7,6 +7,8 @@ use App\Models\AcademicPmcTimetableGenerationRun;
 use App\Models\AcademicPmcTimetableImpactRecord;
 use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableQualityScore;
+use App\Models\AcademicPmcTimetableConstraint;
+use App\Models\AcademicPmcTimetableResolutionAction;
 use App\Models\AcademicPmcTimetableSessionDemand;
 use App\Models\AcademicPmcTimetableSolverAttempt;
 use App\Models\AcademicPmcCourseAllocationBatch;
@@ -337,6 +339,50 @@ class PmcTimetableReadModelService
                 ->paginate(15, ['*'], 'impact_preview_page'),
             'generationDiagnostics' => $generationDiagnostics,
             'surfaceKey' => $surface,
+        ];
+    }
+
+    public function plannerSurface(User $user, array $filters, callable $applySort, callable $constraintsForUserScope): array
+    {
+        $items = $this->applyScope(
+            AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot']),
+            $user,
+            [],
+            ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+        )
+            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status), fn (Builder $query) => $query->where('status', 'scheduled'))
+            ->when($filters['subject_id'] ?? null, fn (Builder $query, string $subjectId) => $query->whereHas('courseGroup', fn (Builder $group) => $group->where('subject_id', $subjectId)))
+            ->when($filters['search'] ?? null, function (Builder $query, string $search) {
+                $query->where(function (Builder $inner) use ($search) {
+                    $inner->whereHas('courseGroup', fn (Builder $group) => $group->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('subject', fn (Builder $subject) => $subject->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%")))
+                        ->orWhereHas('teacher.user', fn (Builder $teacher) => $teacher->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('classroom', fn (Builder $room) => $room->where('name', 'like', "%{$search}%")->orWhere('room_number', 'like', "%{$search}%"));
+                });
+            });
+
+        $applySort($items, $filters);
+
+        return [
+            'title' => 'PMC Timetable Planning Board',
+            'description' => 'Batch, faculty, room, and group grid view with conflict and lock indicators.',
+            'items' => $items->paginate(30),
+            'constraints' => $constraintsForUserScope(
+                AcademicPmcTimetableConstraint::query(),
+                $user,
+                AcademicPmcTimetableGenerationRun::query(),
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            )
+                ->when($filters['severity'] ?? null, fn (Builder $query, string $severity) => $query->where('severity', $severity))
+                ->latest()
+                ->paginate(15)
+                ->withQueryString(),
+            'resolutionActions' => $this->applyScope(
+                AcademicPmcTimetableResolutionAction::with(['constraint', 'owner']),
+                $user,
+                [],
+                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->latest()->paginate(15, ['*'], 'resolution_page'),
         ];
     }
 
