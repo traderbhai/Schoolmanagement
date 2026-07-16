@@ -3,7 +3,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, RoleProgramAssignment, ProgramSeatMatrix};
+use App\Models\{User, Student, Teacher, Department, Course, Program, Batch, Term, Subject, AcademicYear, Semester, Classroom, TimetableSlot, TimetableEntry, Notice, FeeStructure, FeePayment, Enrollment, AdmissionFormConfig, RequiredDocument, SelectionProcessStep, ScoringParameter, AdmissionFeeInstallment, Applicant, ApplicantDocument, CounsellingLog, DocumentVerificationRequest, SelectionSession, SessionApplicant, ApplicantScore, MeritListEntry, AdmissionPayment, EnrollmentConfirmation, ProgramSeatMatrix};
 use App\Services\EnrollmentService;
 use Spatie\Permission\Models\Role;
 use Carbon\Carbon;
@@ -980,74 +980,7 @@ class DemoDataSeeder extends Seeder
         }
 
         // ── P9: Departmental Role Users ─────────────────────────────────────────
-        $admin = User::where('email', 'admin@demo.edu')->first();
-
-        $deanUser = User::firstOrCreate(['email' => 'dean@college.com'], [
-            'name' => 'Dr. Meena Iyer', 'password' => Hash::make('password'), 'email_verified_at' => now(),
-        ]);
-        $deanUser->syncRoles(['dean_academics']);
-
-        $chairUser = User::firstOrCreate(['email' => 'chair@college.com'], [
-            'name' => 'Prof. Anil Gupta', 'password' => Hash::make('password'), 'email_verified_at' => now(),
-        ]);
-        $chairUser->syncRoles(['program_chair']);
-
-        $examUser = User::firstOrCreate(['email' => 'exam@college.com'], [
-            'name' => 'Ritu Verma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
-        ]);
-        $examUser->syncRoles(['exam_cell']);
-
-        $hodUser = User::firstOrCreate(['email' => 'hod@college.com'], [
-            'name' => 'Dr. Suresh Nair', 'password' => Hash::make('password'), 'email_verified_at' => now(),
-        ]);
-        $hodUser->syncRoles(['hod']);
-
-        $accountsUser = User::firstOrCreate(['email' => 'accounts@college.com'], [
-            'name' => 'Pradeep Sharma', 'password' => Hash::make('password'), 'email_verified_at' => now(),
-        ]);
-        $accountsUser->syncRoles(['accounts_officer']);
-
-        // RoleProgramAssignment records for program_chair and hod → PGDM
-        $assignById = $admin?->id ?? 1;
-        RoleProgramAssignment::firstOrCreate(
-            ['user_id' => $chairUser->id, 'role_name' => 'program_chair', 'program_id' => $pgdm->id],
-            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
-        );
-        RoleProgramAssignment::firstOrCreate(
-            ['user_id' => $hodUser->id, 'role_name' => 'hod', 'program_id' => $pgdm->id],
-            ['is_active' => true, 'assigned_by' => $assignById, 'assigned_at' => now()]
-        );
-
-        // ── CMC user ──────────────────────────────────────────────────────────
-        $cmcUser = User::firstOrCreate(
-            ['email' => 'cmc@college.com'],
-            ['name' => 'CMC Officer', 'password' => Hash::make('password')]
-        );
-        $cmcUser->syncRoles(['cmc']);
-
-        // ── Director user ─────────────────────────────────────────────────────
-        $directorUser = User::firstOrCreate(
-            ['email' => 'director@college.com'],
-            ['name' => 'Institute Director', 'password' => Hash::make('password')]
-        );
-        $directorUser->syncRoles(['director']);
-
-        // ── Parent user ───────────────────────────────────────────────────────
-        $parentUser = User::firstOrCreate(
-            ['email' => 'parent@demo.edu'],
-            ['name' => 'Ramesh Kumar', 'password' => Hash::make('password')]
-        );
-        $parentUser->syncRoles(['parent']);
-        $parentProfile = \App\Models\ParentProfile::firstOrCreate(
-            ['user_id' => $parentUser->id],
-            ['relation' => 'father', 'phone' => '9876500000']
-        );
-        $parentChild = \App\Models\Student::whereHas('user', fn($q) => $q->where('email', 'arjun.k@demo.edu'))->first();
-        if ($parentChild && !$parentProfile->students()->where('students.id', $parentChild->id)->exists()) {
-            $parentProfile->students()->attach($parentChild->id);
-        }
-
-        // ── Feature Access Matrix ─────────────────────────────────────────────
+        $this->call(DemoDepartmentRoleUserSeeder::class);
         $this->call(AdmissionDemoModuleSeeder::class);
         $this->call(AcademicsPmcDemoModuleSeeder::class);
         $this->call(RoleFeatureAccessSeeder::class);
