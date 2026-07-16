@@ -133,6 +133,20 @@ use Spatie\Permission\Models\Role;
 
 class AcademicsPmcOperatingDemoSeeder extends Seeder
 {
+    private function user(string $email, string $name, array $roles): User
+    {
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            ['name' => $name, 'password' => Hash::make('password')]
+        );
+
+        foreach ($roles as $role) {
+            $user->assignRole($role);
+        }
+
+        return $user;
+    }
+
     public function seedPmcOperatingSignals(Department $department, User $pmcHead, ?Program $program, ?Subject $subject, ?Student $student, ?Semester $semester, ?int $termId): void
     {
         if (! $program || ! $subject || ! $semester) {
