@@ -6,12 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\ApplicantScore;
 use App\Models\SelectionSession;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class ScoringController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function sessionScoreSheet(SelectionSession $session)
     {
@@ -20,7 +20,7 @@ class ScoringController extends Controller
         $presentApplicants = $session->sessionApplicants()
             ->where('attendance_status', 'present')
             ->whereHas('applicant', function ($query) {
-                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+                $this->accessPolicy->applyApplicantVisibility($query, request()->user());
             })
             ->with('applicant.user')
             ->get();
@@ -28,7 +28,7 @@ class ScoringController extends Controller
         $absentApplicants = $session->sessionApplicants()
             ->whereIn('attendance_status', ['absent', 'excused'])
             ->whereHas('applicant', function ($query) {
-                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+                $this->accessPolicy->applyApplicantVisibility($query, request()->user());
             })
             ->with('applicant.user')
             ->get();
@@ -36,7 +36,7 @@ class ScoringController extends Controller
         // Load existing scores keyed by applicant_id
         $existingScores = ApplicantScore::where('selection_session_id', $session->id)
             ->whereHas('applicant', function ($query) {
-                $this->hierarchy->applyApplicantVisibility($query, request()->user(), 'ADM');
+                $this->accessPolicy->applyApplicantVisibility($query, request()->user());
             })
             ->get()
             ->keyBy('applicant_id');
@@ -51,12 +51,12 @@ class ScoringController extends Controller
         $session->load('step.scoringParameters');
         $parameters = $session->step->scoringParameters;
 
-        $isFinal = $request->boolean('mark_final') && $this->hierarchy->canApproveAdmission($request->user());
+        $isFinal = $request->boolean('mark_final') && $this->accessPolicy->canApproveAdmission($request->user());
 
         $scores = $request->input('scores', []);
         $visibleApplicantIds = Applicant::query()
             ->whereIn('id', array_keys($scores))
-            ->tap(fn ($query) => $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM'))
+            ->tap(fn ($query) => $this->accessPolicy->applyApplicantVisibility($query, $request->user()))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -137,10 +137,7 @@ class ScoringController extends Controller
 
     public function applicantScorecard(Applicant $applicant)
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, false),
-            403
-        );
+        $this->accessPolicy->authorizeViewAssignedUser(request()->user(), $applicant->assigned_to, false);
 
         $applicant->load(['program', 'batch', 'user']);
 
