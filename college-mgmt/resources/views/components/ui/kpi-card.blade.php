@@ -21,7 +21,7 @@
             <div class="d-flex align-items-center gap-3">
                 <div class="kpi-icon"><i class="bi {{ $icon }}"></i></div>
                 <div>
-                    <div class="kpi-value" @if($valueStyle) style="{{ $valueStyle }}" @endif>{{ $value }}</div>
+                    <div class="kpi-value"@if($valueStyle) style="{{ $valueStyle }}"@endif>{{ $value }}</div>
                     <div class="kpi-label">{{ $label }}</div>
                 </div>
             </div>
@@ -37,7 +37,7 @@
         <div class="d-flex align-items-center gap-3">
             <div class="kpi-icon"><i class="bi {{ $icon }}"></i></div>
             <div>
-                <div class="kpi-value" @if($valueStyle) style="{{ $valueStyle }}" @endif>{{ $value }}</div>
+                <div class="kpi-value"@if($valueStyle) style="{{ $valueStyle }}"@endif>{{ $value }}</div>
                 <div class="kpi-label">{{ $label }}</div>
             </div>
         </div>

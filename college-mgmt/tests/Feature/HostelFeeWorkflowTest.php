@@ -364,7 +364,7 @@ class HostelFeeWorkflowTest extends TestCase
             ->assertSee('North Hostel')
             ->assertSee('Room 301')
             ->assertSee('2026-06')
-            ->assertSee('Pending')
+            ->assertSee('Overdue')
             ->assertSee('Paid');
     }
 }

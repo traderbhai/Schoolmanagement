@@ -59,7 +59,20 @@ npm run frontend:smoke:mobile
 C:\tmp\php-8.5.7\php.exe artisan test tests\Feature\ArchitectureStabilizationTest.php
 npm run test:timetable
 npm run frontend:build
+C:\tmp\php-8.5.7\php.exe artisan test tests\Feature
 ```
+
+Full feature suite result after the final fixes:
+
+```text
+1770 tests passed, 29566 assertions
+```
+
+## Final Blockers Fixed
+
+- Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
+- Kept the student fee UI behavior that labels past-due pending hostel demands as `Overdue`, and aligned the stale regression expectation.
+- Fixed the KPI component markup spacing issue that affected the admin operations KPI drilldown assertion.
 
 ## Feedback
 

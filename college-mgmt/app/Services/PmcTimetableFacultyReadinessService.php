@@ -49,12 +49,10 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\TimetableEntry;
-use App\Models\TimetableSlot;
 use App\Models\TimetableVersion;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -65,6 +63,7 @@ class PmcTimetableFacultyReadinessService
     public function __construct(
         private AcademicPmcAccessPolicyService $policy,
         private PmcTimetableReadModelService $readModels,
+        private TimetableSlotMathService $slotMath,
     ) {}
 
     public function facultyAvailabilitySurface(User $user, array $filters = []): array
@@ -219,7 +218,7 @@ class PmcTimetableFacultyReadinessService
             $weeklyLimit = (int) ($preference?->max_weekly_load ?: 18);
             $dailyLimit = (int) ($preference?->max_classes_per_day ?: 4);
             $maxDay = (int) (empty($daily) ? 0 : max($daily));
-            $maxConsecutive = $this->maxConsecutiveForItems($items);
+            $maxConsecutive = $this->slotMath->maxConsecutiveForItems($items);
             $reasons = [];
             $band = 'normal';
 
