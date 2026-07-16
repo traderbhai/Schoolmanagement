@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 
 class AdmissionCallService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function queueFor(User $user, array $filters = []): Collection
     {
@@ -22,7 +22,7 @@ class AdmissionCallService
             ->orderByDesc('score_band')
             ->oldest('last_contacted_at');
 
-        $this->hierarchy->applyLeadVisibility($query, $user, 'ADM');
+        $this->accessPolicy->applyLeadVisibility($query, $user);
 
         return $query
             ->when($filters['program_id'] ?? null, fn ($q, $id) => $q->where('program_id', $id))

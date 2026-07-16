@@ -15,16 +15,16 @@ use Illuminate\Support\Carbon;
 
 class AdmissionCalendarService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $accessPolicy) {}
 
     public function eventsFor(User $viewer, array $filters = []): Collection
     {
         $from = isset($filters['from']) ? Carbon::parse($filters['from'])->startOfDay() : now()->subDays(7)->startOfDay();
         $to = isset($filters['to']) ? Carbon::parse($filters['to'])->endOfDay() : now()->addDays(30)->endOfDay();
 
-        $visibleIds = $viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')
+        $visibleIds = $this->accessPolicy->canSeeAll($viewer)
             ? null
-            : $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+            : $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
 
         $events = collect();
 

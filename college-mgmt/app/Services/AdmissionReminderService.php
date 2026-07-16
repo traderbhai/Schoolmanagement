@@ -15,7 +15,7 @@ class AdmissionReminderService
 {
     public function __construct(
         private AdmissionCommunicationService $communication,
-        private DepartmentHierarchyService $hierarchy,
+        private AdmissionAccessPolicyService $accessPolicy,
     ) {}
 
     public function schedule(Model $subject, array $data, ?User $actor = null): AdmissionReminderSchedule
@@ -91,8 +91,8 @@ class AdmissionReminderService
             ->orderByRaw("case priority when 'urgent' then 1 when 'high' then 2 when 'normal' then 3 else 4 end")
             ->orderBy('due_at');
 
-        if (!$viewer->hasRole('admin') && !$this->hierarchy->canSeeAll($viewer, 'ADM')) {
-            $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+        if (!$this->accessPolicy->canSeeAll($viewer)) {
+            $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
             $query->where(function ($q) use ($visibleIds) {
                 $q->whereIn('assigned_to', $visibleIds)->orWhereIn('owner_user_id', $visibleIds);
             });
@@ -103,11 +103,11 @@ class AdmissionReminderService
 
     public function canAccess(AdmissionReminderSchedule $reminder, User $viewer): bool
     {
-        if ($viewer->hasRole('admin') || $this->hierarchy->canSeeAll($viewer, 'ADM')) {
+        if ($this->accessPolicy->canSeeAll($viewer)) {
             return true;
         }
 
-        $visibleIds = $this->hierarchy->visibleUserIds($viewer, 'ADM')->push($viewer->id)->unique();
+        $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
 
         return $visibleIds->contains($reminder->assigned_to)
             || $visibleIds->contains($reminder->owner_user_id);
