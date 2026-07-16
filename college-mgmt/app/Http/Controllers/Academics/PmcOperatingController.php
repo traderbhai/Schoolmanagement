@@ -1097,7 +1097,9 @@ class PmcOperatingController extends Controller
         $this->pmcPolicy->authorizeWriteScope($request->user(), $data);
         $blockers = $this->timetableLaunchReadiness->generationBlockers($request->user(), $data);
         if ($blockers !== []) {
-            abort(422, 'Timetable generation blocked: ' . implode(' ', array_slice($blockers, 0, 3)));
+            return back()
+                ->withInput()
+                ->with('error', 'Timetable generation blocked: ' . implode(' ', array_slice($blockers, 0, 3)));
         }
         $run = $this->pmcTimetableV041->generate($request->user(), $data);
 
@@ -1176,7 +1178,9 @@ class PmcOperatingController extends Controller
         ]);
         $blockers = $this->timetableLaunchReadiness->publishBlockers($run, $request->user());
         if ($blockers !== [] && blank($data['override_reason'] ?? null)) {
-            abort(422, 'Timetable publish blocked: ' . implode(' ', array_slice($blockers, 0, 3)) . ' Dean/Admin override reason is required for allowed exceptions.');
+            return back()
+                ->withInput()
+                ->with('error', 'Timetable publish blocked: ' . implode(' ', array_slice($blockers, 0, 3)) . ' Dean/Admin override reason is required for allowed exceptions.');
         }
         $version = $this->pmcTimetableV041->publishRun($request->user(), $run, $data);
 

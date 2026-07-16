@@ -377,7 +377,8 @@ class AcademicsPmcTimetableV041Test extends TestCase
             'program_id' => $program->id,
             'batch_id' => $batch->id,
             'term_id' => $term->id,
-        ])->assertStatus(422);
+        ])->assertRedirect()
+            ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'Timetable generation blocked'));
 
         $this->assertFalse(AcademicPmcTimetableGenerationRun::where('title', 'Empty Scope Generator Run')->exists());
     }
@@ -595,7 +596,8 @@ class AcademicsPmcTimetableV041Test extends TestCase
         $this->actingAs($chair)->post(route('academics.pmc.timetable-generator.publish', $run), [
             'effective_from' => now()->toDateString(),
             'decision_reason' => 'Attempt publish with unresolved unscheduled demand.',
-        ])->assertStatus(422);
+        ])->assertRedirect()
+            ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'Timetable publish blocked'));
 
         $run->refresh();
         $this->assertNull($run->timetable_version_id);

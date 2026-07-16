@@ -146,7 +146,8 @@ class AcademicsPmcTimetableV089Test extends TestCase
             ->post(route('academics.pmc.timetable-generator.publish', $run), [
                 'decision_reason' => 'Try publish with suitability blockers.',
             ])
-            ->assertStatus(422);
+            ->assertRedirect()
+            ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'Timetable publish blocked'));
 
         $this->assertTrue(
             AcademicPmcTimetablePublishCheck::where('generation_run_id', $run->id)

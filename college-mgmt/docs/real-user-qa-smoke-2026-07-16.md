@@ -1115,6 +1115,39 @@ Focused verification:
 ProgramChairLegacyTimetableIntegrityTest, StudentTimetableWorkflowTest, AcademicsPmcTimetableV054Test, and AcademicsPmcTimetableV083Test substitution filter: 8 tests passed, 49 assertions.
 ```
 
+## PMC Publish, Freeze, And Operations Recheck
+
+Manual PMC, Program Chair, Dean, Admin, and Director checks were exercised against the running local server:
+
+```text
+pmc.manager@college.com: GET /academics/pmc/command, /timetable-launch, /timetable-generator, /timetable-versions-v041, /timetable-freeze, /official-timetable, /post-publish-operations, and /canonical-sessions/5 all rendered without service-error pages.
+pmc.manager@college.com: POST /academics/pmc/timetable-generator/1/validate and /publish returned 403, confirming manager is not allowed to validate/publish that scoped run.
+chair@college.com and admin@college.com: POST /academics/pmc/timetable-generator/1/validate succeeded and refreshed validation feedback.
+Before fix: chair@college.com POST /academics/pmc/timetable-generator/1/publish returned a generic 422 error page when blockers existed.
+After fix: chair@college.com POST /academics/pmc/timetable-generator/1/publish redirected back to the generator with "Timetable publish blocked" and no generic error page.
+Database check after blocked publish: timetable_versions still had version 1 published; canonical items remained 3 published scheduled and 1 draft unscheduled.
+chair@college.com: POST /academics/pmc/timetable-versions-v041/1/freeze returned 403, confirming Program Chair cannot freeze final timetable lifecycle.
+dean@college.com, admin@college.com, and director@college.com: freeze and unfreeze actions succeeded with lifecycle workflow rows updated.
+```
+
+Bug found and fixed:
+
+```text
+PMC generation and publish blocker paths used abort(422), which produced a generic error page for normal form users.
+The controller now redirects back with input and a clear flash error while preserving the hard generation/publish gate.
+Regression expectations updated for generation, unscheduled publish, hard publish checks, and faculty-suitability publish blockers.
+```
+
+Focused verification:
+
+```text
+PmcOperatingController syntax check passed.
+AcademicsPmcTimetableV041 generation/publish blocker filter: 2 tests passed, 10 assertions.
+AcademicsPmcTimetableV043 publish/seed/override filter: 3 tests passed, 21 assertions.
+AcademicsPmcTimetableV089: 2 tests passed, 11 assertions.
+AcademicsPmcTimetableV082 and V043 freeze/publish blocker filter: 6 tests passed, 41 assertions.
+```
+
 ## Frontend Build And Smoke Recheck
 
 Final frontend checks after the live user workflow pass:
@@ -1123,6 +1156,7 @@ Final frontend checks after the live user workflow pass:
 npm run frontend:build: passed.
 npm run frontend:smoke: first attempt exceeded the 3-minute command timeout; rerun with a longer timeout passed with 138 tests and 4025 assertions.
 npm run frontend:smoke after Accounts fee-demand selector fix: passed with 138 tests and 4027 assertions.
+npm run frontend:smoke after PMC publish blocker UX fix: passed with 138 tests and 4027 assertions.
 npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 ```
 
@@ -1155,4 +1189,3 @@ npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 When time allows, test one module at a time with real click/form submissions:
 
 1. Admission application lifecycle.
-2. PMC publish/freeze flow on a disposable demo run.

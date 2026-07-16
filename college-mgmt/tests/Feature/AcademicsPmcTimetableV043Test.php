@@ -50,7 +50,8 @@ class AcademicsPmcTimetableV043Test extends TestCase
 
         $this->actingAs($fixture['chair'])->post(route('academics.pmc.timetable-generator.publish', $fixture['run']), [
             'decision_reason' => 'Try publish with conflicts.',
-        ])->assertStatus(422);
+        ])->assertRedirect()
+            ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'Timetable publish blocked'));
     }
 
     public function test_seeded_official_timetable_uses_published_canonical_sessions_without_manual_repair(): void
