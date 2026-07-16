@@ -700,6 +700,30 @@ Admission handoff filtered tests: 3 tests passed, 22 assertions
 Academics Dean handoff filtered test: 1 test passed, 9 assertions
 ```
 
+## Converted Student Fees And Accounts Recheck
+
+Manual fee-demand, payment-proof, Accounts verification, and receipt checks were exercised against enrolled student id=24:
+
+```text
+Created fee demand id=1 for meenakshi.rao@applicant.demo, student id=24, term_id=1, final_amount=25000, status=pending.
+meenakshi.rao@applicant.demo: GET /student/fees returned clean HTML and showed the 25000 demand.
+meenakshi.rao@applicant.demo: GET /student/fee-payment/create returned clean HTML.
+meenakshi.rao@applicant.demo: POST /student/fee-payment submitted proof request id=1, demand_id=1, amount=25000, transaction_ref=QA-STU-FEE-20260716225223, proof_path=fee-proofs/24/8CtvdzbgbHoLq8oVPwSROpT8eIliPpjxD4zivVMm.pdf.
+accounts@college.com: GET /admin/fee-payment-requests?status=pending returned clean HTML and showed the submitted reference.
+accounts@college.com: GET /admin/fee-payment-requests/1/proof downloaded the uploaded proof, 68 bytes, application/octet-stream.
+accounts@college.com: PATCH /admin/fee-payment-requests/1/verify verified the proof.
+Fee payment request id=1 persisted status=verified, verified_by=43.
+Fee demand id=1 persisted status=fully_paid, final_amount=0, penalty_amount=0.
+Fee payment id=17 persisted status=paid, amount=25000, receipt_number=RCP-6A59137D57125.
+meenakshi.rao@applicant.demo: GET /student/reports/fee-receipt/17 returned application/pdf, 885999 bytes, header=%PDF-1.7.
+```
+
+Focused verification:
+
+```text
+FeePaymentTest and AccountsDashboardGuidanceTest filtered fee/payment/receipt/accounts checks: 27 tests passed, 194 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
