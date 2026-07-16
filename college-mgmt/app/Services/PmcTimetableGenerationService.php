@@ -899,6 +899,193 @@ class PmcTimetableGenerationService
         return $quality;
     }
 
+    public function applySolverAlternative(User $actor, AcademicPmcTimetableGenerationItem $item, int $alternativeIndex, ?string $decisionNote, bool $allowHardConflictOverride, ?string $overrideReason, callable $refreshConstraintsAndQuality, callable $audit): AcademicPmcTimetableGenerationItem
+    {
+        $run = $item->generationRun;
+        abort_unless($run, 404, 'Generation run not found for this timetable item.');
+        abort_if(in_array($run->status, ['published', 'published_with_dean_override', 'frozen', 'archived'], true), 422, 'Published or frozen timetable runs cannot be changed directly. Create a revision request instead.');
+
+        $metadata = $item->metadata ?: [];
+        $alternatives = array_values($metadata['placement_alternatives'] ?? []);
+        abort_unless(isset($alternatives[$alternativeIndex]), 422, 'The selected solver alternative is no longer available.');
+
+        $alternative = $alternatives[$alternativeIndex];
+        $slotId = (int) ($alternative['slot_id'] ?? 0);
+        $roomId = (int) ($alternative['room_id'] ?? 0);
+        $day = (int) ($alternative['day'] ?? 0);
+        abort_unless($day >= 1 && $day <= 7 && TimetableSlot::whereKey($slotId)->exists() && Classroom::whereKey($roomId)->exists(), 422, 'The selected solver alternative references an invalid day, slot, or room.');
+
+        $beforeQuality = $refreshConstraintsAndQuality($run);
+        $beforeHardConflicts = (int) $beforeQuality->hard_conflicts;
+        $canOverrideHardConflict = $actor->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']);
+
+        $previousPlacement = [
+            'day' => $item->day_of_week,
+            'slot_id' => $item->timetable_slot_id,
+            'room_id' => $item->classroom_id,
+            'confidence' => $item->confidence,
+            'metadata' => $metadata,
+        ];
+
+        $item->update([
+            'day_of_week' => $day,
+            'timetable_slot_id' => $slotId,
+            'classroom_id' => $roomId,
+            'confidence' => (int) ($alternative['score'] ?? $item->confidence ?? 80),
+            'is_locked' => false,
+            'explanation' => 'Applied solver alternative after PMC/manual review.',
+            'metadata' => array_merge($metadata, [
+                'version' => 'PMC OS v0.067',
+                'placement_score' => (int) ($alternative['score'] ?? $item->confidence ?? 80),
+                'placement_reasons' => $alternative['reasons'] ?? [],
+                'previous_placement' => $previousPlacement,
+                'applied_solver_alternative' => [
+                    'index' => $alternativeIndex,
+                    'applied_by' => $actor->id,
+                    'applied_at' => now()->toDateTimeString(),
+                    'decision_note' => $decisionNote,
+                    'alternative' => $alternative,
+                    'hard_conflict_override' => $allowHardConflictOverride && $canOverrideHardConflict,
+                    'override_reason' => $overrideReason,
+                ],
+            ]),
+        ]);
+
+        $afterQuality = $refreshConstraintsAndQuality($run);
+        if ((int) $afterQuality->hard_conflicts > $beforeHardConflicts) {
+            if (! ($allowHardConflictOverride && $canOverrideHardConflict && filled($overrideReason))) {
+                $item->update([
+                    'day_of_week' => $previousPlacement['day'],
+                    'timetable_slot_id' => $previousPlacement['slot_id'],
+                    'classroom_id' => $previousPlacement['room_id'],
+                    'confidence' => $previousPlacement['confidence'],
+                    'metadata' => array_merge($previousPlacement['metadata'], [
+                        'last_blocked_solver_alternative' => [
+                            'index' => $alternativeIndex,
+                            'blocked_at' => now()->toDateTimeString(),
+                            'blocked_by' => $actor->id,
+                            'reason' => 'hard_conflict_introduced',
+                            'before_hard_conflicts' => $beforeHardConflicts,
+                            'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+                            'alternative' => $alternative,
+                        ],
+                    ]),
+                ]);
+                $refreshConstraintsAndQuality($run);
+                abort(422, 'Solver alternative would introduce a hard conflict. Dean/Admin override with reason is required.');
+            }
+
+            $audit($actor, 'academic_pmc_v067_solver_alternative_hard_conflict_override', 'Applied solver alternative with Dean/Admin hard-conflict override for item #' . $item->id, $item, [
+                'generation_run_id' => $run->id,
+                'before_hard_conflicts' => $beforeHardConflicts,
+                'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+                'override_reason' => $overrideReason,
+                'alternative' => $alternative,
+            ]);
+        }
+
+        $audit($actor, 'academic_pmc_v066_solver_alternative_applied', 'Applied solver alternative to timetable item #' . $item->id, $item, [
+            'generation_run_id' => $run->id,
+            'previous_placement' => $previousPlacement,
+            'alternative' => $alternative,
+            'decision_note' => $decisionNote,
+            'before_hard_conflicts' => $beforeHardConflicts,
+            'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+            'hard_conflict_override' => $allowHardConflictOverride && $canOverrideHardConflict && filled($overrideReason),
+        ]);
+
+        return $item->fresh();
+    }
+
+    public function moveGeneratedItem(User $actor, AcademicPmcTimetableGenerationItem $item, array $data, bool $allowHardConflictOverride, ?string $overrideReason, callable $refreshConstraintsAndQuality, callable $audit): AcademicPmcTimetableGenerationItem
+    {
+        $run = $item->generationRun;
+        abort_unless($run, 404, 'Generation run not found for this timetable item.');
+        abort_if(in_array($run->status, ['published', 'published_with_dean_override', 'frozen', 'archived'], true), 422, 'Published or frozen timetable runs cannot be changed directly. Create a revision request instead.');
+
+        $slotId = (int) $data['timetable_slot_id'];
+        $roomId = (int) $data['classroom_id'];
+        $day = (int) $data['day_of_week'];
+        abort_unless($day >= 1 && $day <= 7 && TimetableSlot::whereKey($slotId)->exists() && Classroom::whereKey($roomId)->exists(), 422, 'Manual move references an invalid day, slot, or room.');
+
+        $metadata = $item->metadata ?: [];
+        $beforeQuality = $refreshConstraintsAndQuality($run);
+        $beforeHardConflicts = (int) $beforeQuality->hard_conflicts;
+        $canOverrideHardConflict = $actor->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']);
+        $previousPlacement = [
+            'day' => $item->day_of_week,
+            'slot_id' => $item->timetable_slot_id,
+            'room_id' => $item->classroom_id,
+            'confidence' => $item->confidence,
+            'metadata' => $metadata,
+        ];
+
+        $item->update([
+            'day_of_week' => $day,
+            'timetable_slot_id' => $slotId,
+            'classroom_id' => $roomId,
+            'confidence' => max(1, (int) ($item->confidence ?? 75) - 2),
+            'is_locked' => false,
+            'explanation' => 'Moved manually by PMC timetable review.',
+            'metadata' => array_merge($metadata, [
+                'version' => 'PMC OS v0.068',
+                'previous_placement' => $previousPlacement,
+                'manual_move' => [
+                    'moved_by' => $actor->id,
+                    'moved_at' => now()->toDateTimeString(),
+                    'decision_note' => $data['decision_note'] ?? null,
+                    'target' => ['day' => $day, 'slot_id' => $slotId, 'room_id' => $roomId],
+                    'hard_conflict_override' => $allowHardConflictOverride && $canOverrideHardConflict,
+                    'override_reason' => $overrideReason,
+                ],
+            ]),
+        ]);
+
+        $afterQuality = $refreshConstraintsAndQuality($run);
+        if ((int) $afterQuality->hard_conflicts > $beforeHardConflicts) {
+            if (! ($allowHardConflictOverride && $canOverrideHardConflict && filled($overrideReason))) {
+                $item->update([
+                    'day_of_week' => $previousPlacement['day'],
+                    'timetable_slot_id' => $previousPlacement['slot_id'],
+                    'classroom_id' => $previousPlacement['room_id'],
+                    'confidence' => $previousPlacement['confidence'],
+                    'metadata' => array_merge($previousPlacement['metadata'], [
+                        'last_blocked_manual_move' => [
+                            'blocked_at' => now()->toDateTimeString(),
+                            'blocked_by' => $actor->id,
+                            'reason' => 'hard_conflict_introduced',
+                            'before_hard_conflicts' => $beforeHardConflicts,
+                            'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+                            'target' => ['day' => $day, 'slot_id' => $slotId, 'room_id' => $roomId],
+                        ],
+                    ]),
+                ]);
+                $refreshConstraintsAndQuality($run);
+                abort(422, 'Manual move would introduce a hard conflict. Dean/Admin override with reason is required.');
+            }
+
+            $audit($actor, 'academic_pmc_v068_manual_move_hard_conflict_override', 'Applied manual timetable move with Dean/Admin hard-conflict override for item #' . $item->id, $item, [
+                'generation_run_id' => $run->id,
+                'before_hard_conflicts' => $beforeHardConflicts,
+                'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+                'override_reason' => $overrideReason,
+                'target' => ['day' => $day, 'slot_id' => $slotId, 'room_id' => $roomId],
+            ]);
+        }
+
+        $audit($actor, 'academic_pmc_v068_manual_timetable_item_moved', 'Moved generated timetable item #' . $item->id, $item, [
+            'generation_run_id' => $run->id,
+            'previous_placement' => $previousPlacement,
+            'target' => ['day' => $day, 'slot_id' => $slotId, 'room_id' => $roomId],
+            'decision_note' => $data['decision_note'] ?? null,
+            'before_hard_conflicts' => $beforeHardConflicts,
+            'after_hard_conflicts' => (int) $afterQuality->hard_conflicts,
+            'hard_conflict_override' => $allowHardConflictOverride && $canOverrideHardConflict && filled($overrideReason),
+        ]);
+
+        return $item->fresh();
+    }
+
     public function generationValidationDiagnostics(?User $user = null, ?callable $syncFacultySuitabilityPublishCheck = null): array
     {
         $latestRun = AcademicPmcTimetableGenerationRun::latest()->first();
