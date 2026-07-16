@@ -654,6 +654,33 @@ AdmissionFlowTest: 22 tests passed, 181 assertions
 The regression now proves completed enrollment updates applicant status to enrolled.
 ```
 
+## Converted Student Portal Recheck
+
+Manual post-enrollment student checks were exercised with `meenakshi.rao@applicant.demo`, whose applicant record was enrolled into student id=24:
+
+```text
+Login redirected to /student/dashboard with role=student, applicant status=enrolled, student status=active.
+GET /student/dashboard, /student/profile, /student/timetable, /student/pmc-timetable, /student/courses, /student/attendance, /student/fees, /student/documents, /student/notifications, and /student/academic-summary all returned clean HTML without SERVICE ERROR/Whoops output.
+POST /student/documents created document request id=2, type=bonafide, status=pending, purpose=QA enrollment smoke document 224139.
+POST /student/grievances created grievance id=2, category=academic, status=open, program_id=1, title=QA enrolled student grievance 224139.
+POST /student/notifications with Laravel method spoofing saved notification preference id=4, email_application_updates=1, email_notices=1.
+```
+
+Operational repair:
+
+```text
+Added admission:repair-enrollment-status with dry-run default and explicit --apply mode.
+Local dry run found one pre-fix completed enrollment mismatch for qa-public-20260716221509@example.test.
+Local apply repaired 1 applicant status record; remaining completed-enrollment/applicant-status mismatches=0.
+```
+
+Focused verification:
+
+```text
+AdmissionFlowTest: 23 tests passed, 190 assertions
+Student dashboard/document/grievance/notification/timetable/attendance suite: 52 tests passed, 373 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -667,6 +694,7 @@ The regression now proves completed enrollment updates applicant status to enrol
 - Fixed public applicant demo readiness by seeding an open application window and allowing applicant category/entrance metadata to persist from application form saves.
 - Fixed applicant offer-letter accept/decline form handling so real portal users return to HTML pages with flash messages instead of raw JSON, while JSON callers remain supported.
 - Fixed enrollment lifecycle status so completed admission enrollment marks the applicant as enrolled while creating the student, confirmation, and Academics handoff.
+- Added an explicit admission enrollment status repair command for existing databases with completed confirmations whose applicants were left non-enrolled before the lifecycle fix.
 
 ## Feedback
 

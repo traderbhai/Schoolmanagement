@@ -1126,6 +1126,34 @@ class AdmissionFlowTest extends TestCase
         ]);
     }
 
+    public function test_enrollment_status_repair_command_updates_completed_confirmations_only_when_applied(): void
+    {
+        [, $applicant] = $this->makeEnrollmentReadyApplicant();
+        $officer = $this->admissionOfficer();
+
+        $this->actingAs($officer)
+            ->post(route('admission.enrollment.store', $applicant), [
+                'roll_number' => 'ENR-REPAIR-001',
+            ])
+            ->assertRedirect();
+
+        Applicant::whereKey($applicant->id)->update(['status' => 'selected']);
+
+        $this->artisan('admission:repair-enrollment-status')
+            ->expectsOutputToContain('Enrollment status repair found')
+            ->expectsOutputToContain('Dry run only.')
+            ->assertExitCode(0);
+
+        $this->assertSame('selected', $applicant->fresh()->status);
+
+        $this->artisan('admission:repair-enrollment-status --apply')
+            ->expectsOutputToContain('Enrollment status repair found')
+            ->expectsOutputToContain('Repaired')
+            ->assertExitCode(0);
+
+        $this->assertSame('enrolled', $applicant->fresh()->status);
+    }
+
     public function test_enrollment_rejects_duplicate_roll_number_in_same_batch(): void
     {
         Mail::fake();
