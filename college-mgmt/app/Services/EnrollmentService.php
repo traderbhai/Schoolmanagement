@@ -150,6 +150,8 @@ class EnrollmentService
                 'status'            => 'completed',
             ]);
 
+            $applicant->update(['status' => 'enrolled']);
+
             // 7. Activity log
             ActivityLog::record('enrollment', "Enrolled applicant {$applicant->application_number} as student {$enrollmentNumber}", $confirmation);
 

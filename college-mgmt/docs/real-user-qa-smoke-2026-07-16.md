@@ -633,6 +633,27 @@ OfferLetterTest: 23 tests passed, 122 assertions
 The regression now covers browser form redirects and preserves JSON responses for JSON callers.
 ```
 
+## Admission Enrollment And Handoff Recheck
+
+Manual admission enrollment was exercised against selected local applicants with verified prerequisite records:
+
+```text
+Initial live check enrolled qa-public-20260716221509@example.test and created student id=23, confirmation id=1, and handoff id=5, but exposed a lifecycle bug: the linked applicant kept status=selected even after the user role changed from applicant to student.
+EnrollmentService now marks the applicant status as enrolled inside the same transaction that creates the student and enrollment confirmation.
+meenakshi.rao@applicant.demo: GET /admission/enrollment/5/create loaded successfully for officer@college.com.
+meenakshi.rao@applicant.demo: POST /admission/enrollment/5 created enrollment confirmation id=2, enrollment_number=ENR-2026-PGDM-00005, roll=QA-ENR2-223722, student id=24.
+Applicant id=5 persisted status=enrolled and user role=student.
+Admission handoff id=6 persisted status=ready_for_academics, student_id=24.
+GET /admission/enrollment/confirmation/2/letter returned application/pdf, 1272562 bytes, header=%PDF-1.7.
+```
+
+Focused verification:
+
+```text
+AdmissionFlowTest: 22 tests passed, 181 assertions
+The regression now proves completed enrollment updates applicant status to enrolled.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -645,6 +666,7 @@ The regression now covers browser form redirects and preserves JSON responses fo
 - Fixed legacy demo canonical scope seeding so legacy student services can create program-scoped records such as grievances without database exceptions.
 - Fixed public applicant demo readiness by seeding an open application window and allowing applicant category/entrance metadata to persist from application form saves.
 - Fixed applicant offer-letter accept/decline form handling so real portal users return to HTML pages with flash messages instead of raw JSON, while JSON callers remain supported.
+- Fixed enrollment lifecycle status so completed admission enrollment marks the applicant as enrolled while creating the student, confirmation, and Academics handoff.
 
 ## Feedback
 

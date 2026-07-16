@@ -335,6 +335,7 @@ class AdmissionFlowTest extends TestCase
         $this->assertSame('active', $student->status);
         $this->assertSame($student->id, $confirmation->student_id);
         $this->assertSame('completed', $confirmation->status);
+        $this->assertSame('enrolled', $applicant->fresh()->status);
         $this->assertTrue($applicantUser->fresh()->hasRole('student'));
         $this->assertFalse($applicantUser->fresh()->hasRole('applicant'));
 
@@ -1118,7 +1119,7 @@ class AdmissionFlowTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('error', 'Completed enrollments are locked. Use the academic student lifecycle or audited cancellation workflow instead of changing applicant status.');
 
-        $this->assertSame('selected', $applicant->fresh()->status);
+        $this->assertSame('enrolled', $applicant->fresh()->status);
         $this->assertDatabaseHas('enrollment_confirmations', [
             'applicant_id' => $applicant->id,
             'status' => 'completed',
