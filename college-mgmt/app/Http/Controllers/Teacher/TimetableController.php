@@ -12,7 +12,7 @@ class TimetableController extends Controller
 
     public function index()
     {
-        abort_unless($this->portalAccess->canUseTeacherPortal(auth()->user()), 403);
+        $this->portalAccess->authorizeTeacherPortal(auth()->user());
 
         $teacher = auth()->user()->teacher;
         $currentTerm = Term::latest('start_date')->first();

@@ -16,7 +16,7 @@ class TimetableController extends Controller
 
     public function index()
     {
-        abort_unless($this->portalAccess->canUseStudentPortal(auth()->user()), 403);
+        $this->portalAccess->authorizeStudentPortal(auth()->user());
 
         $student = Student::where('user_id', auth()->id())->first();
 
