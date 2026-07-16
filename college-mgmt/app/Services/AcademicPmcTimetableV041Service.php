@@ -61,6 +61,7 @@ class AcademicPmcTimetableV041Service
         private PmcTimetablePublishService $publishService,
         private PmcTimetableRevisionService $revisionService,
         private PmcTimetableReadinessGateService $readinessGate,
+        private PmcTimetableReadinessScopeService $readinessScope,
         private PmcTimetableGenerationService $generationService,
     ) {}
 
@@ -590,7 +591,11 @@ class AcademicPmcTimetableV041Service
     {
         return $this->readinessGate->readinessChecklist(
             fn (?AcademicPmcTimetableGenerationRun $run = null, ?User $scopedUser = null) => $this->facultySuitabilityDiagnostics($run, $scopedUser),
-            fn (string $check, ?User $scopedUser = null) => $this->readinessChecklistScopedExists($check, $scopedUser),
+            fn (string $check, ?User $scopedUser = null) => $this->readinessScope->readinessChecklistScopedExists(
+                $check,
+                $scopedUser,
+                fn (Builder $query, User $scopeUser, array $directMap = [], array $relationMap = []) => $this->applyScope($query, $scopeUser, $directMap, $relationMap)
+            ),
             $user
         );
     }
@@ -606,53 +611,6 @@ class AcademicPmcTimetableV041Service
             'generation' => $this->generationValidationDiagnostics($user),
             'publish' => $this->publishFreezeReadinessDiagnostics(),
         ]);
-    }
-
-    private function readinessChecklistScopedExists(string $check, ?User $user = null): bool
-    {
-        if (! $user) {
-            return match ($check) {
-                'allocations' => AcademicPmcStudentCourseAllocation::whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists(),
-                'groups' => AcademicPmcCourseGroup::query()->exists(),
-                'faculty_assignments' => AcademicPmcGroupFacultyAssignment::query()->exists(),
-                'faculty_preferences' => AcademicPmcFacultyPreference::query()->exists(),
-                'locked_slots' => AcademicPmcLockedSlot::query()->exists(),
-                'no_hard_conflicts' => AcademicPmcTimetableConstraint::where('severity', 'hard')->count() === 0,
-                default => false,
-            };
-        }
-
-        return match ($check) {
-            'allocations' => $this->applyScope(
-                AcademicPmcStudentCourseAllocation::query(),
-                $user,
-                [],
-                ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-            )->whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists(),
-            'groups' => $this->applyScope(
-                AcademicPmcCourseGroup::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists(),
-            'faculty_assignments' => $this->applyScope(
-                AcademicPmcGroupFacultyAssignment::query(),
-                $user,
-                [],
-                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->exists(),
-            'faculty_preferences' => $this->applyScope(
-                AcademicPmcFacultyPreference::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists(),
-            'locked_slots' => $this->applyScope(
-                AcademicPmcLockedSlot::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists(),
-            'no_hard_conflicts' => AcademicPmcTimetableConstraint::where('severity', 'hard')->count() === 0,
-            default => false,
-        };
     }
 
     private function publishFreezeReadinessDiagnostics(?User $user = null): array

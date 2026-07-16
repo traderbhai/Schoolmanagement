@@ -11,6 +11,7 @@ use App\Services\PmcTimetableExportReadModelService;
 use App\Services\PmcTimetableGenerationService;
 use App\Services\PmcTimetablePublishService;
 use App\Services\PmcTimetableReadinessGateService;
+use App\Services\PmcTimetableReadinessScopeService;
 use App\Services\PmcTimetableReadModelService;
 use App\Services\PmcTimetableRevisionService;
 use App\Services\PortalAccessPolicyService;
@@ -94,6 +95,7 @@ class ArchitectureStabilizationTest extends TestCase
             PmcTimetableReadModelService::class,
             PmcTimetableExportReadModelService::class,
             PmcTimetableReadinessGateService::class,
+            PmcTimetableReadinessScopeService::class,
         ] as $serviceClass) {
             $this->assertTrue(class_exists($serviceClass), "Expected structural service [{$serviceClass}] to exist.");
         }
@@ -137,6 +139,7 @@ class ArchitectureStabilizationTest extends TestCase
             'app/Services/PmcTimetableGenerationService.php' => 1181,
             'app/Services/PmcTimetablePublishService.php' => 522,
             'app/Services/PmcTimetableReadinessGateService.php' => 666,
+            'app/Services/PmcTimetableReadinessScopeService.php' => 120,
             'app/Services/PmcTimetableReadModelService.php' => 688,
             'app/Services/PmcTimetableExportReadModelService.php' => 220,
             'app/Services/PmcTimetableRevisionService.php' => 509,
