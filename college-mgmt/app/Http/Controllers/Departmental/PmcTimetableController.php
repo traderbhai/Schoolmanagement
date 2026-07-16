@@ -5,17 +5,17 @@ use App\Http\Controllers\Controller;
 use App\Models\{AcademicPmcCourseGroup, AcademicPmcFacultyAssignmentAcknowledgement, AcademicPmcRoomReadinessReview, AcademicPmcSubstitutionRecommendation, AcademicPmcTimetableChangeRequest, AcademicPmcTimetableGenerationItem, AcademicPmcTimetableGenerationRun, AcademicPmcTimetableImpactRecord, AcademicPmcTimetablePublishCheck, AcademicYear, Course, Department, Program, Term, Batch, TimetableEntry, TimetableSlot, TimetableVersion,
                 TimetableSubstitution, TeacherAvailability, Subject, Teacher, Classroom,
                 RoleProgramAssignment, Semester};
-use App\Services\{AcademicPmcTimetableV041Service, AutoSchedulingService, CanonicalTimetableBridgeService, ConflictPreventionService, TeacherWorkloadWarningService, TimetableConflictService, TimetableCopyService, TimetableImportService, TimetablePdfService};
+use App\Services\{AcademicPmcAccessPolicyService, AcademicPmcTimetableV041Service, AutoSchedulingService, CanonicalTimetableBridgeService, ConflictPreventionService, TeacherWorkloadWarningService, TimetableConflictService, TimetableCopyService, TimetableImportService, TimetablePdfService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PmcTimetableController extends Controller {
 
-    public function __construct(private CanonicalTimetableBridgeService $canonicalBridge) {}
+    public function __construct(private CanonicalTimetableBridgeService $canonicalBridge, private AcademicPmcAccessPolicyService $policy) {}
 
     private function programIds(): array {
         $user = Auth::user();
-        if ($user?->hasRole(['admin', 'dean_academics', 'director', 'academic_department_owner'])) {
+        if ($user && $this->policy->canSeeAllLegacyProgramScope($user)) {
             return Program::where('is_active', true)->pluck('id')->toArray();
         }
 
@@ -32,7 +32,9 @@ class PmcTimetableController extends Controller {
 
     private function hasAcademicOversight(): bool
     {
-        return Auth::user()?->hasRole(['admin', 'dean_academics', 'director', 'academic_department_owner']) ?? false;
+        $user = Auth::user();
+
+        return $user ? $this->policy->canSeeAllLegacyProgramScope($user) : false;
     }
 
     private function validateAcademicScope(Request $request): ?string

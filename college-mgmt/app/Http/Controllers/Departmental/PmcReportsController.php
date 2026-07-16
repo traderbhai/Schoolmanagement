@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Departmental;
 use App\Http\Controllers\Controller;
 use App\Models\{Program, Term, Student, Subject, Exam, ExamResult, Attendance,
                 Batch, FeeDemand, RoleProgramAssignment, TimetableEntry};
+use App\Services\AcademicPmcAccessPolicyService;
 use App\Services\GradeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,8 @@ use PDF;
 
 class PmcReportsController extends Controller
 {
+    public function __construct(private AcademicPmcAccessPolicyService $policy) {}
+
     private function programIds(): array
     {
         if ($this->hasAcademicOversight()) {
@@ -25,7 +28,9 @@ class PmcReportsController extends Controller
 
     private function hasAcademicOversight(): bool
     {
-        return Auth::user()?->hasRole(['admin', 'dean_academics', 'director', 'academic_department_owner']) ?? false;
+        $user = Auth::user();
+
+        return $user ? $this->policy->canSeeAllLegacyProgramScope($user) : false;
     }
 
     // ── Subject performance report ────────────────────────────────────────────

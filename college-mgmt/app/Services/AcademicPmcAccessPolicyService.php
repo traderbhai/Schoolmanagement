@@ -72,6 +72,11 @@ class AcademicPmcAccessPolicyService
         return true;
     }
 
+    public function canSeeAllLegacyProgramScope(User $user): bool
+    {
+        return $user->hasAnyRole(['admin', 'dean_academics', 'director', 'academic_department_owner']);
+    }
+
     public function scopedProgramIds(User $user, bool $requireManage = false): ?array
     {
         return $this->scopedIds($user, 'program', $requireManage);
