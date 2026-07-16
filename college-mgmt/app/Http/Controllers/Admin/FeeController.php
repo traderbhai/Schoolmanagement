@@ -1,9 +1,9 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
-use App\Helpers\AccessControl;
 use App\Jobs\SendFeeReceiptEmail;
 use App\Models\{FeeStructure, FeePayment, Student, Course, AcademicYear, ActivityLog, FeeDemand, FeePaymentRequest};
+use App\Services\FinanceAccessPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 class FeeController extends Controller
 {
     private const ACTIVE_DEMAND_STATUSES = ['pending', 'partially_paid', 'overdue'];
+
+    public function __construct(private FinanceAccessPolicyService $financeAccess) {}
 
     public function index(Request $request) {
         $this->authorizeFeeManagement($request);
@@ -568,6 +570,6 @@ class FeeController extends Controller
 
     private function authorizeFeeManagement(Request $request): void
     {
-        abort_unless(AccessControl::canManageFees($request->user()), 403);
+        $this->financeAccess->authorizeFeeOperations($request->user());
     }
 }
