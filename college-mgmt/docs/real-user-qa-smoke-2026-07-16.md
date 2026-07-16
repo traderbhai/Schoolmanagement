@@ -916,6 +916,111 @@ AdminOperationsFrontendBetaReadinessTest
 Result: 140 tests passed, 2436 assertions
 ```
 
+## Hostel Allocation, Fees, Outpass, And Complaint Recheck
+
+Manual admin hostel setup and student hostel checks were exercised against the running local server:
+
+```text
+admin@demo.edu: POST /admin/hostel/blocks created QA Hostel Block 232919.
+admin@demo.edu: POST /admin/hostel/blocks/{block}/rooms created room QA-232919.
+admin@demo.edu: POST /admin/hostel/allocations allocated Neha Patel to the QA room.
+admin@demo.edu: GET /admin/hostel/allocations?search=Neha showed Neha Patel and the QA block.
+admin@demo.edu: POST /admin/hostel/fees/generate created a pending July 2026 hostel fee demand for Neha.
+neha.p@demo.edu: POST /student/hostel/outpass submitted a future outpass request.
+neha.p@demo.edu: POST /student/hostel/complaints submitted a maintenance complaint.
+admin@demo.edu: GET /admin/hostel/outpasses?status=pending showed Neha's outpass.
+admin@demo.edu: POST /admin/hostel/outpasses/{outpass}/approve approved the outpass.
+admin@demo.edu: GET /admin/hostel/complaints?status=open&priority=high showed the complaint.
+admin@demo.edu: PUT /admin/hostel/complaints/{complaint} resolved the complaint with notes.
+neha.p@demo.edu: GET /student/hostel/outpass showed the approved status.
+neha.p@demo.edu: GET /student/hostel/complaints showed the resolved complaint.
+```
+
+Focused verification:
+
+```text
+HostelWorkflowGuidanceTest, HostelFeeWorkflowTest, and AdminHostelAccessControlTest: 39 tests passed, 387 assertions
+```
+
+## Grievance, Leave, And Condonation Recheck
+
+Manual student, admin, and program-office lifecycle checks were exercised against the running local server:
+
+```text
+aarav@college.com: POST /student/grievances submitted QA live grievance 233416.
+aarav@college.com: POST /student/leave submitted QA live leave 233416.
+aarav@college.com: POST /student/condonation submitted QA live condonation 233416 for an eligible low-attendance subject.
+admin@college.com: POST /admin/grievances/3 with _method=PATCH resolved and assigned the grievance.
+admin@college.com: POST /admin/leaves/8/approve with _method=PATCH approved the student leave.
+admin@college.com: POST /program-chair/students/condonations/1/approve approved the condonation through the program-office review route.
+aarav@college.com: POST /student/grievances/3/close closed the resolved grievance.
+aarav@college.com: GET /student/grievances/3 showed Closed status and the resolution notes.
+aarav@college.com: GET /student/leave showed the approved leave and original reason.
+aarav@college.com: GET /student/condonation showed the approved condonation and original reason.
+```
+
+Focused verification:
+
+```text
+GrievanceWorkflowGuidanceTest and StudentLeaveWorkflowTest: 32 tests passed, 237 assertions
+```
+
+Seed-data note:
+
+```text
+arjun.k@demo.edu had low attendance in subject 19, but no active enrollment for that subject, so the condonation form correctly rejected the request.
+The valid seeded condonation path used aarav@college.com, whose low-attendance subject and active enrollment align.
+```
+
+## Coursework, Mentoring, Feedback, Resume, And Scholarship Recheck
+
+Manual teacher, student, program-office, admission, and admin checks were exercised against the running local server:
+
+```text
+admin@college.com: POST /program-chair/students/mentors/assign assigned student 11 to active teacher 5.
+pmc.faculty@college.com: POST /teacher/materials created QA fixed material 234501 for subject 18.
+pmc.faculty@college.com: POST /teacher/assignments created QA fixed assignment 234501 for subject 18.
+arjun.k@demo.edu: GET /student/courses/18/materials showed QA fixed material 234501.
+arjun.k@demo.edu: POST /student/assignments/3/submit submitted QA fixed assignment answer 234501.
+pmc.faculty@college.com: POST /teacher/assignments/submissions/1/grade graded the submission with 22/25 and QA feedback.
+arjun.k@demo.edu: GET /student/assignments/3 showed Graded status and QA fixed grade feedback 234501.
+arjun.k@demo.edu: POST /student/mentor/message sent QA fixed mentor message 234501.
+arjun.k@demo.edu: POST /student/mentor/meeting scheduled QA fixed mentor meeting 234501.
+pmc.faculty@college.com: POST /teacher/mentor/11/message sent QA fixed mentor reply 234501.
+arjun.k@demo.edu: GET /student/mentor showed both student and mentor messages.
+arjun.k@demo.edu: POST /student/feedback/22 submitted QA fixed course feedback 234501.
+arjun.k@demo.edu: POST /student/resume saved QA fixed resume headline 234501 with skills and project details.
+admin@college.com: POST /admission/scholarship-schemes created QA live scholarship scheme 234659.
+arjun.k@demo.edu: POST /student/scholarships/1/apply submitted the student scholarship application.
+admin@college.com: POST /admin/student-scholarships/1/shortlist with _method=PATCH shortlisted the application.
+admin@college.com: POST /admin/student-scholarships/1/approve with _method=PATCH approved Rs. 12,000.
+admin@college.com: POST /admin/student-scholarships/1/disburse with _method=PATCH disbursed with ref QA-UTR-234659.
+```
+
+Bug found and fixed:
+
+```text
+Teacher-created assignments and study materials were using the globally latest term instead of the official teaching term for the selected subject.
+That caused enrolled students to receive 403 on a newly created assignment when their enrollment term did not match the global latest term.
+The fix adds officialTeachingTermIdForSubject() to UsesOfficialTeachingSubjects and uses it in Teacher\AssignmentController and Teacher\MaterialController.
+Regression added: TeacherScopeWorkflowTest::test_teacher_assignment_uses_official_teaching_term_for_student_visibility.
+```
+
+Focused verification:
+
+```text
+TeacherScopeWorkflowTest official-term regression: 1 test passed, 8 assertions.
+TeacherScopeWorkflowTest, StudentCourseContentAccessTest, StudentMentorWorkflowTest, StudentCourseFeedbackWorkflowTest, and StudentResumeWorkflowTest: 74 tests passed, 577 assertions.
+ScholarshipTest, StudentScholarshipWorkflowGuidanceTest, and AdmissionApplicantScholarshipWorkflowTest: 50 tests passed, 320 assertions.
+```
+
+Quiz note:
+
+```text
+Student quiz routes and regression coverage exist inside StudentCourseContentAccessTest, but this local demo database currently has no quizzes, and no teacher quiz authoring route appears in routes/teacher.php.
+Live quiz attempt testing should be added after a demo quiz is seeded or a teacher/admin quiz authoring surface is exposed.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.

@@ -120,7 +120,8 @@ class AssignmentController extends Controller
         Assignment::create([
             'subject_id'            => $request->subject_id,
             'created_by'            => auth()->id(),
-            'term_id'               => Term::latest('start_date')->first()?->id,
+            'term_id'               => $this->officialTeachingTermIdForSubject((int) $request->subject_id)
+                ?? Term::latest('start_date')->first()?->id,
             'title'                 => $title,
             'description'           => trim((string) $request->input('description', '')),
             'instructions'          => trim((string) $request->input('instructions', '')) ?: null,

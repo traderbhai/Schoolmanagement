@@ -86,6 +86,31 @@ trait UsesOfficialTeachingSubjects
             ->exists();
     }
 
+    private function officialTeachingTermIdForSubject(int $subjectId, ?Teacher $teacher = null): ?int
+    {
+        $teacher ??= auth()->user()?->teacher;
+        if (! $teacher) {
+            return null;
+        }
+
+        $canonicalTermId = $this->officialPmcTeachingItems($teacher)
+            ->where(function (Builder $query) use ($subjectId) {
+                $query->where('subject_id', $subjectId)
+                    ->orWhereHas('courseGroup', fn (Builder $group) => $group->where('subject_id', $subjectId));
+            })
+            ->orderByDesc('published_at')
+            ->value('term_id');
+
+        if ($canonicalTermId) {
+            return (int) $canonicalTermId;
+        }
+
+        return $this->legacyPublishedTeachingEntries($teacher)
+            ->where('subject_id', $subjectId)
+            ->orderByDesc('id')
+            ->value('term_id');
+    }
+
     private function officialPmcTeachingItems(Teacher $teacher): Builder
     {
         return AcademicPmcTimetableGenerationItem::with(['courseGroup'])

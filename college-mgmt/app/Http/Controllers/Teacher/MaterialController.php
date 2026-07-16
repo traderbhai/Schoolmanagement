@@ -95,7 +95,8 @@ class MaterialController extends Controller
         StudyMaterial::create([
             'subject_id'   => $request->subject_id,
             'uploaded_by'  => auth()->id(),
-            'term_id'      => Term::latest('start_date')->first()?->id,
+            'term_id'      => $this->officialTeachingTermIdForSubject((int) $request->subject_id)
+                ?? Term::latest('start_date')->first()?->id,
             'title'        => $request->title,
             'description'  => $request->description,
             'type'         => $request->type,

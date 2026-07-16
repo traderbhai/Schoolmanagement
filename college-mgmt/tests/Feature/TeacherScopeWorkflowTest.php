@@ -111,6 +111,112 @@ class TeacherScopeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('subject_announcements', ['title' => 'Wrong Subject Announcement']);
     }
 
+    public function test_teacher_assignment_uses_official_teaching_term_for_student_visibility(): void
+    {
+        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+
+        $program = Program::factory()->create();
+        $batch = Batch::factory()->create(['program_id' => $program->id]);
+        $officialTerm = Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'name' => 'Official Teaching Term',
+            'start_date' => now()->subMonths(2),
+        ]);
+        Term::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'name' => 'Newer Unrelated Term',
+            'start_date' => now()->addMonth(),
+        ]);
+        $subject = Subject::factory()->create(['program_id' => $program->id]);
+        $teacher = Teacher::factory()->create(['status' => 'active']);
+        $teacher->user->assignRole('teacher');
+        $student = Student::factory()->create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'current_term_id' => $officialTerm->id,
+        ]);
+        $student->user->assignRole('student');
+        StudentSubjectEnrollment::create([
+            'student_id' => $student->id,
+            'subject_id' => $subject->id,
+            'term_id' => $officialTerm->id,
+            'status' => 'active',
+        ]);
+        $version = TimetableVersion::create([
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $officialTerm->id,
+            'version_number' => 1,
+            'status' => 'published',
+            'created_by' => $teacher->user_id,
+            'published_by' => $teacher->user_id,
+            'published_at' => now(),
+        ]);
+        $run = AcademicPmcTimetableGenerationRun::create([
+            'title' => 'Official Teaching Term Run',
+            'strategy' => 'balanced',
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $officialTerm->id,
+            'timetable_version_id' => $version->id,
+            'created_by' => $teacher->user_id,
+            'status' => 'published',
+            'scheduled_count' => 1,
+        ]);
+        AcademicPmcTimetableGenerationItem::create([
+            'generation_run_id' => $run->id,
+            'timetable_version_id' => $version->id,
+            'program_id' => $program->id,
+            'batch_id' => $batch->id,
+            'term_id' => $officialTerm->id,
+            'subject_id' => $subject->id,
+            'session_index' => 1,
+            'session_type' => 'lecture',
+            'duration_slots' => 1,
+            'teacher_id' => $teacher->id,
+            'day_of_week' => 1,
+            'status' => 'published',
+            'official_status' => 'published',
+            'source_type' => 'generated',
+            'published_at' => now(),
+            'published_by' => $teacher->user_id,
+        ]);
+
+        $this->actingAs($teacher->user)
+            ->post(route('teacher.assignments.store'), [
+                'subject_id' => $subject->id,
+                'title' => 'Official Term Assignment',
+                'description' => 'Visible to students in the official teaching term.',
+                'max_marks' => 20,
+                'due_at' => now()->addWeek()->toDateTimeString(),
+                'is_published' => true,
+            ])
+            ->assertRedirect(route('teacher.assignments.index'));
+
+        $assignment = Assignment::where('title', 'Official Term Assignment')->firstOrFail();
+        $this->assertSame($officialTerm->id, $assignment->term_id);
+
+        $this->actingAs($student->user)
+            ->get(route('student.assignments.show', $assignment))
+            ->assertOk()
+            ->assertSee('Official Term Assignment');
+
+        $this->actingAs($student->user)
+            ->post(route('student.assignments.submit', $assignment), [
+                'answer_text' => 'Student can submit because assignment term matches official allocation.',
+            ])
+            ->assertRedirect(route('student.assignments.show', $assignment));
+
+        $this->assertDatabaseHas('assignment_submissions', [
+            'assignment_id' => $assignment->id,
+            'student_id' => $student->id,
+            'answer_text' => 'Student can submit because assignment term matches official allocation.',
+        ]);
+    }
+
     public function test_teacher_cannot_publish_learning_content_for_draft_timetable_subjects(): void
     {
         $fixture = $this->fixture();
