@@ -42,6 +42,21 @@ class FeeDemandTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_create_fee_demand_student_selector_shows_enrollment_and_name(): void
+    {
+        $user = User::factory()->create(['name' => 'Arjun Kapoor']);
+        $student = Student::factory()->create([
+            'user_id' => $user->id,
+            'enrollment_number' => 'PG24001',
+            'status' => 'active',
+        ]);
+
+        $this->get(route('academic.fee-demands.create'))
+            ->assertStatus(200)
+            ->assertSee('PG24001 - Arjun Kapoor')
+            ->assertSee('value="' . $student->id . '"', false);
+    }
+
     public function test_can_create_fee_demand()
     {
         $student = Student::factory()->create();

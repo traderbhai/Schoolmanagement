@@ -1026,6 +1026,41 @@ arjun.k@demo.edu: GET /student/quizzes/1/result showed QA live quiz 000406 with 
 Focused verification: TeacherScopeWorkflowTest and StudentCourseContentAccessTest passed with 60 tests and 469 assertions.
 ```
 
+## Accounts Fee Demand And Payment Proof Recheck
+
+Manual academic, student, admin, and accounts checks were exercised against the running local server:
+
+```text
+admin@college.com: GET /academic/fee-demands/create showed active student labels with enrollment number and name after the selector fix.
+admin@college.com: POST /academic/fee-demands created a Semester II fee demand for arjun.k@demo.edu.
+arjun.k@demo.edu: GET /student/fees showed the new academic fee balance.
+arjun.k@demo.edu: POST /student/fee-payment submitted general payment proof QA-FEE-20260717001610.
+admin@college.com: PATCH /admin/fee-payment-requests/2/verify verified the proof and created receipt RCP-6A5926F453C84.
+Database check: the general verified proof reduced Arjun Kapoor's open demand to fully_paid.
+admin@college.com: POST /academic/fee-demands created a Semester III fee demand for arjun.k@demo.edu.
+arjun.k@demo.edu: POST /student/fee-payment submitted linked demand proof QA-FEE-LINK-20260717001806.
+admin@college.com: PATCH /admin/fee-payment-requests/3/verify verified the linked proof.
+Database check: linked request 3 created payment 19 and left fee demand 3 partially_paid with INR 6,000 remaining.
+arjun.k@demo.edu: GET /student/fees showed Partial status and INR 6,000 balance.
+arjun.k@demo.edu: GET /student/fee-payment showed the verified linked proof and transaction reference.
+accounts@college.com: GET /accounts/dashboard, /accounts/fee-collections, and /accounts/outstanding rendered successfully.
+```
+
+Bug found and fixed:
+
+```text
+The academic fee-demand create form selected only student id/name but rendered enrollment_number, so the student dropdown could show blank labels.
+The controller now loads user name, enrollment number, and status; the Blade option renders "enrollment - student name" with inactive status where relevant.
+Regression added: FeeDemandTest::test_create_fee_demand_student_selector_shows_enrollment_and_name.
+```
+
+Focused verification:
+
+```text
+FeeDemandTest selector regression: 1 test passed, 3 assertions.
+FeePaymentTest, FeeDemandTest, and AccountsDashboardGuidanceTest: 82 tests passed, 532 assertions.
+```
+
 ## Frontend Build And Smoke Recheck
 
 Final frontend checks after the live user workflow pass:
@@ -1033,6 +1068,7 @@ Final frontend checks after the live user workflow pass:
 ```text
 npm run frontend:build: passed.
 npm run frontend:smoke: first attempt exceeded the 3-minute command timeout; rerun with a longer timeout passed with 138 tests and 4025 assertions.
+npm run frontend:smoke after Accounts fee-demand selector fix: passed with 138 tests and 4027 assertions.
 npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 ```
 
@@ -1068,4 +1104,3 @@ When time allows, test one module at a time with real click/form submissions:
 2. Student timetable and attendance views.
 3. Teacher timetable, attendance marking, and substitutions.
 4. PMC publish/freeze flow on a disposable demo run.
-5. Accounts fee/payment workflow.

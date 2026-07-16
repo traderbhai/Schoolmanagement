@@ -15,7 +15,10 @@
                         <select name="student_id" class="form-select" required>
                             <option value="">Select Student</option>
                             @foreach($students as $student)
-                                <option value="{{ $student->id }}" {{ old('student_id')==$student->id?'selected':'' }}>{{ $student->enrollment_number }}</option>
+                                <option value="{{ $student->id }}" {{ old('student_id')==$student->id?'selected':'' }}>
+                                    {{ $student->enrollment_number ?? 'Enrollment pending' }} - {{ $student->user?->name ?? 'Student name missing' }}
+                                    @if($student->status !== 'active') ({{ str($student->status)->headline() }}) @endif
+                                </option>
                             @endforeach
                         </select>
                         @error('student_id')<div class="text-danger small">{{ $message }}</div>@enderror

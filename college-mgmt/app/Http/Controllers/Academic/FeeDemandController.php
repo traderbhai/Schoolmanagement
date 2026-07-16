@@ -21,7 +21,10 @@ class FeeDemandController extends Controller
 
     public function create()
     {
-        $students = Student::select('id', 'name')->get();
+        $students = Student::with('user:id,name')
+            ->select('id', 'user_id', 'enrollment_number', 'status')
+            ->orderBy('enrollment_number')
+            ->get();
         $terms = Term::select('id', 'name')->get();
         return view('academic.fee-demands.create', compact('students', 'terms'));
     }
