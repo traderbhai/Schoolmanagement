@@ -2829,115 +2829,12 @@ class AcademicPmcTimetableV041Service
 
     private function publishFreezeReadinessDiagnostics(?User $user = null): array
     {
-        $latestVersion = TimetableVersion::latest()->first();
-        $latestWorkflow = $latestVersion
-            ? AcademicPmcTimetableVersionWorkflow::where('timetable_version_id', $latestVersion->id)->latest()->first()
-            : null;
-
-        $publishedVersions = TimetableVersion::where('status', 'published')->count();
-        $frozenVersions = TimetableVersion::where('status', 'frozen')->count()
-            + AcademicPmcTimetableVersionWorkflow::where('lifecycle_status', 'frozen')->count();
-        $blockingPublishChecks = AcademicPmcTimetablePublishCheck::whereIn('status', ['block', 'blocked', 'pending', 'open'])->count();
-        $pendingChangeRequests = AcademicPmcTimetableChangeRequest::whereIn('status', ['requested', 'pending', 'open', 'revision_requested'])->count();
-        $failedNotifications = AcademicPmcTimetableNotification::whereIn('status', ['failed', 'cancelled'])->count();
-        $queuedNotifications = AcademicPmcTimetableNotification::whereIn('status', ['queued', 'pending'])->count();
-        $rollbackWorkflows = AcademicPmcTimetableVersionWorkflow::where('lifecycle_status', 'like', '%rollback%')->count();
-        $missingLifecycleWorkflow = $latestVersion && ! $latestWorkflow ? 1 : 0;
-        $missingOfficialVersion = $publishedVersions + $frozenVersions === 0 ? 1 : 0;
-        $operationalEntriesSynced = (int) data_get($latestWorkflow?->publish_summary, 'operational_entries_synced', 0);
-        $impactRecords = (int) data_get($latestWorkflow?->publish_summary, 'impact_preview.impact_records', 0);
-        $affectedStudents = (int) data_get($latestWorkflow?->impact_summary, 'affected_students', data_get($latestWorkflow?->publish_summary, 'impact_preview.affected_students', 0));
-        $affectedFaculty = (int) data_get($latestWorkflow?->impact_summary, 'affected_faculty', data_get($latestWorkflow?->publish_summary, 'impact_preview.affected_faculty', 0));
-
-        $blockerTotal = $missingOfficialVersion
-            + $missingLifecycleWorkflow
-            + $blockingPublishChecks
-            + $pendingChangeRequests
-            + $failedNotifications;
-
-        return [
-            'latest_version_label' => $latestVersion ? '#' . $latestVersion->version_number : 'No official version',
-            'latest_version_status' => $latestVersion?->status ?? 'missing',
-            'latest_lifecycle_status' => $latestWorkflow?->lifecycle_status ?? 'missing',
-            'latest_approval_status' => $latestWorkflow?->approval_status ?? 'missing',
-            'published_versions' => $publishedVersions,
-            'frozen_versions' => $frozenVersions,
-            'missing_official_version' => $missingOfficialVersion,
-            'missing_lifecycle_workflow' => $missingLifecycleWorkflow,
-            'blocking_publish_checks' => $blockingPublishChecks,
-            'pending_change_requests' => $pendingChangeRequests,
-            'failed_notifications' => $failedNotifications,
-            'queued_notifications' => $queuedNotifications,
-            'rollback_workflows' => $rollbackWorkflows,
-            'operational_entries_synced' => $operationalEntriesSynced,
-            'impact_records' => $impactRecords,
-            'affected_students' => $affectedStudents,
-            'affected_faculty' => $affectedFaculty,
-            'ready_versions' => $blockerTotal === 0 ? max(1, $publishedVersions + $frozenVersions) : 0,
-            'blocker_total' => $blockerTotal,
-            'status' => $blockerTotal === 0 ? 'ready' : 'attention_required',
-            'recommended_action' => $blockerTotal === 0 ? 'Official timetable lifecycle is ready for freeze/notification monitoring.' : 'Clear official version, lifecycle workflow, publish-check, revision, and failed-notification blockers before final freeze.',
-        ];
+        return $this->readinessGate->publishFreezeReadinessDiagnostics($user);
     }
 
     private function substitutionEmergencyDiagnostics(?User $user = null): array
     {
-        $today = now()->toDateString();
-        $tomorrow = now()->addDay()->toDateString();
-
-        $todayRecommendations = AcademicPmcSubstitutionRecommendation::whereDate('substitution_date', $today);
-        $upcomingRecommendations = AcademicPmcSubstitutionRecommendation::whereBetween('substitution_date', [$today, $tomorrow]);
-        $uncoveredToday = (clone $todayRecommendations)->where(function ($query) {
-            $query->where('status', 'uncovered')->orWhereNull('substitute_teacher_id');
-        })->count();
-        $pendingRecommendations = (clone $upcomingRecommendations)->whereIn('status', ['recommended', 'pending', 'open'])->count();
-        $lowScoreRecommendations = (clone $upcomingRecommendations)->where('score', '<', 60)->count();
-        $failedSubstitutionNotices = AcademicPmcTimetableNotification::whereIn('notification_type', ['substitution', 'timetable_revision', 'cancellation'])
-            ->whereIn('status', ['failed', 'cancelled'])
-            ->count();
-        $queuedSubstitutionNotices = AcademicPmcTimetableNotification::whereIn('notification_type', ['substitution', 'timetable_revision', 'cancellation'])
-            ->whereIn('status', ['queued', 'pending'])
-            ->count();
-        $sameDayChangeRequests = AcademicPmcTimetableChangeRequest::whereIn('change_type', ['substitution', 'cancellation', 'reschedule', 'room_change', 'faculty_change'])
-            ->whereIn('status', ['requested', 'pending', 'open', 'revision_requested'])
-            ->count();
-        $repeatedOriginalTeachers = AcademicPmcSubstitutionRecommendation::query()
-            ->select('original_teacher_id')
-            ->whereNotNull('original_teacher_id')
-            ->whereDate('substitution_date', '>=', now()->subDays(14)->toDateString())
-            ->groupBy('original_teacher_id')
-            ->havingRaw('COUNT(*) >= 2')
-            ->get()
-            ->count();
-        $repeatedCourseGroups = AcademicPmcSubstitutionRecommendation::query()
-            ->select('course_group_id')
-            ->whereNotNull('course_group_id')
-            ->whereDate('substitution_date', '>=', now()->subDays(14)->toDateString())
-            ->groupBy('course_group_id')
-            ->havingRaw('COUNT(*) >= 2')
-            ->get()
-            ->count();
-
-        $blockerTotal = $uncoveredToday
-            + $lowScoreRecommendations
-            + $failedSubstitutionNotices
-            + $sameDayChangeRequests;
-
-        return [
-            'today_recommendations' => (clone $todayRecommendations)->count(),
-            'upcoming_recommendations' => (clone $upcomingRecommendations)->count(),
-            'uncovered_today' => $uncoveredToday,
-            'pending_recommendations' => $pendingRecommendations,
-            'low_score_recommendations' => $lowScoreRecommendations,
-            'failed_substitution_notices' => $failedSubstitutionNotices,
-            'queued_substitution_notices' => $queuedSubstitutionNotices,
-            'same_day_change_requests' => $sameDayChangeRequests,
-            'repeated_original_teachers' => $repeatedOriginalTeachers,
-            'repeated_course_groups' => $repeatedCourseGroups,
-            'blocker_total' => $blockerTotal,
-            'status' => $blockerTotal === 0 ? 'ready' : 'attention_required',
-            'recommended_action' => $blockerTotal === 0 ? 'No urgent substitution blockers for today/tomorrow.' : 'Resolve uncovered classes, weak recommendations, same-day changes, and failed substitution notifications before class time.',
-        ];
+        return $this->readinessGate->substitutionEmergencyDiagnostics($user);
     }
 
     private function generationValidationDiagnostics(?User $user = null): array
