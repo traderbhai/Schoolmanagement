@@ -5,14 +5,14 @@ use App\Http\Controllers\Controller;
 use App\Models\AdmissionFeeInstallment;
 use App\Models\Applicant;
 use App\Models\RefundRequest;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class RefundController extends Controller
 {
     private const ACTIVE_REFUND_STATUSES = ['pending', 'approved', 'processed'];
 
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     // List all refund requests
     public function index(Request $request)
@@ -21,14 +21,14 @@ class RefundController extends Controller
         $query = RefundRequest::with(['applicant.user', 'applicant.program', 'reviewedBy'])
             ->latest();
         $query->whereHas('applicant', function ($applicantQuery) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+            $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
         });
         if ($status) {
             $query->where('status', $status);
         }
         $refunds = $query->paginate(30);
         $scopedCounts = RefundRequest::whereHas('applicant', function ($applicantQuery) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+            $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
         });
         $counts = [
             'pending'   => (clone $scopedCounts)->where('status', 'pending')->count(),
@@ -268,10 +268,7 @@ class RefundController extends Controller
 
     private function guardApplicantScope(Applicant $applicant): void
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, false),
-            403
-        );
+        $this->policy->authorizeViewAssignedUser(request()->user(), $applicant->assigned_to, false);
     }
 
     private function guardRefundScope(RefundRequest $refund): void

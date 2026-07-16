@@ -7,12 +7,12 @@ use App\Models\ApplicantScholarship;
 use App\Models\Notification;
 use App\Models\ScholarshipScheme;
 use App\Models\User;
-use App\Services\DepartmentHierarchyService;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class ApplicantScholarshipController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     // Award a scholarship to an applicant
     public function store(Request $request, Applicant $applicant)
@@ -144,7 +144,7 @@ class ApplicantScholarshipController extends Controller
             ->where('status', 'awarded')
             ->latest('awarded_at');
         $query->whereHas('applicant', function ($applicantQuery) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+            $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
         });
 
         if ($request->filled('program_id')) {
@@ -154,7 +154,7 @@ class ApplicantScholarshipController extends Controller
         $pending   = $query->paginate(20)->withQueryString();
         $programs  = \App\Models\Program::where('is_active', true)->orderBy('name')->get();
         $scopedTotals = ApplicantScholarship::whereHas('applicant', function ($applicantQuery) use ($request) {
-            $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+            $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
         });
         $totalPendingAmount = (clone $scopedTotals)->where('status', 'awarded')->sum('awarded_amount');
         $totalDisbursed     = (clone $scopedTotals)->where('status', 'disbursed')->sum('awarded_amount');
@@ -256,10 +256,7 @@ class ApplicantScholarshipController extends Controller
 
     private function guardApplicantScope(Applicant $applicant): void
     {
-        abort_unless(
-            $this->hierarchy->canViewAssignedUser(request()->user(), 'ADM', $applicant->assigned_to, false),
-            403
-        );
+        $this->policy->authorizeViewAssignedUser(request()->user(), $applicant->assigned_to, false);
     }
 
     private function guardScholarshipScope(ApplicantScholarship $scholarship): void
