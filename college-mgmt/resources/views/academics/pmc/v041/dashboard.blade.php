@@ -217,132 +217,83 @@
         'sourceLabel' => 'Open readiness source list',
     ])
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-semibold">Generation Validation Diagnostics</div>
-                <div class="small text-muted">Latest solver run, validation blockers, impact preview, and publish-check readiness.</div>
-            </div>
-            <span class="badge text-bg-{{ ($generationDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $generationDiagnostics['status'] ?? 'attention_required') }}</span>
-        </div>
-        <div class="card-body py-2">
-            <div class="row g-2 text-center">
-                @foreach([
-                    ['Run', $generationDiagnostics['latest_run_title'] ?? 'No run'],
-                    ['Status', str_replace('_', ' ', $generationDiagnostics['latest_run_status'] ?? 'missing')],
-                    ['Scheduled', $generationDiagnostics['scheduled_classes'] ?? 0],
-                    ['Unscheduled', $generationDiagnostics['unscheduled_classes'] ?? 0],
-                    ['Hard Conflicts', $generationDiagnostics['hard_conflicts'] ?? 0],
-                    ['Soft Warnings', $generationDiagnostics['soft_warnings'] ?? 0],
-                    ['Quality', ($generationDiagnostics['quality_score'] ?? 0) . '%'],
-                    ['Quality Band', str_replace('_', ' ', $generationDiagnostics['quality_band'] ?? 'missing')],
-                    ['Solver Attempts', $generationDiagnostics['solver_attempts'] ?? 0],
-                    ['Failed Attempts', $generationDiagnostics['failed_solver_attempts'] ?? 0],
-                    ['Open Actions', $generationDiagnostics['open_resolution_actions'] ?? 0],
-                    ['Publish Blocks', $generationDiagnostics['blocking_publish_checks'] ?? 0],
-                    ['Impact Rows', $generationDiagnostics['impact_preview_records'] ?? 0],
-                    ['Stale Inputs', $generationDiagnostics['stale_input_sources'] ?? 0],
-                    ['Blockers', $generationDiagnostics['blocker_total'] ?? 0],
-                ] as [$label, $value])
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="border rounded p-2 h-100">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold text-truncate" title="{{ $value }}">{{ $value }}</div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-        <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
-            <span>{{ $generationDiagnostics['recommended_action'] ?? 'Review generation validation.' }}</span>
-            <a href="{{ route('academics.pmc.timetable-generator.index') }}">Open generator validation source</a>
-        </div>
-    </div>
+    @include('academics.pmc.v041.partials.diagnostic-grid-card', [
+        'title' => 'Generation Validation Diagnostics',
+        'subtitle' => 'Latest solver run, validation blockers, impact preview, and publish-check readiness.',
+        'status' => $generationDiagnostics['status'] ?? 'attention_required',
+        'metrics' => [
+            ['Run', $generationDiagnostics['latest_run_title'] ?? 'No run'],
+            ['Status', str_replace('_', ' ', $generationDiagnostics['latest_run_status'] ?? 'missing')],
+            ['Scheduled', $generationDiagnostics['scheduled_classes'] ?? 0],
+            ['Unscheduled', $generationDiagnostics['unscheduled_classes'] ?? 0],
+            ['Hard Conflicts', $generationDiagnostics['hard_conflicts'] ?? 0],
+            ['Soft Warnings', $generationDiagnostics['soft_warnings'] ?? 0],
+            ['Quality', ($generationDiagnostics['quality_score'] ?? 0) . '%'],
+            ['Quality Band', str_replace('_', ' ', $generationDiagnostics['quality_band'] ?? 'missing')],
+            ['Solver Attempts', $generationDiagnostics['solver_attempts'] ?? 0],
+            ['Failed Attempts', $generationDiagnostics['failed_solver_attempts'] ?? 0],
+            ['Open Actions', $generationDiagnostics['open_resolution_actions'] ?? 0],
+            ['Publish Blocks', $generationDiagnostics['blocking_publish_checks'] ?? 0],
+            ['Impact Rows', $generationDiagnostics['impact_preview_records'] ?? 0],
+            ['Stale Inputs', $generationDiagnostics['stale_input_sources'] ?? 0],
+            ['Blockers', $generationDiagnostics['blocker_total'] ?? 0],
+        ],
+        'recommendedAction' => $generationDiagnostics['recommended_action'] ?? 'Review generation validation.',
+        'sourceUrl' => route('academics.pmc.timetable-generator.index'),
+        'sourceLabel' => 'Open generator validation source',
+    ])
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-semibold">Publish And Freeze Readiness</div>
-                <div class="small text-muted">Official version, lifecycle workflow, revision queue, publish checks, notification failures, and sync coverage.</div>
-            </div>
-            <span class="badge text-bg-{{ ($publishReadinessDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $publishReadinessDiagnostics['status'] ?? 'attention_required') }}</span>
-        </div>
-        <div class="card-body py-2">
-            <div class="row g-2 text-center">
-                @foreach([
-                    ['Latest Version', $publishReadinessDiagnostics['latest_version_label'] ?? 'No version'],
-                    ['Version Status', str_replace('_', ' ', $publishReadinessDiagnostics['latest_version_status'] ?? 'missing')],
-                    ['Lifecycle', str_replace('_', ' ', $publishReadinessDiagnostics['latest_lifecycle_status'] ?? 'missing')],
-                    ['Approval', str_replace('_', ' ', $publishReadinessDiagnostics['latest_approval_status'] ?? 'missing')],
-                    ['Published', $publishReadinessDiagnostics['published_versions'] ?? 0],
-                    ['Frozen', $publishReadinessDiagnostics['frozen_versions'] ?? 0],
-                    ['Missing Official', $publishReadinessDiagnostics['missing_official_version'] ?? 0],
-                    ['Missing Workflow', $publishReadinessDiagnostics['missing_lifecycle_workflow'] ?? 0],
-                    ['Publish Blocks', $publishReadinessDiagnostics['blocking_publish_checks'] ?? 0],
-                    ['Change Requests', $publishReadinessDiagnostics['pending_change_requests'] ?? 0],
-                    ['Failed Notices', $publishReadinessDiagnostics['failed_notifications'] ?? 0],
-                    ['Queued Notices', $publishReadinessDiagnostics['queued_notifications'] ?? 0],
-                    ['Synced Entries', $publishReadinessDiagnostics['operational_entries_synced'] ?? 0],
-                    ['Impact Rows', $publishReadinessDiagnostics['impact_records'] ?? 0],
-                    ['Affected Students', $publishReadinessDiagnostics['affected_students'] ?? 0],
-                    ['Affected Faculty', $publishReadinessDiagnostics['affected_faculty'] ?? 0],
-                    ['Blockers', $publishReadinessDiagnostics['blocker_total'] ?? 0],
-                ] as [$label, $value])
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="border rounded p-2 h-100">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold text-truncate" title="{{ $value }}">{{ $value }}</div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-        <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
-            <span>{{ $publishReadinessDiagnostics['recommended_action'] ?? 'Review publish and freeze readiness.' }}</span>
-            <span class="d-flex flex-wrap gap-2">
-                <a href="{{ route('academics.pmc.timetable-versions-v041.index') }}">Open version lifecycle board</a>
-                <a href="{{ route('academics.pmc.timetable-reports.index', ['status' => 'failed']) }}">Failed notification report</a>
-            </span>
-        </div>
-    </div>
+    @include('academics.pmc.v041.partials.diagnostic-grid-card', [
+        'title' => 'Publish And Freeze Readiness',
+        'subtitle' => 'Official version, lifecycle workflow, revision queue, publish checks, notification failures, and sync coverage.',
+        'status' => $publishReadinessDiagnostics['status'] ?? 'attention_required',
+        'metrics' => [
+            ['Latest Version', $publishReadinessDiagnostics['latest_version_label'] ?? 'No version'],
+            ['Version Status', str_replace('_', ' ', $publishReadinessDiagnostics['latest_version_status'] ?? 'missing')],
+            ['Lifecycle', str_replace('_', ' ', $publishReadinessDiagnostics['latest_lifecycle_status'] ?? 'missing')],
+            ['Approval', str_replace('_', ' ', $publishReadinessDiagnostics['latest_approval_status'] ?? 'missing')],
+            ['Published', $publishReadinessDiagnostics['published_versions'] ?? 0],
+            ['Frozen', $publishReadinessDiagnostics['frozen_versions'] ?? 0],
+            ['Missing Official', $publishReadinessDiagnostics['missing_official_version'] ?? 0],
+            ['Missing Workflow', $publishReadinessDiagnostics['missing_lifecycle_workflow'] ?? 0],
+            ['Publish Blocks', $publishReadinessDiagnostics['blocking_publish_checks'] ?? 0],
+            ['Change Requests', $publishReadinessDiagnostics['pending_change_requests'] ?? 0],
+            ['Failed Notices', $publishReadinessDiagnostics['failed_notifications'] ?? 0],
+            ['Queued Notices', $publishReadinessDiagnostics['queued_notifications'] ?? 0],
+            ['Synced Entries', $publishReadinessDiagnostics['operational_entries_synced'] ?? 0],
+            ['Impact Rows', $publishReadinessDiagnostics['impact_records'] ?? 0],
+            ['Affected Students', $publishReadinessDiagnostics['affected_students'] ?? 0],
+            ['Affected Faculty', $publishReadinessDiagnostics['affected_faculty'] ?? 0],
+            ['Blockers', $publishReadinessDiagnostics['blocker_total'] ?? 0],
+        ],
+        'recommendedAction' => $publishReadinessDiagnostics['recommended_action'] ?? 'Review publish and freeze readiness.',
+        'sourceLinks' => [
+            ['url' => route('academics.pmc.timetable-versions-v041.index'), 'label' => 'Open version lifecycle board'],
+            ['url' => route('academics.pmc.timetable-reports.index', ['status' => 'failed']), 'label' => 'Failed notification report'],
+        ],
+    ])
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-semibold">Substitution Emergency Desk</div>
-                <div class="small text-muted">Today/tomorrow uncovered classes, weak substitutes, same-day change requests, repeated substitution risk, and failed notices.</div>
-            </div>
-            <span class="badge text-bg-{{ ($substitutionEmergencyDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $substitutionEmergencyDiagnostics['status'] ?? 'attention_required') }}</span>
-        </div>
-        <div class="card-body py-2">
-            <div class="row g-2 text-center">
-                @foreach([
-                    ['Today', $substitutionEmergencyDiagnostics['today_recommendations'] ?? 0],
-                    ['Upcoming', $substitutionEmergencyDiagnostics['upcoming_recommendations'] ?? 0],
-                    ['Uncovered Today', $substitutionEmergencyDiagnostics['uncovered_today'] ?? 0],
-                    ['Pending', $substitutionEmergencyDiagnostics['pending_recommendations'] ?? 0],
-                    ['Low Score', $substitutionEmergencyDiagnostics['low_score_recommendations'] ?? 0],
-                    ['Failed Notices', $substitutionEmergencyDiagnostics['failed_substitution_notices'] ?? 0],
-                    ['Queued Notices', $substitutionEmergencyDiagnostics['queued_substitution_notices'] ?? 0],
-                    ['Same-Day Changes', $substitutionEmergencyDiagnostics['same_day_change_requests'] ?? 0],
-                    ['Repeat Faculty', $substitutionEmergencyDiagnostics['repeated_original_teachers'] ?? 0],
-                    ['Repeat Groups', $substitutionEmergencyDiagnostics['repeated_course_groups'] ?? 0],
-                    ['Blockers', $substitutionEmergencyDiagnostics['blocker_total'] ?? 0],
-                ] as [$label, $value])
-                    <div class="col-6 col-md-4 col-xl-2">
-                        <div class="border rounded p-2 h-100">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-        <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
-            <span>{{ $substitutionEmergencyDiagnostics['recommended_action'] ?? 'Review substitution desk.' }}</span>
-            <a href="{{ route('academics.pmc.substitution-intelligence.index') }}">Open substitution desk</a>
-        </div>
-    </div>
+    @include('academics.pmc.v041.partials.diagnostic-grid-card', [
+        'title' => 'Substitution Emergency Desk',
+        'subtitle' => 'Today/tomorrow uncovered classes, weak substitutes, same-day change requests, repeated substitution risk, and failed notices.',
+        'status' => $substitutionEmergencyDiagnostics['status'] ?? 'attention_required',
+        'metrics' => [
+            ['Today', $substitutionEmergencyDiagnostics['today_recommendations'] ?? 0],
+            ['Upcoming', $substitutionEmergencyDiagnostics['upcoming_recommendations'] ?? 0],
+            ['Uncovered Today', $substitutionEmergencyDiagnostics['uncovered_today'] ?? 0],
+            ['Pending', $substitutionEmergencyDiagnostics['pending_recommendations'] ?? 0],
+            ['Low Score', $substitutionEmergencyDiagnostics['low_score_recommendations'] ?? 0],
+            ['Failed Notices', $substitutionEmergencyDiagnostics['failed_substitution_notices'] ?? 0],
+            ['Queued Notices', $substitutionEmergencyDiagnostics['queued_substitution_notices'] ?? 0],
+            ['Same-Day Changes', $substitutionEmergencyDiagnostics['same_day_change_requests'] ?? 0],
+            ['Repeat Faculty', $substitutionEmergencyDiagnostics['repeated_original_teachers'] ?? 0],
+            ['Repeat Groups', $substitutionEmergencyDiagnostics['repeated_course_groups'] ?? 0],
+            ['Blockers', $substitutionEmergencyDiagnostics['blocker_total'] ?? 0],
+        ],
+        'recommendedAction' => $substitutionEmergencyDiagnostics['recommended_action'] ?? 'Review substitution desk.',
+        'sourceUrl' => route('academics.pmc.substitution-intelligence.index'),
+        'sourceLabel' => 'Open substitution desk',
+    ])
 
     <div class="row g-3">
         <div class="col-xl-4">

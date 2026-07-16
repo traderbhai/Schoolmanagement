@@ -26,8 +26,14 @@
     </div>
     <div class="card-footer py-2 small d-flex flex-wrap justify-content-between gap-2">
         <span>{{ $recommendedAction }}</span>
-        @isset($sourceUrl)
+        @if(!empty($sourceLinks ?? []))
+            <span class="d-flex flex-wrap gap-2">
+                @foreach($sourceLinks as $sourceLink)
+                    <a href="{{ $sourceLink['url'] }}">{{ $sourceLink['label'] }}</a>
+                @endforeach
+            </span>
+        @elseif(isset($sourceUrl))
             <a href="{{ $sourceUrl }}">{{ $sourceLabel ?? 'Open source list' }}</a>
-        @endisset
+        @endif
     </div>
 </div>
