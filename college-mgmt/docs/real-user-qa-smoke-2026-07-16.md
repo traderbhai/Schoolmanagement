@@ -681,6 +681,25 @@ AdmissionFlowTest: 23 tests passed, 190 assertions
 Student dashboard/document/grievance/notification/timetable/attendance suite: 52 tests passed, 373 assertions
 ```
 
+## Admission To Academics Handoff Recheck
+
+Manual Admission and Dean handoff checks were exercised against the handoff records created by enrollment:
+
+```text
+head@college.com: GET /admission/handoff?status=ready_for_academics loaded ready handoff records, including Meenakshi's handoff.
+head@college.com: POST /admission/handoff/5/refresh returned to the ready-for-academics queue successfully.
+head@college.com: POST /admission/handoff/6/mark-handed-off returned success and persisted handoff id=6 as status=handed_off, handed_off_by=16, student_id=24.
+admission_sensitive_audit_events has an admission_handoff_completed audit row for actor_user_id=16.
+dean@college.com: GET /academics/dean-os/handoff returned clean HTML with Admission To Academics Handoff and no SERVICE ERROR/Whoops output.
+```
+
+Focused verification:
+
+```text
+Admission handoff filtered tests: 3 tests passed, 22 assertions
+Academics Dean handoff filtered test: 1 test passed, 9 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
