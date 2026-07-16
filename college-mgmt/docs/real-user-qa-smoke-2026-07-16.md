@@ -346,6 +346,26 @@ fresh migrate/seed plus second db:seed idempotency recheck: passed
 double-seed integrity recheck: users=62, attendances=106, official_items=3, missing_scope=0, missing_bridge_link=0, duplicate_emails=0, duplicate_attendance_keys=0
 ```
 
+## Portal Documents Assets Recheck
+
+Additional portal and operations chunks:
+
+```text
+Applicant/parent portal workflow chunk: 46 tests passed, 437 assertions
+Student document/transcript/admit-card/API workflow chunk: 47 tests passed, 320 assertions
+Assets/inventory/admin operations chunk: 42 tests passed, 1333 assertions
+Student results + portal ownership/frontend chunk: 27 tests passed, 808 assertions
+```
+
+Authenticated HTTP sweep covered 20 pages with HTTP 200 and no service-error/debug text:
+
+```text
+priya.sharma@applicant.demo: /applicant/dashboard, /applicant/checklist, /applicant/application, /applicant/documents, /applicant/fees, /applicant/status, /applicant/registration-fee, /applicant/notifications
+parent@demo.edu: /parent/dashboard, /parent/children, /parent/notices
+arjun.k@demo.edu: /student/documents, /student/documents/request, /student/admit-cards, /student/results, /student/transcript/download
+admin@college.com: /admin/assets, /admin/document-requests, /admin/applicants, /admin/parents
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
