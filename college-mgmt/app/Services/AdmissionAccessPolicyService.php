@@ -64,6 +64,11 @@ class AdmissionAccessPolicyService
         return app(DepartmentHierarchyService::class)->canApproveAdmission($user);
     }
 
+    public function authorizeApproveAdmission(User $user): void
+    {
+        abort_unless($this->canApproveAdmission($user), 403);
+    }
+
     public function evaluatorScope(User $user): ?User
     {
         return $this->canSeeAll($user) ? null : $user;

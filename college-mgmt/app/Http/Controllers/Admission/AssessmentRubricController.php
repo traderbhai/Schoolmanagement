@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admission;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdmissionAssessmentRubric;
+use App\Services\AdmissionAccessPolicyService;
 use Illuminate\Http\Request;
 
 class AssessmentRubricController extends Controller
@@ -17,7 +18,8 @@ class AssessmentRubricController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
+        app(AdmissionAccessPolicyService::class)->authorizeApproveAdmission($request->user());
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'assessment_type' => ['required', 'string', 'max:80'],

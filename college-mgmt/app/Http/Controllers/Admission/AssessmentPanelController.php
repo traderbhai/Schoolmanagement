@@ -7,6 +7,7 @@ use App\Models\AdmissionAssessmentPanel;
 use App\Models\Program;
 use App\Models\SelectionSession;
 use App\Models\User;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAssessmentPanelService;
 use Illuminate\Http\Request;
 
@@ -27,7 +28,8 @@ class AssessmentPanelController extends Controller
 
     public function store(Request $request, AdmissionAssessmentPanelService $service)
     {
-        abort_unless(app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission($request->user()), 403);
+        app(AdmissionAccessPolicyService::class)->authorizeApproveAdmission($request->user());
+
         $panel = $service->createPanel($request->validate([
             'name' => ['required', 'string', 'max:120'],
             'panel_type' => ['required', 'string', 'max:80'],
