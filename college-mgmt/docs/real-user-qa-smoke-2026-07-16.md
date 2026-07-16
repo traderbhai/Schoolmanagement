@@ -1061,6 +1061,41 @@ FeeDemandTest selector regression: 1 test passed, 3 assertions.
 FeePaymentTest, FeeDemandTest, and AccountsDashboardGuidanceTest: 82 tests passed, 532 assertions.
 ```
 
+## Teacher And Student Timetable Attendance Recheck
+
+Manual teacher and student checks were exercised against the running local server:
+
+```text
+pmc.faculty@college.com: GET /teacher/pmc-timetable showed official PMC sessions for PMC Faculty Allocation Demo, Decision Analytics Lab, and PGDM Core Section A.
+arjun.k@demo.edu: GET /student/timetable and /student/pmc-timetable showed official PMC sessions for PMC Faculty Allocation Demo, Growth Analytics, Decision Analytics Lab, and PGDM Core Section A.
+Before fix: pmc.faculty@college.com GET /teacher/timetable did not show official PMC sessions because the page selected the globally latest future term.
+Before fix: pmc.faculty@college.com GET /teacher/attendance/mark?date=2026-07-14 showed no class for the Tuesday official PMC session because the bridge semester id differed from the current semester row.
+After fix: /teacher/timetable showed PMC Faculty Allocation Demo and Decision Analytics Lab.
+After fix: /teacher/attendance/mark?date=2026-07-14 showed the official PMC class.
+After selecting bridge entry 31, the attendance roster showed Arjun Kapoor.
+pmc.faculty@college.com: POST /teacher/attendance/store marked Arjun Kapoor present for 2026-07-14.
+Database check: attendance row 116 was created with timetable_entry_id=31 and pmc_generation_item_id=5.
+arjun.k@demo.edu: GET /student/attendance showed PMC Faculty Allocation Demo and the updated attendance percentage.
+```
+
+Bug found and fixed:
+
+```text
+Teacher timetable used Term::latest(start_date), so future terms could hide a teacher's current official sessions.
+Teacher timetable now derives the current term from the teacher's published canonical/legacy timetable assignments, then falls back to active current terms.
+Teacher attendance filtered only the exact current semester id, while the bridge service may create operational entries under a same-number semester row.
+Teacher attendance now accepts compatible semester rows with the same id, number, or name, so official PMC bridge entries remain markable.
+Regression added: TeacherTimetablePortalTest.
+```
+
+Focused verification:
+
+```text
+TeacherTimetablePortalTest: 2 tests passed, 12 assertions.
+Teacher timetable/attendance/dashboard filtered chunk: 19 tests passed, 138 assertions.
+Student attendance/timetable adjacent filtered chunk: 17 tests passed, 108 assertions.
+```
+
 ## Frontend Build And Smoke Recheck
 
 Final frontend checks after the live user workflow pass:
@@ -1101,6 +1136,5 @@ npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 When time allows, test one module at a time with real click/form submissions:
 
 1. Admission application lifecycle.
-2. Student timetable and attendance views.
-3. Teacher timetable, attendance marking, and substitutions.
-4. PMC publish/freeze flow on a disposable demo run.
+2. Teacher substitutions.
+3. PMC publish/freeze flow on a disposable demo run.

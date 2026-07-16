@@ -86,6 +86,7 @@ class AttendanceController extends Controller
 
         // Teacher's timetable entries for the selected day
         $currentSemester = Semester::current();
+        $semesterIds = $this->compatibleSemesterIds($currentSemester);
         app(CanonicalTimetableBridgeService::class)->ensureTeacherDayBridges(
             $teacher->id,
             $dayOfWeek,
@@ -97,7 +98,7 @@ class AttendanceController extends Controller
             ->where('teacher_id', $teacher->id)
             ->where('day_of_week', $dayOfWeek)
             ->where(fn($query) => $this->publishedTimetableScope($query))
-            ->when($currentSemester, fn($q) => $q->where('semester_id', $currentSemester->id))
+            ->when($semesterIds !== [], fn($q) => $q->whereIn('semester_id', $semesterIds))
             ->get();
 
         $entry = null;
@@ -108,6 +109,7 @@ class AttendanceController extends Controller
                 ->where('teacher_id', $teacher->id)
                 ->where('day_of_week', $dayOfWeek)
                 ->where(fn($query) => $this->publishedTimetableScope($query))
+                ->when($semesterIds !== [], fn($q) => $q->whereIn('semester_id', $semesterIds))
                 ->findOrFail($request->entry_id);
 
             $students = $this->enrolledStudentsForEntry($entry)->with(['user',
@@ -168,5 +170,24 @@ class AttendanceController extends Controller
                 $scope->whereNull('timetable_version_id')
                     ->orWhereHas('version', fn($version) => $version->where('status', 'published'));
             });
+    }
+
+    private function compatibleSemesterIds(?Semester $semester): array
+    {
+        if (! $semester) {
+            return [];
+        }
+
+        return Semester::query()
+            ->where(function ($query) use ($semester) {
+                $query->whereKey($semester->id)
+                    ->orWhere('number', $semester->number)
+                    ->orWhere('name', $semester->name);
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

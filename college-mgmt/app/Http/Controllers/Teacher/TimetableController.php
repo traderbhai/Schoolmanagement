@@ -15,7 +15,7 @@ class TimetableController extends Controller
         $this->portalAccess->authorizeTeacherPortal(auth()->user());
 
         $teacher = auth()->user()->teacher;
-        $currentTerm = Term::latest('start_date')->first();
+        $currentTerm = $teacher ? $this->currentTermForTeacher((int) $teacher->id) : $this->fallbackCurrentTerm();
         $slots = TimetableSlot::where('is_active', true)->orderBy('sort_order')->get();
         $days  = [1=>'Monday',2=>'Tuesday',3=>'Wednesday',4=>'Thursday',5=>'Friday',6=>'Saturday'];
 
@@ -63,6 +63,50 @@ class TimetableController extends Controller
         return view('teacher.timetable.index', compact(
             'slots', 'days', 'entries', 'currentTerm', 'todaySubstitutions', 'profileMissing'
         ));
+    }
+
+    private function currentTermForTeacher(int $teacherId): ?Term
+    {
+        $termIds = AcademicPmcTimetableGenerationItem::where('teacher_id', $teacherId)
+            ->where('official_status', 'published')
+            ->whereNotNull('timetable_version_id')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->pluck('term_id')
+            ->merge(TimetableEntry::where('teacher_id', $teacherId)
+                ->where('is_active', true)
+                ->where('status', 'published')
+                ->pluck('term_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($termIds->isEmpty()) {
+            return $this->fallbackCurrentTerm();
+        }
+
+        $today = today()->toDateString();
+
+        return Term::whereIn('id', $termIds)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('start_date')
+            ->first()
+            ?: Term::whereIn('id', $termIds)->where('is_current', true)->orderByDesc('start_date')->first()
+            ?: Term::whereIn('id', $termIds)->orderByDesc('start_date')->first()
+            ?: $this->fallbackCurrentTerm();
+    }
+
+    private function fallbackCurrentTerm(): ?Term
+    {
+        $today = today()->toDateString();
+
+        return Term::where('is_current', true)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderByDesc('start_date')
+            ->first()
+            ?: Term::where('is_current', true)->orderByDesc('start_date')->first()
+            ?: Term::latest('start_date')->first();
     }
 
     private function todayTimetableAlerts(int $teacherId)
