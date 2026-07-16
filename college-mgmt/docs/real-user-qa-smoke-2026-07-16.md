@@ -1021,6 +1021,16 @@ Student quiz routes and regression coverage exist inside StudentCourseContentAcc
 Live quiz attempt testing should be added after a demo quiz is seeded or a teacher/admin quiz authoring surface is exposed.
 ```
 
+## Frontend Build And Smoke Recheck
+
+Final frontend checks after the live user workflow pass:
+
+```text
+npm run frontend:build: passed.
+npm run frontend:smoke: first attempt exceeded the 3-minute command timeout; rerun with a longer timeout passed with 138 tests and 4025 assertions.
+npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
