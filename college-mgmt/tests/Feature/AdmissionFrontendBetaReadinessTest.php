@@ -604,6 +604,32 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
         ]);
     }
 
+    public function test_document_queue_does_not_link_missing_local_files(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+        $document = ApplicantDocument::with(['applicant.user', 'requiredDocument'])
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $document->update([
+            'file_path' => 'admission-documents/missing-demo-file.pdf',
+            'original_name' => 'missing-demo-file.pdf',
+        ]);
+
+        $this->actingAs($head)
+            ->get(route('admission.documents.queue'))
+            ->assertOk()
+            ->assertSee('File missing')
+            ->assertDontSee(route('admission.documents.preview', $document), false)
+            ->assertDontSee(route('admission.documents.download', $document), false);
+
+        $this->actingAs($head)
+            ->get(route('admission.workbench'))
+            ->assertOk()
+            ->assertSee('File missing - ask applicant to re-upload before preview.')
+            ->assertDontSee(route('admission.documents.preview', $document), false);
+    }
+
     public function test_offer_seat_control_is_read_only_for_lower_roles_and_write_protected(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();

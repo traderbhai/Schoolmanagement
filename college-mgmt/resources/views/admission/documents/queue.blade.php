@@ -189,6 +189,7 @@
                         </td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
+                                @if($doc->file_available)
                                 <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank"
                                    class="btn btn-sm btn-outline-secondary" title="Preview">
                                     <i class="bi bi-eye"></i>
@@ -197,6 +198,11 @@
                                    class="btn btn-sm btn-outline-secondary" title="Download">
                                     <i class="bi bi-download"></i>
                                 </a>
+                                @else
+                                <span class="badge text-bg-light border align-self-center" title="The uploaded file is not present in local storage. Ask the applicant to re-upload before preview or download.">
+                                    <i class="bi bi-file-earmark-x me-1"></i>File missing
+                                </span>
+                                @endif
                                 <form method="POST" action="{{ route('admission.documents.verify', $doc) }}" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success" title="Verify"

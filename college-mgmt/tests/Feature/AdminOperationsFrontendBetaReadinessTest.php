@@ -48,6 +48,7 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
                 'accounts.fee-collections',
                 'accounts.outstanding',
                 'accounts.reconciliation',
+                'accounts.scholarship-disbursements',
                 'accounts.reports',
             ],
             $cmc->email => [
@@ -72,6 +73,24 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
                     ->assertDontSee('Laravel\\', false)
                     ->assertSee('<title', false);
             }
+        }
+    }
+
+    public function test_crawled_admin_exam_and_approval_entry_points_render(): void
+    {
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+
+        foreach ([
+            route('exam-cell.exams.create'),
+            route('approvals.inbox'),
+        ] as $url) {
+            $this->actingAs($admin)
+                ->get($url)
+                ->assertOk()
+                ->assertDontSee('SERVICE ERROR', false)
+                ->assertDontSee('Route [exam-cell.exams.index] not defined', false)
+                ->assertDontSee('Call to undefined method', false)
+                ->assertSee('<title', false);
         }
     }
 
@@ -116,9 +135,23 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
             ->get(route('accounts.dashboard'))
             ->assertOk()
             ->assertSee(route('accounts.admission-payments'), false)
+            ->assertSee(route('accounts.scholarship-disbursements'), false)
             ->assertSee(route('accounts.outstanding'), false)
             ->assertSee(route('accounts.reports'), false)
+            ->assertDontSee(route('admission.scholarship-disbursements.index'), false)
             ->assertDontSee('href="#"', false);
+
+        $this->actingAs($accounts)
+            ->get(route('accounts.admission-payments'))
+            ->assertOk()
+            ->assertSee('Accounts queue')
+            ->assertDontSee(route('admission.payments.queue'), false);
+
+        $this->actingAs($accounts)
+            ->get(route('accounts.scholarship-disbursements'))
+            ->assertOk()
+            ->assertSee('Accounts scholarship workflow')
+            ->assertDontSee(route('admission.scholarship-disbursements.index'), false);
 
         $cmc = User::where('email', 'cmc@college.com')->firstOrFail();
         $this->actingAs($cmc)

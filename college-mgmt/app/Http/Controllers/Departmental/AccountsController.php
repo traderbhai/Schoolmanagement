@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{ActivityLog, FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand};
+use App\Models\{ActivityLog, FeePayment, Student, Program, Batch, AdmissionPayment, FeeDemand, ApplicantScholarship};
 use App\Services\FinanceAccessPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -140,6 +140,26 @@ class AccountsController extends Controller
             ->paginate(25);
 
         return view('departmental.accounts.admission-payments', compact('payments'));
+    }
+
+    public function scholarshipDisbursements(Request $request)
+    {
+        $this->financeAccess->authorizeView($request->user());
+
+        $query = ApplicantScholarship::with(['applicant.user', 'applicant.program', 'scheme'])
+            ->where('status', 'awarded')
+            ->latest('awarded_at');
+
+        if ($request->filled('program_id')) {
+            $query->whereHas('applicant', fn ($applicantQuery) => $applicantQuery->where('program_id', $request->program_id));
+        }
+
+        $pending = $query->paginate(25)->withQueryString();
+        $programs = Program::where('is_active', true)->orderBy('name')->get();
+        $totalPendingAmount = (clone $query)->sum('awarded_amount');
+        $totalDisbursed = ApplicantScholarship::where('status', 'disbursed')->sum('awarded_amount');
+
+        return view('departmental.accounts.scholarship-disbursements', compact('pending', 'programs', 'totalPendingAmount', 'totalDisbursed'));
     }
 
     public function reports()

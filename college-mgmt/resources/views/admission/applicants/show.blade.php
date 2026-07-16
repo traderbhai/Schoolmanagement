@@ -181,6 +181,7 @@
                             <div class="alert alert-danger py-1 small mb-2">{{ $doc->rejection_reason }}</div>
                         @endif
                         <div class="d-flex gap-2 mt-2 flex-wrap">
+                            @if($doc->file_available)
                             <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank"
                                class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-eye"></i> Preview
@@ -189,6 +190,11 @@
                                class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-download"></i> Download
                             </a>
+                            @else
+                            <span class="badge text-bg-light border align-self-center">
+                                <i class="bi bi-file-earmark-x me-1"></i>File missing - ask applicant to re-upload
+                            </span>
+                            @endif
                             @if($doc->status !== 'verified')
                             <form method="POST" action="{{ route('admission.documents.verify', $doc) }}" class="d-inline">
                                 @csrf

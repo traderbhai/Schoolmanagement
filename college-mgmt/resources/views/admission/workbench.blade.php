@@ -206,10 +206,18 @@
                 <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Document Queue</span><span class="small text-muted">Preview and verify</span></div>
                 <div class="list-group list-group-flush">
                     @forelse($pendingDocuments->take(8) as $document)
+                        @if($document->file_available)
                         <a class="list-group-item list-group-item-action" href="{{ route('admission.documents.preview', $document) }}">
                             <div class="fw-semibold">{{ $document->applicant?->user?->name ?? 'Applicant name missing' }}</div>
                             <div class="small text-muted">{{ $document->requiredDocument?->name ?? 'Document requirement not linked' }}</div>
                         </a>
+                        @else
+                        <div class="list-group-item">
+                            <div class="fw-semibold">{{ $document->applicant?->user?->name ?? 'Applicant name missing' }}</div>
+                            <div class="small text-muted">{{ $document->requiredDocument?->name ?? 'Document requirement not linked' }}</div>
+                            <div class="small text-warning-emphasis mt-1">File missing - ask applicant to re-upload before preview.</div>
+                        </div>
+                        @endif
                     @empty
                         <div class="list-group-item text-muted small">
                             <div class="fw-semibold text-body mb-1">No pending documents in this scope.</div>

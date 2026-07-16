@@ -139,12 +139,42 @@ npm run frontend:smoke: 135 tests passed, 3977 assertions
 npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
 ```
 
+Bounded role-navigation crawl on `http://127.0.0.1:8000` then checked visible same-site links for major seeded roles. Initial crawl found real broken user-facing paths:
+
+- `/exam-cell/exams/create` rendered a 500 because the view referenced the non-existent route name `exam-cell.exams.index`.
+- `/approvals/inbox` rendered a 500 because `ApprovalWorkflow::overdue()` was called as a query scope but only existed as an instance method.
+- Admission document queues exposed preview/download links for seeded files that were not present in local storage, producing visible 404s.
+- Accounts pages linked accounts officers into Admission-only payment/scholarship routes, producing avoidable 403s from visible finance actions.
+
+Fixes applied:
+
+- Exam Cell create/cancel links now use the existing `exam-cell.exams` route.
+- `ApprovalWorkflow` now has a query `scopeOverdue()`.
+- Admission document queue, applicant detail, and workbench show a `File missing` state instead of preview/download links when the local file is absent.
+- Accounts now has an owned scholarship disbursement queue at `/accounts/scholarship-disbursements`; Accounts dashboard/payment links stay inside Accounts routes.
+
+Final bounded crawl result after fixes:
+
+```text
+Major seeded role crawl: 663 checked pages/links, 0 broken 404/500/runtime-error pages.
+```
+
+Focused and adjacent verification after these crawl fixes:
+
+```text
+Admin/Accounts adjacent feature checks: 30 tests passed, 1223 assertions
+Admission adjacent feature checks: 31 tests passed, 600 assertions
+npm run test:finance: 57 tests passed, 438 assertions
+npm run test:admission: 101 tests passed, 1093 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
 - Kept the student fee UI behavior that labels past-due pending hostel demands as `Overdue`, and aligned the stale regression expectation.
 - Fixed the KPI component markup spacing issue that affected the admin operations KPI drilldown assertion.
 - Fixed fresh PMC demo seed bridge integrity: published canonical sessions now create compatibility bridge rows during seeding, matching the reconciliation baseline and downstream attendance/reporting expectations.
+- Fixed navigation-crawl blockers in Exam Cell, unified approvals, Admission document file actions, and Accounts finance links.
 
 ## Feedback
 

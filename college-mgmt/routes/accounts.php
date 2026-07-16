@@ -34,6 +34,7 @@ Route::middleware(['auth', 'role:accounts_officer|admin|director'])->prefix('acc
     });
     Route::middleware('department.feature:ACC,accounts.reconciliation')->group(function () {
         Route::get('admission-payments', [Departmental\AccountsController::class, 'admissionPayments'])->name('admission-payments');
+        Route::get('scholarship-disbursements', [Departmental\AccountsController::class, 'scholarshipDisbursements'])->name('scholarship-disbursements');
         Route::get('reconciliation', [Departmental\AccountsController::class, 'reconciliation'])->name('reconciliation');
     });
     Route::middleware('department.feature:ACC,accounts.reports_exports')->group(function () {

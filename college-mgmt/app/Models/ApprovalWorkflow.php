@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 
 class ApprovalWorkflow extends Model
 {
@@ -46,6 +47,14 @@ class ApprovalWorkflow extends Model
     public function isOverdue(): bool
     {
         return $this->status === 'pending' && $this->due_at !== null && $this->due_at->isPast();
+    }
+
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'pending')
+            ->whereNotNull('due_at')
+            ->where('due_at', '<', now());
     }
 
     public function isEscalated(): bool

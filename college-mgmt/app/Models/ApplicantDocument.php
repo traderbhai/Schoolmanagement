@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ApplicantDocument extends Model
 {
@@ -47,5 +48,10 @@ class ApplicantDocument extends Model
             'jpg', 'jpeg', 'png', 'gif', 'webp' => 'bi-file-image',
             default => 'bi-file-earmark',
         };
+    }
+
+    public function getFileAvailableAttribute(): bool
+    {
+        return filled($this->file_path) && Storage::disk('local')->exists($this->file_path);
     }
 }

@@ -57,7 +57,7 @@
                 @elseif($outstanding > 0)
                     <a href="{{ route('accounts.outstanding') }}" class="btn btn-danger btn-sm"><i class="bi bi-exclamation-circle me-1"></i> Review Outstanding</a>
                 @elseif($pendingScholarshipDisbursements > 0)
-                    <a href="{{ route('admission.scholarship-disbursements.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-award me-1"></i> Open Scholarships</a>
+                    <a href="{{ route('accounts.scholarship-disbursements') }}" class="btn btn-primary btn-sm"><i class="bi bi-award me-1"></i> Open Scholarships</a>
                 @else
                     <a href="{{ route('accounts.reconciliation') }}" class="btn btn-primary btn-sm"><i class="bi bi-arrow-left-right me-1"></i> Reconcile Receipts</a>
                 @endif
@@ -92,7 +92,7 @@
         <x-ui.kpi-card href="{{ route('accounts.admission-payments') }}" :tone="$pendingAdmissionVerification > 0 ? 'amber' : 'blue'" icon="bi-ui-checks" :value="$pendingAdmissionVerification" label="Pending Verification" :trend="$pendingAdmissionVerification > 0 ? 'View queue' : 'Queue clear'" :trend-icon="$pendingAdmissionVerification > 0 ? 'bi-clock' : 'bi-check'" :trend-tone="$pendingAdmissionVerification > 0 ? 'up' : null" />
     </div>
     <div class="col-md-3">
-        <x-ui.kpi-card href="{{ route('admission.scholarship-disbursements.index') }}" tone="cyan" icon="bi-award-fill" :value="$pendingScholarshipDisbursements" label="Scholarships to Disburse" trend="Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending" trend-icon="bi-cash-stack" />
+        <x-ui.kpi-card href="{{ route('accounts.scholarship-disbursements') }}" tone="cyan" icon="bi-award-fill" :value="$pendingScholarshipDisbursements" label="Scholarships to Disburse" trend="Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending" trend-icon="bi-cash-stack" />
     </div>
     <div class="col-md-3">
         <x-ui.kpi-card href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" :tone="$overdueDemandsCount > 0 ? 'red' : 'blue'" icon="bi-calendar-x-fill" :value="$overdueDemandsCount" label="Overdue Fee Demands" trend="Rs. {{ number_format($overdueDemandsAmount, 0) }} at risk" trend-icon="bi-eye" :trend-tone="$overdueDemandsCount > 0 ? 'down' : null" />

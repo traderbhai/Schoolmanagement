@@ -4,7 +4,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-cash-coin me-2 text-primary"></i>Admission Payment Verification</h4>
-    <a href="{{ route('admission.payments.queue') }}" class="btn btn-sm btn-outline-primary">Go to CRM Payment Queue</a>
+    <a href="{{ route('accounts.reconciliation') }}" class="btn btn-sm btn-outline-primary">Open Reconciliation</a>
 </div>
 
 <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
@@ -50,7 +50,7 @@
                         <td>{{ $pay->created_at?->format('d M Y') ?? 'Submission date not recorded' }}</td>
                         <td><span class="badge bg-warning text-dark">{{ ucfirst($pay->status) }}</span></td>
                         <td>
-                            <a href="{{ route('admission.payments.index', $pay->applicant?->program_id ?? 0) }}" class="btn btn-sm btn-outline-primary">Open source</a>
+                            <span class="badge text-bg-light border">Accounts queue</span>
                         </td>
                     </tr>
                 @empty

@@ -7,7 +7,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Schedule New Exam</h5>
-    <a href="{{ route('exam-cell.exams.index') }}" class="btn btn-sm btn-outline-secondary">
+    <a href="{{ route('exam-cell.exams') }}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back to Exams
     </a>
 </div>
@@ -168,7 +168,7 @@
 
             <hr class="my-4">
             <div class="d-flex justify-content-end gap-2">
-                <a href="{{ route('exam-cell.exams.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                <a href="{{ route('exam-cell.exams') }}" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-calendar-plus me-1"></i>Schedule Exam
                 </button>
