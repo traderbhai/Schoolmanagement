@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcCourseGroupMember;
 use App\Models\AcademicPmcGroupFacultyAssignment;
+use App\Models\AcademicPmcTimetableConstraint;
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcTimetableImpactRecord;
 use App\Models\AcademicPmcTimetableNotification;
 use App\Models\AcademicPmcTimetablePublishCheck;
 use App\Models\AcademicPmcTimetableVersionWorkflow;
@@ -24,7 +26,7 @@ class PmcTimetablePublishService
 
     public function __construct(private PmcTimetableBridgeSyncService $bridgeSync) {}
 
-    public function publishRun(User $actor, AcademicPmcTimetableGenerationRun $run, array $data, callable $refreshConstraintsAndQuality, callable $refreshGenerationImpactPreview): TimetableVersion
+    public function publishRun(User $actor, AcademicPmcTimetableGenerationRun $run, array $data, callable $refreshConstraintsAndQuality): TimetableVersion
     {
         $refreshConstraintsAndQuality($run);
         $blocking = AcademicPmcTimetablePublishCheck::where('generation_run_id', $run->id)->where('status', 'block')->get();
@@ -35,7 +37,7 @@ class PmcTimetablePublishService
             abort(422, 'Publish is blocked by hard timetable checks: ' . ($blockedChecks ?: 'unresolved publish checks') . '. Dean/Admin override requires a reason.');
         }
 
-        $impactRecords = $refreshGenerationImpactPreview($actor, $run);
+        $impactRecords = $this->refreshGenerationImpactPreview($actor, $run);
         $impactSummary = $run->fresh()->input_summary['impact_preview'] ?? [];
 
         $lastVersion = TimetableVersion::where('program_id', $run->program_id)
@@ -105,6 +107,159 @@ class PmcTimetablePublishService
         $this->audit($actor, 'academic_pmc_v043_timetable_published', 'Published timetable version #' . $version->version_number, $version, ['run_id' => $run->id, 'recipient_notifications' => $recipientNotificationCounts]);
 
         return $version;
+    }
+
+    public function refreshGenerationImpactPreview(User $actor, AcademicPmcTimetableGenerationRun $run): Collection
+    {
+        $items = AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot'])
+            ->where('generation_run_id', $run->id)
+            ->get();
+        $groupIds = $items->pluck('course_group_id')->filter()->unique()->values();
+        $teacherIds = $items->pluck('teacher_id')->filter()->unique()->values();
+        $roomIds = $items->pluck('classroom_id')->filter()->unique()->values();
+        $students = AcademicPmcCourseGroupMember::with('student.user')
+            ->whereIn('course_group_id', $groupIds)
+            ->where('status', 'active')
+            ->get()
+            ->unique('student_id')
+            ->values();
+        $changedItems = $items->filter(function (AcademicPmcTimetableGenerationItem $item) {
+            $metadata = $item->metadata ?: [];
+            return ! empty($metadata['previous_placement']) || ! empty($metadata['manual_move']) || ! empty($metadata['applied_solver_alternative']);
+        })->values();
+        $conflicts = AcademicPmcTimetableConstraint::where('generation_run_id', $run->id)->get();
+
+        AcademicPmcTimetableImpactRecord::where('metadata->generation_run_id', $run->id)
+            ->where('metadata->version', 'PMC OS v0.069')
+            ->delete();
+
+        $records = collect([
+            [
+                'type' => 'students',
+                'title' => 'Students affected by generated timetable',
+                'count' => $students->count(),
+                'records' => $students->take(20)->map(fn ($member) => [
+                    'student_id' => $member->student_id,
+                    'name' => $member->student?->user?->name,
+                    'course_group_id' => $member->course_group_id,
+                ])->values()->all(),
+                'severity' => $students->count() > 0 ? 'medium' : 'low',
+            ],
+            [
+                'type' => 'faculty',
+                'title' => 'Faculty affected by generated timetable',
+                'count' => $teacherIds->count(),
+                'records' => $items->whereNotNull('teacher_id')->unique('teacher_id')->take(20)->map(fn ($item) => [
+                    'teacher_id' => $item->teacher_id,
+                    'name' => $item->teacher?->user?->name,
+                    'course_group' => $item->courseGroup?->name,
+                ])->values()->all(),
+                'severity' => $teacherIds->count() > 0 ? 'medium' : 'low',
+            ],
+            [
+                'type' => 'rooms',
+                'title' => 'Rooms and labs affected by generated timetable',
+                'count' => $roomIds->count(),
+                'records' => $items->whereNotNull('classroom_id')->unique('classroom_id')->take(20)->map(fn ($item) => [
+                    'classroom_id' => $item->classroom_id,
+                    'name' => $item->classroom?->name,
+                    'course_group' => $item->courseGroup?->name,
+                ])->values()->all(),
+                'severity' => $roomIds->count() > 0 ? 'medium' : 'low',
+            ],
+            [
+                'type' => 'groups',
+                'title' => 'Course sections/groups affected by generated timetable',
+                'count' => $groupIds->count(),
+                'records' => $items->whereNotNull('course_group_id')->unique('course_group_id')->take(20)->map(fn ($item) => [
+                    'course_group_id' => $item->course_group_id,
+                    'name' => $item->courseGroup?->name,
+                    'subject' => $item->courseGroup?->subject?->code,
+                ])->values()->all(),
+                'severity' => $groupIds->count() > 0 ? 'medium' : 'low',
+            ],
+            [
+                'type' => 'changed_slots',
+                'title' => 'Manual or alternative placement changes',
+                'count' => $changedItems->count(),
+                'records' => $changedItems->take(20)->map(fn ($item) => [
+                    'item_id' => $item->id,
+                    'course_group' => $item->courseGroup?->name,
+                    'day' => $item->day_of_week,
+                    'slot' => $item->slot?->name,
+                    'room' => $item->classroom?->name,
+                ])->values()->all(),
+                'severity' => $changedItems->count() > 0 ? 'high' : 'low',
+            ],
+            [
+                'type' => 'conflicts',
+                'title' => 'Open hard conflicts and soft warnings',
+                'count' => $conflicts->count(),
+                'records' => $conflicts->take(20)->map(fn ($constraint) => [
+                    'constraint_id' => $constraint->id,
+                    'type' => $constraint->constraint_type,
+                    'severity' => $constraint->severity,
+                    'title' => $constraint->title,
+                    'recommended_fix' => $constraint->recommended_fix,
+                ])->values()->all(),
+                'severity' => $conflicts->where('severity', 'hard')->isNotEmpty() ? 'critical' : ($conflicts->isNotEmpty() ? 'high' : 'low'),
+            ],
+            [
+                'type' => 'notification_audience',
+                'title' => 'Notification audience before publish/revision',
+                'count' => $students->count() + $teacherIds->count(),
+                'records' => [
+                    'students' => $students->count(),
+                    'faculty' => $teacherIds->count(),
+                    'rooms' => $roomIds->count(),
+                    'groups' => $groupIds->count(),
+                ],
+                'severity' => $items->isNotEmpty() ? 'medium' : 'low',
+            ],
+        ])->map(function (array $impact) use ($run, $actor) {
+            return AcademicPmcTimetableImpactRecord::create([
+                'impact_type' => $impact['type'],
+                'title' => $impact['title'],
+                'affected_count' => $impact['count'],
+                'affected_records' => $impact['records'],
+                'metadata' => [
+                    'version' => 'PMC OS v0.069',
+                    'generation_run_id' => $run->id,
+                    'program_id' => $run->program_id,
+                    'batch_id' => $run->batch_id,
+                    'term_id' => $run->term_id,
+                    'severity' => $impact['severity'],
+                    'refreshed_by' => $actor->id,
+                    'refreshed_at' => now()->toDateTimeString(),
+                ],
+            ]);
+        });
+
+        $run->update([
+            'input_summary' => array_merge($run->input_summary ?: [], [
+                'impact_preview' => [
+                    'version' => 'PMC OS v0.069',
+                    'affected_students' => $students->count(),
+                    'affected_faculty' => $teacherIds->count(),
+                    'affected_rooms' => $roomIds->count(),
+                    'affected_groups' => $groupIds->count(),
+                    'changed_slots' => $changedItems->count(),
+                    'open_conflicts' => $conflicts->count(),
+                    'refreshed_at' => now()->toDateTimeString(),
+                ],
+            ]),
+        ]);
+
+        $this->audit($actor, 'academic_pmc_v069_timetable_impact_preview_refreshed', 'PMC timetable generation impact preview refreshed', $run, [
+            'generation_run_id' => $run->id,
+            'records' => $records->count(),
+            'affected_students' => $students->count(),
+            'affected_faculty' => $teacherIds->count(),
+            'changed_slots' => $changedItems->count(),
+            'open_conflicts' => $conflicts->count(),
+        ]);
+
+        return $records;
     }
 
     public function freezeVersion(User $actor, TimetableVersion $version, array $data): AcademicPmcTimetableVersionWorkflow
