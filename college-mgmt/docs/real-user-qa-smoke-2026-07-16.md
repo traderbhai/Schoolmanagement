@@ -1148,6 +1148,24 @@ AcademicsPmcTimetableV089: 2 tests passed, 11 assertions.
 AcademicsPmcTimetableV082 and V043 freeze/publish blocker filter: 6 tests passed, 41 assertions.
 ```
 
+## Admission Application Lifecycle Recheck
+
+Manual applicant, admission manager, admission head, officer, and admin checks were exercised against the running local server:
+
+```text
+priya.sharma@applicant.demo: GET /applicant/dashboard, /application, /status, /checklist, /registration-fee, /fees, /offer-letters, /documents, and /admission-operations rendered without service-error pages.
+admission.manager@college.com: GET /admission/dashboard, /admission/applicants, /admission/enrollment, /admission/handoff, /admission/payments/queue, /admission/offer-seat-control, /admission/offer-letters/1, and /admission/documents/queue rendered without service-error pages.
+admission.manager@college.com: GET /admission/applicants/1 detail/scorecard/payments returned 403 for scoped applicant access, confirming role scoping rather than page failure.
+admin@college.com and head@college.com: GET /admission/applicants/1, /scorecard, /payments, /application-pdf, and /registration-fee rendered successfully.
+officer@college.com: same applicant #1 detail surfaces returned 403, confirming officer scope restrictions on that applicant.
+```
+
+Focused verification:
+
+```text
+AdmissionFlowTest, AdmissionApplicantUxGuidanceTest, ApplicantPortalActionEntryTest, ApplicantRegistrationFeeTest, AdmissionPaymentVerificationIntegrityTest, and AdmissionDocumentVerificationIntegrityTest: 69 tests passed, 535 assertions.
+```
+
 ## Frontend Build And Smoke Recheck
 
 Final frontend checks after the live user workflow pass:
@@ -1186,6 +1204,4 @@ npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 
 ## Next Recommended Testing
 
-When time allows, test one module at a time with real click/form submissions:
-
-1. Admission application lifecycle.
+No critical module from this real-user pass remains on the immediate list. Future testing should continue one module at a time when a new feature or change is made.
