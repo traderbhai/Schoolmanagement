@@ -10,10 +10,14 @@ use App\Models\AcademicPmcCourseAllocationException;
 use App\Models\AcademicPmcElectiveChoice;
 use App\Models\AcademicPmcCourseGroupAdjustment;
 use App\Models\AcademicPmcCourseGroupMember;
+use App\Models\AcademicPmcFacultyAssignmentAcknowledgement;
+use App\Models\AcademicPmcFacultyLoadReview;
+use App\Models\AcademicPmcFacultyPreference;
 use App\Models\AcademicPmcGroupBuildRun;
 use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcLockedSlot;
 use App\Models\AcademicPmcStudentCourseAllocation;
+use App\Models\AcademicPmcWorkloadRule;
 use App\Models\Batch;
 use App\Models\Classroom;
 use App\Models\Program;
@@ -215,6 +219,51 @@ class PmcTimetableReadModelService
             'buildRuns' => $buildRuns->paginate(10, ['*'], 'build_runs_page'),
             'groupAdjustments' => $groupAdjustments->paginate(15, ['*'], 'adjustments_page'),
             'groupDiagnostics' => $groupDiagnostics,
+        ];
+    }
+
+    public function facultySurface(User $user, string $surface, array $filters, array $facultyDiagnostics, array $facultySuitabilityDiagnostics): array
+    {
+        $assignments = $this->applyScope(
+            AcademicPmcGroupFacultyAssignment::with(['courseGroup.subject', 'teacher.user']),
+            $user,
+            [],
+            ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+        )->latest();
+        $preferences = $this->applyScope(
+            AcademicPmcFacultyPreference::with('teacher.user'),
+            $user,
+            ['term_id' => 'term']
+        )->latest();
+        $acknowledgements = $this->applyScope(
+            AcademicPmcFacultyAssignmentAcknowledgement::with(['assignment.courseGroup.subject', 'teacher.user', 'requester', 'reviewer']),
+            $user,
+            [],
+            ['assignment' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+        )->latest();
+        $loadReviews = $this->applyScope(
+            AcademicPmcFacultyLoadReview::with(['teacher.user', 'generationRun', 'reviewer']),
+            $user,
+            ['term_id' => 'term'],
+            ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+        )->latest();
+        $rules = $this->applyScope(
+            AcademicPmcWorkloadRule::query(),
+            $user,
+            ['program_id' => 'program', 'term_id' => 'term']
+        )->latest();
+
+        return [
+            'title' => 'PMC Section/Group Faculty And Load Planning',
+            'description' => 'Faculty assignment to exact sections/groups, preferences, adjunct days, load rules, and shortage planning.',
+            'assignments' => $assignments->paginate(15),
+            'preferences' => $preferences->paginate(15),
+            'acknowledgements' => $acknowledgements->paginate(15, ['*'], 'ack_page'),
+            'loadReviews' => $loadReviews->paginate(15, ['*'], 'load_reviews_page'),
+            'rules' => $rules->paginate(15),
+            'facultyDiagnostics' => $facultyDiagnostics,
+            'facultySuitabilityDiagnostics' => $facultySuitabilityDiagnostics,
+            'surfaceKey' => $surface,
         ];
     }
 

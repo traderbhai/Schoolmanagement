@@ -2696,34 +2696,13 @@ class AcademicPmcTimetableV041Service
 
     private function facultySurface(User $user, string $surface, array $filters): array
     {
-        $assignments = $this->applyScope(AcademicPmcGroupFacultyAssignment::with(['courseGroup.subject', 'teacher.user']), $user, [], ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']])->latest();
-        $preferences = $this->applyScope(AcademicPmcFacultyPreference::with('teacher.user'), $user, ['term_id' => 'term'])->latest();
-        $acknowledgements = $this->applyScope(
-            AcademicPmcFacultyAssignmentAcknowledgement::with(['assignment.courseGroup.subject', 'teacher.user', 'requester', 'reviewer']),
+        return $this->readModels->facultySurface(
             $user,
-            [],
-            ['assignment' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-        )->latest();
-        $loadReviews = $this->applyScope(
-            AcademicPmcFacultyLoadReview::with(['teacher.user', 'generationRun', 'reviewer']),
-            $user,
-            ['term_id' => 'term'],
-            ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-        )->latest();
-        $rules = $this->applyScope(AcademicPmcWorkloadRule::query(), $user, ['program_id' => 'program', 'term_id' => 'term'])->latest();
-
-        return [
-            'title' => 'PMC Section/Group Faculty And Load Planning',
-            'description' => 'Faculty assignment to exact sections/groups, preferences, adjunct days, load rules, and shortage planning.',
-            'assignments' => $assignments->paginate(15),
-            'preferences' => $preferences->paginate(15),
-            'acknowledgements' => $acknowledgements->paginate(15, ['*'], 'ack_page'),
-            'loadReviews' => $loadReviews->paginate(15, ['*'], 'load_reviews_page'),
-            'rules' => $rules->paginate(15),
-            'facultyDiagnostics' => $this->facultyAllocationDiagnostics($user),
-            'facultySuitabilityDiagnostics' => $this->facultySuitabilityDiagnostics(null, $user),
-            'surfaceKey' => $surface,
-        ];
+            $surface,
+            $filters,
+            $this->facultyAllocationDiagnostics($user),
+            $this->facultySuitabilityDiagnostics(null, $user)
+        );
     }
 
     private function lockedSlotSurface(User $user, array $filters): array
