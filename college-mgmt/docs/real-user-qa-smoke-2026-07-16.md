@@ -279,6 +279,25 @@ php artisan route:list --json: 1298 registered routes
 Critical routes present: academics.pmc.command, academics.pmc.official-timetable.index, admin.dashboard, teacher.timetable.index, student.timetable, accounts.dashboard, admission.dashboard
 ```
 
+## Remaining Module Workflow Recheck
+
+Additional module chunks that were not part of the previous action pass:
+
+```text
+Exam/CoE/published-result reporting boundary chunk: 60 tests passed, 713 assertions
+CMC/placement workflow chunk: 38 tests passed, 308 assertions
+Library/hostel/transport operations chunk: 84 tests passed, 831 assertions
+```
+
+Authenticated HTTP module sweep covered the registered routes for Exam Cell, CMC, admin library/hostel/transport/exam, and student exam/placement/library/hostel/transport. The corrected sweep passed 24 pages with HTTP 200 and no service-error/debug text:
+
+```text
+exam@college.com: /exam-cell/dashboard, /exam-cell/exams, /exam-cell/exams/create, /exam-cell/results, /exam-cell/hall-tickets
+cmc@college.com: /cmc/dashboard, /cmc/companies, /cmc/drives, /cmc/placements, /cmc/events, /cmc/internships
+admin@college.com: /admin/library/books, /admin/library/issues, /admin/hostel, /admin/hostel/allocations, /admin/hostel/fees, /admin/transport, /admin/exams
+arjun.k@demo.edu: /student/exam-registration, /student/placements, /student/library, /student/hostel/outpass, /student/hostel/complaints, /student/transport
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
