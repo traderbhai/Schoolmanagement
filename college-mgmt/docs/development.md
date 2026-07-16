@@ -31,6 +31,18 @@ npm run test:production-readiness
 
 ## Current Stabilization Evidence
 
+Critical local readiness checkpoint on 2026-07-16:
+
+```powershell
+$env:PHPRC='C:\tmp\php-8.5.7-codex-ini'
+C:\tmp\php-8.5.7\php.exe artisan test tests\Feature\ArchitectureStabilizationTest.php
+npm run test:timetable
+npm run frontend:build
+npm run frontend:smoke
+```
+
+All four commands passed at this checkpoint. This is the minimum gate before resuming feature development or local manual testing.
+
 Last verified locally during the structural stabilization pass:
 
 ```powershell
@@ -46,6 +58,16 @@ C:\tmp\php-8.5.7\php.exe artisan test tests\Feature\AdminOperationsFrontendBetaR
 ```
 
 The full `artisan test` command was also attempted with the same PHP runtime and hit the local 10-minute process timeout before returning a failing test. Use the chunked suites above for reliable local verification until the full suite runtime is reduced.
+
+## Non-Blocking Structural Backlog
+
+The app is ready for local testing and feature development after the critical checkpoint above. Remaining structural work should be handled incrementally, not as a blocker for product work:
+
+- Continue reducing the largest PMC services and controllers.
+- Continue dashboard/view simplification outside the PMC timetable surfaces.
+- Split demo seeders further by module and keep them idempotent.
+- Broaden authorization consolidation for Finance, Portal, Admin reporting, and exports.
+- Reduce full-suite runtime so `artisan test` can complete locally without relying on chunked suites.
 
 ## Git Hygiene
 
