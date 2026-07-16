@@ -54,6 +54,21 @@ class AdmissionAccessPolicyService
         return false;
     }
 
+    public function canSeeAll(User $user): bool
+    {
+        return $user->hasRole('admin') || app(DepartmentHierarchyService::class)->canSeeAll($user, 'ADM');
+    }
+
+    public function canApproveAdmission(User $user): bool
+    {
+        return app(DepartmentHierarchyService::class)->canApproveAdmission($user);
+    }
+
+    public function evaluatorScope(User $user): ?User
+    {
+        return $this->canSeeAll($user) ? null : $user;
+    }
+
     public function auditCoverage(): array
     {
         return collect(app('router')->getRoutes())
