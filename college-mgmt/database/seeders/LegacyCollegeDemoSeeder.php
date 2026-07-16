@@ -330,10 +330,19 @@ class LegacyCollegeDemoSeeder extends Seeder
                     } else {
                         $status = 'present';
                     }
-                    Attendance::firstOrCreate(
-                        ['student_id' => $student->id, 'timetable_entry_id' => $entry->id, 'date' => $date],
-                        ['status' => $status]
-                    );
+                    $existingAttendance = Attendance::where('student_id', $student->id)
+                        ->where('timetable_entry_id', $entry->id)
+                        ->whereDate('date', $date)
+                        ->first();
+
+                    if (! $existingAttendance) {
+                        Attendance::create([
+                            'student_id' => $student->id,
+                            'timetable_entry_id' => $entry->id,
+                            'date' => $date,
+                            'status' => $status,
+                        ]);
+                    }
                     $counter++;
                 }
             }

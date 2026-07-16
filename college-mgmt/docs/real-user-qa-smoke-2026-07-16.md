@@ -310,6 +310,30 @@ Official timetable publish/freeze/revision/canonical constraint chunk: 76 tests 
 Global access/reporting/canonical admin boundary chunk: 20 tests passed, 124 assertions
 ```
 
+## Fresh Seed Idempotency Recheck
+
+A disposable SQLite database was created at `database/codex_seed_idempotency.sqlite` to test whether the demo setup is safe to rerun. The first `migrate:fresh --seed --force` passed, but a second `db:seed --force` exposed a real blocker in `LegacyCollegeDemoSeeder`: legacy attendance rows used `firstOrCreate` with a plain date string, while the model cast inserted the date as `YYYY-MM-DD 00:00:00`. On SQLite this failed to match the existing row and hit the unique key on `student_id`, `timetable_entry_id`, and `date`.
+
+Fix applied:
+
+- Legacy attendance demo rows now check existing records with `whereDate('date', $date)` before creating attendance.
+
+Verification after the fix:
+
+```text
+fresh migrate/seed followed by second db:seed: passed
+users=62
+attendances=106
+official_items=3
+missing_scope=0
+missing_bridge_link=0
+duplicate_emails=0
+duplicate_pmc_items=0
+duplicate_attendance_keys=0
+Demo credentials + seeded official timetable + attendance focused regression: 22 tests passed, 100 assertions
+double-seeded temporary server smoke on http://127.0.0.1:8013: 9 critical pages passed with HTTP 200 and no service-error/debug text
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -318,6 +342,7 @@ Global access/reporting/canonical admin boundary chunk: 20 tests passed, 124 ass
 - Fixed fresh PMC demo seed bridge integrity: published canonical sessions now create compatibility bridge rows during seeding, matching the reconciliation baseline and downstream attendance/reporting expectations.
 - Fixed navigation-crawl blockers in Exam Cell, unified approvals, Admission document file actions, and Accounts finance links.
 - Patched Composer dependency advisories in Guzzle packages and re-ran dependency, frontend, timetable, production-readiness, Admission, Finance, Portal, and live role smoke checks.
+- Fixed legacy demo attendance seeding so rerunning `db:seed` on an existing demo database does not create duplicate attendance keys or crash.
 
 ## Feedback
 
