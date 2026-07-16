@@ -1096,6 +1096,25 @@ Teacher timetable/attendance/dashboard filtered chunk: 19 tests passed, 138 asse
 Student attendance/timetable adjacent filtered chunk: 17 tests passed, 108 assertions.
 ```
 
+## Program Chair Substitution Recheck
+
+Manual Program Chair and teacher checks were exercised against the running local server:
+
+```text
+chair@college.com: GET /program-chair/timetable/substitutions rendered the substitution page and listed PMC Faculty Allocation Demo.
+chair@college.com: POST /program-chair/timetable/substitutions recorded canonical substitution QA substitution live 20260717003155 for pmc:5 with substitute teacher 6.
+Database check: academic_pmc_substitution_recommendations row 8 was created with pmc_generation_item_id=5, original_teacher_id=5, substitute_teacher_id=6, status=recorded, score=100.
+Database check: no timetable_substitutions legacy row was created for pmc_generation_item_id=5.
+pmc.faculty@college.com: GET /teacher/timetable showed "Substituted by Prof. Vikram Shah" and the QA reason.
+pmc.adjunct@college.com: GET /teacher/timetable showed "Covering for Prof. Aditi Sen" and the QA reason.
+```
+
+Focused verification:
+
+```text
+ProgramChairLegacyTimetableIntegrityTest, StudentTimetableWorkflowTest, AcademicsPmcTimetableV054Test, and AcademicsPmcTimetableV083Test substitution filter: 8 tests passed, 49 assertions.
+```
+
 ## Frontend Build And Smoke Recheck
 
 Final frontend checks after the live user workflow pass:
@@ -1136,5 +1155,4 @@ npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 When time allows, test one module at a time with real click/form submissions:
 
 1. Admission application lifecycle.
-2. Teacher substitutions.
-3. PMC publish/freeze flow on a disposable demo run.
+2. PMC publish/freeze flow on a disposable demo run.
