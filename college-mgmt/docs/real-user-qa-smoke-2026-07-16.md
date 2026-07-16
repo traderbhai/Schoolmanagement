@@ -68,6 +68,37 @@ Full feature suite result after the final fixes:
 1770 tests passed, 29566 assertions
 ```
 
+Continuation verification on the same committed baseline:
+
+```powershell
+$env:PHPRC='C:\tmp\php-8.5.7-codex-ini'
+C:\tmp\php-8.5.7\php.exe artisan test tests\Unit
+npm run frontend:build
+npm run frontend:smoke
+npm run frontend:smoke:mobile
+```
+
+Results:
+
+```text
+Unit suite: 27 tests passed, 70 assertions
+Frontend build: passed
+Desktop frontend smoke: 135 tests passed, 3977 assertions
+Mobile frontend smoke: 29 tests passed, 1473 assertions
+```
+
+Additional live HTTP login sweep on `http://127.0.0.1:8000` passed for these seeded-role pages with HTTP 200 and no service-error/debug failure text:
+
+| User | Pages |
+| --- | --- |
+| `admin@college.com` | `/admin/dashboard`, `/admin/students`, `/admin/teachers`, `/admin/notices` |
+| `chair@college.com` | `/academics/pmc/command`, `/academics/pmc/official-timetable`, `/academics/pmc/timetable-generator`, `/academics/pmc/course-groups`, `/academics/pmc/timetable-quality` |
+| `dean@college.com` | `/academics/dean-os`, `/academics/dean-os/attention/critical_attention`, `/academics/course-delivery` |
+| `head@college.com` | `/admission/dashboard`, `/admission/command-center`, `/admission/workbench`, `/admission/documents/queue` |
+| `accounts@college.com` | `/accounts/dashboard`, `/accounts/fee-collections`, `/accounts/outstanding`, `/accounts/reconciliation` |
+| `anjali@demo.edu` | `/teacher/dashboard`, `/teacher/timetable`, `/teacher/attendance/mark`, `/teacher/materials`, `/teacher/assignments` |
+| `arjun.k@demo.edu` | `/student/dashboard`, `/student/timetable`, `/student/attendance`, `/student/fees`, `/student/courses` |
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
