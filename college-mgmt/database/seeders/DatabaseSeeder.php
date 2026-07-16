@@ -7,24 +7,13 @@ use App\Models\{User, Department, Course, Subject, Classroom, AcademicYear, Seme
     Enrollment, FeeStructure, FeePayment, Exam, ExamResult, Attendance};
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Roles
-        $roles = ['admin', 'teacher', 'student'];
-        foreach ($roles as $role) {
-            Role::firstOrCreate(['name' => $role]);
-        }
-
-        // Admin user
-        $admin = User::firstOrCreate(['email' => 'admin@college.com'], [
-            'name'     => 'Admin User',
-            'password' => Hash::make('password'),
-        ]);
-        $admin->assignRole('admin');
+        $this->call(CoreUserRoleSeeder::class);
+        $admin = User::where('email', 'admin@college.com')->firstOrFail();
 
         // Departments
         $depts = [
