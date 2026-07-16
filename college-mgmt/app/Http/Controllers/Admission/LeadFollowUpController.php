@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lead;
 use App\Models\LeadFollowUp;
 use App\Models\User;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,9 +32,9 @@ class LeadFollowUpController extends Controller
             ->whereBetween('scheduled_at', [$startOfMonth, $endOfMonth])
             ->orderBy('scheduled_at');
 
-        $hierarchy = app(DepartmentHierarchyService::class);
-        if (! $request->user()->hasRole('admin') && ! $hierarchy->canSeeAll($request->user(), 'ADM')) {
-            $visibleUserIds = $hierarchy->visibleUserIds($request->user(), 'ADM');
+        $policy = app(AdmissionAccessPolicyService::class);
+        if (! $policy->canSeeAll($request->user())) {
+            $visibleUserIds = $policy->visibleUserIds($request->user());
             $query->where(function ($scope) use ($visibleUserIds) {
                 $scope->whereIn('assigned_to', $visibleUserIds)
                     ->orWhereNull('assigned_to')
@@ -42,7 +43,7 @@ class LeadFollowUpController extends Controller
         }
 
         if ($counsellorId) {
-            abort_unless($hierarchy->canViewAssignedUser($request->user(), 'ADM', (int) $counsellorId, true), 403);
+            $policy->authorizeViewAssignedUser($request->user(), (int) $counsellorId, true);
             $query->where('assigned_to', $counsellorId);
         }
 
@@ -70,7 +71,8 @@ class LeadFollowUpController extends Controller
         ]);
 
         if (! empty($validated['assigned_to'])) {
-            abort_unless(app(DepartmentHierarchyService::class)->canViewAssignedUser($request->user(), 'ADM', (int) $validated['assigned_to'], true), 403);
+            app(AdmissionAccessPolicyService::class)
+                ->authorizeViewAssignedUser($request->user(), (int) $validated['assigned_to'], true);
         }
 
         $lead->followUps()->create($validated);
@@ -99,7 +101,8 @@ class LeadFollowUpController extends Controller
         $validated = $request->validate([
             'assigned_to' => 'required|exists:users,id',
         ]);
-        abort_unless(app(DepartmentHierarchyService::class)->canViewAssignedUser($request->user(), 'ADM', (int) $validated['assigned_to'], true), 403);
+        app(AdmissionAccessPolicyService::class)
+            ->authorizeViewAssignedUser($request->user(), (int) $validated['assigned_to'], true);
 
         $lead->update([
             'assigned_to' => $validated['assigned_to'],
@@ -112,12 +115,12 @@ class LeadFollowUpController extends Controller
     {
         $followUp->loadMissing('lead');
 
-        return app(DepartmentHierarchyService::class)->canViewAssignedUser($request->user(), 'ADM', $followUp->assigned_to, true)
+        return app(AdmissionAccessPolicyService::class)->canViewAssignedUser($request->user(), $followUp->assigned_to, true)
             || ($followUp->lead && $this->canAccessLead($request, $followUp->lead));
     }
 
     private function canAccessLead(Request $request, Lead $lead): bool
     {
-        return app(DepartmentHierarchyService::class)->canViewAssignedUser($request->user(), 'ADM', $lead->assigned_to, true);
+        return app(AdmissionAccessPolicyService::class)->canViewAssignedUser($request->user(), $lead->assigned_to, true);
     }
 }
