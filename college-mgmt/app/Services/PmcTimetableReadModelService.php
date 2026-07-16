@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcCourseAllocationException;
+use App\Models\AcademicPmcElectiveChoice;
 use App\Models\AcademicPmcGroupFacultyAssignment;
 use App\Models\AcademicPmcLockedSlot;
 use App\Models\AcademicPmcStudentCourseAllocation;
@@ -133,6 +135,42 @@ class PmcTimetableReadModelService
             'allocations' => $allocations->paginate(20),
             'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
             'basketDiagnostics' => $basketDiagnostics,
+            'allocationPressureDiagnostics' => $allocationPressureDiagnostics,
+        ];
+    }
+
+    public function allocationSurface(User $user, array $filters, array $allocationPressureDiagnostics, callable $filter): array
+    {
+        $batches = $this->applyScope(
+            AcademicPmcCourseAllocationBatch::with(['program', 'batch', 'term', 'owner']),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->latest();
+        $allocations = $this->applyScope(
+            $filter(AcademicPmcStudentCourseAllocation::with(['student.user', 'subject', 'term']), $filters),
+            $user,
+            [],
+            ['term' => ['id' => 'term'], 'student' => ['program_id' => 'program', 'batch_id' => 'batch']]
+        )->latest();
+        $electiveChoices = $this->applyScope(
+            AcademicPmcElectiveChoice::with(['student.user', 'subject', 'term']),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        )->latest();
+        $allocationExceptions = $this->applyScope(
+            AcademicPmcCourseAllocationException::with(['student.user', 'subject', 'term', 'requester', 'decider']),
+            $user,
+            [],
+            ['student' => ['program_id' => 'program', 'batch_id' => 'batch'], 'term' => ['id' => 'term']]
+        )->latest();
+
+        return [
+            'title' => 'PMC Course Allocation',
+            'description' => 'Term-wise student course allocation before timetable creation.',
+            'batches' => $batches->paginate(10),
+            'allocations' => $allocations->paginate(15),
+            'electiveChoices' => $electiveChoices->paginate(15, ['*'], 'choices_page'),
+            'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
             'allocationPressureDiagnostics' => $allocationPressureDiagnostics,
         ];
     }

@@ -2665,30 +2665,12 @@ class AcademicPmcTimetableV041Service
 
     private function allocationSurface(User $user, array $filters): array
     {
-        $batches = $this->applyScope(AcademicPmcCourseAllocationBatch::with(['program', 'batch', 'term', 'owner']), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest();
-        $allocations = $this->applyScope(
-            $this->filter(AcademicPmcStudentCourseAllocation::with(['student.user', 'subject', 'term']), $filters),
+        return $this->readModels->allocationSurface(
             $user,
-            [],
-            ['term' => ['id' => 'term'], 'student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-        )->latest();
-        $electiveChoices = $this->applyScope(AcademicPmcElectiveChoice::with(['student.user', 'subject', 'term']), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest();
-        $allocationExceptions = $this->applyScope(
-            AcademicPmcCourseAllocationException::with(['student.user', 'subject', 'term', 'requester', 'decider']),
-            $user,
-            [],
-            ['student' => ['program_id' => 'program', 'batch_id' => 'batch'], 'term' => ['id' => 'term']]
-        )->latest();
-
-        return [
-            'title' => 'PMC Course Allocation',
-            'description' => 'Term-wise student course allocation before timetable creation.',
-            'batches' => $batches->paginate(10),
-            'allocations' => $allocations->paginate(15),
-            'electiveChoices' => $electiveChoices->paginate(15, ['*'], 'choices_page'),
-            'allocationExceptions' => $allocationExceptions->paginate(15, ['*'], 'exceptions_page'),
-            'allocationPressureDiagnostics' => $this->allocationPressureDiagnostics($user),
-        ];
+            $filters,
+            $this->allocationPressureDiagnostics($user),
+            fn (Builder $query, array $surfaceFilters) => $this->filter($query, $surfaceFilters)
+        );
     }
 
     private function studentBasketSurface(User $user, array $filters): array
