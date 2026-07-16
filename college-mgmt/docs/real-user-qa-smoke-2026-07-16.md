@@ -226,6 +226,40 @@ Live authenticated real-user sweep covered 43 pages across Admin, PMC, Dean, Adm
 
 The smoke script initially checked `/approvals`, which is not a valid registered route. The real shared approval inbox is `/approvals/inbox`; it passed for Admin and Dean.
 
+## Full Regression And Fresh Setup Recheck
+
+After the Guzzle dependency patch, the broad backend and production-style gates were re-run:
+
+```text
+php artisan test: 1800 tests passed, 29685 assertions
+php artisan config:cache: passed
+php artisan route:cache: passed
+php artisan view:cache: passed
+php artisan optimize:clear: passed after cache verification
+```
+
+A disposable SQLite database was created at `database/codex_goal_fresh_smoke.sqlite`, then `migrate:fresh --seed --force` passed. Fresh seeded PMC canonical timetable integrity returned:
+
+```text
+official_items=3
+missing_scope=0
+missing_bridge_link=0
+unscheduled_official=0
+bridge_rows=3
+parallel_slot_groups=1
+```
+
+A temporary fresh-data server on `http://127.0.0.1:8012` passed 12 authenticated critical page checks with HTTP 200 and no service-error/debug text:
+
+```text
+chair@college.com: /academics/pmc/official-timetable, /academics/pmc/command
+admin@college.com: /admin/dashboard, /admin/timetable
+anjali@demo.edu: /teacher/timetable, /teacher/attendance/mark
+arjun.k@demo.edu: /student/timetable, /student/fees
+accounts@college.com: /accounts/dashboard, /accounts/reconciliation
+head@college.com: /admission/dashboard, /admission/documents/queue
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
