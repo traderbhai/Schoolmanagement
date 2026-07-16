@@ -37,40 +37,32 @@
     </div>
 
     @isset($allocationPressureDiagnostics)
-        <div class="card shadow-sm mb-3">
-            <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <div>
-                    <div class="fw-semibold">Allocation Pressure Diagnostics</div>
-                    <div class="small text-muted">Choice-window pressure, waitlists, add/drop exceptions, repeat/backlog cases, duplicate baskets, and incomplete student baskets before section locking.</div>
-                </div>
-                <span class="badge text-bg-{{ ($allocationPressureDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $allocationPressureDiagnostics['status'] ?? 'attention_required') }}</span>
-            </div>
-            <div class="row g-0 text-center">
-                @foreach([
-                    ['Choices', $allocationPressureDiagnostics['elective_choices_total'] ?? 0],
-                    ['Submitted', $allocationPressureDiagnostics['submitted_choices'] ?? 0],
-                    ['Allocated', $allocationPressureDiagnostics['allocated_choices'] ?? 0],
-                    ['Waitlisted', $allocationPressureDiagnostics['waitlisted_choices'] ?? 0],
-                    ['Choice Students Pending', $allocationPressureDiagnostics['unprocessed_choice_students'] ?? 0],
-                    ['Waitlist Subjects', $allocationPressureDiagnostics['waitlist_subjects'] ?? 0],
-                    ['Add/Drop Pending', $allocationPressureDiagnostics['pending_add_drop'] ?? 0],
-                    ['Repeat/Backlog Pending', $allocationPressureDiagnostics['pending_repeat_backlog'] ?? 0],
-                    ['Dean Pending', $allocationPressureDiagnostics['dean_approval_pending'] ?? 0],
-                    ['Duplicate Baskets', $allocationPressureDiagnostics['duplicate_student_subject_allocations'] ?? 0],
-                    ['No Basket', $allocationPressureDiagnostics['students_without_basket'] ?? 0],
-                    ['Single-Course Baskets', $allocationPressureDiagnostics['single_course_baskets'] ?? 0],
-                    ['Manual Overrides', $allocationPressureDiagnostics['manual_overrides'] ?? 0],
-                    ['Recent Rounds', $allocationPressureDiagnostics['recent_allocation_rounds'] ?? 0],
-                    ['Pressure', $allocationPressureDiagnostics['pressure_total'] ?? 0],
-                ] as [$label, $value])
-                    <div class="col-6 col-md-4 col-xl border-top border-end py-2">
-                        <div class="small text-muted">{{ $label }}</div>
-                        <div class="fw-semibold">{{ $value }}</div>
-                    </div>
-                @endforeach
-            </div>
-            <div class="card-footer py-2 small">{{ $allocationPressureDiagnostics['recommended_action'] ?? 'Review allocation pressure before section locking.' }}</div>
-        </div>
+        @include('academics.pmc.v041.partials.diagnostic-card', [
+            'title' => 'Allocation Pressure Diagnostics',
+            'subtitle' => 'Choice-window pressure, waitlists, add/drop exceptions, repeat/backlog cases, duplicate baskets, and incomplete student baskets before section locking.',
+            'status' => $allocationPressureDiagnostics['status'] ?? 'attention_required',
+            'metricColumnClass' => 'col-6 col-md-4 col-xl',
+            'metrics' => [
+                ['Choices', $allocationPressureDiagnostics['elective_choices_total'] ?? 0],
+                ['Submitted', $allocationPressureDiagnostics['submitted_choices'] ?? 0],
+                ['Allocated', $allocationPressureDiagnostics['allocated_choices'] ?? 0],
+                ['Waitlisted', $allocationPressureDiagnostics['waitlisted_choices'] ?? 0],
+                ['Choice Students Pending', $allocationPressureDiagnostics['unprocessed_choice_students'] ?? 0],
+                ['Waitlist Subjects', $allocationPressureDiagnostics['waitlist_subjects'] ?? 0],
+                ['Add/Drop Pending', $allocationPressureDiagnostics['pending_add_drop'] ?? 0],
+                ['Repeat/Backlog Pending', $allocationPressureDiagnostics['pending_repeat_backlog'] ?? 0],
+                ['Dean Pending', $allocationPressureDiagnostics['dean_approval_pending'] ?? 0],
+                ['Duplicate Baskets', $allocationPressureDiagnostics['duplicate_student_subject_allocations'] ?? 0],
+                ['No Basket', $allocationPressureDiagnostics['students_without_basket'] ?? 0],
+                ['Single-Course Baskets', $allocationPressureDiagnostics['single_course_baskets'] ?? 0],
+                ['Manual Overrides', $allocationPressureDiagnostics['manual_overrides'] ?? 0],
+                ['Recent Rounds', $allocationPressureDiagnostics['recent_allocation_rounds'] ?? 0],
+                ['Pressure', $allocationPressureDiagnostics['pressure_total'] ?? 0],
+            ],
+            'recommendedAction' => $allocationPressureDiagnostics['recommended_action'] ?? 'Review allocation pressure before section locking.',
+            'sourceUrl' => route('academics.pmc.elective-allocation.index'),
+            'sourceLabel' => 'Open allocation pressure source list',
+        ])
     @endisset
 
     @if(isset($batches))
@@ -89,32 +81,23 @@
         @includeWhen(isset($allocationExceptions), 'academics.pmc.v041.tables.course-allocation-exceptions')
     @elseif(isset($allocations))
         @isset($basketDiagnostics)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <div class="fw-semibold">Course Basket Diagnostics</div>
-                        <div class="small text-muted">Readiness signals that must be cleared before section/group locking and timetable generation.</div>
-                    </div>
-                    <span class="badge text-bg-{{ $basketDiagnostics['status'] === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $basketDiagnostics['status']) }}</span>
-                </div>
-                <div class="row g-0 text-center">
-                    @foreach([
-                        ['Total', $basketDiagnostics['total_allocations']],
-                        ['Ready', $basketDiagnostics['ready_allocations']],
-                        ['Ungrouped', $basketDiagnostics['ungrouped_allocations']],
-                        ['Waitlisted', $basketDiagnostics['waitlisted_allocations']],
-                        ['Pending Exceptions', $basketDiagnostics['pending_exceptions']],
-                        ['Credit Overload', $basketDiagnostics['credit_overload_baskets']],
-                        ['Flagged', $basketDiagnostics['flagged_allocations']],
-                    ] as [$label, $value])
-                        <div class="col-6 col-md border-top border-end py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="card-footer py-2 small">{{ $basketDiagnostics['recommended_action'] }}</div>
-            </div>
+            @include('academics.pmc.v041.partials.diagnostic-card', [
+                'title' => 'Course Basket Diagnostics',
+                'subtitle' => 'Readiness signals that must be cleared before section/group locking and timetable generation.',
+                'status' => $basketDiagnostics['status'],
+                'metrics' => [
+                    ['Total', $basketDiagnostics['total_allocations']],
+                    ['Ready', $basketDiagnostics['ready_allocations']],
+                    ['Ungrouped', $basketDiagnostics['ungrouped_allocations']],
+                    ['Waitlisted', $basketDiagnostics['waitlisted_allocations']],
+                    ['Pending Exceptions', $basketDiagnostics['pending_exceptions']],
+                    ['Credit Overload', $basketDiagnostics['credit_overload_baskets']],
+                    ['Flagged', $basketDiagnostics['flagged_allocations']],
+                ],
+                'recommendedAction' => $basketDiagnostics['recommended_action'],
+                'sourceUrl' => route('academics.pmc.student-course-baskets.index'),
+                'sourceLabel' => 'Open basket source list',
+            ])
         @endisset
         <div class="card shadow-sm">
             <div class="card-header py-2 fw-semibold">Student Course Baskets</div>
@@ -133,34 +116,25 @@
         @includeWhen(isset($allocationExceptions), 'academics.pmc.v041.tables.course-allocation-exceptions')
     @elseif(isset($groups))
         @isset($groupDiagnostics)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <div class="fw-semibold">Section And Group Diagnostics</div>
-                        <div class="small text-muted">Resolve capacity, lock, membership, faculty, and adjustment blockers before timetable generation.</div>
-                    </div>
-                    <span class="badge text-bg-{{ $groupDiagnostics['status'] === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $groupDiagnostics['status']) }}</span>
-                </div>
-                <div class="row g-0 text-center">
-                    @foreach([
-                        ['Total', $groupDiagnostics['total_groups']],
-                        ['Ready', $groupDiagnostics['ready_groups']],
-                        ['Unlocked', $groupDiagnostics['unlocked_groups']],
-                        ['Under Min', $groupDiagnostics['under_min_groups']],
-                        ['Over Capacity', $groupDiagnostics['over_capacity_groups']],
-                        ['No Faculty', $groupDiagnostics['groups_without_faculty']],
-                        ['Ungrouped Allocations', $groupDiagnostics['ungrouped_allocations']],
-                        ['Pending Adjustments', $groupDiagnostics['pending_adjustments']],
-                        ['Strength Mismatch', $groupDiagnostics['strength_mismatch_groups']],
-                    ] as [$label, $value])
-                        <div class="col-6 col-md border-top border-end py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="card-footer py-2 small">{{ $groupDiagnostics['recommended_action'] }}</div>
-            </div>
+            @include('academics.pmc.v041.partials.diagnostic-card', [
+                'title' => 'Section And Group Diagnostics',
+                'subtitle' => 'Resolve capacity, lock, membership, faculty, and adjustment blockers before timetable generation.',
+                'status' => $groupDiagnostics['status'],
+                'metrics' => [
+                    ['Total', $groupDiagnostics['total_groups']],
+                    ['Ready', $groupDiagnostics['ready_groups']],
+                    ['Unlocked', $groupDiagnostics['unlocked_groups']],
+                    ['Under Min', $groupDiagnostics['under_min_groups']],
+                    ['Over Capacity', $groupDiagnostics['over_capacity_groups']],
+                    ['No Faculty', $groupDiagnostics['groups_without_faculty']],
+                    ['Ungrouped Allocations', $groupDiagnostics['ungrouped_allocations']],
+                    ['Pending Adjustments', $groupDiagnostics['pending_adjustments']],
+                    ['Strength Mismatch', $groupDiagnostics['strength_mismatch_groups']],
+                ],
+                'recommendedAction' => $groupDiagnostics['recommended_action'],
+                'sourceUrl' => route('academics.pmc.course-groups.index'),
+                'sourceLabel' => 'Open group source list',
+            ])
         @endisset
         <div class="row g-3">
             <div class="col-xl-8">@include('academics.pmc.v041.tables.groups')</div>
@@ -169,67 +143,50 @@
         @includeWhen(isset($groupAdjustments), 'academics.pmc.v041.tables.course-group-adjustments')
     @elseif(isset($assignments))
         @isset($facultyDiagnostics)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <div class="fw-semibold">Faculty Allocation Diagnostics</div>
-                        <div class="small text-muted">Resolve exact faculty, acknowledgement, preference, backup, and load-review blockers before generation.</div>
-                    </div>
-                    <span class="badge text-bg-{{ $facultyDiagnostics['status'] === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $facultyDiagnostics['status']) }}</span>
-                </div>
-                <div class="row g-0 text-center">
-                    @foreach([
-                        ['Assignments', $facultyDiagnostics['total_assignments']],
-                        ['Ready', $facultyDiagnostics['ready_assignments']],
-                        ['Groups Assigned', $facultyDiagnostics['assigned_groups']],
-                        ['Missing Primary', $facultyDiagnostics['groups_missing_primary']],
-                        ['No Backup', $facultyDiagnostics['groups_without_backup']],
-                        ['Pending Ack', $facultyDiagnostics['pending_acknowledgements']],
-                        ['No Ack Request', $facultyDiagnostics['assignments_without_acknowledgement']],
-                        ['Missing Preference', $facultyDiagnostics['teachers_missing_preference']],
-                        ['Load Blockers', $facultyDiagnostics['load_review_blockers']],
-                        ['Overload', $facultyDiagnostics['overload_reviews']],
-                    ] as [$label, $value])
-                        <div class="col-6 col-md border-top border-end py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="card-footer py-2 small">{{ $facultyDiagnostics['recommended_action'] }}</div>
-            </div>
+            @include('academics.pmc.v041.partials.diagnostic-card', [
+                'title' => 'Faculty Allocation Diagnostics',
+                'subtitle' => 'Resolve exact faculty, acknowledgement, preference, backup, and load-review blockers before generation.',
+                'status' => $facultyDiagnostics['status'],
+                'metrics' => [
+                    ['Assignments', $facultyDiagnostics['total_assignments']],
+                    ['Ready', $facultyDiagnostics['ready_assignments']],
+                    ['Groups Assigned', $facultyDiagnostics['assigned_groups']],
+                    ['Missing Primary', $facultyDiagnostics['groups_missing_primary']],
+                    ['No Backup', $facultyDiagnostics['groups_without_backup']],
+                    ['Pending Ack', $facultyDiagnostics['pending_acknowledgements']],
+                    ['No Ack Request', $facultyDiagnostics['assignments_without_acknowledgement']],
+                    ['Missing Preference', $facultyDiagnostics['teachers_missing_preference']],
+                    ['Load Blockers', $facultyDiagnostics['load_review_blockers']],
+                    ['Overload', $facultyDiagnostics['overload_reviews']],
+                ],
+                'recommendedAction' => $facultyDiagnostics['recommended_action'],
+                'sourceUrl' => route('academics.pmc.section-faculty-allocation.index'),
+                'sourceLabel' => 'Open faculty allocation source list',
+            ])
         @endisset
         @isset($facultySuitabilityDiagnostics)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <div class="fw-semibold">Faculty Suitability Diagnostics</div>
-                        <div class="small text-muted">Subject expertise, adjunct availability, acknowledgement concerns, overload approvals, and backup-only primary gaps before timetable generation.</div>
-                    </div>
-                    <span class="badge text-bg-{{ ($facultySuitabilityDiagnostics['status'] ?? '') === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $facultySuitabilityDiagnostics['status'] ?? 'attention_required') }}</span>
-                </div>
-                <div class="row g-0 text-center">
-                    @foreach([
-                        ['Assignments', $facultySuitabilityDiagnostics['total_assignments'] ?? 0],
-                        ['Suitable', $facultySuitabilityDiagnostics['suitable_assignments'] ?? 0],
-                        ['Expertise Gaps', $facultySuitabilityDiagnostics['missing_expertise'] ?? 0],
-                        ['Adjunct Day Risk', $facultySuitabilityDiagnostics['adjunct_day_risk'] ?? 0],
-                        ['Restrictions', $facultySuitabilityDiagnostics['restriction_risks'] ?? 0],
-                        ['Ack Concerns', $facultySuitabilityDiagnostics['acknowledgement_concerns'] ?? 0],
-                        ['Declined', $facultySuitabilityDiagnostics['declined_assignments'] ?? 0],
-                        ['Overload Risk', $facultySuitabilityDiagnostics['overload_risks'] ?? 0],
-                        ['Unapproved', $facultySuitabilityDiagnostics['unapproved_suitability'] ?? 0],
-                        ['Backup-Only Gap', $facultySuitabilityDiagnostics['backup_only_primary_gap'] ?? 0],
-                        ['Blockers', $facultySuitabilityDiagnostics['blocker_total'] ?? 0],
-                    ] as [$label, $value])
-                        <div class="col-6 col-md-4 col-xl border-top border-end py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="card-footer py-2 small">{{ $facultySuitabilityDiagnostics['recommended_action'] ?? 'Review faculty suitability before timetable generation.' }}</div>
-            </div>
+            @include('academics.pmc.v041.partials.diagnostic-card', [
+                'title' => 'Faculty Suitability Diagnostics',
+                'subtitle' => 'Subject expertise, adjunct availability, acknowledgement concerns, overload approvals, and backup-only primary gaps before timetable generation.',
+                'status' => $facultySuitabilityDiagnostics['status'] ?? 'attention_required',
+                'metricColumnClass' => 'col-6 col-md-4 col-xl',
+                'metrics' => [
+                    ['Assignments', $facultySuitabilityDiagnostics['total_assignments'] ?? 0],
+                    ['Suitable', $facultySuitabilityDiagnostics['suitable_assignments'] ?? 0],
+                    ['Expertise Gaps', $facultySuitabilityDiagnostics['missing_expertise'] ?? 0],
+                    ['Adjunct Day Risk', $facultySuitabilityDiagnostics['adjunct_day_risk'] ?? 0],
+                    ['Restrictions', $facultySuitabilityDiagnostics['restriction_risks'] ?? 0],
+                    ['Ack Concerns', $facultySuitabilityDiagnostics['acknowledgement_concerns'] ?? 0],
+                    ['Declined', $facultySuitabilityDiagnostics['declined_assignments'] ?? 0],
+                    ['Overload Risk', $facultySuitabilityDiagnostics['overload_risks'] ?? 0],
+                    ['Unapproved', $facultySuitabilityDiagnostics['unapproved_suitability'] ?? 0],
+                    ['Backup-Only Gap', $facultySuitabilityDiagnostics['backup_only_primary_gap'] ?? 0],
+                    ['Blockers', $facultySuitabilityDiagnostics['blocker_total'] ?? 0],
+                ],
+                'recommendedAction' => $facultySuitabilityDiagnostics['recommended_action'] ?? 'Review faculty suitability before timetable generation.',
+                'sourceUrl' => route('academics.pmc.section-faculty-allocation.index'),
+                'sourceLabel' => 'Open suitability source list',
+            ])
         @endisset
         <div class="row g-3">
             <div class="col-xl-8">@include('academics.pmc.v041.tables.faculty')</div>
@@ -237,37 +194,28 @@
         </div>
     @elseif(isset($lockedSlots))
         @isset($readinessInputDiagnostics)
-            <div class="card shadow-sm mb-3">
-                <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <div class="fw-semibold">Readiness Input Diagnostics</div>
-                        <div class="small text-muted">Resolve faculty preference, locked-slot, hard-lock collision, and room/lab blockers before timetable generation.</div>
-                    </div>
-                    <span class="badge text-bg-{{ $readinessInputDiagnostics['status'] === 'ready' ? 'success' : 'warning' }}">{{ str_replace('_', ' ', $readinessInputDiagnostics['status']) }}</span>
-                </div>
-                <div class="row g-0 text-center">
-                    @foreach([
-                        ['Preferences', $readinessInputDiagnostics['total_preferences']],
-                        ['Complete Pref', $readinessInputDiagnostics['complete_preferences']],
-                        ['Incomplete Pref', $readinessInputDiagnostics['incomplete_preferences']],
-                        ['Restrictive Pref', $readinessInputDiagnostics['restrictive_preferences']],
-                        ['Active Locks', $readinessInputDiagnostics['active_locked_slots']],
-                        ['Hard Locks', $readinessInputDiagnostics['hard_locked_slots']],
-                        ['Soft Locks', $readinessInputDiagnostics['soft_locked_slots']],
-                        ['Missing Context', $readinessInputDiagnostics['locked_slots_missing_context']],
-                        ['Lock Collisions', $readinessInputDiagnostics['hard_lock_collisions']],
-                        ['Room Blockers', $readinessInputDiagnostics['room_review_blockers']],
-                        ['Lab Not Ready', $readinessInputDiagnostics['lab_not_ready']],
-                        ['Capacity Exceptions', $readinessInputDiagnostics['capacity_exceptions']],
-                    ] as [$label, $value])
-                        <div class="col-6 col-md border-top border-end py-2">
-                            <div class="small text-muted">{{ $label }}</div>
-                            <div class="fw-semibold">{{ $value }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="card-footer py-2 small">{{ $readinessInputDiagnostics['recommended_action'] }}</div>
-            </div>
+            @include('academics.pmc.v041.partials.diagnostic-card', [
+                'title' => 'Readiness Input Diagnostics',
+                'subtitle' => 'Resolve faculty preference, locked-slot, hard-lock collision, and room/lab blockers before timetable generation.',
+                'status' => $readinessInputDiagnostics['status'],
+                'metrics' => [
+                    ['Preferences', $readinessInputDiagnostics['total_preferences']],
+                    ['Complete Pref', $readinessInputDiagnostics['complete_preferences']],
+                    ['Incomplete Pref', $readinessInputDiagnostics['incomplete_preferences']],
+                    ['Restrictive Pref', $readinessInputDiagnostics['restrictive_preferences']],
+                    ['Active Locks', $readinessInputDiagnostics['active_locked_slots']],
+                    ['Hard Locks', $readinessInputDiagnostics['hard_locked_slots']],
+                    ['Soft Locks', $readinessInputDiagnostics['soft_locked_slots']],
+                    ['Missing Context', $readinessInputDiagnostics['locked_slots_missing_context']],
+                    ['Lock Collisions', $readinessInputDiagnostics['hard_lock_collisions']],
+                    ['Room Blockers', $readinessInputDiagnostics['room_review_blockers']],
+                    ['Lab Not Ready', $readinessInputDiagnostics['lab_not_ready']],
+                    ['Capacity Exceptions', $readinessInputDiagnostics['capacity_exceptions']],
+                ],
+                'recommendedAction' => $readinessInputDiagnostics['recommended_action'],
+                'sourceUrl' => route('academics.pmc.locked-slots.index'),
+                'sourceLabel' => 'Open readiness source list',
+            ])
         @endisset
         <div class="row g-3">
             <div class="col-xl-8">@include('academics.pmc.v041.tables.locked-slots')</div>
