@@ -6,19 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\Batch;
 use App\Models\Program;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionDeferralService;
 use App\Services\AdmissionJoiningKitService;
 use App\Services\AdmissionOfferRoundService;
 use App\Services\AdmissionSeatControlService;
 use App\Services\AdmissionSensitiveAuditService;
 use App\Services\AdmissionWaitlistService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OfferSeatControlController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
@@ -158,7 +158,7 @@ class OfferSeatControlController extends Controller
 
     private function canManageSeatControl(Request $request): bool
     {
-        return $this->hierarchy->canApproveAdmission($request->user());
+        return $this->policy->canApproveAdmission($request->user());
     }
 
     private function authorizeSeatControlWrite(Request $request): void
@@ -168,29 +168,29 @@ class OfferSeatControlController extends Controller
 
     private function guardApplicantScope(Request $request, Applicant $applicant): void
     {
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $applicant->assigned_to, false), 403);
+        $this->policy->authorizeViewAssignedUser($request->user(), $applicant->assigned_to, false);
     }
 
     private function visibleApplicantIds(Request $request)
     {
-        if ($this->hierarchy->canSeeAll($request->user(), 'ADM')) {
+        if ($this->policy->canSeeAll($request->user())) {
             return null;
         }
 
         $query = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+        $this->policy->applyApplicantVisibility($query, $request->user());
 
         return $query->pluck('id');
     }
 
     private function visibleProgramIds(Request $request)
     {
-        if ($this->hierarchy->canSeeAll($request->user(), 'ADM')) {
+        if ($this->policy->canSeeAll($request->user())) {
             return null;
         }
 
         $query = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+        $this->policy->applyApplicantVisibility($query, $request->user());
 
         return $query->pluck('program_id')->filter()->unique()->values();
     }

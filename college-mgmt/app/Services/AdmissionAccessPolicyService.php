@@ -92,6 +92,13 @@ class AdmissionAccessPolicyService
         return $query;
     }
 
+    public function applyLeadVisibility(Builder $query, User $user): Builder
+    {
+        app(DepartmentHierarchyService::class)->applyLeadVisibility($query, $user, 'ADM');
+
+        return $query;
+    }
+
     public function evaluatorScope(User $user): ?User
     {
         return $this->canSeeAll($user) ? null : $user;

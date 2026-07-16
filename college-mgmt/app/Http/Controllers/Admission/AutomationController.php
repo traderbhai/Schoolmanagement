@@ -7,13 +7,13 @@ use App\Models\AdmissionAutomation;
 use App\Models\AdmissionAutomationExecution;
 use App\Models\Applicant;
 use App\Models\Lead;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAutomationService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class AutomationController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
@@ -66,7 +66,7 @@ class AutomationController extends Controller
 
     private function canManageAutomations(Request $request): bool
     {
-        return $this->hierarchy->canApproveAdmission($request->user());
+        return $this->policy->canApproveAdmission($request->user());
     }
 
     private function authorizeAutomationWrite(Request $request): void
@@ -76,14 +76,14 @@ class AutomationController extends Controller
 
     private function guardSubjectScope(Request $request, Lead|Applicant $subject): void
     {
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $subject->assigned_to, $subject instanceof Lead), 403);
+        $this->policy->authorizeViewAssignedUser($request->user(), $subject->assigned_to, $subject instanceof Lead);
     }
 
     private function automationExecutionQuery(Request $request)
     {
         $query = AdmissionAutomationExecution::query();
 
-        if ($this->hierarchy->canSeeAll($request->user(), 'ADM')) {
+        if ($this->policy->canSeeAll($request->user())) {
             return $query;
         }
 
@@ -101,10 +101,10 @@ class AutomationController extends Controller
     private function visibleSubjectIds(Request $request): array
     {
         $leadQuery = Lead::query();
-        $this->hierarchy->applyLeadVisibility($leadQuery, $request->user(), 'ADM');
+        $this->policy->applyLeadVisibility($leadQuery, $request->user());
 
         $applicantQuery = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+        $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
 
         return [$leadQuery->pluck('id'), $applicantQuery->pluck('id')];
     }

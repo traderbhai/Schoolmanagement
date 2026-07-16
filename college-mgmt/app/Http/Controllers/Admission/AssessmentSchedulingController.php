@@ -7,18 +7,18 @@ use App\Models\AdmissionAssessmentPanel;
 use App\Models\Applicant;
 use App\Models\SelectionSession;
 use App\Models\User;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAssessmentResourceService;
 use App\Services\AdmissionAssessmentSlotService;
 use App\Services\AdmissionAssessmentSubmissionService;
 use App\Services\AdmissionGdGroupService;
 use App\Services\AdmissionSensitiveAuditService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AssessmentSchedulingController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
@@ -27,8 +27,8 @@ class AssessmentSchedulingController extends Controller
         $invitations = DB::table('admission_evaluator_invitations')->latest()->limit(20)->get();
         $conflicts = app(AdmissionAssessmentResourceService::class)->conflicts();
         $applicants = Applicant::with('user')
-            ->when(! $this->hierarchy->canSeeAll($request->user(), 'ADM'), function ($query) use ($request) {
-                $this->hierarchy->applyApplicantVisibility($query, $request->user(), 'ADM');
+            ->when(! $this->policy->canSeeAll($request->user()), function ($query) use ($request) {
+                $this->policy->applyApplicantVisibility($query, $request->user());
             })
             ->latest()
             ->limit(100)
@@ -162,7 +162,7 @@ class AssessmentSchedulingController extends Controller
 
     private function canManageAssessmentScheduling(Request $request): bool
     {
-        return $this->hierarchy->canApproveAdmission($request->user());
+        return $this->policy->canApproveAdmission($request->user());
     }
 
     private function authorizeAssessmentSchedulingWrite(Request $request): void
@@ -172,6 +172,6 @@ class AssessmentSchedulingController extends Controller
 
     private function guardApplicantScope(Request $request, Applicant $applicant): void
     {
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $applicant->assigned_to, false), 403);
+        $this->policy->authorizeViewAssignedUser($request->user(), $applicant->assigned_to, false);
     }
 }

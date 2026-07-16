@@ -7,14 +7,14 @@ use App\Models\AdmissionCommunicationLog;
 use App\Models\AdmissionCommunicationTemplate;
 use App\Models\Applicant;
 use App\Models\Lead;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionCommunicationService;
 use App\Services\AdmissionSafeCommunicationService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class CommunicationController extends Controller
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
+    public function __construct(private AdmissionAccessPolicyService $policy) {}
 
     public function index(Request $request)
     {
@@ -71,7 +71,7 @@ class CommunicationController extends Controller
 
     private function canManageCommunication(Request $request): bool
     {
-        return $this->hierarchy->canApproveAdmission($request->user());
+        return $this->policy->canApproveAdmission($request->user());
     }
 
     private function authorizeCommunicationWrite(Request $request): void
@@ -82,14 +82,14 @@ class CommunicationController extends Controller
     private function guardSubjectScope(Request $request, Lead|Applicant $subject): void
     {
         $assignedTo = $subject instanceof Lead ? $subject->assigned_to : $subject->assigned_to;
-        abort_unless($this->hierarchy->canViewAssignedUser($request->user(), 'ADM', $assignedTo, $subject instanceof Lead), 403);
+        $this->policy->authorizeViewAssignedUser($request->user(), $assignedTo, $subject instanceof Lead);
     }
 
     private function communicationLogQuery(Request $request)
     {
         $query = AdmissionCommunicationLog::query();
 
-        if ($this->hierarchy->canSeeAll($request->user(), 'ADM')) {
+        if ($this->policy->canSeeAll($request->user())) {
             return $query;
         }
 
@@ -107,10 +107,10 @@ class CommunicationController extends Controller
     private function visibleSubjectIds(Request $request): array
     {
         $leadQuery = Lead::query();
-        $this->hierarchy->applyLeadVisibility($leadQuery, $request->user(), 'ADM');
+        $this->policy->applyLeadVisibility($leadQuery, $request->user());
 
         $applicantQuery = Applicant::query();
-        $this->hierarchy->applyApplicantVisibility($applicantQuery, $request->user(), 'ADM');
+        $this->policy->applyApplicantVisibility($applicantQuery, $request->user());
 
         return [$leadQuery->pluck('id'), $applicantQuery->pluck('id')];
     }
