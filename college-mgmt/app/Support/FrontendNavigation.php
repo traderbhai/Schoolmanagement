@@ -474,6 +474,7 @@ class FrontendNavigation
                     'Academics / Delivery' => [
                         ['label' => 'Study Materials', 'route' => 'teacher.materials.index', 'active' => 'teacher.materials.*'],
                         ['label' => 'Assignments', 'route' => 'teacher.assignments.index', 'active' => 'teacher.assignments.*'],
+                        ['label' => 'Quizzes', 'route' => 'teacher.quizzes.index', 'active' => 'teacher.quizzes.*'],
                         ['label' => 'Announcements', 'route' => 'teacher.announcements.index', 'active' => 'teacher.announcements.*'],
                     ],
                     'Students' => [

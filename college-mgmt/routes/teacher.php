@@ -67,6 +67,11 @@ Route::prefix('teacher')->name('teacher.')->middleware(['auth', 'role:teacher|ad
     Route::get('assignments/{assignment}/submissions', [Teacher\AssignmentController::class, 'submissions'])->name('assignments.submissions');
     Route::post('assignments/submissions/{submission}/grade', [Teacher\AssignmentController::class, 'grade'])->name('assignments.grade');
 
+    // Quizzes
+    Route::get('quizzes', [Teacher\QuizController::class, 'index'])->name('quizzes.index');
+    Route::get('quizzes/create', [Teacher\QuizController::class, 'create'])->name('quizzes.create');
+    Route::post('quizzes', [Teacher\QuizController::class, 'store'])->name('quizzes.store');
+
     // Mentor dashboard
     Route::get('mentor',                        [Teacher\MentorController::class, 'index'])->name('mentor.index');
     Route::get('mentor/{student}',              [Teacher\MentorController::class, 'mentee'])->name('mentor.mentee');

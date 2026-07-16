@@ -1017,8 +1017,13 @@ ScholarshipTest, StudentScholarshipWorkflowGuidanceTest, and AdmissionApplicantS
 Quiz note:
 
 ```text
-Student quiz routes and regression coverage exist inside StudentCourseContentAccessTest, but this local demo database currently has no quizzes, and no teacher quiz authoring route appears in routes/teacher.php.
-Live quiz attempt testing should be added after a demo quiz is seeded or a teacher/admin quiz authoring surface is exposed.
+The previous quiz gap was closed by adding teacher quiz authoring routes, controller, views, and navigation.
+pmc.faculty@college.com: POST /teacher/quizzes created QA live quiz 000406 for subject 18.
+arjun.k@demo.edu: GET /student/quizzes showed QA live quiz 000406.
+arjun.k@demo.edu: POST /student/quizzes/1/start opened the quiz attempt.
+arjun.k@demo.edu: POST /student/quizzes/1/submit submitted the correct option.
+arjun.k@demo.edu: GET /student/quizzes/1/result showed QA live quiz 000406 with score 1 / 1.
+Focused verification: TeacherScopeWorkflowTest and StudentCourseContentAccessTest passed with 60 tests and 469 assertions.
 ```
 
 ## Frontend Build And Smoke Recheck

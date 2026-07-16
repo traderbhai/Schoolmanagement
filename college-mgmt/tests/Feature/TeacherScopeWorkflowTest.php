@@ -18,6 +18,7 @@ use App\Models\ExamResult;
 use App\Models\MentorMeeting;
 use App\Models\MentorMessage;
 use App\Models\Program;
+use App\Models\Quiz;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
@@ -121,12 +122,14 @@ class TeacherScopeWorkflowTest extends TestCase
         $officialTerm = Term::factory()->create([
             'program_id' => $program->id,
             'batch_id' => $batch->id,
+            'term_number' => 1,
             'name' => 'Official Teaching Term',
             'start_date' => now()->subMonths(2),
         ]);
         Term::factory()->create([
             'program_id' => $program->id,
             'batch_id' => $batch->id,
+            'term_number' => 99,
             'name' => 'Newer Unrelated Term',
             'start_date' => now()->addMonth(),
         ]);
@@ -215,6 +218,95 @@ class TeacherScopeWorkflowTest extends TestCase
             'student_id' => $student->id,
             'answer_text' => 'Student can submit because assignment term matches official allocation.',
         ]);
+    }
+
+    public function test_teacher_can_create_quiz_for_assigned_subject_and_student_can_attempt_it(): void
+    {
+        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+
+        $fixture = $this->fixture();
+        $fixture['enrolled']->user->assignRole('student');
+
+        $this->actingAs($fixture['teacher']->user)
+            ->get(route('teacher.quizzes.create'))
+            ->assertOk()
+            ->assertSee('Create Quiz')
+            ->assertSee($fixture['assignedSubject']->name);
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.quizzes.store'), [
+                'subject_id' => $fixture['assignedSubject']->id,
+                'title' => 'Assigned Subject Quiz',
+                'description' => 'Quiz created by the assigned teacher.',
+                'duration_minutes' => 20,
+                'pass_marks' => 1,
+                'starts_at' => now()->subMinute()->toDateTimeString(),
+                'ends_at' => now()->addDay()->toDateTimeString(),
+                'is_published' => true,
+                'show_result_immediately' => true,
+                'questions' => [
+                    [
+                        'question_text' => 'Choose the correct option.',
+                        'marks' => 1,
+                        'correct_option' => 1,
+                        'options' => ['Wrong option', 'Correct option', '', ''],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('teacher.quizzes.index'))
+            ->assertSessionHas('success', 'Quiz created.');
+
+        $quiz = Quiz::where('title', 'Assigned Subject Quiz')->firstOrFail();
+        $question = $quiz->questions()->with('options')->firstOrFail();
+        $correct = $question->options->firstWhere('is_correct', true);
+
+        $this->actingAs($fixture['enrolled']->user)
+            ->get(route('student.quizzes.index'))
+            ->assertOk()
+            ->assertSee('Assigned Subject Quiz');
+
+        $this->actingAs($fixture['enrolled']->user)
+            ->post(route('student.quizzes.start', $quiz))
+            ->assertOk()
+            ->assertSee('Choose the correct option.');
+
+        $this->actingAs($fixture['enrolled']->user)
+            ->post(route('student.quizzes.submit', $quiz), [
+                'answers' => [$question->id => $correct->id],
+            ])
+            ->assertRedirect(route('student.quizzes.result', $quiz));
+
+        $this->assertDatabaseHas('quiz_attempts', [
+            'quiz_id' => $quiz->id,
+            'student_id' => $fixture['enrolled']->id,
+            'is_completed' => true,
+            'score' => 1,
+        ]);
+    }
+
+    public function test_teacher_cannot_create_quiz_for_unassigned_subject(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['teacher']->user)
+            ->post(route('teacher.quizzes.store'), [
+                'subject_id' => $fixture['otherSubject']->id,
+                'title' => 'Unauthorized Quiz',
+                'starts_at' => now()->subMinute()->toDateTimeString(),
+                'ends_at' => now()->addDay()->toDateTimeString(),
+                'is_published' => true,
+                'questions' => [
+                    [
+                        'question_text' => 'This should not be created.',
+                        'marks' => 1,
+                        'correct_option' => 0,
+                        'options' => ['Correct', 'Wrong'],
+                    ],
+                ],
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('quizzes', ['title' => 'Unauthorized Quiz']);
     }
 
     public function test_teacher_cannot_publish_learning_content_for_draft_timetable_subjects(): void
