@@ -401,47 +401,7 @@ class DemoDataSeeder extends Seeder
         }
 
         // 17. Companies and placement drives
-        $company1 = \App\Models\Company::firstOrCreate(['name' => 'InfoSys Ltd'], [
-            'industry' => 'IT / Consulting',
-            'contact_person' => 'Ms. Ritu Sharma',
-            'contact_email' => 'campus@infosys.com',
-            'is_active' => true,
-        ]);
-        $company2 = \App\Models\Company::firstOrCreate(['name' => 'HDFC Bank'], [
-            'industry' => 'Banking & Finance',
-            'contact_person' => 'Mr. Vijay Menon',
-            'contact_email' => 'campus@hdfc.com',
-            'is_active' => true,
-        ]);
-        $drive1 = \App\Models\PlacementDrive::firstOrCreate(['title' => 'InfoSys Campus Drive 2025'], [
-            'company_id' => $company1->id,
-            'job_role' => 'Management Trainee',
-            'package' => '6.5 LPA',
-            'min_cgpa' => 6.0,
-            'drive_date' => '2025-02-15',
-            'last_apply_date' => '2025-02-10',
-            'location' => 'Bangalore',
-            'status' => 'upcoming',
-            'vacancies' => 10,
-        ]);
-        \App\Models\PlacementDrive::firstOrCreate(['title' => 'HDFC Bank PGDM Drive'], [
-            'company_id' => $company2->id,
-            'job_role' => 'Relationship Manager',
-            'package' => '7 LPA',
-            'min_cgpa' => 6.5,
-            'drive_date' => '2025-03-01',
-            'last_apply_date' => '2025-02-25',
-            'location' => 'Mumbai',
-            'status' => 'upcoming',
-            'vacancies' => 5,
-        ]);
-
-        // 3 students applied to drive1
-        foreach (array_slice($students, 0, 3) as $i => $s) {
-            \App\Models\Placement::firstOrCreate(['drive_id' => $drive1->id, 'student_id' => $s->id], [
-                'application_status' => ['applied', 'shortlisted', 'applied'][$i],
-            ]);
-        }
+        $this->call(DemoPlacementSeeder::class);
 
         // ── Sample Applicants ──────────────────────────────────────────────────
         Role::firstOrCreate(['name' => 'applicant']);
