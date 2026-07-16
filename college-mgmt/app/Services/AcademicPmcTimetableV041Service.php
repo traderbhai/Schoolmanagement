@@ -67,6 +67,7 @@ class AcademicPmcTimetableV041Service
         private PmcTimetableBridgeSyncService $bridgeSync,
         private PmcTimetablePublishService $publishService,
         private PmcTimetableRevisionService $revisionService,
+        private PmcTimetableReadinessGateService $readinessGate,
     ) {}
 
     public function dashboard(User $user): array
@@ -3125,72 +3126,71 @@ class AcademicPmcTimetableV041Service
 
     private function readinessChecklist(?User $user = null): array
     {
-        $facultySuitabilityDiagnostics = $this->facultySuitabilityDiagnostics(null, $user);
-
-        return [
-            ['label' => 'Student course allocation locked', 'ready' => $this->applyScope(
-                AcademicPmcStudentCourseAllocation::query(),
-                $user,
-                [],
-                ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
-            )->whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists()],
-            ['label' => 'Sections/groups created', 'ready' => $this->applyScope(
-                AcademicPmcCourseGroup::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists()],
-            ['label' => 'Faculty assigned to groups', 'ready' => $this->applyScope(
-                AcademicPmcGroupFacultyAssignment::query(),
-                $user,
-                [],
-                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->exists()],
-            ['label' => 'Faculty suitability blockers cleared', 'ready' => (int) $facultySuitabilityDiagnostics['blocker_total'] === 0 && (int) $facultySuitabilityDiagnostics['total_assignments'] > 0],
-            ['label' => 'Faculty availability/preferences captured', 'ready' => $this->applyScope(
-                AcademicPmcFacultyPreference::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists()],
-            ['label' => 'Rooms/labs and locked slots reviewed', 'ready' => $this->applyScope(
-                AcademicPmcLockedSlot::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-            )->exists()],
-            ['label' => 'Hard conflicts zero before publish', 'ready' => AcademicPmcTimetableConstraint::where('severity', 'hard')->count() === 0],
-        ];
+        return $this->readinessGate->readinessChecklist(
+            fn (?AcademicPmcTimetableGenerationRun $run = null, ?User $scopedUser = null) => $this->facultySuitabilityDiagnostics($run, $scopedUser),
+            fn (string $check, ?User $scopedUser = null) => $this->readinessChecklistScopedExists($check, $scopedUser),
+            $user
+        );
     }
 
     private function launchControl(?User $user = null): array
     {
-        $basketDiagnostics = $this->courseBasketDiagnostics($user);
-        $groupDiagnostics = $this->courseGroupDiagnostics($user);
-        $facultyDiagnostics = $this->facultyAllocationDiagnostics($user);
-        $facultySuitabilityDiagnostics = $this->facultySuitabilityDiagnostics(null, $user);
-        $readinessInputDiagnostics = $this->readinessInputDiagnostics($user);
-        $generationDiagnostics = $this->generationValidationDiagnostics($user);
-        $publishReadinessDiagnostics = $this->publishFreezeReadinessDiagnostics();
-        $facultyBlockers = (int) $facultyDiagnostics['blocker_total'] + (int) $facultySuitabilityDiagnostics['blocker_total'];
+        return $this->readinessGate->launchControl([
+            'basket' => $this->courseBasketDiagnostics($user),
+            'group' => $this->courseGroupDiagnostics($user),
+            'faculty' => $this->facultyAllocationDiagnostics($user),
+            'faculty_suitability' => $this->facultySuitabilityDiagnostics(null, $user),
+            'readiness_inputs' => $this->readinessInputDiagnostics($user),
+            'generation' => $this->generationValidationDiagnostics($user),
+            'publish' => $this->publishFreezeReadinessDiagnostics(),
+        ]);
+    }
 
-        $stages = [
-            $this->launchStage('Course baskets', (int) $basketDiagnostics['ready_allocations'], (int) $basketDiagnostics['blocker_total'], 'Clear unapproved, waitlisted, overload, pending exception, and ungrouped basket blockers.', 'academics.pmc.student-course-baskets.index', ['status' => 'pending']),
-            $this->launchStage('Sections and groups', (int) $groupDiagnostics['ready_groups'], (int) $groupDiagnostics['blocker_total'], 'Lock valid groups, resolve capacity issues, add missing faculty, and clear pending adjustments.', 'academics.pmc.course-groups.index', ['status' => 'active']),
-            $this->launchStage('Faculty allocation', (int) min($facultyDiagnostics['ready_assignments'], $facultySuitabilityDiagnostics['suitable_assignments']), $facultyBlockers, 'Resolve missing primary/backup faculty, suitability/expertise gaps, adjunct-day constraints, acknowledgement concerns, availability gaps, and load-review blockers.', 'academics.pmc.section-faculty-allocation.index', ['status' => 'requested']),
-            $this->launchStage('Readiness inputs', (int) $readinessInputDiagnostics['ready_inputs'], (int) $readinessInputDiagnostics['blocker_total'], 'Resolve incomplete preferences, invalid locked slots, hard-lock collisions, and room/lab readiness blockers.', 'academics.pmc.locked-slots.index', []),
-            $this->launchStage('Generate and validate', (int) $generationDiagnostics['ready_generations'], (int) $generationDiagnostics['blocker_total'], 'Regenerate stale runs, schedule unscheduled classes, clear hard conflicts, close resolution actions, and refresh impact preview.', 'academics.pmc.timetable-generator.index', []),
-            $this->launchStage('Publish and notify', (int) $publishReadinessDiagnostics['ready_versions'], (int) $publishReadinessDiagnostics['blocker_total'], 'Publish/freeze only after lifecycle workflow, impact, sync, revision, and notification blockers are clear.', 'academics.pmc.timetable-versions-v041.index', []),
-        ];
+    private function readinessChecklistScopedExists(string $check, ?User $user = null): bool
+    {
+        if (! $user) {
+            return match ($check) {
+                'allocations' => AcademicPmcStudentCourseAllocation::whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists(),
+                'groups' => AcademicPmcCourseGroup::query()->exists(),
+                'faculty_assignments' => AcademicPmcGroupFacultyAssignment::query()->exists(),
+                'faculty_preferences' => AcademicPmcFacultyPreference::query()->exists(),
+                'locked_slots' => AcademicPmcLockedSlot::query()->exists(),
+                'no_hard_conflicts' => AcademicPmcTimetableConstraint::where('severity', 'hard')->count() === 0,
+                default => false,
+            };
+        }
 
-        $readyStages = collect($stages)->where('status', 'ready')->count();
-        $blockedStages = collect($stages)->where('status', 'blocked')->count();
-
-        return [
-            'status' => $blockedStages === 0 ? 'ready_to_launch' : 'attention_required',
-            'ready_stages' => $readyStages,
-            'total_stages' => count($stages),
-            'blocked_stages' => $blockedStages,
-            'next_action' => collect($stages)->firstWhere('status', 'blocked') ?: collect($stages)->last(),
-            'stages' => $stages,
-        ];
+        return match ($check) {
+            'allocations' => $this->applyScope(
+                AcademicPmcStudentCourseAllocation::query(),
+                $user,
+                [],
+                ['student' => ['program_id' => 'program', 'batch_id' => 'batch']]
+            )->whereIn('basket_status', ['approved', 'locked', 'allocated'])->exists(),
+            'groups' => $this->applyScope(
+                AcademicPmcCourseGroup::query(),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            )->exists(),
+            'faculty_assignments' => $this->applyScope(
+                AcademicPmcGroupFacultyAssignment::query(),
+                $user,
+                [],
+                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->exists(),
+            'faculty_preferences' => $this->applyScope(
+                AcademicPmcFacultyPreference::query(),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            )->exists(),
+            'locked_slots' => $this->applyScope(
+                AcademicPmcLockedSlot::query(),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            )->exists(),
+            'no_hard_conflicts' => AcademicPmcTimetableConstraint::where('severity', 'hard')->count() === 0,
+            default => false,
+        };
     }
 
     private function publishFreezeReadinessDiagnostics(?User $user = null): array
@@ -3859,19 +3859,6 @@ class AcademicPmcTimetableV041Service
             'recommended_action' => $pressureTotal === 0
                 ? 'Allocation rounds are settled for section/group locking.'
                 : 'Resolve pending elective choices, waitlists, add/drop exceptions, repeat/backlog cases, duplicate baskets, and incomplete student baskets before locking sections.',
-        ];
-    }
-
-    private function launchStage(string $label, int $doneCount, int $blockerCount, string $action, string $route, array $filters): array
-    {
-        return [
-            'label' => $label,
-            'done_count' => $doneCount,
-            'blocker_count' => $blockerCount,
-            'status' => $doneCount > 0 && $blockerCount === 0 ? 'ready' : 'blocked',
-            'recommended_action' => $action,
-            'route' => $route,
-            'filters' => $filters,
         ];
     }
 
