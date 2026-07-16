@@ -2737,86 +2737,11 @@ class AcademicPmcTimetableV041Service
 
     private function versionSurface(User $user, array $filters): array
     {
-        $versionQuery = $this->applyScope(
-            TimetableVersion::with(['program', 'batch', 'term', 'creator']),
+        return $this->readModels->versionSurface(
             $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            $filters,
+            $this->publishFreezeReadinessDiagnostics($user)
         );
-        $scopedVersionIds = (clone $versionQuery)->pluck('id');
-        $scopedGenerationRunIds = AcademicPmcTimetableGenerationRun::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedVersionIds) {
-                if ($scopedVersionIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('timetable_version_id', $scopedVersionIds);
-                }
-            })
-            ->pluck('id');
-        $scopedImpactChangeRequestIds = AcademicPmcTimetableChangeRequest::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedVersionIds) {
-                if ($scopedVersionIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('timetable_version_id', $scopedVersionIds);
-                }
-            })
-            ->pluck('id');
-
-        return [
-            'title' => 'PMC Timetable Version, Freeze And Impact',
-            'description' => 'Generated, PMC review, Dean review, approved, published, frozen, revision, impact, compare, and rollback governance.',
-            'versions' => $versionQuery->latest()->paginate(15),
-            'workflows' => $this->applyScope(
-                AcademicPmcTimetableVersionWorkflow::with(['timetableVersion.program', 'publisher', 'generationRun']),
-                $user,
-                [],
-                ['timetableVersion' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'workflows_page'),
-            'changes' => AcademicPmcTimetableChangeRequest::with(['pmcGenerationItem.courseGroup.subject', 'pmcGenerationItem.slot', 'pmcGenerationItem.teacher.user'])
-                ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedVersionIds) {
-                    if ($scopedVersionIds->isEmpty()) {
-                        $query->whereRaw('1 = 0');
-                    } else {
-                        $query->whereIn('timetable_version_id', $scopedVersionIds);
-                    }
-                })
-                ->latest()
-                ->paginate(15),
-            'impacts' => $this->applyScope(
-                AcademicPmcTimetableImpactRecord::query(),
-                $user,
-                []
-            )->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($scopedImpactChangeRequestIds, $scopedGenerationRunIds) {
-                if ($scopedImpactChangeRequestIds->isEmpty() && $scopedGenerationRunIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                    return;
-                }
-
-                $query->where(function (Builder $query) use ($scopedImpactChangeRequestIds, $scopedGenerationRunIds) {
-                    $hasFilter = false;
-                    if ($scopedImpactChangeRequestIds->isNotEmpty()) {
-                        $query->whereIn('change_request_id', $scopedImpactChangeRequestIds);
-                        $hasFilter = true;
-                    }
-
-                    if ($scopedGenerationRunIds->isNotEmpty()) {
-                        $runIds = $scopedGenerationRunIds->map(fn ($id) => (string) $id)->all();
-                        if ($hasFilter) {
-                            $query->orWhereIn('metadata->generation_run_id', $runIds);
-                        } else {
-                            $query->whereIn('metadata->generation_run_id', $runIds);
-                        }
-                    }
-                });
-            })->latest()->paginate(15),
-            'publishChecks' => $this->applyScope(
-                AcademicPmcTimetablePublishCheck::query(),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'publish_checks_page'),
-            'publishReadinessDiagnostics' => $this->publishFreezeReadinessDiagnostics($user),
-        ];
     }
 
     private function substitutionSurface(User $user, array $filters): array
