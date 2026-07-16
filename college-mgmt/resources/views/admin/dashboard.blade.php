@@ -38,128 +38,96 @@
 
 {{-- A) KPI Cards Row --}}
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.students.index') }}" class="text-decoration-none d-block h-100" aria-label="Open active students source list">
-        <div class="kpi-card kpi-blue h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Active Students</div>
-                    <div class="kpi-value mt-1">{{ $stats['students'] }}</div>
-                    <div class="kpi-trend up mt-2"><i class="bi bi-arrow-up-short"></i> enrolled this year</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.teachers.index') }}" class="text-decoration-none d-block h-100" aria-label="Open teachers source list">
-        <div class="kpi-card kpi-green h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Teachers</div>
-                    <div class="kpi-value mt-1">{{ $stats['teachers'] }}</div>
-                    <div class="kpi-trend up mt-2"><i class="bi bi-arrow-up-short"></i> faculty members</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.departments.index') }}" class="text-decoration-none d-block h-100" aria-label="Open departments source list">
-        <div class="kpi-card kpi-amber h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Departments</div>
-                    <div class="kpi-value mt-1">{{ $stats['departments'] }}</div>
-                    <div class="kpi-trend up mt-2"><i class="bi bi-arrow-up-short"></i> academic units</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-building-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.programs.index') }}" class="text-decoration-none d-block h-100" aria-label="Open programs source list">
-        <div class="kpi-card kpi-purple h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Courses</div>
-                    <div class="kpi-value mt-1">{{ $stats['courses'] }}</div>
-                    <div class="kpi-trend up mt-2"><i class="bi bi-arrow-up-short"></i> programmes offered</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.students.index'),
+        'ariaLabel' => 'Open active students source list',
+        'variant' => 'kpi-blue',
+        'label' => 'Active Students',
+        'value' => $stats['students'],
+        'trendClass' => 'up',
+        'trendIcon' => 'bi-arrow-up-short',
+        'trend' => 'enrolled this year',
+        'icon' => 'bi-people-fill',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.teachers.index'),
+        'ariaLabel' => 'Open teachers source list',
+        'variant' => 'kpi-green',
+        'label' => 'Teachers',
+        'value' => $stats['teachers'],
+        'trendClass' => 'up',
+        'trendIcon' => 'bi-arrow-up-short',
+        'trend' => 'faculty members',
+        'icon' => 'bi-person-badge-fill',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.departments.index'),
+        'ariaLabel' => 'Open departments source list',
+        'variant' => 'kpi-amber',
+        'label' => 'Departments',
+        'value' => $stats['departments'],
+        'trendClass' => 'up',
+        'trendIcon' => 'bi-arrow-up-short',
+        'trend' => 'academic units',
+        'icon' => 'bi-building-fill',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.programs.index'),
+        'ariaLabel' => 'Open programs source list',
+        'variant' => 'kpi-purple',
+        'label' => 'Courses',
+        'value' => $stats['courses'],
+        'trendClass' => 'up',
+        'trendIcon' => 'bi-arrow-up-short',
+        'trend' => 'programmes offered',
+        'icon' => 'bi-journal-bookmark-fill',
+    ])
 </div>
 
 {{-- A2) Extra KPI Row: Attendance, Fees --}}
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.attendance.index') }}" class="text-decoration-none d-block h-100" aria-label="Open attendance source list">
-        <div class="kpi-card kpi-cyan h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Today's Attendance</div>
-                    <div class="kpi-value mt-1">{{ $todayAttendanceRate }}%</div>
-                    <div class="kpi-trend mt-2"><i class="bi bi-check2-square me-1"></i> present today</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.fees.index') }}" class="text-decoration-none d-block h-100" aria-label="Open fees source list">
-        <div class="kpi-card kpi-green h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Fee Collected</div>
-                    <div class="kpi-value mt-1">Rs. {{ number_format($totalFeeCollected) }}</div>
-                    <div class="kpi-trend mt-2"><i class="bi bi-arrow-up-short"></i> of Rs. {{ number_format($totalFeeDue) }} due</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-            </div>
-            <div class="mt-2">
-                <div class="progress" style="height:4px;border-radius:2px;background:rgba(255,255,255,.3)">
-                    <div class="progress-bar bg-white" style="width:{{ $feeCollectionRate }}%"></div>
-                </div>
-                <div class="text-xs mt-1 opacity-85">{{ $feeCollectionRate }}% collection rate</div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.notices.index') }}" class="text-decoration-none d-block h-100" aria-label="Open notices source list">
-        <div class="kpi-card kpi-amber h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Active Notices</div>
-                    <div class="kpi-value mt-1">{{ $pendingNotices }}</div>
-                    <div class="kpi-trend mt-2"><i class="bi bi-megaphone me-1"></i> published</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-megaphone-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <a href="{{ route('admin.exams.index') }}" class="text-decoration-none d-block h-100" aria-label="Open exams source list">
-        <div class="kpi-card kpi-purple h-100">
-            <div class="d-flex align-items-start justify-content-between">
-                <div>
-                    <div class="kpi-label">Upcoming Exams</div>
-                    <div class="kpi-value mt-1">{{ $upcomingExams->count() }}</div>
-                    <div class="kpi-trend mt-2"><i class="bi bi-calendar-event me-1"></i> next 14 days</div>
-                </div>
-                <div class="kpi-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
-            </div>
-        </div>
-        </a>
-    </div>
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.attendance.index'),
+        'ariaLabel' => 'Open attendance source list',
+        'variant' => 'kpi-cyan',
+        'label' => "Today's Attendance",
+        'value' => $todayAttendanceRate . '%',
+        'trendIcon' => 'bi-check2-square me-1',
+        'trend' => 'present today',
+        'icon' => 'bi-check2-square',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.fees.index'),
+        'ariaLabel' => 'Open fees source list',
+        'variant' => 'kpi-green',
+        'label' => 'Fee Collected',
+        'value' => 'Rs. ' . number_format($totalFeeCollected),
+        'trendIcon' => 'bi-arrow-up-short',
+        'trend' => 'of Rs. ' . number_format($totalFeeDue) . ' due',
+        'icon' => 'bi-cash-coin',
+        'progress' => $feeCollectionRate,
+        'progressLabel' => $feeCollectionRate . '% collection rate',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.notices.index'),
+        'ariaLabel' => 'Open notices source list',
+        'variant' => 'kpi-amber',
+        'label' => 'Active Notices',
+        'value' => $pendingNotices,
+        'trendIcon' => 'bi-megaphone me-1',
+        'trend' => 'published',
+        'icon' => 'bi-megaphone-fill',
+    ])
+    @include('admin.partials.kpi-card', [
+        'href' => route('admin.exams.index'),
+        'ariaLabel' => 'Open exams source list',
+        'variant' => 'kpi-purple',
+        'label' => 'Upcoming Exams',
+        'value' => $upcomingExams->count(),
+        'trendIcon' => 'bi-calendar-event me-1',
+        'trend' => 'next 14 days',
+        'icon' => 'bi-file-earmark-text-fill',
+    ])
 </div>
 
 {{-- B) Today's Snapshot --}}
