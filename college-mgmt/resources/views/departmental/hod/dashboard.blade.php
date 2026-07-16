@@ -32,90 +32,22 @@
 {{-- KPI Cards --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-cyan">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-person-badge-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $facultyCount }}</div>
-                    <div class="kpi-label">Faculty Members</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-people me-1"></i>Department staff</div>
-        </div>
+        <x-ui.kpi-card tone="cyan" icon="bi-person-badge-fill" :value="$facultyCount" label="Faculty Members" trend="Department staff" trend-icon="bi-people" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-green">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $studentCount }}</div>
-                    <div class="kpi-label">Active Students</div>
-                </div>
-            </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Enrolled</div>
-        </div>
+        <x-ui.kpi-card tone="green" icon="bi-mortarboard-fill" :value="$studentCount" label="Active Students" trend="Enrolled" trend-icon="bi-arrow-up" trend-tone="up" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-blue">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-book-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $subjectCount }}</div>
-                    <div class="kpi-label">Subjects</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-collection me-1"></i>This term</div>
-        </div>
+        <x-ui.kpi-card tone="blue" icon="bi-book-fill" :value="$subjectCount" label="Subjects" trend="This term" trend-icon="bi-collection" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <a href="{{ route('hod.approvals') }}" class="text-decoration-none">
-            <div class="kpi-card {{ $pendingApprovals > 0 ? 'kpi-red' : 'kpi-blue' }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-check2-circle"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $pendingApprovals }}</div>
-                        <div class="kpi-label">Pending Approvals</div>
-                    </div>
-                </div>
-                <div class="kpi-trend {{ $pendingApprovals > 0 ? 'up' : '' }}">
-                    @if($pendingApprovals > 0)<i class="bi bi-exclamation-circle me-1"></i>Needs attention
-                    @else
-                    <i class="bi bi-check-all me-1"></i>All clear
-                    @endif
-                </div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('hod.approvals') }}" :tone="$pendingApprovals > 0 ? 'red' : 'blue'" icon="bi-check2-circle" :value="$pendingApprovals" label="Pending Approvals" :trend="$pendingApprovals > 0 ? 'Needs attention' : 'All clear'" :trend-icon="$pendingApprovals > 0 ? 'bi-exclamation-circle' : 'bi-check-all'" :trend-tone="$pendingApprovals > 0 ? 'up' : null" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ $attendancePct < 75 ? 'kpi-red' : 'kpi-green' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-calendar-check-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $attendancePct }}%</div>
-                    <div class="kpi-label">Dept. Attendance</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $attendancePct >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $attendancePct >= 75 ? 'up' : 'down' }} me-1"></i>Last 30 days
-            </div>
-        </div>
+        <x-ui.kpi-card :tone="$attendancePct < 75 ? 'red' : 'green'" icon="bi-calendar-check-fill" value="{{ $attendancePct }}%" label="Dept. Attendance" trend="Last 30 days" :trend-icon="$attendancePct >= 75 ? 'bi-arrow-up' : 'bi-arrow-down'" :trend-tone="$attendancePct >= 75 ? 'up' : 'down'" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ $pendingLeaves > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-calendar2-minus-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $pendingLeaves }}</div>
-                    <div class="kpi-label">Pending Leaves</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $pendingLeaves > 0 ? 'up' : '' }}">
-                @if($pendingLeaves > 0)<i class="bi bi-hourglass-split me-1"></i>Awaiting review
-                @else
-                <i class="bi bi-check me-1"></i>None pending
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card :tone="$pendingLeaves > 0 ? 'amber' : 'blue'" icon="bi-calendar2-minus-fill" :value="$pendingLeaves" label="Pending Leaves" :trend="$pendingLeaves > 0 ? 'Awaiting review' : 'None pending'" :trend-icon="$pendingLeaves > 0 ? 'bi-hourglass-split' : 'bi-check'" :trend-tone="$pendingLeaves > 0 ? 'up' : null" />
     </div>
 </div>
 
