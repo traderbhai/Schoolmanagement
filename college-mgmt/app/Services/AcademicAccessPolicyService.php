@@ -62,6 +62,47 @@ class AcademicAccessPolicyService
         return $user->hasAnyRole(['admin', 'director', 'academic_department_owner', 'dean_academics']);
     }
 
+    public function canUseProgramLeadership(User $user): bool
+    {
+        return $user->hasAnyRole([
+            'admin',
+            'director',
+            'academic_department_owner',
+            'dean_academics',
+            'pmc_head',
+            'pmc_manager',
+            'program_chair',
+            'program_director',
+            'program_leader',
+            'hod',
+            'semester_coordinator',
+            'course_coordinator',
+            'faculty_mentor',
+        ]);
+    }
+
+    public function canUseCourseDelivery(User $user): bool
+    {
+        return $user->hasAnyRole([
+            'admin',
+            'director',
+            'academic_department_owner',
+            'dean_academics',
+            'pmc_head',
+            'pmc_manager',
+            'pmc_officer',
+            'program_chair',
+            'program_director',
+            'program_leader',
+            'hod',
+            'semester_coordinator',
+            'course_coordinator',
+            'faculty_mentor',
+            'teacher',
+            'faculty',
+        ]);
+    }
+
     public function canManageCurriculum(User $user): bool
     {
         return $this->canConfigureGovernance($user)
@@ -116,6 +157,18 @@ class AcademicAccessPolicyService
     public function authorizeDeanOperatingSystem(User $user): void
     {
         abort_unless($this->canUseDeanOperatingSystem($user), 403);
+    }
+
+    public function authorizeProgramLeadership(User $user): void
+    {
+        $this->authorizeRead($user);
+        abort_unless($this->canUseProgramLeadership($user), 403);
+    }
+
+    public function authorizeCourseDelivery(User $user): void
+    {
+        $this->authorizeRead($user);
+        abort_unless($this->canUseCourseDelivery($user), 403);
     }
 
     public function authorizeCurriculum(User $user): void

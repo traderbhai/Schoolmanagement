@@ -60,32 +60,8 @@ class CourseDeliveryController extends Controller
     private function authorizeCourseDelivery(Request $request): void
     {
         $user = $request->user();
+        abort_unless($user, 403);
 
-        abort_unless(
-            $this->policy->canViewAcademics($user) || $user->hasAnyRole(['teacher', 'faculty']),
-            403
-        );
-
-        abort_unless(
-            $user->hasAnyRole([
-                'admin',
-                'director',
-                'academic_department_owner',
-                'dean_academics',
-                'pmc_head',
-                'pmc_manager',
-                'pmc_officer',
-                'program_chair',
-                'program_director',
-                'program_leader',
-                'hod',
-                'semester_coordinator',
-                'course_coordinator',
-                'faculty_mentor',
-                'teacher',
-                'faculty',
-            ]),
-            403
-        );
+        $this->policy->authorizeCourseDelivery($user);
     }
 }

@@ -59,25 +59,8 @@ class ProgramLeadershipController extends Controller
     private function authorizeProgramLeadership(Request $request): void
     {
         $user = $request->user();
-        $this->policy->authorizeRead($user);
+        abort_unless($user, 403);
 
-        abort_unless(
-            $user->hasAnyRole([
-                'admin',
-                'director',
-                'academic_department_owner',
-                'dean_academics',
-                'pmc_head',
-                'pmc_manager',
-                'program_chair',
-                'program_director',
-                'program_leader',
-                'hod',
-                'semester_coordinator',
-                'course_coordinator',
-                'faculty_mentor',
-            ]),
-            403
-        );
+        $this->policy->authorizeProgramLeadership($user);
     }
 }
