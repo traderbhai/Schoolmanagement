@@ -146,9 +146,7 @@ class ArchitectureStabilizationTest extends TestCase
 
     public function test_no_new_oversized_demo_seeders_are_added(): void
     {
-        $allowedLargeSeeders = [
-            'AcademicsOperatingDemoSeeder.php',
-        ];
+        $allowedLargeSeeders = [];
 
         $oversized = collect(glob(base_path('database/seeders/*.php')))
             ->map(fn (string $path) => [
