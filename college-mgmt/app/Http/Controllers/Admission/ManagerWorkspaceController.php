@@ -6,24 +6,24 @@ use App\Http\Controllers\Controller;
 use App\Models\AdmissionCallLog;
 use App\Models\AdmissionReminderSchedule;
 use App\Models\Lead;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAttentionService;
 use App\Services\AdmissionKpiService;
 use App\Services\AdmissionManagerReviewService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class ManagerWorkspaceController extends Controller
 {
     public function __invoke(
         Request $request,
-        DepartmentHierarchyService $hierarchy,
+        AdmissionAccessPolicyService $accessPolicy,
         AdmissionAttentionService $attention,
         AdmissionKpiService $kpis,
         AdmissionManagerReviewService $reviews,
     ) {
         $user = $request->user();
         $leadQuery = Lead::with(['program', 'assignedTo'])->latest();
-        $hierarchy->applyLeadVisibility($leadQuery, $user, 'ADM');
+        $accessPolicy->applyLeadVisibility($leadQuery, $user);
 
         return view('admission.v0031.manager-workspace', [
             'teamKpis' => $kpis->rollupByUser($user),

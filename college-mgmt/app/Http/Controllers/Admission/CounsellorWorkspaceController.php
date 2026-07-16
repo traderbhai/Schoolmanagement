@@ -5,18 +5,18 @@ namespace App\Http\Controllers\Admission;
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\Lead;
+use App\Services\AdmissionAccessPolicyService;
 use App\Services\AdmissionAttentionService;
 use App\Services\AdmissionCallService;
 use App\Services\AdmissionKpiService;
 use App\Services\AdmissionReminderService;
-use App\Services\DepartmentHierarchyService;
 use Illuminate\Http\Request;
 
 class CounsellorWorkspaceController extends Controller
 {
     public function __invoke(
         Request $request,
-        DepartmentHierarchyService $hierarchy,
+        AdmissionAccessPolicyService $accessPolicy,
         AdmissionAttentionService $attention,
         AdmissionKpiService $kpis,
         AdmissionCallService $calls,
@@ -25,9 +25,9 @@ class CounsellorWorkspaceController extends Controller
         $user = $request->user();
 
         $leadQuery = Lead::with(['program', 'assignedTo'])->latest();
-        $hierarchy->applyLeadVisibility($leadQuery, $user, 'ADM');
+        $accessPolicy->applyLeadVisibility($leadQuery, $user);
         $applicantQuery = Applicant::with(['user', 'program', 'assignedCounsellor'])->latest();
-        $hierarchy->applyApplicantVisibility($applicantQuery, $user, 'ADM');
+        $accessPolicy->applyApplicantVisibility($applicantQuery, $user);
 
         return view('admission.v0031.counsellor-workspace', [
             'assignedLeads' => (clone $leadQuery)->where('assigned_to', $user->id)->limit(10)->get(),
