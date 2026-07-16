@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 class AdmissionAssignmentService
 {
     public function __construct(
+        private AdmissionAccessPolicyService $accessPolicy,
         private DepartmentHierarchyService $hierarchy,
         private AdmissionWorkflowService $workflow,
     ) {}
@@ -69,18 +70,18 @@ class AdmissionAssignmentService
 
     public function eligibleAssigneesFor(User $actor, string $type = 'lead'): Collection
     {
-        if ($actor->hasRole('admin') || $this->hierarchy->canSeeAll($actor, 'ADM')) {
+        if ($this->accessPolicy->canSeeAll($actor)) {
             return $this->activeAdmissionMembers()->pluck('user')->filter()->unique('id')->values();
         }
 
-        $visibleIds = $this->hierarchy->visibleUserIds($actor, 'ADM');
+        $visibleIds = $this->accessPolicy->visibleUserIds($actor);
 
         return User::whereIn('id', $visibleIds)->orderBy('name')->get();
     }
 
     public function assign(Lead|Applicant $subject, User $to, User $actor, array $options = []): Lead|Applicant
     {
-        if ((int) $to->id !== (int) $actor->id && !$this->hierarchy->canAssignTo($actor, $to, 'ADM')) {
+        if ((int) $to->id !== (int) $actor->id && !$this->accessPolicy->canAssignTo($actor, $to)) {
             abort(403, 'You cannot assign outside your admission hierarchy scope.');
         }
 

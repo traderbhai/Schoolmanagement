@@ -130,6 +130,11 @@ class AdmissionAccessPolicyService
         abort_unless($this->canViewAssignedUser($user, $assignedTo, $isLead), 403);
     }
 
+    public function canAssignTo(User $actor, User $target): bool
+    {
+        return app(DepartmentHierarchyService::class)->canAssignTo($actor, $target, 'ADM');
+    }
+
     public function applyApplicantVisibility(Builder $query, User $user): Builder
     {
         app(DepartmentHierarchyService::class)->applyApplicantVisibility($query, $user, 'ADM');

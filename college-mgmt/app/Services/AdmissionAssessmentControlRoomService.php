@@ -10,8 +10,6 @@ use App\Models\User;
 
 class AdmissionAssessmentControlRoomService
 {
-    public function __construct(private DepartmentHierarchyService $hierarchy) {}
-
     public function dashboard(User $viewer, array $filters = []): array
     {
         $sessionQuery = SelectionSession::with(['step', 'program', 'batch', 'sessionApplicants'])
