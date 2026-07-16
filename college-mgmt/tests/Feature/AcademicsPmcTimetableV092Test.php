@@ -16,6 +16,7 @@ use App\Models\Student;
 use App\Models\StudentSubjectEnrollment;
 use App\Models\Subject;
 use App\Models\Term;
+use App\Models\TimetableEntry;
 use App\Models\User;
 use App\Services\AcademicPmcTimetableV041Service;
 use Database\Seeders\AcademicsOperatingDemoSeeder;
@@ -164,6 +165,25 @@ class AcademicsPmcTimetableV092Test extends TestCase
             ->get(route('academics.pmc.data-reconciliation.index', ['group' => 'timetable']))
             ->assertOk()
             ->assertSee('Sample mismatches');
+    }
+
+    public function test_demo_seed_publishes_and_bridges_official_canonical_sessions(): void
+    {
+        $this->seedFixture();
+        $run = AcademicPmcTimetableGenerationRun::whereNotNull('timetable_version_id')->firstOrFail();
+
+        $officialItems = AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->where('official_status', 'published')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->get();
+
+        $this->assertSame(3, $officialItems->count());
+        $this->assertSame(0, $officialItems->filter(fn ($item) => ! $item->operational_timetable_entry_id)->count());
+        $this->assertSame(3, TimetableEntry::whereIn('pmc_generation_item_id', $officialItems->pluck('id'))->count());
+        $this->assertSame(0, AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
+            ->where('status', 'unscheduled')
+            ->where('official_status', 'published')
+            ->count());
     }
 
     public function test_reconciliation_repair_restores_draft_only_canonical_items_before_bridge_sync(): void

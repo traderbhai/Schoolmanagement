@@ -127,6 +127,7 @@ use App\Models\TimetableVersion;
 use App\Models\User;
 use App\Services\AcademicScopeService;
 use App\Services\AcademicPmcV003Service;
+use App\Services\CanonicalTimetableBridgeService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -467,6 +468,14 @@ class AcademicsPmcTimetableV041DemoSeeder extends Seeder
                 \Illuminate\Support\Facades\DB::table('academic_pmc_group_faculty_assignments')->where('course_group_id', $duplicateGroup->id)->delete();
                 $duplicateGroup->delete();
             });
+        $bridgeService = app(CanonicalTimetableBridgeService::class);
+        AcademicPmcTimetableGenerationItem::with(['courseGroup.subject.program.department', 'courseGroup.program', 'term', 'timetableVersion'])
+            ->where('generation_run_id', $run->id)
+            ->where('official_status', 'published')
+            ->whereIn('status', ['scheduled', 'published', 'locked'])
+            ->get()
+            ->each(fn (AcademicPmcTimetableGenerationItem $item) => $bridgeService->ensureBridgeForOfficialSession($item, $dean));
+
         AcademicPmcTimetableConstraint::firstOrCreate(
             ['generation_run_id' => $run->id, 'constraint_type' => 'student_clash', 'affected_type' => 'student', 'affected_key' => (string) ($student?->id ?? 0)],
             ['severity' => 'hard', 'title' => 'Student clash through elective group membership', 'description' => 'Core section and elective group are both placed in the same slot for an overlapping student.', 'recommended_fix' => 'Move elective group or choose alternate section.', 'source_route' => route('academics.pmc.timetable-planner.index')]

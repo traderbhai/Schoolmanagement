@@ -99,11 +99,42 @@ Additional live HTTP login sweep on `http://127.0.0.1:8000` passed for these see
 | `anjali@demo.edu` | `/teacher/dashboard`, `/teacher/timetable`, `/teacher/attendance/mark`, `/teacher/materials`, `/teacher/assignments` |
 | `arjun.k@demo.edu` | `/student/dashboard`, `/student/timetable`, `/student/attendance`, `/student/fees`, `/student/courses` |
 
+Fresh setup verification was also run against an isolated SQLite database, not the normal local `database.sqlite`:
+
+```powershell
+$env:DB_CONNECTION='sqlite'
+$env:DB_DATABASE='C:\Users\mohd.naved\Documents\SchoolManagement\college-mgmt\database\codex_fresh_smoke.sqlite'
+C:\tmp\php-8.5.7\php.exe artisan migrate:fresh --seed --force
+```
+
+Result: fresh migrate and seed passed. The seeded PMC official timetable integrity check returned:
+
+```text
+official_items=3
+missing_scope=0
+missing_bridge_link=0
+unscheduled_official=0
+bridge_rows=3
+parallel_slot_groups=1
+```
+
+Fresh seeded smoke on temporary server `http://127.0.0.1:8010` passed for:
+
+| User | Pages |
+| --- | --- |
+| `chair@college.com` | `/academics/pmc/official-timetable`, `/academics/pmc/command`, `/academics/pmc/data-reconciliation` |
+| `anjali@demo.edu` | `/teacher/timetable`, `/teacher/attendance/mark` |
+| `arjun.k@demo.edu` | `/student/timetable`, `/student/attendance` |
+| `admin@college.com` | `/admin/attendance`, `/admin/timetable` |
+
+After fixing the fresh seed bridge gap, `npm run test:timetable` passed `126 tests / 1000 assertions`.
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
 - Kept the student fee UI behavior that labels past-due pending hostel demands as `Overdue`, and aligned the stale regression expectation.
 - Fixed the KPI component markup spacing issue that affected the admin operations KPI drilldown assertion.
+- Fixed fresh PMC demo seed bridge integrity: published canonical sessions now create compatibility bridge rows during seeding, matching the reconciliation baseline and downstream attendance/reporting expectations.
 
 ## Feedback
 
