@@ -25,95 +25,55 @@
 
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-blue">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-journal-text"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $total }}</div>
-                    <div class="kpi-label">Total Exams</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-collection me-1"></i>All time</div>
-        </div>
+        <x-ui.kpi-card tone="blue" icon="bi-journal-text" :value="$total" label="Total Exams" trend="All time" trend-icon="bi-collection" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card kpi-cyan">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-calendar-event-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $upcoming }}</div>
-                    <div class="kpi-label">Upcoming</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-clock me-1"></i>Scheduled</div>
-        </div>
+        <x-ui.kpi-card tone="cyan" icon="bi-calendar-event-fill" :value="$upcoming" label="Upcoming" trend="Scheduled" trend-icon="bi-clock" />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ $pending > 0 ? 'kpi-red' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-pencil-square"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $pending }}</div>
-                    <div class="kpi-label">Pending Entry</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $pending > 0 ? 'up' : '' }}">
-                @if($pending > 0)<i class="bi bi-exclamation-circle me-1"></i>Needs entry
-                @else
-                <i class="bi bi-check me-1"></i>Up to date
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$pending > 0 ? 'red' : 'blue'"
+            icon="bi-pencil-square"
+            :value="$pending"
+            label="Pending Entry"
+            :trend="$pending > 0 ? 'Needs entry' : 'Up to date'"
+            :trend-icon="$pending > 0 ? 'bi-exclamation-circle' : 'bi-check'"
+            :trend-tone="$pending > 0 ? 'up' : null"
+        />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ ($pendingAppeals ?? 0) > 0 ? 'kpi-amber' : 'kpi-green' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-envelope-exclamation"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $pendingAppeals ?? 0 }}</div>
-                    <div class="kpi-label">Open Appeals</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ ($pendingAppeals ?? 0) > 0 ? 'up' : '' }}">
-                @if(($pendingAppeals ?? 0) > 0)<i class="bi bi-exclamation-circle me-1"></i>Review queue
-                @else
-                <i class="bi bi-check me-1"></i>None pending
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="($pendingAppeals ?? 0) > 0 ? 'amber' : 'green'"
+            icon="bi-envelope-exclamation"
+            :value="$pendingAppeals ?? 0"
+            label="Open Appeals"
+            :trend="($pendingAppeals ?? 0) > 0 ? 'Review queue' : 'None pending'"
+            :trend-icon="($pendingAppeals ?? 0) > 0 ? 'bi-exclamation-circle' : 'bi-check'"
+            :trend-tone="($pendingAppeals ?? 0) > 0 ? 'up' : null"
+        />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <a href="{{ route('exam-cell.anomalies.index') }}" class="text-decoration-none">
-            <div class="kpi-card {{ ($anomalyCount ?? 0) > 0 ? 'kpi-red' : 'kpi-blue' }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-flag-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $anomalyCount ?? 0 }}</div>
-                        <div class="kpi-label">Open Anomalies</div>
-                    </div>
-                </div>
-                <div class="kpi-trend {{ ($anomalyCount ?? 0) > 0 ? 'up' : '' }}">
-                    @if(($anomalyCount ?? 0) > 0)<i class="bi bi-exclamation-triangle me-1"></i>Requires action
-                    @else
-                    <i class="bi bi-check-all me-1"></i>None flagged
-                    @endif
-                </div>
-            </div>
-        </a>
+        <x-ui.kpi-card
+            :href="route('exam-cell.anomalies.index')"
+            :tone="($anomalyCount ?? 0) > 0 ? 'red' : 'blue'"
+            icon="bi-flag-fill"
+            :value="$anomalyCount ?? 0"
+            label="Open Anomalies"
+            :trend="($anomalyCount ?? 0) > 0 ? 'Requires action' : 'None flagged'"
+            :trend-icon="($anomalyCount ?? 0) > 0 ? 'bi-exclamation-triangle' : 'bi-check-all'"
+            :trend-tone="($anomalyCount ?? 0) > 0 ? 'up' : null"
+        />
     </div>
     <div class="col-sm-6 col-lg-2">
-        <div class="kpi-card {{ $completionPct >= 75 ? 'kpi-green' : ($completionPct >= 50 ? 'kpi-amber' : 'kpi-red') }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $completionPct }}%</div>
-                    <div class="kpi-label">Completion</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $completionPct >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $completionPct >= 75 ? 'up' : 'down' }} me-1"></i>Result entry rate
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$completionPct >= 75 ? 'green' : ($completionPct >= 50 ? 'amber' : 'red')"
+            icon="bi-pie-chart-fill"
+            :value="$completionPct . '%'"
+            label="Completion"
+            trend="Result entry rate"
+            :trend-icon="$completionPct >= 75 ? 'bi-arrow-up' : 'bi-arrow-down'"
+            :trend-tone="$completionPct >= 75 ? 'up' : 'down'"
+        />
     </div>
 </div>
 

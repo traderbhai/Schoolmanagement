@@ -40,74 +40,54 @@
 {{-- KPI Row --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-blue">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
-                <div><div class="kpi-value">{{ $activeStudents }}</div><div class="kpi-label">Active Students</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-mortarboard me-1"></i>Enrolled in programs</div>
-        </div>
+        <x-ui.kpi-card tone="blue" icon="bi-people-fill" :value="$activeStudents" label="Active Students" trend="Enrolled in programs" trend-icon="bi-mortarboard" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card kpi-cyan">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-book-fill"></i></div>
-                <div><div class="kpi-value">{{ $subjectsThisTerm }}</div><div class="kpi-label">Subjects This Term</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-calendar-range me-1"></i>Current term</div>
-        </div>
+        <x-ui.kpi-card tone="cyan" icon="bi-book-fill" :value="$subjectsThisTerm" label="Subjects This Term" trend="Current term" trend-icon="bi-calendar-range" />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card {{ $attendancePct >= 75 ? 'kpi-green' : 'kpi-red' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-check2-square"></i></div>
-                <div><div class="kpi-value">{{ $attendancePct }}%</div><div class="kpi-label">Attendance</div></div>
-            </div>
-            <div class="kpi-trend {{ $attendancePct >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $attendancePct >= 75 ? 'up' : 'down' }} me-1"></i>
-                {{ $attendancePct >= 75 ? 'On track' : 'Below 75% threshold' }}
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$attendancePct >= 75 ? 'green' : 'red'"
+            icon="bi-check2-square"
+            :value="$attendancePct . '%'"
+            label="Attendance"
+            :trend="$attendancePct >= 75 ? 'On track' : 'Below 75% threshold'"
+            :trend-icon="$attendancePct >= 75 ? 'bi-arrow-up' : 'bi-arrow-down'"
+            :trend-tone="$attendancePct >= 75 ? 'up' : 'down'"
+        />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card {{ $atRiskStudents->count() > 0 ? 'kpi-red' : 'kpi-green' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                <div><div class="kpi-value">{{ $atRiskStudents->count() }}</div><div class="kpi-label">At-Risk</div></div>
-            </div>
-            <div class="kpi-trend {{ $atRiskStudents->count() > 0 ? 'up' : '' }}">
-                @if($atRiskStudents->count() > 0)
-                <i class="bi bi-exclamation-circle me-1"></i>Needs attention
-                @else
-                <i class="bi bi-check-all me-1"></i>All clear
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$atRiskStudents->count() > 0 ? 'red' : 'green'"
+            icon="bi-exclamation-triangle-fill"
+            :value="$atRiskStudents->count()"
+            label="At-Risk"
+            :trend="$atRiskStudents->count() > 0 ? 'Needs attention' : 'All clear'"
+            :trend-icon="$atRiskStudents->count() > 0 ? 'bi-exclamation-circle' : 'bi-check-all'"
+            :trend-tone="$atRiskStudents->count() > 0 ? 'up' : null"
+        />
     </div>
     @php $totalPending = $pendingApprovals + $pendingLeaves + $pendingCondonations + $openGrievances; @endphp
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card {{ $totalPending > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-inbox-fill"></i></div>
-                <div><div class="kpi-value">{{ $totalPending }}</div><div class="kpi-label">Pending Items</div></div>
-            </div>
-            <div class="kpi-trend {{ $totalPending > 0 ? 'up' : '' }}">
-                @if($totalPending > 0)
-                <i class="bi bi-hourglass-split me-1"></i>Awaiting action
-                @else
-                <i class="bi bi-check me-1"></i>Inbox clear
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$totalPending > 0 ? 'amber' : 'blue'"
+            icon="bi-inbox-fill"
+            :value="$totalPending"
+            label="Pending Items"
+            :trend="$totalPending > 0 ? 'Awaiting action' : 'Inbox clear'"
+            :trend-icon="$totalPending > 0 ? 'bi-hourglass-split' : 'bi-check'"
+            :trend-tone="$totalPending > 0 ? 'up' : null"
+        />
     </div>
     <div class="col-6 col-sm-4 col-xl-2">
-        <div class="kpi-card {{ $avgMarks !== '—' && $avgMarks >= 50 ? 'kpi-green' : 'kpi-amber' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-bar-chart-fill"></i></div>
-                <div><div class="kpi-value">{{ $avgMarks }}{{ $avgMarks !== '—' ? '' : '' }}</div><div class="kpi-label">Avg Score</div></div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-graph-up me-1"></i>Across all exams</div>
-        </div>
+        <x-ui.kpi-card
+            :tone="$avgMarks !== '—' && $avgMarks >= 50 ? 'green' : 'amber'"
+            icon="bi-bar-chart-fill"
+            :value="$avgMarks"
+            label="Avg Score"
+            trend="Across all exams"
+            trend-icon="bi-graph-up"
+        />
     </div>
 </div>
 
