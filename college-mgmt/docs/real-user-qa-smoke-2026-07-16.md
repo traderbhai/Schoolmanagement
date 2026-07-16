@@ -852,6 +852,51 @@ Focused verification:
 AlumniWorkflowGuidanceTest: 4 tests passed, 32 assertions
 ```
 
+## Transport Assignment Recheck
+
+Manual admin transport setup, assignment, student visibility, export, and end-assignment checks were exercised against the running local server:
+
+```text
+admin@demo.edu: POST /admin/transport/routes created route QA Route 232215.
+admin@demo.edu: POST /admin/transport/stops created stop QA Stop.
+admin@demo.edu: POST /admin/transport/vehicles created vehicle QA-232215.
+admin@demo.edu: POST /admin/transport/assignments assigned Vikram Singh to the QA route, stop, and vehicle.
+admin@demo.edu: GET /admin/transport?assignment_search=Vikram showed Vikram Singh, QA Route 232215, and QA Stop.
+admin@demo.edu: GET /admin/transport/assignments/export?assignment_search=Vikram returned CSV containing Vikram Singh and QA Route 232215.
+vikram.s@demo.edu: GET /student/transport showed the active assignment and notes.
+admin@demo.edu: POST /admin/transport/assignments/{assignment}/end ended the assignment.
+vikram.s@demo.edu: GET /student/transport showed no active assignment and retained the QA route in transport history.
+```
+
+Focused verification:
+
+```text
+TransportWorkflowTest: 18 tests passed, 119 assertions
+```
+
+## Library Circulation And Reservation Recheck
+
+Manual admin library circulation, student library visibility, reservation, return, and fulfillment checks were exercised against the running local server:
+
+```text
+admin@demo.edu: POST /admin/library/books created book QA Library Book 232339 with one copy.
+admin@demo.edu: POST /admin/library/issue issued the copy to Pooja Mehta with due date 2026-07-30.
+pooja.m@demo.edu: GET /student/library showed QA Library Book 232339 under currently borrowed with Issued status.
+vikram.s@demo.edu: GET /student/library showed the unavailable QA title with a Reserve action.
+vikram.s@demo.edu: POST /student/library/reservations created a pending reservation for the QA title.
+admin@demo.edu: GET /admin/library/reservations?search=QAISBN232339 showed Vikram Singh's reservation.
+admin@demo.edu: POST /admin/library/issues/{issue}/return returned Pooja's copy.
+pooja.m@demo.edu: GET /student/library showed no current borrowing and retained the QA title in borrowing history.
+admin@demo.edu: POST /admin/library/reservations/{reservation}/fulfill fulfilled Vikram's reservation and issued the copy.
+vikram.s@demo.edu: GET /student/library showed QA Library Book 232339 under currently borrowed with Issued status.
+```
+
+Focused verification:
+
+```text
+LibraryCirculationWorkflowTest and AdminLibraryAccessControlTest: 32 tests passed, 332 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
