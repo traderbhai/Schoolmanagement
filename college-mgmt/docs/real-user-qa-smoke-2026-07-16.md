@@ -408,6 +408,24 @@ exam@college.com: /exam-cell/dashboard, /academics/coe, /academics/coe/exam-read
 iqac.head@college.com: /academics/iqac, /academics/iqac/obe-readiness, /academics/iqac/attainment-monitoring, /academics/iqac/feedback-quality, /academics/iqac/audit-compliance, /academics/iqac/reports
 ```
 
+## Admission Lifecycle Recheck
+
+Representative admission lifecycle chunk:
+
+```text
+Admission applicant readiness/UX, flow, document verification, payment verification, merit decision, seat matrix, waitlist promotion, refund, and reporting scope: 92 tests passed, 889 assertions
+```
+
+Authenticated HTTP sweep covered 31 pages with HTTP 200 and no service-error/debug text:
+
+```text
+head@college.com: /admission/dashboard, /admission/command-center, /admission/workbench, /admission/applicants, /admission/applicants/6, /admission/documents/queue, /admission/payments/queue, /admission/merit-list/1, /admission/offer-seat-control, /admission/reports, /admission/call-queue, /admission/counsellor-performance
+officer@college.com: /admission/dashboard, /admission/applicants, /admission/documents/queue, /admission/payments/queue, /admission/reports
+counsellor@college.com: /admission/counsellor-desk, /admission/counsellor-workspace, /admission/counsellor-playbooks, /admission/applicants
+telecaller@college.com: /admission/calling-desk, /admission/call-queue, /admission/leads
+priya.sharma@applicant.demo: /applicant/dashboard, /applicant/admission-operations, /applicant/checklist, /applicant/application, /applicant/documents, /applicant/fees, /applicant/status
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
