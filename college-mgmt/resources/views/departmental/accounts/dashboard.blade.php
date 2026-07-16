@@ -70,198 +70,48 @@
 {{-- Primary Finance KPIs --}}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
-        <a href="{{ route('accounts.reports') }}" class="text-decoration-none">
-            <div class="kpi-card kpi-blue">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
-                    <div>
-                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalBilled, 0) }}</div>
-                        <div class="kpi-label">Total Billed</div>
-                    </div>
-                </div>
-                <div class="kpi-trend"><i class="bi bi-file-earmark-text me-1"></i>Open demand report</div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.reports') }}" tone="blue" icon="bi-receipt-cutoff" value="Rs. {{ number_format($totalBilled, 0) }}" value-size="1.4rem" label="Total Billed" trend="Open demand report" trend-icon="bi-file-earmark-text" />
     </div>
     <div class="col-sm-6 col-lg-3">
-        <a href="{{ route('accounts.fee-collections', ['status' => 'paid']) }}" class="text-decoration-none">
-            <div class="kpi-card kpi-green">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-                    <div>
-                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($totalCollected, 0) }}</div>
-                        <div class="kpi-label">Collected</div>
-                    </div>
-                </div>
-                <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open paid collections</div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.fee-collections', ['status' => 'paid']) }}" tone="green" icon="bi-cash-coin" value="Rs. {{ number_format($totalCollected, 0) }}" value-size="1.4rem" label="Collected" trend="Open paid collections" trend-icon="bi-arrow-up" trend-tone="up" />
     </div>
     <div class="col-sm-6 col-lg-3">
-        <a href="{{ route('accounts.outstanding') }}" class="text-decoration-none">
-            <div class="kpi-card kpi-red">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
-                    <div>
-                        <div class="kpi-value" style="font-size:1.4rem">Rs. {{ number_format($outstanding, 0) }}</div>
-                        <div class="kpi-label">Outstanding</div>
-                    </div>
-                </div>
-                <div class="kpi-trend down"><i class="bi bi-arrow-down me-1"></i>Open outstanding list</div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.outstanding') }}" tone="red" icon="bi-exclamation-circle-fill" value="Rs. {{ number_format($outstanding, 0) }}" value-size="1.4rem" label="Outstanding" trend="Open outstanding list" trend-icon="bi-arrow-down" trend-tone="down" />
     </div>
     <div class="col-sm-6 col-lg-3">
-        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
-            <div class="kpi-card {{ $overdue > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-hourglass-split"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $overdue }}</div>
-                        <div class="kpi-label">Overdue Accounts</div>
-                    </div>
-                </div>
-                <div class="kpi-trend {{ $overdue > 0 ? 'up' : '' }}">
-                    @if($overdue > 0)<i class="bi bi-exclamation-triangle me-1"></i>Open overdue queue
-                    @else
-                    <i class="bi bi-check me-1"></i>None overdue
-                    @endif
-                </div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" :tone="$overdue > 0 ? 'amber' : 'blue'" icon="bi-hourglass-split" :value="$overdue" label="Overdue Accounts" :trend="$overdue > 0 ? 'Open overdue queue' : 'None overdue'" :trend-icon="$overdue > 0 ? 'bi-exclamation-triangle' : 'bi-check'" :trend-tone="$overdue > 0 ? 'up' : null" />
     </div>
 </div>
 
 {{-- Admission-side stats row --}}
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-            <a href="{{ route('accounts.reconciliation') }}" class="text-decoration-none">
-            <div class="kpi-card kpi-green">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-mortarboard-fill"></i></div>
-                    <div>
-                    <div class="kpi-value" style="font-size:1.3rem">Rs. {{ number_format($totalAdmissionCollected, 0) }}</div>
-                    <div class="kpi-label">Admission Fees Collected</div>
-                </div>
-                </div>
-            <div class="kpi-trend up"><i class="bi bi-arrow-up me-1"></i>Open reconciliation</div>
-            </div>
-            </a>
+        <x-ui.kpi-card href="{{ route('accounts.reconciliation') }}" tone="green" icon="bi-mortarboard-fill" value="Rs. {{ number_format($totalAdmissionCollected, 0) }}" value-size="1.3rem" label="Admission Fees Collected" trend="Open reconciliation" trend-icon="bi-arrow-up" trend-tone="up" />
     </div>
     <div class="col-md-3">
-        <a href="{{ route('accounts.admission-payments') }}" class="text-decoration-none">
-            <div class="kpi-card {{ $pendingAdmissionVerification > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-ui-checks"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $pendingAdmissionVerification }}</div>
-                        <div class="kpi-label">Pending Verification</div>
-                    </div>
-                </div>
-                <div class="kpi-trend {{ $pendingAdmissionVerification > 0 ? 'up' : '' }}">
-                    @if($pendingAdmissionVerification > 0)<i class="bi bi-clock me-1"></i>View queue
-                    @else
-                    <i class="bi bi-check me-1"></i>Queue clear
-                    @endif
-                </div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.admission-payments') }}" :tone="$pendingAdmissionVerification > 0 ? 'amber' : 'blue'" icon="bi-ui-checks" :value="$pendingAdmissionVerification" label="Pending Verification" :trend="$pendingAdmissionVerification > 0 ? 'View queue' : 'Queue clear'" :trend-icon="$pendingAdmissionVerification > 0 ? 'bi-clock' : 'bi-check'" :trend-tone="$pendingAdmissionVerification > 0 ? 'up' : null" />
     </div>
     <div class="col-md-3">
-        <a href="{{ route('admission.scholarship-disbursements.index') }}" class="text-decoration-none">
-            <div class="kpi-card kpi-cyan">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-award-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $pendingScholarshipDisbursements }}</div>
-                        <div class="kpi-label">Scholarships to Disburse</div>
-                    </div>
-                </div>
-                <div class="kpi-trend"><i class="bi bi-cash-stack me-1"></i>Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending</div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('admission.scholarship-disbursements.index') }}" tone="cyan" icon="bi-award-fill" :value="$pendingScholarshipDisbursements" label="Scholarships to Disburse" trend="Rs. {{ number_format($pendingScholarshipAmount, 0) }} pending" trend-icon="bi-cash-stack" />
     </div>
     <div class="col-md-3">
-        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
-        <div class="kpi-card {{ $overdueDemandsCount > 0 ? 'kpi-red' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-calendar-x-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $overdueDemandsCount }}</div>
-                    <div class="kpi-label">Overdue Fee Demands</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $overdueDemandsCount > 0 ? 'down' : '' }}">
-                <i class="bi bi-eye me-1"></i>Rs. {{ number_format($overdueDemandsAmount, 0) }} at risk
-            </div>
-        </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" :tone="$overdueDemandsCount > 0 ? 'red' : 'blue'" icon="bi-calendar-x-fill" :value="$overdueDemandsCount" label="Overdue Fee Demands" trend="Rs. {{ number_format($overdueDemandsAmount, 0) }} at risk" trend-icon="bi-eye" :trend-tone="$overdueDemandsCount > 0 ? 'down' : null" />
     </div>
 </div>
 
 {{-- Fee Demand KPIs --}}
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="kpi-card kpi-purple">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-file-earmark-ruled-fill"></i></div>
-                <div>
-                    <div class="kpi-value" style="font-size:1.3rem">Rs. {{ number_format($totalDemanded, 0) }}</div>
-                    <div class="kpi-label">Total Demanded</div>
-                </div>
-            </div>
-            <div class="kpi-trend"><i class="bi bi-bar-chart me-1"></i>All demands raised</div>
-        </div>
+        <x-ui.kpi-card tone="purple" icon="bi-file-earmark-ruled-fill" value="Rs. {{ number_format($totalDemanded, 0) }}" value-size="1.3rem" label="Total Demanded" trend="All demands raised" trend-icon="bi-bar-chart" />
     </div>
     <div class="col-md-3">
-        <div class="kpi-card {{ $collectionRate >= 75 ? 'kpi-green' : ($collectionRate >= 50 ? 'kpi-amber' : 'kpi-red') }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
-                <div>
-                    <div class="kpi-value">{{ $collectionRate }}%</div>
-                    <div class="kpi-label">Collection Rate</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $collectionRate >= 75 ? 'up' : 'down' }}">
-                <i class="bi bi-arrow-{{ $collectionRate >= 75 ? 'up' : 'down' }} me-1"></i>Overall efficiency
-            </div>
-        </div>
+        <x-ui.kpi-card :tone="$collectionRate >= 75 ? 'green' : ($collectionRate >= 50 ? 'amber' : 'red')" icon="bi-pie-chart-fill" value="{{ $collectionRate }}%" label="Collection Rate" trend="Overall efficiency" :trend-icon="$collectionRate >= 75 ? 'bi-arrow-up' : 'bi-arrow-down'" :trend-tone="$collectionRate >= 75 ? 'up' : 'down'" />
     </div>
     <div class="col-md-3">
-        <a href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" class="text-decoration-none">
-            <div class="kpi-card {{ $overdueCount > 0 ? 'kpi-red' : 'kpi-blue' }}">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="kpi-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>
-                    <div>
-                        <div class="kpi-value">{{ $overdueCount }}</div>
-                        <div class="kpi-label">Overdue Demands</div>
-                    </div>
-                </div>
-                <div class="kpi-trend {{ $overdueCount > 0 ? 'down' : '' }}">
-                    @if($overdueCount > 0)<i class="bi bi-eye me-1"></i>View demands
-                    @else
-                <i class="bi bi-check me-1"></i>None overdue
-                @endif
-                </div>
-            </div>
-        </a>
+        <x-ui.kpi-card href="{{ route('accounts.outstanding', ['mode' => 'overdue_demands']) }}" :tone="$overdueCount > 0 ? 'red' : 'blue'" icon="bi-exclamation-octagon-fill" :value="$overdueCount" label="Overdue Demands" :trend="$overdueCount > 0 ? 'View demands' : 'None overdue'" :trend-icon="$overdueCount > 0 ? 'bi-eye' : 'bi-check'" :trend-tone="$overdueCount > 0 ? 'down' : null" />
     </div>
     <div class="col-md-3">
-        <div class="kpi-card {{ $totalPenalty > 0 ? 'kpi-amber' : 'kpi-blue' }}">
-            <div class="d-flex align-items-center gap-3">
-                <div class="kpi-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                <div>
-                    <div class="kpi-value" style="font-size:1.3rem">Rs. {{ number_format($totalPenalty, 0) }}</div>
-                    <div class="kpi-label">Pending Penalties</div>
-                </div>
-            </div>
-            <div class="kpi-trend {{ $totalPenalty > 0 ? 'up' : '' }}">
-                @if($totalPenalty > 0)<i class="bi bi-hourglass me-1"></i>Late fees accrued
-                @else
-                <i class="bi bi-check me-1"></i>No penalties
-                @endif
-            </div>
-        </div>
+        <x-ui.kpi-card :tone="$totalPenalty > 0 ? 'amber' : 'blue'" icon="bi-exclamation-triangle-fill" value="Rs. {{ number_format($totalPenalty, 0) }}" value-size="1.3rem" label="Pending Penalties" :trend="$totalPenalty > 0 ? 'Late fees accrued' : 'No penalties'" :trend-icon="$totalPenalty > 0 ? 'bi-hourglass' : 'bi-check'" :trend-tone="$totalPenalty > 0 ? 'up' : null" />
     </div>
 </div>
 
