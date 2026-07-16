@@ -18,6 +18,7 @@ use App\Models\AcademicPmcTimetableResolutionAction;
 use App\Models\AcademicPmcTimetableSessionDemand;
 use App\Models\AcademicPmcTimetableSolverAttempt;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class PmcTimetableGenerationService
 {
@@ -46,6 +47,41 @@ class PmcTimetableGenerationService
         $audit($actor, 'academic_pmc_v041_timetable_generated', $run->title, $run);
 
         return $run->fresh();
+    }
+
+    public function createSessionDemands(AcademicPmcTimetableGenerationRun $run, AcademicPmcCourseGroup $group, ?AcademicPmcGroupFacultyAssignment $assignment): Collection
+    {
+        $constraints = $group->constraints ?: [];
+        if (! empty($constraints['session_mix']) && is_array($constraints['session_mix'])) {
+            return collect($constraints['session_mix'])->map(function ($mix, $type) use ($run, $group) {
+                return AcademicPmcTimetableSessionDemand::create([
+                    'generation_run_id' => $run->id,
+                    'course_group_id' => $group->id,
+                    'session_type' => is_string($type) ? $type : ($mix['type'] ?? 'lecture'),
+                    'required_sessions_per_week' => max(1, (int) ($mix['sessions'] ?? 1)),
+                    'duration_slots' => max(1, (int) ($mix['duration_slots'] ?? 1)),
+                    'source' => 'group_session_mix',
+                    'rules' => $mix,
+                    'metadata' => ['version' => 'PMC OS v0.062'],
+                ]);
+            })->values();
+        }
+
+        $sessionType = str_contains($group->group_type, 'lab') ? 'lab' : (str_contains($group->group_type, 'tutorial') ? 'tutorial' : 'lecture');
+        $duration = $sessionType === 'lab' ? 2 : 1;
+        $weeklyHours = (int) ($assignment?->weekly_hours ?: ($constraints['weekly_hours'] ?? $group->subject?->credits ?? 3));
+        $sessions = (int) ($constraints['weekly_sessions'] ?? max(1, (int) ceil($weeklyHours / $duration)));
+
+        return collect([AcademicPmcTimetableSessionDemand::create([
+            'generation_run_id' => $run->id,
+            'course_group_id' => $group->id,
+            'session_type' => $sessionType,
+            'required_sessions_per_week' => $sessions,
+            'duration_slots' => $duration,
+            'source' => $assignment?->weekly_hours ? 'faculty_weekly_hours' : 'group_or_subject_defaults',
+            'rules' => ['weekly_hours' => $weeklyHours, 'group_type' => $group->group_type, 'subject_credits' => $group->subject?->credits],
+            'metadata' => ['version' => 'PMC OS v0.062'],
+        ])]);
     }
 
     public function refreshPublishChecks(AcademicPmcTimetableGenerationRun $run, int $hard, int $soft, int $score, array $facultySuitabilityDiagnostics): void
