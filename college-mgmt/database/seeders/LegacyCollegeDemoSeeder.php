@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\{User, Department, Course, Subject, Classroom, AcademicYear, Semester,
+use App\Models\{User, Department, Course, Program, Batch, Term, Subject, Classroom, AcademicYear, Semester,
     Teacher, Student, TimetableSlot, TimetableEntry, Notice,
     Enrollment, FeeStructure, FeePayment, Exam, ExamResult, Attendance};
 use Illuminate\Database\Seeder;
@@ -97,6 +97,62 @@ class LegacyCollegeDemoSeeder extends Seeder
             'is_current'       => true,
         ]);
 
+        $programs = [];
+        $batches = [];
+        $terms = [];
+        foreach ($courseDefs as $c) {
+            $programs[$c['code']] = Program::firstOrCreate(['code' => $c['code']], [
+                'department_id' => $departments[$c['dept']]->id,
+                'name' => $c['name'],
+                'abbreviation' => $c['code'],
+                'system_type' => 'semester',
+                'duration_years' => $c['duration_years'],
+                'total_terms' => $c['total_semesters'],
+                'default_intake_capacity' => 60,
+                'description' => $courses[$c['code']]->description,
+                'is_active' => true,
+            ]);
+
+            $batches[$c['code']] = Batch::firstOrCreate([
+                'program_id' => $programs[$c['code']]->id,
+                'code' => $c['code'] . '-2025',
+            ], [
+                'academic_year_id' => $year->id,
+                'name' => $c['name'] . ' 2025 Batch',
+                'start_date' => '2025-08-01',
+                'end_date' => now()->addYears($c['duration_years'])->toDateString(),
+                'intake_capacity' => 60,
+                'status' => 'active',
+            ]);
+
+            $terms[$c['code']] = Term::firstOrCreate([
+                'program_id' => $programs[$c['code']]->id,
+                'batch_id' => $batches[$c['code']]->id,
+                'term_number' => $semester->number,
+            ], [
+                'name' => $semester->name,
+                'start_date' => $semester->start_date,
+                'end_date' => $semester->end_date,
+                'is_current' => true,
+                'sort_order' => $semester->number,
+            ]);
+        }
+
+        $subjectProgramMap = [
+            'CS' => 'BTCS',
+            'EC' => 'BTEC',
+            'ME' => 'BTME',
+        ];
+        foreach ($subjectDefs as $s) {
+            $programCode = $subjectProgramMap[$s['dept']] ?? null;
+            if ($programCode && isset($subjects[$s['code']], $programs[$programCode])) {
+                $subjects[$s['code']]->update([
+                    'program_id' => $subjects[$s['code']]->program_id ?: $programs[$programCode]->id,
+                    'term_number' => $subjects[$s['code']]->term_number ?: $semester->number,
+                ]);
+            }
+        }
+
         // Timetable Slots
         $slotDefs = [
             ['name' => '1st Period',  'start_time' => '08:00', 'end_time' => '09:00', 'sort_order' => 1],
@@ -162,6 +218,11 @@ class LegacyCollegeDemoSeeder extends Seeder
                 'classroom_id' => $rooms[$tt['room']]->id,
                 'is_active'    => true,
             ]);
+
+            $timetableEntries[array_key_last($timetableEntries)]->update([
+                'program_id' => $programs[$tt['course']]->id,
+                'term_id' => $terms[$tt['course']]->id,
+            ]);
         }
 
         // Notice
@@ -198,10 +259,21 @@ class LegacyCollegeDemoSeeder extends Seeder
                 'user_id'           => $u->id,
                 'department_id'     => $departments[$sd['dept']]->id,
                 'course_id'         => $courses[$sd['course']]->id,
+                'program_id'        => $programs[$sd['course']]->id,
+                'batch_id'          => $batches[$sd['course']]->id,
+                'current_term_id'   => $terms[$sd['course']]->id,
                 'enrollment_number' => $sd['enr'],
                 'roll_number'       => $sd['roll'],
                 'current_semester'  => $sd['sem'],
+                'current_term'      => $sd['sem'],
                 'admission_date'    => $sd['year'],
+            ]);
+
+            $students[$sd['enr']]->update([
+                'program_id' => $students[$sd['enr']]->program_id ?: $programs[$sd['course']]->id,
+                'batch_id' => $students[$sd['enr']]->batch_id ?: $batches[$sd['course']]->id,
+                'current_term_id' => $students[$sd['enr']]->current_term_id ?: $terms[$sd['course']]->id,
+                'current_term' => $students[$sd['enr']]->current_term ?: $sd['sem'],
             ]);
         }
 

@@ -7,6 +7,8 @@ use App\Models\RoleProgramAssignment;
 use App\Models\Student;
 use App\Models\StudentGrievance;
 use App\Models\User;
+use Database\Seeders\CoreUserRoleSeeder;
+use Database\Seeders\LegacyCollegeDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -95,6 +97,32 @@ class GrievanceWorkflowGuidanceTest extends TestCase
         $this->assertDatabaseMissing('student_grievances', [
             'student_id' => $student->id,
             'title' => 'Inactive direct grievance',
+        ]);
+    }
+
+    public function test_legacy_demo_student_can_submit_grievance_with_canonical_program_scope(): void
+    {
+        $this->seed(CoreUserRoleSeeder::class);
+        $this->seed(LegacyCollegeDemoSeeder::class);
+
+        $student = Student::whereHas('user', fn ($query) => $query->where('email', 'aarav@college.com'))->firstOrFail();
+        $this->assertNotNull($student->program_id);
+
+        $this->actingAs($student->user)
+            ->post(route('student.grievances.store'), [
+                'category' => 'facility',
+                'title' => 'QA seeded grievance submit',
+                'description' => 'Seeded student should be able to submit a grievance without a database exception.',
+                'priority' => 'low',
+            ])
+            ->assertRedirect(route('student.grievances.index'))
+            ->assertSessionHas('success', 'Grievance submitted.');
+
+        $this->assertDatabaseHas('student_grievances', [
+            'student_id' => $student->id,
+            'program_id' => $student->program_id,
+            'title' => 'QA seeded grievance submit',
+            'status' => 'open',
         ]);
     }
 

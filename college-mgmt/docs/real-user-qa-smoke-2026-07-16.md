@@ -502,6 +502,37 @@ npm run frontend:smoke:mobile: 29 tests passed, 1473 assertions
 PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test: 1800 tests passed, 29685 assertions
 ```
 
+## Manual Form Submission Recheck
+
+Low-risk form submissions were exercised against the running local app with seeded demo users. This pass caught and fixed a real seeded-data blocker:
+
+```text
+Initial student grievance POST as aarav@college.com failed with HTTP 500 because legacy demo students had no canonical program_id, while student_grievances.program_id is required.
+LegacyCollegeDemoSeeder now creates canonical B.Tech programs, batches, and current terms for legacy courses, and backfills legacy subjects, timetable rows, and students with program/batch/term scope.
+Regression added: seeded aarav@college.com can submit a student grievance with non-null program_id.
+```
+
+Post-fix manual submissions:
+
+```text
+aarav@college.com: POST /student/grievances created open grievance id=1 with program_id=3
+aarav@college.com: POST /student/documents created pending migration document request id=1
+aarav@college.com: /student/fee-payment/create had no outstanding demand option, so fee proof submission was skipped rather than fabricating a payment state
+cmc@college.com: POST /cmc/companies created active company id=3
+cmc@college.com: POST /cmc/events created published workshop event id=1
+head@college.com: POST /admission/applicants/6/notes created admission team note id=1
+```
+
+Focused verification:
+
+```text
+LegacyCollegeDemoSeeder rerun on local database: passed
+Legacy demo scope integrity after rerun: legacy_students_missing_scope=0, legacy_timetable_missing_scope=0, legacy_subjects_missing_scope=0
+Temporary fresh SQLite migrate:fresh --seed: passed
+Fresh SQLite legacy scope integrity: legacy_students_missing_scope=0, legacy_timetable_missing_scope=0, legacy_subjects_missing_scope=0, aarav_program_id=1
+GrievanceWorkflowGuidanceTest, DemoCredentialsTest, PortalFrontendBetaReadinessTest, StudentDashboardGuidanceTest: 51 tests passed, 912 assertions
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
@@ -511,6 +542,7 @@ PHPRC=C:\tmp\php-8.5.7-codex-ini C:\tmp\php-8.5.7\php.exe artisan test: 1800 tes
 - Fixed navigation-crawl blockers in Exam Cell, unified approvals, Admission document file actions, and Accounts finance links.
 - Patched Composer dependency advisories in Guzzle packages and re-ran dependency, frontend, timetable, production-readiness, Admission, Finance, Portal, and live role smoke checks.
 - Fixed legacy demo attendance seeding so rerunning `db:seed` on an existing demo database does not create duplicate attendance keys or crash.
+- Fixed legacy demo canonical scope seeding so legacy student services can create program-scoped records such as grievances without database exceptions.
 
 ## Feedback
 
