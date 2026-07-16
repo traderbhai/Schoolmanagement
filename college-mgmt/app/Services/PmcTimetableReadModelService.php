@@ -4,6 +4,11 @@ namespace App\Services;
 
 use App\Models\AcademicPmcTimetableGenerationItem;
 use App\Models\AcademicPmcTimetableGenerationRun;
+use App\Models\AcademicPmcTimetableImpactRecord;
+use App\Models\AcademicPmcTimetablePublishCheck;
+use App\Models\AcademicPmcTimetableQualityScore;
+use App\Models\AcademicPmcTimetableSessionDemand;
+use App\Models\AcademicPmcTimetableSolverAttempt;
 use App\Models\AcademicPmcCourseAllocationBatch;
 use App\Models\AcademicPmcCourseGroup;
 use App\Models\AcademicPmcCourseAllocationException;
@@ -263,6 +268,74 @@ class PmcTimetableReadModelService
             'rules' => $rules->paginate(15),
             'facultyDiagnostics' => $facultyDiagnostics,
             'facultySuitabilityDiagnostics' => $facultySuitabilityDiagnostics,
+            'surfaceKey' => $surface,
+        ];
+    }
+
+    public function generatorSurface(User $user, string $surface, array $filters, array $generationDiagnostics): array
+    {
+        $generationRunIds = (clone $this->applyScope(
+            AcademicPmcTimetableGenerationRun::query(),
+            $user,
+            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+        ))->pluck('id');
+        $quality = AcademicPmcTimetableQualityScore::query()
+            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($generationRunIds) {
+                if ($generationRunIds->isEmpty()) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn('generation_run_id', $generationRunIds);
+                }
+            });
+
+        return [
+            'title' => 'PMC Constraint-Based Timetable Generator',
+            'description' => 'Deterministic generator, suggestions, unscheduled classes, hard conflicts, soft warnings, and quality score.',
+            'runs' => $this->applyScope(
+                AcademicPmcTimetableGenerationRun::query(),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
+            )->latest()->paginate(10),
+            'items' => $this->applyScope(
+                AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'operationalTimetableEntry']),
+                $user,
+                [],
+                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->latest()->paginate(20),
+            'sessionDemands' => $this->applyScope(
+                AcademicPmcTimetableSessionDemand::with('courseGroup.subject'),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->latest()->paginate(15, ['*'], 'session_demands_page'),
+            'quality' => $quality->latest()->first(),
+            'solverAttempts' => $this->applyScope(
+                AcademicPmcTimetableSolverAttempt::query(),
+                $user,
+                [],
+                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->latest()->paginate(10, ['*'], 'solver_attempts_page'),
+            'publishChecks' => $this->applyScope(
+                AcademicPmcTimetablePublishCheck::query(),
+                $user,
+                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
+                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
+            )->latest()->paginate(15, ['*'], 'publish_checks_page'),
+            'impactPreview' => AcademicPmcTimetableImpactRecord::query()
+                ->where('metadata->version', 'PMC OS v0.069')
+                ->when(
+                    ! $this->policy->canIgnorePmcScope($user),
+                    function (Builder $query) use ($generationRunIds) {
+                        if ($generationRunIds->isEmpty()) {
+                            $query->whereRaw('1 = 0');
+                        } else {
+                            $query->whereIn('metadata->generation_run_id', $generationRunIds->map(fn ($id) => (string) $id)->all());
+                        }
+                    }
+                )
+                ->latest()
+                ->paginate(15, ['*'], 'impact_preview_page'),
+            'generationDiagnostics' => $generationDiagnostics,
             'surfaceKey' => $surface,
         ];
     }

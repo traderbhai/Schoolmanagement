@@ -2717,67 +2717,12 @@ class AcademicPmcTimetableV041Service
 
     private function generatorSurface(User $user, string $surface, array $filters): array
     {
-        $generationRunIds = (clone $this->applyScope(
-            AcademicPmcTimetableGenerationRun::query(),
+        return $this->readModels->generatorSurface(
             $user,
-            ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']
-        ))->pluck('id');
-        $generationDiagnostics = $this->generationValidationDiagnostics($user);
-        $quality = AcademicPmcTimetableQualityScore::query()
-            ->when(! $this->policy->canIgnorePmcScope($user), function (Builder $query) use ($generationRunIds) {
-                if ($generationRunIds->isEmpty()) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn('generation_run_id', $generationRunIds);
-                }
-            });
-
-        return [
-            'title' => 'PMC Constraint-Based Timetable Generator',
-            'description' => 'Deterministic generator, suggestions, unscheduled classes, hard conflicts, soft warnings, and quality score.',
-            'runs' => $this->applyScope(AcademicPmcTimetableGenerationRun::query(), $user, ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'])->latest()->paginate(10),
-            'items' => $this->applyScope(
-                AcademicPmcTimetableGenerationItem::with(['courseGroup.subject', 'teacher.user', 'classroom', 'slot', 'operationalTimetableEntry']),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'], 'courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(20),
-            'sessionDemands' => $this->applyScope(
-                AcademicPmcTimetableSessionDemand::with('courseGroup.subject'),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
-                ['courseGroup' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'session_demands_page'),
-            'quality' => $quality->latest()->first(),
-            'solverAttempts' => $this->applyScope(
-                AcademicPmcTimetableSolverAttempt::query(),
-                $user,
-                [],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(10, ['*'], 'solver_attempts_page'),
-            'publishChecks' => $this->applyScope(
-                AcademicPmcTimetablePublishCheck::query(),
-                $user,
-                ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term'],
-                ['generationRun' => ['program_id' => 'program', 'batch_id' => 'batch', 'term_id' => 'term']]
-            )->latest()->paginate(15, ['*'], 'publish_checks_page'),
-            'impactPreview' => AcademicPmcTimetableImpactRecord::query()
-                ->where('metadata->version', 'PMC OS v0.069')
-                ->when(
-                    ! $this->policy->canIgnorePmcScope($user),
-                    function (Builder $query) use ($generationRunIds) {
-                        if ($generationRunIds->isEmpty()) {
-                            $query->whereRaw('1 = 0');
-                        } else {
-                            $query->whereIn('metadata->generation_run_id', $generationRunIds->map(fn ($id) => (string) $id)->all());
-                        }
-                    }
-                )
-                ->latest()
-                ->paginate(15, ['*'], 'impact_preview_page'),
-            'generationDiagnostics' => $generationDiagnostics,
-            'surfaceKey' => $surface,
-        ];
+            $surface,
+            $filters,
+            $this->generationValidationDiagnostics($user)
+        );
     }
 
     private function plannerSurface(User $user, array $filters): array
