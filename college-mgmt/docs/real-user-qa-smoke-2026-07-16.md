@@ -575,6 +575,25 @@ Temporary fresh SQLite migrate:fresh --seed: passed
 Fresh SQLite public apply readiness: open_application_windows=1, program=PGDM, capacity_limit=500
 ```
 
+## Applicant Follow-Up Workflow Recheck
+
+Manual applicant-side follow-up submissions were exercised against the running local app after public application creation:
+
+```text
+qa-public-meta-20260716221812@example.test: POST /applicant/registration-fee saved registration_fee_receipt=QA-REG-20260716222426 and registration_fee_amount=10000 while the application was still draft.
+qa-public-meta-20260716221812@example.test: POST /applicant/documents/4 uploaded Graduation Marksheet (all semesters) as applicant document id=29, status=pending, version=1, path=applicant-documents/8/graduation-marksheet-all-semesters_v1_1784220866.pdf.
+sneha.patel@applicant.demo: POST /applicant/fees/2 submitted First Semester Fee proof as admission payment id=3, amount=140000, status=pending, transaction_reference=QA-FEE-20260716222457, proof=payment_proofs/saCKAZuOYABahKTqek0EIi2ih7FNcALB12Yfe9gU.pdf.
+```
+
+Observed behavior:
+
+```text
+Draft applicants can save registration-fee details and upload required documents.
+Submitted applicants can still manage documents until a final selected/rejected/withdrawn/enrolled state.
+Admission-fee proof remains correctly gated to shortlisted/selected applicants.
+No blocker was found in this pass.
+```
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
