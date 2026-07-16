@@ -426,6 +426,23 @@ telecaller@college.com: /admission/calling-desk, /admission/call-queue, /admissi
 priya.sharma@applicant.demo: /applicant/dashboard, /applicant/admission-operations, /applicant/checklist, /applicant/application, /applicant/documents, /applicant/fees, /applicant/status
 ```
 
+## Teacher Student Timetable Attendance Recheck
+
+Teacher/student timetable, attendance, course, result, and ownership workflow chunk:
+
+```text
+Student/teacher canonical attendance, student timetable, course content, academic summary, results, teacher dashboard/student list/scope/profile, and portal ownership: 100 tests passed, 782 assertions
+```
+
+Authenticated HTTP sweep covered 29 valid pages with HTTP 200 and no service-error/debug text:
+
+```text
+ravi@college.com: /teacher/dashboard, /teacher/timetable, /teacher/pmc-timetable, /teacher/pmc-availability, /teacher/attendance/mark, /teacher/students, /teacher/materials, /teacher/assignments, /teacher/exams, /teacher/mentor, /teacher/profile
+aarav@college.com: /student/dashboard, /student/timetable, /student/pmc-timetable, /student/attendance, /student/courses, /student/courses/2, /student/courses/2/materials, /student/courses/2/announcements, /student/academic-summary, /student/results, /student/exam-registration, /student/fees, /student/documents, /student/profile, /student/mentor, /student/pmc-course-basket, /student/pmc-elective-choices
+```
+
+The attempted `/student/courses/24` page returned HTTP 403 for `aarav@college.com`; this was the correct ownership guard because that subject was not linked from Aarav's course hub. Valid linked course pages used subject `2`.
+
 ## Final Blockers Fixed
 
 - Restored faculty load review refresh by moving shared multi-slot/consecutive-slot calculations into `TimetableSlotMathService` and delegating from `PmcTimetableFacultyReadinessService`.
