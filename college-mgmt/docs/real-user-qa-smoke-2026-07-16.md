@@ -1205,3 +1205,71 @@ npm run frontend:smoke:mobile: passed with 29 tests and 1473 assertions.
 ## Next Recommended Testing
 
 No critical module from this real-user pass remains on the immediate list. Future testing should continue one module at a time when a new feature or change is made.
+
+## 2026-07-17 Release Readiness Recheck
+
+Fresh local setup exposed one real blocker after the prior pass: seeded PMC official timetable sessions were published under the legacy BTCS/Semester 5 scope while the demo student cohort was PGDM/Semester I. That caused teacher/student timetable and attendance pages to load but miss the expected canonical class content.
+
+Fix applied:
+
+```text
+AcademicsPmcTimetableV041DemoSeeder now resolves the canonical demo timetable scope to the PGDM demo cohort, creates/updates PMC Faculty Allocation Demo under that scope, aligns the seeded group member student to the same batch/term, and publishes bridge rows with matching program/batch/term metadata.
+AcademicDeanAttentionService now merges mapped timetable-gap arrays through a base collection, avoiding the Eloquent getKey() crash on the Dean dashboard.
+ArchitectureStabilizationTest route-count guard updated to the current registered route count of 1302.
+Student timetable now uses mobile cards below the medium breakpoint instead of forcing students to read a clipped wide table.
+```
+
+Fresh setup verification:
+
+```text
+C:\tmp\php-8.5.7\php.exe artisan migrate:fresh --seed: passed.
+Seeded official canonical sessions: 3 published scheduled items, all PGDM / PGDM Batch 2026-28 / Semester I.
+Seeded bridge rows: 3 timetable_entries with pmc_generation_item_id and matching PGDM / PGDM Batch 2026-28 / Semester I scope.
+arjun.k@demo.edu: PGDM / PGDM Batch 2026-28 / Semester I.
+```
+
+Authenticated live smoke on `http://127.0.0.1:8000` passed with HTTP 200, no service-error/debug text, and expected content for:
+
+```text
+admin@college.com: /admin/dashboard
+chair@college.com: /academics/pmc/command
+chair@college.com: /academics/pmc/official-timetable, including PGDM Core Section A, Growth Analytics Elective Group 1, Decision Analytics Lab Group L1, and 2 parallel
+pmc.faculty@college.com: /teacher/timetable, including PMC Faculty Allocation Demo and Decision Analytics Lab
+pmc.faculty@college.com: /teacher/attendance/mark?date=2026-07-14, including PMC Faculty Allocation Demo and PGDM Core Section A
+arjun.k@demo.edu: /student/dashboard, /student/timetable, /student/attendance
+accounts@college.com: /accounts/dashboard
+admission.manager@college.com: /admission/dashboard
+priya.sharma@applicant.demo: /applicant/dashboard
+cmc@college.com: /cmc/dashboard
+exam@college.com: /exam-cell/dashboard
+parent@demo.edu: /parent/dashboard
+```
+
+Release gates:
+
+```text
+AcademicsPmcTimetableV092Test: 13 tests passed, 138 assertions.
+npm run test:timetable: 129 tests passed, 1035 assertions.
+TeacherTimetablePortalTest + StudentTimetableWorkflowTest + StudentTeacherAttendanceCanonicalWorkflowTest: 21 tests passed, 168 assertions.
+npm run test:admission: 102 tests passed, 1103 assertions.
+npm run test:portal: 54 tests passed, 462 assertions.
+npm run test:finance: 57 tests passed, 438 assertions.
+npm run test:production-readiness: 58 tests passed, 12517 assertions.
+npm run frontend:build: passed.
+npm run frontend:smoke: first attempt exceeded the 5-minute command timeout; rerun with a longer timeout passed with 138 tests, 4027 assertions; rerun after the student timetable mobile-card fix also passed with 138 tests, 4027 assertions.
+npm run frontend:smoke:mobile: 29 tests passed, 1474 assertions; rerun after the student timetable mobile-card fix also passed with 29 tests, 1474 assertions.
+StudentTimetableWorkflowTest after the mobile-card fix: 7 tests passed, 54 assertions.
+```
+
+Full-suite note:
+
+```text
+C:\tmp\php-8.5.7\php.exe artisan test was attempted with a 10-minute timeout and timed out locally before returning a specific failing test. Current release confidence is based on the passing chunked gates above.
+```
+
+Browser visual note:
+
+```text
+The in-app browser control plugin could not initialize in this session because its runtime failed with "Cannot redefine property: process". No screenshot-based browser audit is claimed for this pass. The live authenticated HTML smoke plus desktop/mobile frontend smoke remain the current rendered-route evidence.
+Chrome headless was used as a fallback to render authenticated HTML snapshots for PMC official timetable, teacher attendance, student timetable desktop, and student timetable mobile. This visual pass found a clipped mobile student timetable table; after the mobile-card fix, the refreshed 390px student timetable screenshot showed all subject, time, faculty, and room content without horizontal clipping.
+```

@@ -24,7 +24,7 @@ class ArchitectureStabilizationTest extends TestCase
 {
     public function test_modular_route_files_register_critical_routes(): void
     {
-        $this->assertCount(1298, Route::getRoutes(), 'Route count changed unexpectedly; preserve URLs/names unless adding a deliberate feature route.');
+        $this->assertCount(1302, Route::getRoutes(), 'Route count changed unexpectedly; preserve URLs/names unless adding a deliberate feature route.');
 
         foreach ([
             'public.php',

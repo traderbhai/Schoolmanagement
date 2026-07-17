@@ -31,7 +31,39 @@
                     <h6 class="mb-0 fw-semibold">{{ $day }}</h6>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="d-md-none p-3">
+                        <div class="vstack gap-2">
+                            @foreach($entries[$day] as $entry)
+                                <div class="border rounded-2 p-3 bg-white">
+                                    <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+                                        <div class="fw-semibold">{{ $entry->subject?->name ?? $entry->courseGroup?->subject?->name ?? 'Subject not set' }}</div>
+                                        <div class="font-monospace small text-nowrap">
+                                            {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') : 'Not set' }}
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mb-2">
+                                        {{ $entry->subject?->code ?? $entry->courseGroup?->subject?->code ?? '' }}
+                                        @if($entry->courseGroup)
+                                            <span class="ms-1">| {{ $entry->courseGroup->name }}</span>
+                                        @endif
+                                    </div>
+                                    <dl class="row small mb-0 g-2">
+                                        <dt class="col-4 text-muted fw-semibold">Time</dt>
+                                        <dd class="col-8 mb-0">
+                                            {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') : 'Not set' }}
+                                            &ndash;
+                                            {{ $entry->slot ? \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') : 'Not set' }}
+                                        </dd>
+                                        <dt class="col-4 text-muted fw-semibold">Faculty</dt>
+                                        <dd class="col-8 mb-0">{{ $entry->teacher->user->name ?? 'Teacher not assigned' }}</dd>
+                                        <dt class="col-4 text-muted fw-semibold">Room</dt>
+                                        <dd class="col-8 mb-0">{{ $entry->classroom->name ?? 'Room not assigned' }}</dd>
+                                    </dl>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-sm mb-0">
                             <thead class="bg-light">
                                 <tr>

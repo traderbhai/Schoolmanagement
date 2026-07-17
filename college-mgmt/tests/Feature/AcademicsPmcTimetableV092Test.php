@@ -180,6 +180,32 @@ class AcademicsPmcTimetableV092Test extends TestCase
         $this->assertSame(3, $officialItems->count());
         $this->assertSame(0, $officialItems->filter(fn ($item) => ! $item->operational_timetable_entry_id)->count());
         $this->assertSame(3, TimetableEntry::whereIn('pmc_generation_item_id', $officialItems->pluck('id'))->count());
+        $program = Program::where('code', 'PGDM')->firstOrFail();
+        $member = \Illuminate\Support\Facades\DB::table('academic_pmc_course_group_members')
+            ->whereIn('course_group_id', $officialItems->pluck('course_group_id'))
+            ->whereNotNull('student_id')
+            ->first();
+        $this->assertNotNull($member);
+        $student = Student::findOrFail($member->student_id);
+        $batch = Batch::findOrFail($student->batch_id);
+        $term = Term::findOrFail($student->current_term_id);
+
+        $this->assertSame($program->id, $student->program_id);
+        $this->assertSame($batch->id, $student->batch_id);
+        $this->assertSame($term->id, $student->current_term_id);
+        $this->assertSame([$program->id], $officialItems->pluck('program_id')->unique()->values()->all());
+        $this->assertSame([$batch->id], $officialItems->pluck('batch_id')->unique()->values()->all());
+        $this->assertSame([$term->id], $officialItems->pluck('term_id')->unique()->values()->all());
+        $this->assertEqualsCanonicalizing([
+            'Decision Analytics Lab',
+            'Open Elective: Growth Analytics',
+            'PMC Faculty Allocation Demo',
+        ], Subject::whereIn('id', $officialItems->pluck('subject_id'))->pluck('name')->all());
+        $this->assertSame(3, TimetableEntry::whereIn('pmc_generation_item_id', $officialItems->pluck('id'))
+            ->where('program_id', $program->id)
+            ->where('batch_id', $batch->id)
+            ->where('term_id', $term->id)
+            ->count());
         $this->assertSame(0, AcademicPmcTimetableGenerationItem::where('generation_run_id', $run->id)
             ->where('status', 'unscheduled')
             ->where('official_status', 'published')

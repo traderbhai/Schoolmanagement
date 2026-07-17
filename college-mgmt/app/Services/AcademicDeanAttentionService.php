@@ -197,7 +197,7 @@ class AcademicDeanAttentionService
             ->reject(fn (TimetableEntry $entry) => $canonicalProgramTermKeys->contains($this->programTermKey($entry->program_id, $entry->term_id)))
             ->map(fn (TimetableEntry $entry) => $this->item($entry->subject?->name ?? 'Timetable entry', ($entry->subject?->program?->code ?? 'Program') . ' timetable not published', 'medium', 'pmc', 'PMC Officer', null, route('academics.pmc.timetable-readiness'), 'Publish or fix timetable'));
 
-        return $canonicalItems
+        $canonicalGaps = $canonicalItems
             ->map(fn (AcademicPmcTimetableGenerationItem $item) => $this->item(
                 $item->subject?->name ?? $item->courseGroup?->subject?->name ?? 'PMC timetable session',
                 ($item->program?->code ?? $item->subject?->program?->code ?? $item->courseGroup?->subject?->program?->code ?? 'Program') . ' official timetable not published',
@@ -207,8 +207,10 @@ class AcademicDeanAttentionService
                 null,
                 route('academics.pmc.timetable-readiness'),
                 'Publish or fix timetable'
-            ))
-            ->merge($legacyGaps)
+            ));
+
+        return collect($canonicalGaps->all())
+            ->merge($legacyGaps->all())
             ->take(25)
             ->values();
     }

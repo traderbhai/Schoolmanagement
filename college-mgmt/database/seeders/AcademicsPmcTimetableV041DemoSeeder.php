@@ -150,12 +150,50 @@ class AcademicsPmcTimetableV041DemoSeeder extends Seeder
 
     public function seedPmcTimetableV041Signals(Department $department, User $dean, User $pmcHead, ?Program $program, ?Subject $subject, ?Student $student, ?int $termId): void
     {
-        if (! $program || ! $subject) {
+        $student = Student::whereHas('user', fn ($query) => $query->where('email', 'arjun.k@demo.edu'))->first()
+            ?: $student;
+        $program = Program::where('code', 'PGDM')->first()
+            ?: $student?->program
+            ?: $program;
+
+        if (! $program) {
             return;
         }
 
-        $batch = Batch::where('program_id', $program->id)->first();
-        $term = $termId ? Term::find($termId) : Term::where('program_id', $program->id)->orWhere('batch_id', $batch?->id)->first();
+        $batch = Batch::where('program_id', $program->id)->where('code', 'PGDM-24')->first()
+            ?: Batch::where('program_id', $program->id)->where('status', 'active')->orderBy('id')->first()
+            ?: Batch::where('program_id', $program->id)->orderBy('id')->first();
+        $term = Term::where('program_id', $program->id)
+            ->when($batch, fn ($query) => $query->where('batch_id', $batch->id))
+            ->where('term_number', 1)
+            ->first()
+            ?: Term::where('program_id', $program->id)
+                ->when($batch, fn ($query) => $query->where('batch_id', $batch->id))
+                ->where('is_current', true)
+                ->first()
+            ?: ($termId ? Term::where('id', $termId)->where('program_id', $program->id)->first() : null)
+            ?: Term::where('program_id', $program->id)->orderBy('term_number')->first();
+        $subject = Subject::updateOrCreate(
+            ['code' => 'PMC-ALLOC-101'],
+            [
+                'department_id' => $program->department_id ?? $department->id,
+                'program_id' => $program->id,
+                'term_number' => 1,
+                'name' => 'PMC Faculty Allocation Demo',
+                'credits' => 3,
+                'type' => 'theory',
+                'hours_per_week' => 3,
+                'is_active' => true,
+            ]
+        );
+        if ($student && ($student->program_id !== $program->id || $student->batch_id !== $batch?->id || $student->current_term_id !== $term?->id)) {
+            $student->forceFill([
+                'program_id' => $program->id,
+                'batch_id' => $batch?->id,
+                'current_term_id' => $term?->id,
+            ])->save();
+        }
+
         $pmcManager = User::where('email', 'pmc.manager@college.com')->first() ?: $pmcHead;
         $pmcOfficer = User::where('email', 'pmc.officer@college.com')->first() ?: $pmcHead;
         $facultyUser = $this->user('pmc.faculty@college.com', 'Prof. Aditi Sen', []);
