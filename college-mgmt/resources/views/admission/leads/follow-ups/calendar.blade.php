@@ -15,10 +15,10 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="alert alert-info border-0 shadow-sm small mb-4">
@@ -39,11 +39,11 @@
             <form method="GET" action="{{ route('admission.leads.follow-ups.calendar') }}" class="row g-2 align-items-end">
                 <div class="col-auto">
                     <label class="form-label small text-muted mb-1">Month</label>
-                    <input type="month" name="month" class="form-control form-control-sm" value="{{ $month }}">
+                    <input aria-label="Month" type="month" name="month" class="form-control form-control-sm" value="{{ $month }}">
                 </div>
                 <div class="col-auto">
                     <label class="form-label small text-muted mb-1">Counsellor</label>
-                    <select name="counsellor_id" class="form-select form-select-sm" style="min-width:180px">
+                    <select aria-label="Counsellor" name="counsellor_id" class="form-select form-select-sm" style="min-width:180px">
                         <option value="">All Counsellors</option>
                         @foreach($counsellors as $c)
                             <option value="{{ $c->id }}" {{ $counsellorId == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
@@ -150,13 +150,13 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Date / Time</th>
-                            <th>Lead</th>
-                            <th>Type</th>
-                            <th>Counsellor</th>
-                            <th>Notes</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th scope="col">Date / Time</th>
+                            <th scope="col">Lead</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Counsellor</th>
+                            <th scope="col">Notes</th>
+                            <th scope="col">Status</th>
+                            <th aria-label="Actions" scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>

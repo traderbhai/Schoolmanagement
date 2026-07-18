@@ -21,7 +21,7 @@
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -128,12 +128,12 @@
                         <table class="table table-bordered table-sm font-monospace" style="font-size: 0.85rem;">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>name</th>
-                                    <th>email</th>
-                                    <th>phone</th>
-                                    <th>program_code</th>
-                                    <th>source</th>
-                                    <th>notes</th>
+                                    <th scope="col">name</th>
+                                    <th scope="col">email</th>
+                                    <th scope="col">phone</th>
+                                    <th scope="col">program_code</th>
+                                    <th scope="col">source</th>
+                                    <th scope="col">notes</th>
                                 </tr>
                             </thead>
                             <tbody>

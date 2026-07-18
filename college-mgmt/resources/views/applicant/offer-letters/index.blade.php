@@ -17,14 +17,14 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -117,10 +117,10 @@
 
                             @if($offer->isPending())
                                 <div class="d-flex gap-2 mt-3">
-                                    <button class="btn btn-sm btn-success flex-fill" data-bs-toggle="modal" data-bs-target="#acceptModal{{ $offer->id }}">
+                                    <button type="button" class="btn btn-sm btn-success flex-fill" data-bs-toggle="modal" data-bs-target="#acceptModal{{ $offer->id }}">
                                         Accept Offer
                                     </button>
-                                    <button class="btn btn-sm btn-danger flex-fill" data-bs-toggle="modal" data-bs-target="#declineModal{{ $offer->id }}">
+                                    <button type="button" class="btn btn-sm btn-danger flex-fill" data-bs-toggle="modal" data-bs-target="#declineModal{{ $offer->id }}">
                                         Decline Offer
                                     </button>
                                 </div>
@@ -136,7 +136,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title">Confirm Acceptance</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
                                     <p>Are you sure you want to accept this offer for <strong>{{ $offer->program->name }}</strong>?</p>
@@ -159,7 +159,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title">Confirm Decline</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <form action="{{ route('applicant.offer-letters.decline', $offer) }}" method="POST">
                                     @csrf
@@ -167,7 +167,7 @@
                                         <p>Are you sure you want to decline this offer for <strong>{{ $offer->program->name }}</strong>?</p>
                                         <div class="mb-3">
                                             <label class="form-label">Reason (Optional)</label>
-                                            <textarea name="reason" class="form-control" rows="3" placeholder="Please tell us why you're declining..."></textarea>
+                                            <textarea aria-label="Offer decline reason" name="reason" class="form-control" rows="3" placeholder="Please tell us why you're declining..."></textarea>
                                         </div>
                                         <p class="text-muted small">Once declined, you cannot revert this action.</p>
                                     </div>

@@ -9,7 +9,7 @@
         <a href="{{ route('academic.transcripts.index') }}" class="btn btn-sm btn-outline-secondary me-2">
             <i class="bi bi-arrow-left me-1"></i>Back
         </a>
-        <a href="{{ route('academic.transcripts.pdf', $student) }}" class="btn btn-sm btn-danger" target="_blank">
+        <a rel="noopener" href="{{ route('academic.transcripts.pdf', $student) }}" class="btn btn-sm btn-danger" target="_blank">
             <i class="bi bi-file-pdf me-1"></i>Download PDF
         </a>
     </div>
@@ -60,12 +60,12 @@
             <table class="table table-sm mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Subject</th>
-                        <th>Credits</th>
-                        <th>Marks</th>
-                        <th>%</th>
-                        <th>Grade</th>
-                        <th>Result</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Credits</th>
+                        <th scope="col">Marks</th>
+                        <th scope="col">%</th>
+                        <th scope="col">Grade</th>
+                        <th scope="col">Result</th>
                     </tr>
                 </thead>
                 <tbody>

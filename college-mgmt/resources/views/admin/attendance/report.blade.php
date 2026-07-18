@@ -19,7 +19,7 @@
         <form class="row g-3 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label">Student <span class="text-danger">*</span></label>
-                <select name="student_id" class="form-select form-select-sm">
+                <select aria-label="Student" name="student_id" class="form-select form-select-sm">
                     <option value="">Select student…</option>
                     @foreach($students as $s)
                         <option value="{{ $s->id }}" @selected(request('student_id')==$s->id)>{{ $s->user->name }} ({{ $s->enrollment_number }})</option>
@@ -28,7 +28,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Semester <span class="text-danger">*</span></label>
-                <select name="semester_id" class="form-select form-select-sm">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm">
                     <option value="">Select semester…</option>
                     @foreach($semesters as $s)
                         <option value="{{ $s->id }}" @selected(request('semester_id')==$s->id)>{{ $s->name }}</option>
@@ -122,7 +122,7 @@
     <div class="card-body">
         <div class="empty-state py-4">
             <div class="empty-icon"><i class="bi bi-search"></i></div>
-            <div class="mt-2 fw-semibold">No records found</div>
+            <div class="mt-2 fw-semibold">No attendance records for this selection</div>
             <div class="text-muted" style="font-size:.85rem">No attendance records found for the selected criteria.</div>
         </div>
     </div>

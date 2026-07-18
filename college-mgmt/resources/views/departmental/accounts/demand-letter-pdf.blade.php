@@ -65,8 +65,8 @@
     <table class="fee">
         <thead>
             <tr>
-                <th>Description</th>
-                <th style="text-align:right">Amount (₹)</th>
+                <th scope="col">Description</th>
+                <th scope="col" style="text-align:right">Amount (₹)</th>
             </tr>
         </thead>
         <tbody>

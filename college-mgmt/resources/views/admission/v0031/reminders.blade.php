@@ -32,11 +32,11 @@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-3"><label class="form-label small mb-1">Status</label><select name="status" class="form-select form-select-sm"><option value="">All Status</option>@foreach(['scheduled','queued','paused','escalated'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
-            <div class="col-md-3"><label class="form-label small mb-1">Reason</label><input name="reason" value="{{ request('reason') }}" class="form-control form-control-sm" placeholder="document_blocker"></div>
-            <div class="col-md-2"><label class="form-label small mb-1">Due Date</label><input type="date" name="date" value="{{ request('date') }}" class="form-control form-control-sm"></div>
-            <div class="col-md-2"><label class="form-label small mb-1">Rows</label><select name="per_page" class="form-select form-select-sm">@foreach([10,25,50,100] as $size)<option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>@endforeach</select></div>
-            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary btn-sm flex-fill">Apply</button><a href="{{ route('admission.reminders.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Status</label><select aria-label="Status" name="status" class="form-select form-select-sm"><option value="">All Status</option>@foreach(['scheduled','queued','paused','escalated'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Reason</label><input aria-label="document_blocker" name="reason" value="{{ request('reason') }}" class="form-control form-control-sm" placeholder="document_blocker"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Due Date</label><input aria-label="Date" type="date" name="date" value="{{ request('date') }}" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Rows</label><select aria-label="Per Page" name="per_page" class="form-select form-select-sm">@foreach([10,25,50,100] as $size)<option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>@endforeach</select></div>
+            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary btn-sm flex-fill">Apply filters</button><a href="{{ route('admission.reminders.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
         </form>
         @if(request()->hasAny(['status', 'reason', 'date']))
             <div class="small text-muted mt-2">
@@ -55,7 +55,7 @@
             <div class="card-header bg-transparent fw-bold">Reminder Queue</div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Target</th><th>Reason</th><th>Channel</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Target</th><th scope="col">Reason</th><th scope="col">Channel</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
                     <tbody>
                     @foreach($reminders as $reminder)
                         @php
@@ -88,9 +88,9 @@
                             <td>{{ optional($reminder->due_at)->format('d M Y H:i') ?? 'Due date not set' }}</td>
                             <td><span class="badge bg-secondary">{{ ucfirst($reminder->status) }}</span></td>
                             <td class="d-flex gap-1 flex-wrap">
-                                <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}" onsubmit="return confirm('Queue this reminder through the communication hub?')">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
-                                <form method="POST" action="{{ route('admission.reminders.complete', $reminder) }}" onsubmit="return confirm('Mark this reminder as completed?')">@csrf<button class="btn btn-sm btn-outline-primary">Done</button></form>
-                                <form method="POST" action="{{ route('admission.reminders.pause', $reminder) }}" onsubmit="return confirm('Pause this reminder cadence for this record?')">@csrf<button class="btn btn-sm btn-outline-warning">Pause</button></form>
+                <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}" onsubmit="return confirm('Queue this reminder through the communication hub? Confirm recipient, channel, approved template, consent state, and provider readiness before sending.')">@csrf<button class="btn btn-sm btn-success">Send reminder</button></form>
+                                <form method="POST" action="{{ route('admission.reminders.complete', $reminder) }}" onsubmit="return confirm('Mark this reminder as completed after the student or lead action has been recorded? Confirm the follow-up outcome, next action, and audit trail before closing it.')">@csrf<button class="btn btn-sm btn-outline-secondary">Done</button></form>
+                                <form method="POST" action="{{ route('admission.reminders.pause', $reminder) }}" onsubmit="return confirm('Pause this reminder cadence for this record? Confirm reason, next follow-up owner, delayed communication impact, and applicant/lead risk before pausing.')">@csrf<button class="btn btn-sm btn-link text-warning text-decoration-none px-1">Pause</button></form>
                             </td>
                         </tr>
                     @endforeach
@@ -120,16 +120,16 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent fw-bold">Create Cadence Rule</div>
             <div class="card-body">
-                <form method="POST" action="{{ route('admission.reminders.cadence') }}" class="vstack gap-2" onsubmit="return confirm('Create this reminder cadence rule for future matching records?')">
+                <form method="POST" action="{{ route('admission.reminders.cadence') }}" class="vstack gap-2" onsubmit="return confirm('Create this reminder cadence rule for future matching records? Confirm target type, reason, channel, template, timing, and duplicate-send controls before activation.')">
                     @csrf
-                    <input class="form-control form-control-sm" name="name" placeholder="Rule name" required>
-                    <select class="form-select form-select-sm" name="target_type"><option value="lead">Lead</option><option value="applicant">Applicant</option></select>
-                    <input class="form-control form-control-sm" name="reason" value="no_response_follow_up" required>
-                    <select class="form-select form-select-sm" name="channel"><option value="email">Email</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="internal">Internal</option></select>
-                    <select class="form-select form-select-sm" name="template_id"><option value="">Template</option>@foreach($templates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach</select>
+                    <input aria-label="Rule name" class="form-control form-control-sm" name="name" placeholder="Rule name" required>
+                    <select aria-label="Target Type" class="form-select form-select-sm" name="target_type"><option value="lead">Lead</option><option value="applicant">Applicant</option></select>
+                    <input aria-label="Reason" class="form-control form-control-sm" name="reason" value="no_response_follow_up" required>
+                    <select aria-label="Channel" class="form-select form-select-sm" name="channel"><option value="email">Email</option><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="internal">Internal</option></select>
+                    <select aria-label="Template" class="form-select form-select-sm" name="template_id"><option value="">Template</option>@foreach($templates as $template)<option value="{{ $template->id }}">{{ $template->name }}</option>@endforeach</select>
                     <div class="row g-2">
-                        <div class="col"><label class="form-label small mb-1">First delay hours</label><input class="form-control form-control-sm" name="initial_delay_hours" type="number" value="24"></div>
-                        <div class="col"><label class="form-label small mb-1">Repeat interval hours</label><input class="form-control form-control-sm" name="interval_hours" type="number" value="24"></div>
+                        <div class="col"><label class="form-label small mb-1">First delay hours</label><input aria-label="Initial Delay Hours" class="form-control form-control-sm" name="initial_delay_hours" type="number" value="24"></div>
+                        <div class="col"><label class="form-label small mb-1">Repeat interval hours</label><input aria-label="Interval Hours" class="form-control form-control-sm" name="interval_hours" type="number" value="24"></div>
                     </div>
                     <button class="btn btn-primary btn-sm">Save Cadence</button>
                 </form>

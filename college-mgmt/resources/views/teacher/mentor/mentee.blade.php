@@ -103,10 +103,10 @@
                     <form method="POST" action="{{ route('teacher.mentor.message', $student) }}">
                         @csrf
                         <div class="d-flex gap-2">
-                            <textarea name="message" rows="2"
+                            <textarea aria-label="Mentee message" name="message" rows="2"
                                       class="form-control @error('message') is-invalid @enderror"
                                       placeholder="Write a message…" required>{{ old('message') }}</textarea>
-                            <button type="submit" class="btn btn-primary px-3 align-self-end">
+                    <button type="submit" class="btn btn-primary px-3 align-self-end" aria-label="Send mentor note">
                                 <i class="bi bi-send"></i>
                             </button>
                         </div>
@@ -181,7 +181,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Date <span class="text-danger">*</span></label>
-                            <input type="date" name="meeting_date" value="{{ old('meeting_date') }}"
+                            <input aria-label="Meeting Date" type="date" name="meeting_date" value="{{ old('meeting_date') }}"
                                    class="form-control form-control-sm @error('meeting_date') is-invalid @enderror"
                                    required>
                             @error('meeting_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -189,7 +189,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Topic <span class="text-danger">*</span></label>
-                            <input type="text" name="topic" value="{{ old('topic') }}"
+                            <input aria-label="Meeting topic" type="text" name="topic" value="{{ old('topic') }}"
                                    class="form-control form-control-sm @error('topic') is-invalid @enderror"
                                    placeholder="e.g. Academic progress review" required>
                             @error('topic')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -197,7 +197,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Notes</label>
-                            <textarea name="notes" rows="2"
+                            <textarea aria-label="Meeting agenda notes" name="notes" rows="2"
                                       class="form-control form-control-sm"
                                       placeholder="Agenda or discussion points (optional)">{{ old('notes') }}</textarea>
                         </div>
@@ -227,9 +227,9 @@
                         <table class="table table-sm mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Subject</th>
-                                    <th class="text-center">Present/Total</th>
-                                    <th class="text-center">%</th>
+                                    <th scope="col">Subject</th>
+                                    <th scope="col" class="text-center">Present/Total</th>
+                                    <th scope="col" class="text-center">%</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -265,10 +265,10 @@
                         <table class="table table-sm mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Subject</th>
-                                    <th>Exam</th>
-                                    <th class="text-center">Marks</th>
-                                    <th class="text-center">%</th>
+                                    <th scope="col">Subject</th>
+                                    <th scope="col">Exam</th>
+                                    <th scope="col" class="text-center">Marks</th>
+                                    <th scope="col" class="text-center">%</th>
                                 </tr>
                             </thead>
                             <tbody>

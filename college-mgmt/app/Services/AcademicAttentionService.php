@@ -59,7 +59,7 @@ class AcademicAttentionService
 
     public function queue(User $user, string $queueKey): array
     {
-        return collect($this->queuesFor($user))->firstWhere('key', $queueKey)
+        return collect($this->queuesFor($user, 'command'))->firstWhere('key', $queueKey)
             ?? $this->emptyQueue($queueKey, 'Unknown Queue', 'No queue definition exists for this key.', 'governance');
     }
 

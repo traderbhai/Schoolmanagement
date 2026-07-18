@@ -71,6 +71,14 @@ class PortalFrontendBetaReadinessTest extends TestCase
         }
     }
 
+    public function test_applicant_document_removal_explains_readiness_impact(): void
+    {
+        $contents = file_get_contents(resource_path('views/applicant/documents/index.blade.php'));
+
+        $this->assertStringContainsString('Confirm you will upload the correct file again before document verification or admission readiness checks.', $contents);
+        $this->assertStringNotContainsString("confirm('Remove this document?')", $contents);
+    }
+
     public function test_portal_dashboards_expose_real_action_links_for_daily_work(): void
     {
         $student = User::where('email', 'arjun.k@demo.edu')->firstOrFail();
@@ -483,6 +491,36 @@ class PortalFrontendBetaReadinessTest extends TestCase
                 "{$route} did not expose an operational list or empty state."
             );
         }
+    }
+
+    public function test_student_priority_pages_include_mobile_card_layouts(): void
+    {
+        $student = User::where('email', 'arjun.k@demo.edu')->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('d-md-none p-3', false)
+            ->assertSee('Full timetable', false);
+
+        $this->actingAs($student)
+            ->get(route('student.fees'))
+            ->assertOk()
+            ->assertSee('d-md-none', false)
+            ->assertSee('vstack gap-2 p-3', false)
+            ->assertSee('Fee Structures');
+
+        $this->actingAs($student)
+            ->get(route('student.documents.index'))
+            ->assertOk()
+            ->assertSee('flex-column flex-md-row', false)
+            ->assertSee('Once submitted, the request status and download action will appear here.');
+
+        $this->actingAs($student)
+            ->get(route('student.courses.index'))
+            ->assertOk()
+            ->assertSee('d-grid d-sm-flex', false)
+            ->assertSee('Course Hub');
     }
 
     public function test_student_document_and_payment_empty_states_explain_next_actions(): void

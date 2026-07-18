@@ -4,11 +4,11 @@
         <table class="table table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Run</th>
-                    <th>Strategy</th>
-                    <th>Scheduled</th>
-                    <th>Conflicts</th>
-                    <th>Score</th>
+                    <th scope="col">Run</th>
+                    <th scope="col">Strategy</th>
+                    <th scope="col">Scheduled</th>
+                    <th scope="col">Conflicts</th>
+                    <th scope="col">Score</th>
                 </tr>
             </thead>
             <tbody>
@@ -27,16 +27,16 @@
                             <div class="d-flex flex-wrap gap-1 mt-1">
                                 <form method="POST" action="{{ route('academics.pmc.timetable-generator.validate', $run) }}">
                                     @csrf
-                                    <button class="btn btn-xs btn-outline-secondary py-0 px-1">Validate</button>
+                                    <button type="submit" class="btn btn-xs btn-outline-secondary py-0 px-1">Validate run</button>
                                 </form>
                                 <form method="POST" action="{{ route('academics.pmc.timetable-generator.impact-preview', $run) }}">
                                     @csrf
-                                    <button class="btn btn-xs btn-outline-info py-0 px-1">Impact</button>
+                                    <button type="submit" class="btn btn-xs btn-outline-info py-0 px-1">Preview impact</button>
                                 </form>
-                                <form method="POST" action="{{ route('academics.pmc.timetable-generator.publish', $run) }}">
+                                <form method="POST" action="{{ route('academics.pmc.timetable-generator.publish', $run) }}" onsubmit="return confirm('Publish this canonical timetable run? Confirm readiness checks, unscheduled sessions, hard conflicts, impact preview, faculty acknowledgement, room readiness, and compatibility bridge sync before making it official.')">
                                     @csrf
                                     <input type="hidden" name="decision_reason" value="Published from PMC generator">
-                                    <button class="btn btn-xs btn-outline-primary py-0 px-1">Publish</button>
+                                    <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-1">Publish canonical run</button>
                                 </form>
                             </div>
                         </td>
@@ -57,12 +57,12 @@
             <table class="table table-sm mb-0">
                 <thead>
                     <tr>
-                        <th>Group</th>
-                        <th>Type</th>
-                        <th>Required</th>
-                        <th>Scheduled</th>
-                        <th>Unscheduled</th>
-                        <th>Status</th>
+                        <th scope="col">Group</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Required</th>
+                        <th scope="col">Scheduled</th>
+                        <th scope="col">Unscheduled</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,14 +94,14 @@
         <table class="table table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Group</th>
-                    <th>Session</th>
-                    <th>Faculty</th>
-                    <th>Room</th>
-                    <th>Day/Slot</th>
-                    <th>Solver Reason</th>
-                    <th>Manual Move</th>
-                    <th>Status</th>
+                    <th scope="col">Group</th>
+                    <th scope="col">Session</th>
+                    <th scope="col">Faculty</th>
+                    <th scope="col">Room</th>
+                    <th scope="col">Day/Slot</th>
+                    <th scope="col">Solver Reason</th>
+                    <th scope="col">Manual Move</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -142,7 +142,7 @@
                                             @csrf
                                             <input type="hidden" name="alternative_index" value="{{ $altIndex }}">
                                             <input type="hidden" name="decision_note" value="Applied solver alternative from generator table">
-                                            <button class="btn btn-xs btn-outline-primary py-0 px-1">Apply D{{ $alt['day'] ?? '-' }}/{{ $alt['slot_name'] ?? 'slot' }}</button>
+                                            <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-1">Apply alternative D{{ $alt['day'] ?? '-' }}/{{ $alt['slot_name'] ?? 'slot' }}</button>
                                         </form>
                                     @endforeach
                                 </div>
@@ -168,7 +168,7 @@
                                         @endforeach
                                     </select>
                                     <input type="hidden" name="decision_note" value="Manual move from generator table">
-                                    <button class="btn btn-xs btn-outline-secondary py-0 px-1">Move</button>
+                                    <button type="submit" class="btn btn-xs btn-outline-secondary py-0 px-1">Move canonical session</button>
                                 </form>
                                 <div class="small text-muted mt-1">Validates conflicts before saving; Dean/Admin override remains backend-controlled.</div>
                             @else
@@ -191,10 +191,10 @@
             <table class="table table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>Impact</th>
-                        <th>Affected</th>
-                        <th>Severity</th>
-                        <th>Source</th>
+                        <th scope="col">Impact</th>
+                        <th scope="col">Affected</th>
+                        <th scope="col">Severity</th>
+                        <th scope="col">Source</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -225,9 +225,9 @@
             <table class="table table-sm mb-0">
                 <thead>
                     <tr>
-                        <th>Check</th>
-                        <th>Status</th>
-                        <th>Required Role</th>
+                        <th scope="col">Check</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Required Role</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -13,7 +13,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="card border-0 shadow-sm mb-4">
@@ -43,16 +43,46 @@
     </div>
     @else
     <div class="card border-0 shadow-sm">
-        <div class="table-responsive">
+        <div class="d-md-none">
+            <div class="vstack gap-2 p-3">
+                @foreach($requests as $r)
+                @php
+                    $statusClasses = [
+                        'pending' => 'bg-warning text-dark',
+                        'approved' => 'bg-info',
+                        'ready' => 'bg-success',
+                        'rejected' => 'bg-danger',
+                    ];
+                @endphp
+                <div class="border rounded-2 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="fw-semibold">{{ \App\Models\DocumentRequest::typeLabel($r->document_type) }}</div>
+                        <span class="badge {{ $statusClasses[$r->status] ?? 'bg-secondary' }}">{{ ucfirst($r->status === 'approved' ? 'processing' : $r->status) }}</span>
+                    </div>
+                    <div class="small text-muted mb-1">Requested {{ $r->created_at->format('d M Y') }}</div>
+                    <div class="small mb-2">{{ $r->purpose ?: 'Purpose not recorded' }}</div>
+                    @if($r->notes)
+                        <div class="small text-muted mb-2">{{ $r->notes }}</div>
+                    @endif
+                    @if($r->status === 'ready' && $r->output_path)
+                        <a href="{{ route('student.documents.download', $r) }}" class="btn btn-sm btn-outline-success w-100">Download</a>
+                    @else
+                        <div class="small text-muted">Download will appear when the document is ready.</div>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Document Type</th>
-                        <th>Purpose</th>
-                        <th>Requested</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                        <th class="text-end">Action</th>
+                        <th scope="col">Document Type</th>
+                        <th scope="col">Purpose</th>
+                        <th scope="col">Requested</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Notes</th>
+                        <th scope="col" class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody>

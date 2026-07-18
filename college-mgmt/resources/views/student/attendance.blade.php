@@ -15,7 +15,7 @@
         <form method="GET" action="{{ route('student.attendance') }}" class="row g-2 align-items-end">
             <div class="col-auto">
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
                     @foreach($semesters as $sem)
                         <option value="{{ $sem->id }}" @selected($sem->id == $semesterId)>
                             {{ $sem->name }}

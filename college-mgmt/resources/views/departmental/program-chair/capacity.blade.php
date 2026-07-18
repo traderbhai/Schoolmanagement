@@ -95,14 +95,14 @@
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th>Day/Slot</th>
-                                <th>Subject</th>
-                                <th>Batch</th>
-                                <th>Size</th>
-                                <th>Room</th>
-                                <th>Capacity</th>
-                                <th>Shortage</th>
-                                <th>Suggested Rooms</th>
+                                <th scope="col">Day/Slot</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Batch</th>
+                                <th scope="col">Size</th>
+                                <th scope="col">Room</th>
+                                <th scope="col">Capacity</th>
+                                <th scope="col">Shortage</th>
+                                <th scope="col">Suggested Rooms</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -151,14 +151,14 @@
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th>Room</th>
-                                <th>Type</th>
-                                <th>Capacity</th>
-                                <th>Batches</th>
-                                <th>Max Batch</th>
-                                <th>Max Util.</th>
-                                <th>Avg Util.</th>
-                                <th>Status</th>
+                                <th scope="col">Room</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Capacity</th>
+                                <th scope="col">Batches</th>
+                                <th scope="col">Max Batch</th>
+                                <th scope="col">Max Util.</th>
+                                <th scope="col">Avg Util.</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>

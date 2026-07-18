@@ -8,7 +8,7 @@
             <div class="text-muted">Configure reusable roles, teams, and reporting lines for any department.</div>
         </div>
         <form method="GET" class="d-flex gap-2">
-            <select name="department_id" class="form-select" onchange="this.form.submit()">
+            <select aria-label="Department" name="department_id" class="form-select" onchange="this.form.submit()">
                 @foreach($departments as $dept)
                     <option value="{{ $dept->id }}" @selected($department?->id === $dept->id)>{{ $dept->name }}</option>
                 @endforeach
@@ -28,16 +28,16 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Role Name</label>
-                        <input name="name" class="form-control" placeholder="Admission Director" required>
+                        <input aria-label="Admission Director" name="name" class="form-control" placeholder="Admission Director" required>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-7">
                             <label class="form-label">Code</label>
-                            <input name="code" class="form-control" placeholder="admission_director">
+                            <input aria-label="admission_director" name="code" class="form-control" placeholder="admission_director">
                         </div>
                         <div class="col-5">
                             <label class="form-label">Level</label>
-                            <input name="level" type="number" min="1" class="form-control" value="50" required>
+                            <input aria-label="Level" name="level" type="number" min="1" class="form-control" value="50" required>
                         </div>
                     </div>
                     <div class="form-check mb-2">
@@ -54,7 +54,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Permissions</label>
-                        <select name="permissions[]" class="form-select" multiple>
+                        <select aria-label="Permissions" name="permissions[]" class="form-select" multiple>
                             @foreach([
                                 'manage_department_settings',
                                 'configure_department',
@@ -88,11 +88,11 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Team Name</label>
-                        <input name="name" class="form-control" placeholder="North Region Team" required>
+                        <input aria-label="North Region Team" name="name" class="form-control" placeholder="North Region Team" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Team Type</label>
-                        <select name="type" class="form-select" required>
+                        <select aria-label="Type" name="type" class="form-select" required>
                             @foreach(['custom', 'region', 'program', 'source', 'campus', 'function'] as $type)
                                 <option value="{{ $type }}">{{ ucfirst($type) }}</option>
                             @endforeach
@@ -100,7 +100,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Parent Team</label>
-                        <select name="parent_id" class="form-select">
+                        <select aria-label="Parent" name="parent_id" class="form-select">
                             <option value="">None</option>
                             @foreach($teams as $team)
                                 <option value="{{ $team->id }}">{{ $team->name }}</option>
@@ -120,7 +120,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">User</label>
-                        <select name="user_id" class="form-select" required>
+                        <select aria-label="User" name="user_id" class="form-select" required>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }} - {{ $user->email }}</option>
                             @endforeach
@@ -128,7 +128,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Role Level</label>
-                        <select name="department_role_id" class="form-select" required>
+                        <select aria-label="Department Role" name="department_role_id" class="form-select" required>
                             @foreach($roles as $role)
                                 <option value="{{ $role->id }}">{{ $role->name }} (L{{ $role->level }})</option>
                             @endforeach
@@ -136,7 +136,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Team</label>
-                        <select name="department_team_id" class="form-select">
+                        <select aria-label="Department Team" name="department_team_id" class="form-select">
                             <option value="">No team</option>
                             @foreach($teams as $team)
                                 <option value="{{ $team->id }}">{{ $team->name }}</option>
@@ -145,7 +145,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Reports To</label>
-                        <select name="reports_to_member_id" class="form-select">
+                        <select aria-label="Reports To Member" name="reports_to_member_id" class="form-select">
                             <option value="">Top-level</option>
                             @foreach($members as $member)
                                 <option value="{{ $member->id }}">{{ $member->user?->name }} - {{ $member->role?->name }}</option>
@@ -164,7 +164,7 @@
                 <div class="card-header fw-semibold">Configured Roles</div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Level</th><th>Role</th><th>Members</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Level</th><th scope="col">Role</th><th scope="col">Members</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($roles as $role)
                                 <tr>
@@ -196,7 +196,7 @@
                 <div class="card-header fw-semibold">Configured Teams</div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Team</th><th>Type</th><th>Parent</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Team</th><th scope="col">Type</th><th scope="col">Parent</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($teams as $team)
                                 <tr>
@@ -224,7 +224,7 @@
                 <div class="card-header fw-semibold">Reporting Structure</div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>User</th><th>Role</th><th>Reports To</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col">Reports To</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($members as $member)
                                 <tr>

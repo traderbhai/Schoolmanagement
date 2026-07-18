@@ -81,7 +81,7 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Superior Role</label>
-                        <select name="parent_role" class="form-select form-select-sm" required>
+                        <select aria-label="Parent Role" name="parent_role" class="form-select form-select-sm" required>
                             <option value="">Select role...</option>
                             @foreach($allRoles as $key => $label)
                             <option value="{{ $key }}">{{ $label }}</option>
@@ -90,7 +90,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Subordinate Role</label>
-                        <select name="child_role" class="form-select form-select-sm" required>
+                        <select aria-label="Child Role" name="child_role" class="form-select form-select-sm" required>
                             <option value="">Select role...</option>
                             @foreach($allRoles as $key => $label)
                             <option value="{{ $key }}">{{ $label }}</option>
@@ -123,11 +123,11 @@
                 <table class="table table-hover align-middle mb-0 small">
                     <thead class="table-light">
                         <tr>
-                            <th>Superior Role</th>
-                            <th>Subordinate Role</th>
-                            <th class="text-center">Summary View</th>
-                            <th class="text-center">Full Access</th>
-                            <th></th>
+                            <th scope="col">Superior Role</th>
+                            <th scope="col">Subordinate Role</th>
+                            <th scope="col" class="text-center">Summary View</th>
+                            <th scope="col" class="text-center">Full Access</th>
+                            <th aria-label="Actions" scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,7 +144,9 @@
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="can_view_full" value="{{ (int)$line->can_view_full }}">
                                     <button type="submit" name="can_view_summary" value="{{ $line->can_view_summary ? 0 : 1 }}"
-                                        class="btn btn-xs border-0 bg-transparent p-0">
+                                        class="btn btn-xs border-0 bg-transparent p-0"
+                                        aria-label="{{ $line->can_view_summary ? 'Disable' : 'Enable' }} summary dashboard visibility for {{ $roleLabels[$line->parent_role] ?? $line->parent_role }} over {{ $roleLabels[$line->child_role] ?? $line->child_role }}"
+                                        onclick="return confirm('Update summary dashboard visibility for this reporting line? This changes what superior roles can see from subordinate portals.')">
                                         <i class="bi bi-toggle-{{ $line->can_view_summary ? 'on text-success' : 'off text-muted' }} fs-5"></i>
                                     </button>
                                 </form>
@@ -154,7 +156,9 @@
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="can_view_summary" value="{{ (int)$line->can_view_summary }}">
                                     <button type="submit" name="can_view_full" value="{{ $line->can_view_full ? 0 : 1 }}"
-                                        class="btn btn-xs border-0 bg-transparent p-0">
+                                        class="btn btn-xs border-0 bg-transparent p-0"
+                                        aria-label="{{ $line->can_view_full ? 'Disable' : 'Enable' }} full portal access for {{ $roleLabels[$line->parent_role] ?? $line->parent_role }} over {{ $roleLabels[$line->child_role] ?? $line->child_role }}"
+                                        onclick="return confirm('Update full portal access for this reporting line? This changes whether superior roles can open subordinate portal pages.')">
                                         <i class="bi bi-toggle-{{ $line->can_view_full ? 'on text-success' : 'off text-muted' }} fs-5"></i>
                                     </button>
                                 </form>
@@ -163,7 +167,8 @@
                                 <form method="POST" action="{{ route('admin.org-hierarchy.destroy', $line) }}">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-xs btn-outline-danger border-0 py-0"
-                                        onclick="return confirm('Remove this reporting line?')">
+                                        aria-label="Remove reporting line between {{ $roleLabels[$line->parent_role] ?? $line->parent_role }} and {{ $roleLabels[$line->child_role] ?? $line->child_role }}"
+                                        onclick="return confirm('Remove this reporting line between {{ addslashes($roleLabels[$line->parent_role] ?? $line->parent_role) }} and {{ addslashes($roleLabels[$line->child_role] ?? $line->child_role) }}? This immediately changes dashboard visibility and full portal access for affected roles.')">
                                         <i class="bi bi-trash3 small"></i>
                                     </button>
                                 </form>

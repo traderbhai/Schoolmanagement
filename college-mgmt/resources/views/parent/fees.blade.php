@@ -61,12 +61,12 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Term</th>
-                        <th>Due Date</th>
-                        <th>Demand</th>
-                        <th>Penalty</th>
-                        <th>Total Open</th>
-                        <th>Status</th>
+                        <th scope="col">Term</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Demand</th>
+                        <th scope="col">Penalty</th>
+                        <th scope="col">Total Open</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -110,11 +110,11 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Month</th>
-                        <th>Room</th>
-                        <th>Due Date</th>
-                        <th>Amount</th>
-                        <th>Status</th>
+                        <th scope="col">Month</th>
+                        <th scope="col">Room</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,11 +148,11 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Receipt No.</th>
-                        <th>Fee Type</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                        <th>Status</th>
+                        <th scope="col">Receipt No.</th>
+                        <th scope="col">Fee Type</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

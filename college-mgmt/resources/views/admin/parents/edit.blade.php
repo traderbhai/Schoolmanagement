@@ -21,12 +21,12 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $parent->user->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $parent->user->name) }}" required>
                     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $parent->user->email) }}" required>
+                    <input aria-label="Email" type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $parent->user->email) }}" required>
                     @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             </div>
@@ -35,7 +35,7 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Relation <span class="text-danger">*</span></label>
-                    <select name="relation" class="form-select" required>
+                    <select aria-label="Relation" name="relation" class="form-select" required>
                         @foreach(['father','mother','guardian','parent'] as $rel)
                         <option value="{{ $rel }}" @selected(old('relation', $parent->relation) == $rel)>{{ ucfirst($rel) }}</option>
                         @endforeach
@@ -43,19 +43,19 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Phone</label>
-                    <input type="text" name="phone" class="form-control" value="{{ old('phone', $parent->phone) }}">
+                    <input aria-label="Phone" type="text" name="phone" class="form-control" value="{{ old('phone', $parent->phone) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Occupation</label>
-                    <input type="text" name="occupation" class="form-control" value="{{ old('occupation', $parent->occupation) }}">
+                    <input aria-label="Occupation" type="text" name="occupation" class="form-control" value="{{ old('occupation', $parent->occupation) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Annual Income</label>
-                    <input type="text" name="annual_income" class="form-control" value="{{ old('annual_income', $parent->annual_income) }}">
+                    <input aria-label="Annual Income" type="text" name="annual_income" class="form-control" value="{{ old('annual_income', $parent->annual_income) }}">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Address</label>
-                    <textarea name="address" class="form-control" rows="2">{{ old('address', $parent->address) }}</textarea>
+                    <textarea aria-label="Address" name="address" class="form-control" rows="2">{{ old('address', $parent->address) }}</textarea>
                 </div>
             </div>
 
@@ -64,7 +64,7 @@
                 @foreach($students as $student)
                 <div class="col-md-6">
                     <div class="form-check">
-                        <input type="checkbox" name="student_ids[]" value="{{ $student->id }}"
+                        <input aria-label="Link student {{ $student->user->name }} to parent" type="checkbox" name="student_ids[]" value="{{ $student->id }}"
                             class="form-check-input" id="student_{{ $student->id }}"
                             @checked(in_array($student->id, old('student_ids', $linkedIds)))>
                         <label class="form-check-label" for="student_{{ $student->id }}">
@@ -80,7 +80,7 @@
             </div>
 
             <div class="d-flex gap-2 pt-2 border-top">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Update parent</button>
                 <a href="{{ route('admin.parents.index') }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>

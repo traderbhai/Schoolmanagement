@@ -35,11 +35,11 @@
         <form method="GET" action="{{ route('admin.notices.index') }}" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small text-muted mb-1">Search notices</label>
-                <input type="search" name="search" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Title or notice body">
+                <input aria-label="Title or notice body" type="search" name="search" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Title or notice body">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Audience</label>
-                <select name="audience" class="form-select form-select-sm">
+                <select aria-label="Audience" name="audience" class="form-select form-select-sm">
                     <option value="">All audiences</option>
                     @foreach(['all' => 'All users', 'students' => 'Students / parents', 'teachers' => 'Teachers', 'admin' => 'Admin / staff'] as $value => $label)
                         <option value="{{ $value }}" @selected(($filters['audience'] ?? '') === $value)>{{ $label }}</option>
@@ -48,7 +48,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All statuses</option>
                     @foreach(['active' => 'Active now', 'published' => 'Published', 'draft' => 'Draft', 'scheduled' => 'Scheduled', 'expired' => 'Expired'] as $value => $label)
                         <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
@@ -56,7 +56,7 @@
                 </select>
             </div>
             <div class="col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply filters</button>
                 <a href="{{ route('admin.notices.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
             </div>
         </form>
@@ -78,13 +78,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Title</th>
-                    <th>Audience</th>
-                    <th>Publish Date</th>
-                    <th>Expiry</th>
-                    <th>Posted By</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Audience</th>
+                    <th scope="col">Publish Date</th>
+                    <th scope="col">Expiry</th>
+                    <th scope="col">Posted By</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>

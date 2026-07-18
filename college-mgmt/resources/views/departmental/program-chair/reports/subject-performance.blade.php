@@ -11,7 +11,7 @@
             <form method="GET" action="{{ route('chair.reports.subject-performance') }}" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Term</label>
-                    <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Term" name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">— All Terms —</option>
                         @foreach($terms as $term)
                             <option value="{{ $term->id }}" {{ $selectedTerm?->id == $term->id ? 'selected' : '' }}>

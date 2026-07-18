@@ -28,23 +28,23 @@
                 @csrf
                 <div class="card-header fw-semibold">Submit lead</div>
                 <div class="card-body vstack gap-2">
-                    <input class="form-control form-control-sm" name="name" placeholder="Candidate name" required>
-                    <input class="form-control form-control-sm" name="email" placeholder="Email">
-                    <input class="form-control form-control-sm" name="phone" placeholder="Phone">
-                    <select class="form-select form-select-sm" name="program_id" required>
+                    <input aria-label="Candidate name" class="form-control form-control-sm" name="name" placeholder="Candidate name" required>
+                    <input aria-label="Email" class="form-control form-control-sm" name="email" placeholder="Email">
+                    <input aria-label="Phone" class="form-control form-control-sm" name="phone" placeholder="Phone">
+                    <select aria-label="Program" class="form-select form-select-sm" name="program_id" required>
                         <option value="">Select program</option>
                         @foreach($programs as $program)
                             <option value="{{ $program->id }}">{{ $program->name }}</option>
                         @endforeach
                     </select>
-                    <input class="form-control form-control-sm" name="partner_reference" placeholder="Partner reference">
-                    <select class="form-select form-select-sm" name="priority">
+                    <input aria-label="Partner reference" class="form-control form-control-sm" name="partner_reference" placeholder="Partner reference">
+                    <select aria-label="Priority" class="form-select form-select-sm" name="priority">
                         <option value="normal">Normal priority</option>
                         <option value="high">High priority</option>
                         <option value="urgent">Urgent priority</option>
                         <option value="low">Low priority</option>
                     </select>
-                    <textarea class="form-control form-control-sm" name="notes" rows="3" placeholder="Counselling notes"></textarea>
+                    <textarea aria-label="Counselling notes" class="form-control form-control-sm" name="notes" rows="3" placeholder="Counselling notes"></textarea>
                     <button class="btn btn-primary btn-sm">Submit to admission team</button>
                 </div>
             </form>
@@ -58,7 +58,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <caption class="visually-hidden">Latest partner leads</caption>
-                        <thead><tr><th>Lead</th><th>Program</th><th>Status</th><th>Priority</th><th>Reference</th></tr></thead>
+                        <thead><tr><th scope="col">Lead</th><th scope="col">Program</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Reference</th></tr></thead>
                         <tbody>
                             @forelse($latestLeads as $lead)
                                 <tr>

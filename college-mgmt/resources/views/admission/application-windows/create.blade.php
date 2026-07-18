@@ -17,7 +17,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Batch <span class="text-muted">(Optional - leave empty for all batches)</span></label>
-                        <select name="batch_id" class="form-control @error('batch_id') is-invalid @enderror">
+                        <select aria-label="Batch" name="batch_id" class="form-control @error('batch_id') is-invalid @enderror">
                             <option value="">All Batches</option>
                             @foreach($batches as $batch)
                                 <option value="{{ $batch->id }}">{{ $batch->name }}</option>
@@ -30,7 +30,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Application Capacity <span class="text-muted">(Optional - leave empty for unlimited)</span></label>
-                        <input type="number" name="capacity_limit" class="form-control @error('capacity_limit') is-invalid @enderror" min="1" placeholder="e.g. 100">
+                        <input aria-label="Application capacity limit" type="number" name="capacity_limit" class="form-control @error('capacity_limit') is-invalid @enderror" min="1" placeholder="e.g. 100">
                         @error('capacity_limit')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -40,7 +40,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Opens At *</label>
-                        <input type="datetime-local" name="opens_at" class="form-control @error('opens_at') is-invalid @enderror" required>
+                        <input aria-label="Opens At" type="datetime-local" name="opens_at" class="form-control @error('opens_at') is-invalid @enderror" required>
                         @error('opens_at')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -48,7 +48,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Closes At *</label>
-                        <input type="datetime-local" name="closes_at" class="form-control @error('closes_at') is-invalid @enderror" required>
+                        <input aria-label="Closes At" type="datetime-local" name="closes_at" class="form-control @error('closes_at') is-invalid @enderror" required>
                         @error('closes_at')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -57,7 +57,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="Additional details about this application window..."></textarea>
+                    <textarea aria-label="Application window description" name="description" class="form-control @error('description') is-invalid @enderror" rows="3" placeholder="Additional details about this application window..."></textarea>
                     @error('description')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

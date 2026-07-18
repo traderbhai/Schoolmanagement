@@ -47,7 +47,7 @@
           </select>
         </div>
         <div class="col-lg-3 col-md-12 d-flex gap-2">
-          <button class="btn btn-primary" type="submit">Apply</button>
+          <button class="btn btn-primary" type="submit">Apply filters</button>
           <a href="{{ route('chair.students.at-risk') }}" class="btn btn-outline-secondary">Clear</a>
         </div>
       </div>
@@ -73,11 +73,11 @@
         <table class="table table-hover mb-0 align-middle">
           <thead class="table-dark">
             <tr>
-              <th><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'student', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Student</a></th>
-              <th><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'program', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Batch / Program</a></th>
-              <th>Risk Flags</th>
-              <th><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'attendance_issues', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Attendance Issues</a></th>
-              <th>Mentor</th>
+              <th scope="col"><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'student', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Student</a></th>
+              <th scope="col"><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'program', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Batch / Program</a></th>
+              <th scope="col">Risk Flags</th>
+              <th scope="col"><a class="link-light" href="{{ route('chair.students.at-risk', array_merge(request()->query(), ['sort' => 'attendance_issues', 'direction' => request('direction') === 'desc' ? 'asc' : 'desc'])) }}">Attendance Issues</a></th>
+              <th scope="col">Mentor</th>
             </tr>
           </thead>
           <tbody>

@@ -10,7 +10,7 @@
 @section('content')
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Filters --}}
@@ -18,7 +18,7 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
             <div class="col-sm-3">
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Statuses</option>
                     @foreach(['open','in_progress','resolved','closed'] as $s)
                         <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>
@@ -26,7 +26,7 @@
                 </select>
             </div>
             <div class="col-sm-3">
-                <select name="priority" class="form-select form-select-sm">
+                <select aria-label="Priority" name="priority" class="form-select form-select-sm">
                     <option value="">All Priorities</option>
                     @foreach(['low','medium','high'] as $p)
                         <option value="{{ $p }}" @selected(request('priority') === $p)>{{ ucfirst($p) }}</option>
@@ -48,14 +48,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Priority</th>
-                    <th>Category</th>
-                    <th>Title</th>
-                    <th>Student</th>
-                    <th>Block/Room</th>
-                    <th>Status</th>
-                    <th>Assigned To</th>
-                    <th>Actions</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Block/Room</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Assigned To</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -73,7 +73,7 @@
                         <td><span class="badge bg-{{ $statusColors[$c->status] ?? 'secondary' }}">{{ ucfirst(str_replace('_',' ',$c->status)) }}</span></td>
                         <td>{{ $c->assignedTo?->name ?? 'Unassigned' }}</td>
                         <td onclick="event.stopPropagation()">
-                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#complaintModal{{ $c->id }}">Update</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#complaintModal{{ $c->id }}">Update complaint</button>
                         </td>
                     </tr>
 
@@ -83,7 +83,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title">{{ $c->title }}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="row mb-3">
@@ -112,7 +112,7 @@
                                         <div class="row g-2">
                                             <div class="col-sm-4">
                                                 <label class="form-label">Status</label>
-                                                <select name="status" class="form-select" required>
+                                                <select aria-label="Status" name="status" class="form-select" required>
                                                     @foreach(['open','in_progress','resolved','closed'] as $s)
                                                         <option value="{{ $s }}" @selected($c->status === $s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>
                                                     @endforeach
@@ -120,7 +120,7 @@
                                             </div>
                                             <div class="col-sm-8">
                                                 <label class="form-label">Assign To</label>
-                                                <select name="assigned_to" class="form-select">
+                                                <select aria-label="Assigned To" name="assigned_to" class="form-select">
                                                     <option value="">Unassigned</option>
                                                     @foreach($users as $u)
                                                         <option value="{{ $u->id }}" @selected($c->assigned_to == $u->id)>{{ $u->name }}</option>
@@ -129,12 +129,12 @@
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label">Resolution Notes <span class="text-muted small">(required for resolved/closed)</span></label>
-                                                <textarea name="resolution_notes" class="form-control" rows="3" maxlength="3000" placeholder="Record action taken, staff response, and final resolution before closing.">{{ $c->resolution_notes }}</textarea>
+                                                <textarea aria-label="Record action taken, staff response, and final resolution before closing." name="resolution_notes" class="form-control" rows="3" maxlength="3000" placeholder="Record action taken, staff response, and final resolution before closing.">{{ $c->resolution_notes }}</textarea>
                                             </div>
                                         </div>
                                         <div class="mt-3 text-end">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="submit" class="btn btn-primary ms-2">Save</button>
+                                            <button type="submit" class="btn btn-primary ms-2">Save complaint</button>
                                         </div>
                                     </form>
                                 </div>

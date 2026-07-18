@@ -10,7 +10,7 @@
     </nav>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="card border-0 shadow-sm mb-4">
@@ -35,7 +35,7 @@
         </div>
         @if($grievance->status === 'resolved')
         <div class="card-footer text-end">
-            <form method="POST" action="{{ route('student.grievances.close', $grievance) }}" class="d-inline" onsubmit="return confirm('Close this grievance?')">
+            <form method="POST" action="{{ route('student.grievances.close', $grievance) }}" class="d-inline" onsubmit="return confirm('Close this grievance after accepting the recorded resolution? Confirm no further follow-up is needed before marking it closed.')">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-outline-success">
                     <i class="bi bi-check2-circle me-1"></i>Close Grievance
@@ -69,8 +69,8 @@
             <form method="POST" action="{{ route('student.grievances.comment', $grievance) }}">
                 @csrf
                 <div class="d-flex gap-2">
-                    <textarea name="comment" rows="2" class="form-control form-control-sm @error('comment') is-invalid @enderror" placeholder="Add a follow-up or additional information">{{ old('comment') }}</textarea>
-                    <button type="submit" class="btn btn-sm btn-primary align-self-end">Send</button>
+                    <textarea aria-label="Add a follow-up or additional information" name="comment" rows="2" class="form-control form-control-sm @error('comment') is-invalid @enderror" placeholder="Add a follow-up or additional information">{{ old('comment') }}</textarea>
+                    <button type="submit" class="btn btn-sm btn-primary align-self-end">Send follow-up</button>
                 </div>
                 @error('comment')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </form>

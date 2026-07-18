@@ -1,5 +1,5 @@
 @props([
-    'title' => 'No records found',
+    'title' => 'Nothing to review yet',
     'message' => 'There is no matching database-backed data for the current view.',
     'icon' => 'bi-inbox',
 ])

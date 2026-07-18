@@ -7,7 +7,7 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Filters --}}
@@ -16,7 +16,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-sm-3">
                 <label class="form-label form-label-sm mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All</option>
                     @foreach(['open','under_review','escalated','resolved','closed'] as $s)
                         <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucwords(str_replace('_',' ',$s)) }}</option>
@@ -25,7 +25,7 @@
             </div>
             <div class="col-sm-3">
                 <label class="form-label form-label-sm mb-1">Priority</label>
-                <select name="priority" class="form-select form-select-sm">
+                <select aria-label="Priority" name="priority" class="form-select form-select-sm">
                     <option value="">All</option>
                     @foreach(['low','normal','high','urgent'] as $p)
                         <option value="{{ $p }}" @selected(request('priority') === $p)>{{ ucfirst($p) }}</option>
@@ -46,13 +46,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Category</th>
-                        <th>Title</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th></th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Title</th>
+                        <th scope="col">Priority</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Date</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

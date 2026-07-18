@@ -12,23 +12,23 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Student</label>
-                        <input type="text" class="form-control" value="{{ $termPromotion->student->enrollment_number ?? 'Enrollment number pending' }}" readonly>
+                        <input aria-label="Student enrollment number" type="text" class="form-control" value="{{ $termPromotion->student->enrollment_number ?? 'Enrollment number pending' }}" readonly>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Current Term</label>
-                        <input type="text" class="form-control" value="{{ $termPromotion->currentTerm->name ?? 'Current term not linked' }}" readonly>
+                        <input aria-label="Current term" type="text" class="form-control" value="{{ $termPromotion->currentTerm->name ?? 'Current term not linked' }}" readonly>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">CGPA</label>
-                        <input type="number" name="cgpa" class="form-control" step="0.01" min="0" max="10" value="{{ old('cgpa', $termPromotion->cgpa) }}">
+                        <input aria-label="Cgpa" type="number" name="cgpa" class="form-control" step="0.01" min="0" max="10" value="{{ old('cgpa', $termPromotion->cgpa) }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Attendance (%)</label>
-                        <input type="number" name="attendance_percentage" class="form-control" step="0.01" min="0" max="100" value="{{ old('attendance_percentage', $termPromotion->attendance_percentage) }}">
+                        <input aria-label="Attendance Percentage" type="number" name="attendance_percentage" class="form-control" step="0.01" min="0" max="100" value="{{ old('attendance_percentage', $termPromotion->attendance_percentage) }}">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Status</label>
-                        <select name="status" class="form-select" required>
+                        <select aria-label="Status" name="status" class="form-select" required>
                             @foreach(['pending','on_hold'] as $s)
                                 <option value="{{ $s }}" {{ old('status',$termPromotion->status)==$s?'selected':'' }}>{{ ucfirst($s) }}</option>
                             @endforeach
@@ -36,7 +36,7 @@
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Remarks</label>
-                        <textarea name="remarks" class="form-control" rows="2">{{ old('remarks', $termPromotion->remarks) }}</textarea>
+                        <textarea aria-label="Remarks" name="remarks" class="form-control" rows="2">{{ old('remarks', $termPromotion->remarks) }}</textarea>
                     </div>
                 </div>
                 <div class="mt-4">

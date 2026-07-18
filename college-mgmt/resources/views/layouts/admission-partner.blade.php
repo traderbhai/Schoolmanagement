@@ -11,12 +11,13 @@
     @stack('styles')
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <div class="sidebar sidebar-desktop">
     <x-ui.manifest-sidebar role="admission_partner" brand-sub="Partner Portal" brand-icon="bi-building-check" />
 </div>
 
 <div class="topbar">
-    <button class="topbar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+    <button class="topbar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Open navigation menu">
         <i class="bi bi-list fs-4"></i>
     </button>
     <h1 class="topbar-title d-none d-lg-block mb-0">@yield('page-title', 'Admission Partner Portal')</h1>
@@ -34,7 +35,7 @@
                 <div class="brand-sub">Partner Portal</div>
             </span>
         </div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas"></button>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="offcanvas" aria-label="Close navigation menu"></button>
     </div>
     <div class="offcanvas-body p-0">
         <x-ui.manifest-sidebar
@@ -47,11 +48,11 @@
     </div>
 </div>
 
-<main class="main-content">
+<main id="main-content" class="main-content" tabindex="-1">
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mx-3 mt-3" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
         </div>
     @endif
     @if($errors->any())
@@ -62,7 +63,7 @@
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
         </div>
     @endif
 

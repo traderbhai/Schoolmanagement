@@ -23,14 +23,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Room No.</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Capacity</th>
-                    <th>Building / Floor</th>
-                    <th>Features</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Room No.</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col">Building / Floor</th>
+                    <th scope="col">Features</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,9 +57,10 @@
                 <td><span class="badge {{ $r->is_active ? 'badge-active' : 'badge-danger' }}">{{ $r->is_active ? 'Active' : 'Inactive' }}</span></td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.classrooms.show', $r) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
-                        <a href="{{ route('admin.classrooms.edit', $r) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.classrooms.show', $r) }}" class="btn btn-sm btn-outline-secondary" title="View" aria-label="View classroom {{ $r->name }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.classrooms.edit', $r) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit classroom {{ $r->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete classroom {{ $r->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.classrooms.destroy', $r) }}"
                             data-name="{{ $r->name }}">

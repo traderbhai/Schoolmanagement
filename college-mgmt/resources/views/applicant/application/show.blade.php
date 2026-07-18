@@ -80,7 +80,7 @@
             <h5 class="fw-bold mb-2">Ready to Submit?</h5>
             <p class="text-muted mb-3">Once submitted, you won't be able to edit your application. Make sure all sections are filled correctly.</p>
             <form method="POST" action="{{ route('applicant.application.submit') }}"
-                  onsubmit="return confirm('Are you sure you want to submit your application? This cannot be undone.')">
+                  onsubmit="return confirm('Submit your admission application now? Confirm all sections, documents, program choices, and contact details are final because editing is locked after submission.')">
                 @csrf
                 <button type="submit" class="btn btn-success btn-lg px-5">
                     <i class="bi bi-send-fill me-2"></i>Submit Application

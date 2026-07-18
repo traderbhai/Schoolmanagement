@@ -63,7 +63,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply filters</button>
                     <a href="{{ request()->url() }}" class="btn btn-sm btn-outline-secondary flex-fill">Reset</a>
                 </div>
             </form>
@@ -73,9 +73,9 @@
             <table class="table table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>Record</th>
-                        <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th scope="col">Record</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody>

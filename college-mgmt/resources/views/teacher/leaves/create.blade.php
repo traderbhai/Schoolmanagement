@@ -45,7 +45,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">Leave Type <span class="text-danger">*</span></label>
-                        <select name="leave_type" class="form-select @error('leave_type') is-invalid @enderror" required>
+                        <select aria-label="Leave Type" name="leave_type" class="form-select @error('leave_type') is-invalid @enderror" required>
                             <option value="">Select type...</option>
                             <option value="casual"    @selected(old('leave_type')=='casual')>Casual Leave</option>
                             <option value="medical"   @selected(old('leave_type')=='medical')>Medical Leave</option>
@@ -60,13 +60,13 @@
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
                             <label class="form-label">From Date <span class="text-danger">*</span></label>
-                            <input type="date" name="from_date" class="form-control @error('from_date') is-invalid @enderror"
+                            <input aria-label="From Date" type="date" name="from_date" class="form-control @error('from_date') is-invalid @enderror"
                                 value="{{ old('from_date') }}" min="{{ date('Y-m-d') }}" required>
                             @error('from_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label">To Date <span class="text-danger">*</span></label>
-                            <input type="date" name="to_date" class="form-control @error('to_date') is-invalid @enderror"
+                            <input aria-label="To Date" type="date" name="to_date" class="form-control @error('to_date') is-invalid @enderror"
                                 value="{{ old('to_date') }}" min="{{ date('Y-m-d') }}" required>
                             @error('to_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -74,7 +74,7 @@
 
                     <div class="mb-3">
                         <label class="form-label">Reason <span class="text-danger">*</span></label>
-                        <textarea name="reason" class="form-control @error('reason') is-invalid @enderror"
+                        <textarea aria-label="Leave reason and coverage plan" name="reason" class="form-control @error('reason') is-invalid @enderror"
                             rows="4" placeholder="Example: Duty leave for university workshop; classes will be covered by the assigned substitute." maxlength="1000" required>{{ old('reason') }}</textarea>
                         <div class="form-text">Include handover or coverage notes when the leave affects classes, mentoring, exams, or assessment work.</div>
                         @error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror

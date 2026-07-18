@@ -24,8 +24,8 @@
                         <table class="table align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3">Program</th>
-                                    <th class="text-end pe-3">Placed</th>
+                                    <th scope="col" class="ps-3">Program</th>
+                                    <th scope="col" class="text-end pe-3">Placed</th>
                                 </tr>
                             </thead>
                             <tbody>

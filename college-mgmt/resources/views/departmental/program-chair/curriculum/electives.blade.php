@@ -26,13 +26,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -43,7 +43,7 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold mb-1">Program</label>
-                        <select name="program_id" class="form-select"
+                        <select aria-label="Program" name="program_id" class="form-select"
                                 onchange="document.getElementById('filterForm').submit()">
                             <option value="">— Select Program —</option>
                             @foreach($programs as $program)
@@ -56,7 +56,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold mb-1">Term</label>
-                        <select name="term_id" class="form-select"
+                        <select aria-label="Term" name="term_id" class="form-select"
                                 onchange="document.getElementById('filterForm').submit()">
                             <option value="">— All Terms —</option>
                             @foreach($terms as $term)
@@ -120,11 +120,11 @@
                                     <table class="table table-hover align-middle mb-0">
                                         <thead class="table-light small">
                                             <tr>
-                                                <th class="ps-3">Subject</th>
-                                                <th>Code</th>
-                                                <th>Type</th>
-                                                <th class="text-center">Credits</th>
-                                                <th class="text-center">Demand</th>
+                                                <th scope="col" class="ps-3">Subject</th>
+                                                <th scope="col">Code</th>
+                                                <th scope="col">Type</th>
+                                                <th scope="col" class="text-center">Credits</th>
+                                                <th scope="col" class="text-center">Demand</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -219,7 +219,7 @@
                                                     @csrf
                                                     <input type="hidden" name="status" value="open">
                                                     <button type="submit" class="btn btn-xs btn-success py-0 px-2">
-                                                        <i class="bi bi-unlock me-1"></i>Open
+                                                        <i class="bi bi-unlock me-1"></i>Open window
                                                     </button>
                                                 </form>
                                             @endif
@@ -272,32 +272,32 @@
                     <h5 class="modal-title fw-semibold" id="createWindowModalLabel">
                         <i class="bi bi-calendar-plus me-2"></i>Create Elective Registration Window
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Opens At <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="opens_at" class="form-control" required>
+                            <input aria-label="Opens At" type="datetime-local" name="opens_at" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Closes At <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="closes_at" class="form-control" required>
+                            <input aria-label="Closes At" type="datetime-local" name="closes_at" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Max Selections Per Student <span class="text-danger">*</span></label>
-                            <input type="number" name="max_selections" class="form-control" min="1" value="1" required>
+                            <input aria-label="Max Selections" type="number" name="max_selections" class="form-control" min="1" value="1" required>
                             <div class="form-text">How many electives can each student pick in this window.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Elective Group</label>
-                            <input type="number" name="elective_group" class="form-control" min="1" placeholder="e.g. 1">
+                            <input aria-label="Elective group number" type="number" name="elective_group" class="form-control" min="1" placeholder="e.g. 1">
                             <div class="form-text">Leave blank to apply to all elective groups.</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Instructions for Students</label>
-                            <textarea name="instructions" class="form-control" rows="3"
+                            <textarea aria-label="Elective selection instructions" name="instructions" class="form-control" rows="3"
                                       placeholder="e.g. Select exactly one elective from Group 1 based on your interest and career goals…"></textarea>
                         </div>
                     </div>

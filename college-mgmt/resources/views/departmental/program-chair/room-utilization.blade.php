@@ -92,15 +92,15 @@
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th>Room</th>
-                                <th>Type</th>
-                                <th>Capacity</th>
-                                <th>Classes</th>
-                                <th>Max Batch</th>
-                                <th>Max Util.</th>
-                                <th>Avg Util.</th>
-                                <th>Status</th>
-                                <th>Batches</th>
+                                <th scope="col">Room</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Capacity</th>
+                                <th scope="col">Classes</th>
+                                <th scope="col">Max Batch</th>
+                                <th scope="col">Max Util.</th>
+                                <th scope="col">Avg Util.</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Batches</th>
                             </tr>
                         </thead>
                         <tbody>

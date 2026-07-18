@@ -31,7 +31,7 @@
             <div class="card-header bg-transparent fw-semibold">Top Performers</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>#</th><th>Student</th><th>Avg Marks</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">#</th><th scope="col">Student</th><th scope="col">Avg Marks</th></tr></thead>
                     <tbody>
                     @forelse($topPerformers as $i => $s)
                         <tr>
@@ -58,7 +58,7 @@
             <div class="card-header bg-transparent fw-semibold text-danger">At-Risk Students (&lt;40%)</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Student</th><th>Score%</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Student</th><th scope="col">Score%</th></tr></thead>
                     <tbody>
                     @forelse($atRisk as $s)
                         <tr>

@@ -18,13 +18,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -42,7 +42,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Subject</label>
-                        <select name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('quiz-filter-form').submit()">
+                        <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('quiz-filter-form').submit()">
                             <option value="">All Subjects</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" @selected(request('subject_id') == $subject->id)>
@@ -79,12 +79,12 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Quiz</th>
-                                <th>Subject</th>
-                                <th>Window</th>
-                                <th class="text-center">Marks</th>
-                                <th class="text-center">Attempts</th>
-                                <th class="text-center">Status</th>
+                                <th scope="col">Quiz</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Window</th>
+                                <th scope="col" class="text-center">Marks</th>
+                                <th scope="col" class="text-center">Attempts</th>
+                                <th scope="col" class="text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>

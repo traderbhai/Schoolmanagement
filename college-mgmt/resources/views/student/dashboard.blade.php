@@ -29,7 +29,7 @@
             @foreach($lowAttendanceSubjects as $i => $sub)
                 <strong>{{ $sub['subject'] }}</strong> ({{ $sub['pct'] }}%){{ $i < count($lowAttendanceSubjects)-1 ? ', ' : '.' }}
             @endforeach
-            <a href="{{ route('student.attendance') }}" class="alert-link ms-1">View details -></a>
+            <a href="{{ route('student.attendance') }}" class="alert-link ms-1">Review attendance details</a>
         </div>
     </div>
     @endif
@@ -40,7 +40,7 @@
         <i class="bi bi-credit-card-fill fs-5 mt-1 flex-shrink-0"></i>
         <div>
             <strong>Fee Outstanding: Rs. {{ number_format($feeOutstanding, 0) }}</strong>
-            <a href="{{ route('student.fees') }}" class="alert-link ms-2">View details -></a>
+            <a href="{{ route('student.fees') }}" class="alert-link ms-2">Review fee details</a>
         </div>
     </div>
     @endif
@@ -157,14 +157,34 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <span class="fw-semibold"><i class="bi bi-calendar-check me-2"></i>Today's Classes - {{ now()->format('l, d M') }}</span>
-                    <a href="{{ route('student.timetable') }}" class="btn btn-sm btn-link p-0">Full timetable -></a>
+                    <a href="{{ route('student.timetable') }}" class="btn btn-sm btn-link p-0">Full timetable</a>
                 </div>
                 <div class="card-body p-0">
                     @if(count($todayClasses) > 0)
-                    <div class="table-responsive">
+                    <div class="d-md-none p-3">
+                        <div class="vstack gap-2">
+                            @foreach($slots as $slot)
+                                @php $slotClasses = collect($todayClasses[$slot->id] ?? [])->filter(); @endphp
+                                @foreach($slotClasses as $entry)
+                                    <div class="border rounded-2 p-3 bg-white">
+                                        <div class="d-flex justify-content-between gap-2 mb-2">
+                                            <div class="fw-semibold">{{ $entry->subject?->name ?? $entry->courseGroup?->subject?->name ?? 'Subject not assigned' }}</div>
+                                            <div class="small text-muted text-nowrap">{{ $slot->start_time ?? $slot->name }}</div>
+                                        </div>
+                                        @if($entry->courseGroup?->name)
+                                            <span class="badge text-bg-light mb-2">{{ $entry->courseGroup->name }}</span>
+                                        @endif
+                                        <div class="small text-muted">Faculty: {{ $entry->teacher?->user?->name ?? 'Faculty not assigned' }}</div>
+                                        <div class="small text-muted">Room: {{ $entry->classroom?->name ?? $entry->classroom?->room_number ?? 'Room not assigned' }}</div>
+                                    </div>
+                                @endforeach
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-sm mb-0 align-middle">
                             <thead class="table-light">
-                                <tr><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th></tr>
+                                <tr><th scope="col">Time</th><th scope="col">Subject</th><th scope="col">Faculty</th><th scope="col">Room</th></tr>
                             </thead>
                             <tbody>
                                 @foreach($slots as $slot)
@@ -202,7 +222,7 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <span class="fw-semibold"><i class="bi bi-clock-history me-2 text-danger"></i>Upcoming Deadlines - Next 7 Days</span>
-                    <a href="{{ route('student.assignments.index') }}" class="btn btn-sm btn-link p-0">All assignments -></a>
+                    <a href="{{ route('student.assignments.index') }}" class="btn btn-sm btn-link p-0">All assignments</a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($upcomingAssignments as $assignment)
@@ -218,7 +238,7 @@
                                 <span class="badge bg-success">Done</span>
                             @else
                                 <span class="text-danger small">{{ $assignment->due_at->diffForHumans() }}</span>
-                                <a href="{{ route('student.assignments.show', $assignment) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Submit</a>
+                                <a href="{{ route('student.assignments.show', $assignment) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Submit assignment</a>
                             @endif
                         </div>
                     </div>
@@ -241,7 +261,7 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <span class="fw-semibold"><i class="bi bi-calendar-event me-2"></i>Coming Up - Next 30 Days</span>
-                    <a href="{{ route('student.calendar.index') }}" class="btn btn-sm btn-link p-0">Full calendar -></a>
+                    <a href="{{ route('student.calendar.index') }}" class="btn btn-sm btn-link p-0">Full calendar</a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($upcomingEvents as $event)
@@ -266,7 +286,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                     <span class="fw-semibold"><i class="bi bi-megaphone me-2"></i>Latest Notices</span>
-                    <a href="{{ route('student.notices') }}" class="btn btn-sm btn-link p-0">All notices -></a>
+                    <a href="{{ route('student.notices') }}" class="btn btn-sm btn-link p-0">All notices</a>
                 </div>
                 <div class="card-body p-0">
                     @foreach($notices as $notice)

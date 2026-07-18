@@ -22,18 +22,18 @@
     </div>
     <div class="row g-4">
         <div class="col-lg-4">
-            <form method="POST" action="{{ route('admission.communication.templates.store') }}" class="card" onsubmit="return confirm('Save this communication template for Admission use?')">
+            <form method="POST" action="{{ route('admission.communication.templates.store') }}" class="card" onsubmit="return confirm('Save this communication template for Admission use? Confirm channel, purpose, variables, approval readiness, and future automated/bulk-send usage before saving.')">
                 @csrf
                 <div class="card-header">
                     <div class="fw-semibold">Template</div>
                     <div class="small text-muted">Keep variables clear so counsellors can reuse the same message safely across leads and applicants.</div>
                 </div>
                 <div class="card-body vstack gap-3">
-                    <input class="form-control" name="name" placeholder="Name" required>
-                    <select class="form-select" name="channel"><option>email</option><option>internal</option><option>sms</option><option>whatsapp</option></select>
-                    <input class="form-control" name="purpose" placeholder="Purpose" value="general">
-                    <input class="form-control" name="subject" placeholder="Subject">
-                    <textarea class="form-control" name="body" rows="5" required>Hello @{{ name }}, your @{{ program }} admission status is @{{ status }}.</textarea>
+                    <input aria-label="Name" class="form-control" name="name" placeholder="Name" required>
+                    <select aria-label="Channel" class="form-select" name="channel"><option>email</option><option>internal</option><option>sms</option><option>whatsapp</option></select>
+                    <input aria-label="Purpose" class="form-control" name="purpose" placeholder="Purpose" value="general">
+                    <input aria-label="Subject" class="form-control" name="subject" placeholder="Subject">
+                    <textarea aria-label="Body" class="form-control" name="body" rows="5" required>Hello @{{ name }}, your @{{ program }} admission status is @{{ status }}.</textarea>
                     <button class="btn btn-primary" @disabled(! $canManageCommunication)>Save Template</button>
                 </div>
             </form>
@@ -44,7 +44,7 @@
                     <div class="fw-semibold">Templates</div>
                     <div class="small text-muted">Templates should move through safety approval before bulk or automated sends.</div>
                 </div>
-                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Name</th><th>Channel</th><th>Purpose</th></tr></thead><tbody>
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th scope="col">Name</th><th scope="col">Channel</th><th scope="col">Purpose</th></tr></thead><tbody>
                     @forelse($templates as $template)
                         <tr>
                             <td>{{ $template->name ?: 'Template name missing' }}</td>
@@ -61,13 +61,13 @@
                     @endforelse
                 </tbody></table></div>
             </div>
-            <form method="POST" action="{{ route('admission.communication.dispatch') }}" class="mb-3" onsubmit="return confirm('Dispatch all queued Admission messages through the configured providers?')">@csrf<button class="btn btn-outline-success" @disabled(! $canManageCommunication)>Dispatch Queued Messages</button> <span class="small text-muted ms-2">Runs provider-ready queued messages after safety checks have already created the queue.</span></form>
+            <form method="POST" action="{{ route('admission.communication.dispatch') }}" class="mb-3" onsubmit="return confirm('Dispatch all queued Admission messages through the configured providers? Confirm consent, quiet hours, approved templates, blocked recipients, and provider readiness before sending.')">@csrf<button class="btn btn-outline-success" @disabled(! $canManageCommunication)>Dispatch Queued Messages</button> <span class="small text-muted ms-2">Runs provider-ready queued messages after safety checks have already created the queue.</span></form>
             <div class="card">
                 <div class="card-header">
                     <div class="fw-semibold">Recent Messages</div>
                     <div class="small text-muted">Use this table to confirm queued, sent, failed, delayed, or blocked delivery states.</div>
                 </div>
-                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>Recipient</th></tr></thead><tbody>
+                <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th scope="col">Channel</th><th scope="col">Provider</th><th scope="col">Status</th><th scope="col">Recipient</th></tr></thead><tbody>
                     @forelse($logs as $log)
                         <tr>
                             <td>{{ strtoupper($log->channel ?: 'internal') }}</td>

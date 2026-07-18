@@ -67,7 +67,7 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Name, industry, email…" value="{{ request('search') }}">
+                <input aria-label="Company search" type="text" name="search" class="form-control form-control-sm" placeholder="Name, industry, email…" value="{{ request('search') }}">
             </div>
             <div class="col-auto">
                 <button class="btn btn-sm btn-primary">Search</button>
@@ -89,13 +89,13 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Company</th>
-                        <th>Industry</th>
-                        <th>Contact</th>
-                        <th>Website</th>
-                        <th>Active Drives</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Company</th>
+                        <th scope="col">Industry</th>
+                        <th scope="col">Contact</th>
+                        <th scope="col">Website</th>
+                        <th scope="col">Active Drives</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,12 +134,12 @@
                             @endif
                         </td>
                         <td class="text-end">
-                            <a href="{{ route('admin.companies.edit', $company) }}" class="btn btn-sm btn-outline-primary me-1">
+                <a href="{{ route('admin.companies.edit', $company) }}" class="btn btn-sm btn-outline-primary me-1" aria-label="Edit company {{ $company->name }}">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <form method="POST" action="{{ route('admin.companies.destroy', $company) }}" class="d-inline" onsubmit="return confirm('Delete this company?')">
+                            <form method="POST" action="{{ route('admin.companies.destroy', $company) }}" class="d-inline" onsubmit="return confirm('Delete company {{ addslashes($company->name) }}? Confirm placement drives, student applications, offer history, and CMC reports no longer depend on this company record.')">
                                 @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" aria-label="Delete company {{ $company->name }}"><i class="bi bi-trash"></i></button>
                             </form>
                         </td>
                     </tr>

@@ -13,7 +13,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Batch (leave blank for all batches)</label>
-                <select name="batch_id" class="form-select">
+                <select aria-label="Batch" name="batch_id" class="form-select">
                     <option value="">— All Batches (Default) —</option>
                     @foreach($batches as $b)
                         <option value="{{ $b->id }}" @selected(old('batch_id') == $b->id)>{{ $b->name }}</option>
@@ -56,7 +56,7 @@
 
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">State Quota %</label>
-                    <input type="number" name="state_quota_percentage" class="form-control"
+                    <input aria-label="State Quota Percentage" type="number" name="state_quota_percentage" class="form-control"
                            value="{{ old('state_quota_percentage', 0) }}" min="0" max="100" step="0.01">
                     <div class="form-text">Percentage of seats reserved for state domicile</div>
                 </div>

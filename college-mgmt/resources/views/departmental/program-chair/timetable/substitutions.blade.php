@@ -8,8 +8,8 @@
     <a href="{{ route('chair.timetable.builder') }}" class="btn btn-outline-secondary btn-sm">Back to Builder</a>
   </div>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
-  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <div class="row g-4">
     <div class="col-lg-5">
@@ -20,7 +20,7 @@
             @csrf
             <div class="mb-3">
               <label class="form-label">Session</label>
-              <select name="session_ref" class="form-select" required>
+              <select aria-label="Session Ref" name="session_ref" class="form-select" required>
                 <option value="">Select session...</option>
                 @if($canonicalSessions->isNotEmpty())
                   <optgroup label="Official PMC sessions">
@@ -56,7 +56,7 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Date</label>
-              <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
+              <input aria-label="Date" type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Action</label>
@@ -68,7 +68,7 @@
             </div>
             <div class="mb-3" id="sub-row">
               <label class="form-label">Substitute Teacher</label>
-              <select name="substitute_teacher_id" class="form-select">
+              <select aria-label="Substitute Teacher" name="substitute_teacher_id" class="form-select">
                 <option value="">None / uncovered</option>
                 @foreach($teachers as $t)
                   <option value="{{ $t->id }}">{{ $t->user->name ?? $t->id }}</option>
@@ -77,7 +77,7 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Reason</label>
-              <input type="text" name="reason" class="form-control" maxlength="300" placeholder="e.g. Faculty on leave">
+              <input aria-label="Substitution reason" type="text" name="reason" class="form-control" maxlength="300" placeholder="e.g. Faculty on leave">
             </div>
             <button type="submit" class="btn btn-primary w-100">Record</button>
           </form>
@@ -92,7 +92,7 @@
           <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
               <thead class="table-light">
-                <tr><th>Date</th><th>Session</th><th>Action</th><th>Substitute</th><th>Reason</th></tr>
+                <tr><th scope="col">Date</th><th scope="col">Session</th><th scope="col">Action</th><th scope="col">Substitute</th><th scope="col">Reason</th></tr>
               </thead>
               <tbody>
                 @forelse($recent as $sub)

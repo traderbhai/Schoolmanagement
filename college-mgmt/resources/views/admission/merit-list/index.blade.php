@@ -4,7 +4,7 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card border-0 shadow-sm mb-4">
@@ -48,7 +48,7 @@
     <div class="row g-2 align-items-end">
         <div class="col-sm-4">
             <label class="form-label small">Filter by Batch</label>
-            <select name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <select aria-label="Batch" name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">All Batches</option>
                 @foreach($batches as $b)
                     <option value="{{ $b->id }}" @selected($batchId == $b->id)>{{ $b->name }}</option>
@@ -103,7 +103,7 @@
             <div class="row g-3 align-items-end">
                 <div class="col-sm-4">
                     <label class="form-label small fw-semibold">Batch (optional)</label>
-                    <select name="batch_id" class="form-select form-select-sm">
+                    <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
                         <option value="">All Batches</option>
                         @foreach($batches as $b)
                             <option value="{{ $b->id }}" @selected($batchId == $b->id)>{{ $b->name }}</option>

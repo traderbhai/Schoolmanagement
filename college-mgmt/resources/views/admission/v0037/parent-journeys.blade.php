@@ -38,11 +38,11 @@
             <table class="table table-sm align-middle mb-0" aria-label="Parent guardian journeys">
                 <thead class="table-light">
                     <tr>
-                        <th>Guardian</th>
-                        <th>Subject</th>
-                        <th>Decision</th>
-                        <th>Next Action</th>
-                        <th></th>
+                        <th scope="col">Guardian</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Decision</th>
+                        <th scope="col">Next Action</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

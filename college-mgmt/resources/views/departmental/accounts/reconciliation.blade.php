@@ -70,7 +70,7 @@
         <form method="GET" class="d-flex gap-2 align-items-end">
             <div class="flex-grow-1">
                 <label class="form-label small text-muted mb-1">Filter by Program</label>
-                <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Programs</option>
                     @foreach($programs as $prog)
                         <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>
@@ -94,14 +94,14 @@
             <table class="table table-sm table-hover mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th>Applicant</th>
-                        <th>Application No.</th>
-                        <th>Program</th>
-                        <th>Owner / Source</th>
-                        <th>Reference No.</th>
-                        <th>Method</th>
-                        <th class="text-end">Amount (Rs.)</th>
-                        <th>Verified At</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Application No.</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Owner / Source</th>
+                        <th scope="col">Reference No.</th>
+                        <th scope="col">Method</th>
+                        <th scope="col" class="text-end">Amount (Rs.)</th>
+                        <th scope="col">Verified At</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -64,7 +64,7 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header py-2 d-flex justify-content-between align-items-center">
                         <div class="fw-semibold"><i class="bi {{ $meta['icon'] }} me-1"></i>{{ $meta['label'] }}</div>
-                        <a href="{{ $meta['route'] }}" class="btn btn-sm btn-outline-primary">Open</a>
+                        <a href="{{ $meta['route'] }}" class="btn btn-sm btn-outline-primary">Open {{ $meta['label'] }}</a>
                     </div>
                     <div class="card-body py-2">
                         <div class="small text-muted mb-2">{{ $section['description'] }}</div>
@@ -82,7 +82,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
-                                <thead><tr><th>Item</th><th>Owner / Source</th><th>Status</th><th></th></tr></thead>
+                                <thead><tr><th scope="col">Item</th><th scope="col">Owner / Source</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr></thead>
                                 <tbody>
                                     @forelse($section['items']->take(5) as $item)
                                         <tr>
@@ -95,7 +95,7 @@
                                                 <span class="badge text-bg-light border">Source: {{ $meta['label'] }}</span>
                                             </td>
                                             <td><span class="badge text-bg-light">{{ $item['status'] }}</span></td>
-                                            <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Go</a></td>
+                                            <td class="text-end"><a href="{{ $item['action'] }}" class="btn btn-sm btn-outline-secondary">Open {{ $item['title'] }}</a></td>
                                         </tr>
                                     @empty
                                         <tr><td colspan="4" class="text-muted text-center py-3">No current program exceptions for {{ $meta['label'] }}. Continue with portfolio scope review, course delivery checks, student interventions, quality signals, or Chair escalation if a source workflow is missing.</td></tr>

@@ -79,19 +79,19 @@
             @csrf
             <div class="col-md-2">
                 <label class="form-label">Category</label>
-                <select name="asset_category_id" class="form-select">
+                <select aria-label="Asset Category" name="asset_category_id" class="form-select">
                     <option value="">- Category -</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2"><label class="form-label">Item</label><input name="name" class="form-control" placeholder="Printer Paper" required></div>
-            <div class="col-md-2"><label class="form-label">SKU</label><input name="sku" class="form-control" placeholder="STAT-PAPER-A4" required></div>
-            <div class="col-md-1"><label class="form-label">Unit</label><input name="unit" class="form-control" value="pcs" required></div>
-            <div class="col-md-1"><label class="form-label">Stock</label><input name="current_stock" type="number" min="0" value="0" class="form-control" required></div>
-            <div class="col-md-2"><label class="form-label">Reorder Level</label><input name="reorder_level" type="number" min="0" value="0" class="form-control" required></div>
-            <div class="col-md-1"><label class="form-label">Location</label><input name="location" class="form-control" placeholder="Store"></div>
+            <div class="col-md-2"><label class="form-label">Item</label><input aria-label="Printer Paper" name="name" class="form-control" placeholder="Printer Paper" required></div>
+            <div class="col-md-2"><label class="form-label">SKU</label><input aria-label="STAT-PAPER-A4" name="sku" class="form-control" placeholder="STAT-PAPER-A4" required></div>
+            <div class="col-md-1"><label class="form-label">Unit</label><input aria-label="Unit" name="unit" class="form-control" value="pcs" required></div>
+            <div class="col-md-1"><label class="form-label">Stock</label><input aria-label="Current Stock" name="current_stock" type="number" min="0" value="0" class="form-control" required></div>
+            <div class="col-md-2"><label class="form-label">Reorder Level</label><input aria-label="Reorder Level" name="reorder_level" type="number" min="0" value="0" class="form-control" required></div>
+            <div class="col-md-1"><label class="form-label">Location</label><input aria-label="Store" name="location" class="form-control" placeholder="Store"></div>
             <div class="col-md-1"><button class="btn btn-primary w-100">Create</button></div>
         </form>
     </div>
@@ -104,8 +104,8 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.assets.categories.store') }}" class="vstack gap-3">
                     @csrf
-                    <input name="name" class="form-control" placeholder="Category name" required>
-                    <input name="code" class="form-control" placeholder="Code, e.g. IT" required>
+                    <input aria-label="Category name" name="name" class="form-control" placeholder="Category name" required>
+                    <input aria-label="Asset code" name="code" class="form-control" placeholder="Code, e.g. IT" required>
                     <button class="btn btn-primary">Save Category</button>
                 </form>
             </div>
@@ -118,29 +118,29 @@
                 <form method="POST" action="{{ route('admin.assets.store') }}" class="row g-3">
                     @csrf
                     <div class="col-md-3">
-                        <select name="asset_category_id" class="form-select">
+                        <select aria-label="Asset Category" name="asset_category_id" class="form-select">
                             <option value="">- Category -</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3"><input name="asset_tag" class="form-control" placeholder="Asset tag" required></div>
-                    <div class="col-md-3"><input name="name" class="form-control" placeholder="Asset name" required></div>
-                    <div class="col-md-3"><input name="serial_number" class="form-control" placeholder="Serial number"></div>
-                    <div class="col-md-3"><input name="vendor_name" class="form-control" placeholder="Vendor"></div>
-                    <div class="col-md-3"><input name="purchase_date" type="date" class="form-control"></div>
-                    <div class="col-md-3"><input name="purchase_cost" type="number" step="0.01" min="0" class="form-control" placeholder="Cost"></div>
-                    <div class="col-md-3"><input name="location" class="form-control" placeholder="Location"></div>
+                    <div class="col-md-3"><input aria-label="Asset tag" name="asset_tag" class="form-control" placeholder="Asset tag" required></div>
+                    <div class="col-md-3"><input aria-label="Asset name" name="name" class="form-control" placeholder="Asset name" required></div>
+                    <div class="col-md-3"><input aria-label="Serial number" name="serial_number" class="form-control" placeholder="Serial number"></div>
+                    <div class="col-md-3"><input aria-label="Vendor" name="vendor_name" class="form-control" placeholder="Vendor"></div>
+                    <div class="col-md-3"><input aria-label="Purchase Date" name="purchase_date" type="date" class="form-control"></div>
+                    <div class="col-md-3"><input aria-label="Cost" name="purchase_cost" type="number" step="0.01" min="0" class="form-control" placeholder="Cost"></div>
+                    <div class="col-md-3"><input aria-label="Location" name="location" class="form-control" placeholder="Location"></div>
                     <div class="col-md-3">
-                        <select name="condition" class="form-select" required>
+                        <select aria-label="Condition" name="condition" class="form-select" required>
                             <option value="new">New</option>
                             <option value="good" selected>Good</option>
                             <option value="needs_repair">Needs Repair</option>
                             <option value="damaged">Damaged</option>
                         </select>
                     </div>
-                    <div class="col-md-7"><input name="notes" class="form-control" placeholder="Notes"></div>
+                    <div class="col-md-7"><input aria-label="Notes" name="notes" class="form-control" placeholder="Notes"></div>
                     <div class="col-md-2"><button class="btn btn-primary w-100">Add Asset</button></div>
                 </form>
             </div>
@@ -162,11 +162,11 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Search</label>
-                <input name="search" value="{{ request('search') }}" class="form-control" placeholder="Tag, name, serial, location">
+                <input aria-label="Tag, name, serial, location" name="search" value="{{ request('search') }}" class="form-control" placeholder="Tag, name, serial, location">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Status</label>
-                <select name="status" class="form-select">
+                <select aria-label="Status" name="status" class="form-select">
                     <option value="">All</option>
                     @foreach(['available' => 'Available', 'assigned' => 'Assigned', 'maintenance' => 'Maintenance', 'retired' => 'Retired'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
@@ -184,13 +184,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Asset</th>
-                        <th>Category</th>
-                        <th>Location</th>
-                        <th>Status</th>
-                        <th>Assigned To</th>
-                        <th class="text-end">Value</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Asset</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Location</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Assigned To</th>
+                        <th scope="col" class="text-end">Value</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -217,7 +217,7 @@
                             <td class="text-end">Rs. {{ number_format($asset->purchase_cost, 2) }}</td>
                             <td class="text-end">
                                 @if($asset->status === 'available')
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignAsset{{ $asset->id }}">Assign</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignAsset{{ $asset->id }}">Assign</button>
                                 @else
                                     <span class="text-muted small">No action</span>
                                 @endif
@@ -256,10 +256,10 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Asset</th>
-                        <th>Assigned To</th>
-                        <th>Assigned On</th>
-                        <th class="text-end">Return</th>
+                        <th scope="col">Asset</th>
+                        <th scope="col">Assigned To</th>
+                        <th scope="col">Assigned On</th>
+                        <th scope="col" class="text-end">Return</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -269,7 +269,7 @@
                             <td>{{ $assignment->assignedTo->name ?? 'Custodian not linked' }}</td>
                             <td>{{ $assignment->assigned_on?->format('d M Y') }}</td>
                             <td class="text-end">
-                                <form method="POST" action="{{ route('admin.assets.assignments.return', $assignment) }}" class="d-inline" onsubmit="return confirm('Return this asset in good condition?')">
+                                <form method="POST" action="{{ route('admin.assets.assignments.return', $assignment) }}" class="d-inline" onsubmit="return confirm('Return asset {{ addslashes($assignment->asset->asset_tag ?? $assignment->asset->name ?? 'this asset') }} from {{ addslashes($assignment->assignedTo->name ?? 'this custodian') }} in good condition? Confirm physical inspection, accessories, custody handover, and maintenance status before closing the assignment.')">
                                     @csrf
                                     <input type="hidden" name="returned_on" value="{{ now()->toDateString() }}">
                                     <input type="hidden" name="condition" value="good">
@@ -304,13 +304,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Item</th>
-                        <th>Category</th>
-                        <th>Location</th>
-                        <th class="text-end">Current Stock</th>
-                        <th class="text-end">Reorder Level</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Location</th>
+                        <th scope="col" class="text-end">Current Stock</th>
+                        <th scope="col" class="text-end">Reorder Level</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -335,8 +335,8 @@
                             </td>
                             <td class="text-end">
                                 @if($item->status === 'active')
-                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#receiveStock{{ $item->id }}">Receive</button>
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#issueStock{{ $item->id }}">Issue</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#receiveStock{{ $item->id }}">Receive</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#issueStock{{ $item->id }}">Issue</button>
                                 @else
                                     <span class="text-muted small">No stock movement</span>
                                 @endif
@@ -369,12 +369,12 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Date</th>
-                        <th>Item</th>
-                        <th>Type</th>
-                        <th class="text-end">Quantity</th>
-                        <th>Reference</th>
-                        <th>Issued To</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" class="text-end">Quantity</th>
+                        <th scope="col">Reference</th>
+                        <th scope="col">Issued To</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -406,16 +406,16 @@
     <div class="modal fade" id="assignAsset{{ $asset->id }}" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" action="{{ route('admin.assets.assign', $asset) }}" onsubmit="return confirm('Assign this asset to the selected user?')">
+                <form method="POST" action="{{ route('admin.assets.assign', $asset) }}" onsubmit="return confirm('Assign asset {{ addslashes($asset->asset_tag ?? $asset->name) }} to the selected user? Confirm custodian, handover date, accessories, and return expectations before changing asset custody.')">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title">Assign {{ $asset->asset_tag }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Assign To</label>
-                            <select name="assigned_to_user_id" class="form-select" required>
+                            <select aria-label="Assigned To User" name="assigned_to_user_id" class="form-select" required>
                                 <option value="">- Select User -</option>
                                 @foreach($users as $user)
                                     <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
@@ -424,11 +424,11 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Assigned On</label>
-                            <input type="date" name="assigned_on" value="{{ now()->toDateString() }}" class="form-control" required>
+                            <input aria-label="Assigned On" type="date" name="assigned_on" value="{{ now()->toDateString() }}" class="form-control" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Remarks</label>
-                            <textarea name="remarks" rows="3" class="form-control" placeholder="Handover notes, accessories, or expected return terms"></textarea>
+                            <textarea aria-label="Handover notes, accessories, or expected return terms" name="remarks" rows="3" class="form-control" placeholder="Handover notes, accessories, or expected return terms"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -446,18 +446,18 @@
 <div class="modal fade" id="receiveStock{{ $item->id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.assets.stock-items.receive', $item) }}" onsubmit="return confirm('Receive this stock quantity into inventory?')">
+            <form method="POST" action="{{ route('admin.assets.stock-items.receive', $item) }}" onsubmit="return confirm('Receive stock for {{ addslashes($item->name) }} into inventory? Confirm quantity, vendor/reference, date, and storage location before increasing available stock.')">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Receive {{ $item->name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3"><label class="form-label">Quantity</label><input name="quantity" type="number" min="1" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Vendor</label><input name="vendor_name" class="form-control"></div>
-                    <div class="mb-3"><label class="form-label">Reference</label><input name="reference_number" class="form-control"></div>
-                    <div class="mb-3"><label class="form-label">Date</label><input name="movement_date" type="date" value="{{ now()->toDateString() }}" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Remarks</label><textarea name="remarks" rows="3" class="form-control"></textarea></div>
+                    <div class="mb-3"><label class="form-label">Quantity</label><input aria-label="Quantity" name="quantity" type="number" min="1" class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Vendor</label><input aria-label="Vendor Name" name="vendor_name" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">Reference</label><input aria-label="Reference Number" name="reference_number" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">Date</label><input aria-label="Movement Date" name="movement_date" type="date" value="{{ now()->toDateString() }}" class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Remarks</label><textarea aria-label="Remarks" name="remarks" rows="3" class="form-control"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -471,27 +471,27 @@
 <div class="modal fade" id="issueStock{{ $item->id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.assets.stock-items.issue', $item) }}" onsubmit="return confirm('Issue this stock quantity and reduce current inventory?')">
+            <form method="POST" action="{{ route('admin.assets.stock-items.issue', $item) }}" onsubmit="return confirm('Issue stock for {{ addslashes($item->name) }} and reduce current inventory? Confirm quantity, recipient, purpose, and low-stock impact before recording the movement.')">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Issue {{ $item->name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info small">Current stock: {{ $item->current_stock }} {{ $item->unit }}</div>
-                    <div class="mb-3"><label class="form-label">Quantity</label><input name="quantity" type="number" min="1" class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Quantity</label><input aria-label="Quantity" name="quantity" type="number" min="1" class="form-control" required></div>
                     <div class="mb-3">
                         <label class="form-label">Issue To</label>
-                        <select name="issued_to_user_id" class="form-select">
+                        <select aria-label="Issued To User" name="issued_to_user_id" class="form-select">
                             <option value="">- Select User -</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="mb-3"><label class="form-label">Reference</label><input name="reference_number" class="form-control"></div>
-                    <div class="mb-3"><label class="form-label">Date</label><input name="movement_date" type="date" value="{{ now()->toDateString() }}" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Remarks</label><textarea name="remarks" rows="3" class="form-control"></textarea></div>
+                    <div class="mb-3"><label class="form-label">Reference</label><input aria-label="Reference Number" name="reference_number" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">Date</label><input aria-label="Movement Date" name="movement_date" type="date" value="{{ now()->toDateString() }}" class="form-control" required></div>
+                    <div class="mb-3"><label class="form-label">Remarks</label><textarea aria-label="Remarks" name="remarks" rows="3" class="form-control"></textarea></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

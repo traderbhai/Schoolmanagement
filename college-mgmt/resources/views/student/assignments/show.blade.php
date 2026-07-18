@@ -60,12 +60,12 @@
                     @endif
                     <div class="mb-3">
                         <label class="form-label">Your Answer <span class="text-muted">(optional if uploading file)</span></label>
-                        <textarea name="answer_text" rows="6" class="form-control @error('answer_text') is-invalid @enderror">{{ old('answer_text') }}</textarea>
+                        <textarea aria-label="Answer Text" name="answer_text" rows="6" class="form-control @error('answer_text') is-invalid @enderror">{{ old('answer_text') }}</textarea>
                         @error('answer_text')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Upload File <span class="text-muted">(max 10MB)</span></label>
-                        <input type="file" name="file" class="form-control @error('file') is-invalid @enderror">
+                        <input aria-label="File" type="file" name="file" class="form-control @error('file') is-invalid @enderror">
                         @error('file')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <button type="submit" class="btn btn-primary">Submit Assignment</button>

@@ -46,6 +46,48 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 
+.skip-link {
+  position: fixed;
+  top: .75rem;
+  left: .75rem;
+  z-index: 2000;
+  padding: .55rem .8rem;
+  border-radius: var(--radius-sm);
+  background: var(--clr-primary);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform .15s ease;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  color: #fff;
+  transform: translateY(0);
+  outline: 3px solid rgba(79,70,229,.28);
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.nav-link:focus-visible,
+.dropdown-item:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(79,70,229,.35);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(79,70,229,.12);
+}
+
+.sidebar .nav-link:focus-visible,
+.offcanvas[id="mobileSidebar"] .nav-link:focus-visible {
+  outline-color: rgba(255,255,255,.75);
+  box-shadow: 0 0 0 4px rgba(255,255,255,.16);
+}
+
 body {
   font-family: var(--font-base);
   font-size: 14px;

@@ -47,7 +47,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show py-2">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -56,11 +56,11 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small mb-1">Search</label>
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Name / Email / App#" value="{{ request('search') }}">
+                    <input aria-label="Name / Email / App#" type="text" name="search" class="form-control form-control-sm" placeholder="Name / Email / App#" value="{{ request('search') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Program</label>
-                    <select name="program_id" class="form-select form-select-sm">
+                    <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                         <option value="">All Programs</option>
                         @foreach($programs as $p)
                             <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->abbreviation ?? $p->name }}</option>
@@ -69,7 +69,7 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
                         @foreach($statuses as $s)
                             <option value="{{ $s }}" @selected(request('status') == $s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>
@@ -78,7 +78,7 @@
                 </div>
                 <div class="col-md-1">
                     <label class="form-label small mb-1">Rows</label>
-                    <select name="per_page" class="form-select form-select-sm">
+                    <select aria-label="Per Page" name="per_page" class="form-select form-select-sm">
                         @foreach([10,20,50,100] as $size)
                             <option value="{{ $size }}" @selected(request('per_page', 20) == $size)>{{ $size }}</option>
                         @endforeach
@@ -86,14 +86,14 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">From</label>
-                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                    <input aria-label="Date From" type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">To</label>
-                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                    <input aria-label="Date To" type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
                 </div>
                 <div class="col-12 d-flex justify-content-end gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Apply</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Apply filters</button>
                     <a href="{{ route('admission.applicants.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                 </div>
             </form>
@@ -104,14 +104,14 @@
         @csrf
         <div id="bulkBar" class="alert alert-warning d-none mb-2 py-2 d-flex align-items-center gap-3">
             <span class="fw-semibold"><span id="selectedCount">0</span> selected</span>
-            <select name="action" class="form-select form-select-sm w-auto" required>
+            <select aria-label="Action" name="action" class="form-select form-select-sm w-auto" required>
                 <option value="">Bulk Action</option>
                 <option value="under_review">Move to Under Review</option>
                 <option value="shortlisted">Move to Shortlisted</option>
                 <option value="rejected">Move to Rejected</option>
                 <option value="withdrawn">Mark Withdrawn</option>
             </select>
-            <button type="submit" class="btn btn-warning btn-sm">Apply</button>
+            <button type="submit" class="btn btn-warning btn-sm">Apply bulk action</button>
         </div>
 
         <div class="card border-0 shadow-sm">
@@ -119,22 +119,22 @@
                 <table class="table table-hover table-sm align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th width="40"><input type="checkbox" id="checkAll" class="form-check-input"></th>
-                            <th>Name / Email</th>
-                            <th><a class="sort-link" href="{{ $sortUrl('application_number') }}">App # <i class="bi {{ $sortIcon('application_number') }}"></i></a></th>
-                            <th>Program</th>
-                            <th><a class="sort-link" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
-                            <th><a class="sort-link" href="{{ $sortUrl('applied_at') }}">Applied <i class="bi {{ $sortIcon('applied_at') }}"></i></a></th>
-                            <th>Last Interaction</th>
-                            <th>Next Follow-up</th>
-                            <th>Complete</th>
-                            <th></th>
+                            <th scope="col" width="40"><input type="checkbox" id="checkAll" class="form-check-input"></th>
+                            <th scope="col">Name / Email</th>
+                            <th scope="col"><a class="sort-link" href="{{ $sortUrl('application_number') }}">App # <i class="bi {{ $sortIcon('application_number') }}"></i></a></th>
+                            <th scope="col">Program</th>
+                            <th scope="col"><a class="sort-link" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
+                            <th scope="col"><a class="sort-link" href="{{ $sortUrl('applied_at') }}">Applied <i class="bi {{ $sortIcon('applied_at') }}"></i></a></th>
+                            <th scope="col">Last Interaction</th>
+                            <th scope="col">Next Follow-up</th>
+                            <th scope="col">Complete</th>
+                            <th aria-label="Actions" scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($applicants as $applicant)
                         <tr>
-                            <td><input type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="form-check-input row-check"></td>
+                            <td><input aria-label="Select applicant {{ $applicant->application_number }}" type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="form-check-input row-check"></td>
                             <td>
                                 <div class="fw-semibold">{{ $applicant->user->name ?? 'Applicant name missing' }}</div>
                                 <div class="text-muted small">{{ $applicant->user->email ?? 'Email not provided' }}</div>
@@ -168,7 +168,7 @@
                                 </div>
                             </td>
                             <td class="text-end">
-                                <a href="{{ route('admission.applicants.show', $applicant) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Open</a>
+                                <a href="{{ route('admission.applicants.show', $applicant) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Open applicant</a>
                             </td>
                         </tr>
                         @empty

@@ -18,7 +18,7 @@
     <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">Student</th><th>Enrollment</th><th>Status</th><th>Package Offered</th><th>Remarks</th><th class="text-end pe-3">Update</th></tr>
+        <tr><th scope="col" class="ps-3">Student</th><th scope="col">Enrollment</th><th scope="col">Status</th><th scope="col">Package Offered</th><th scope="col">Remarks</th><th scope="col" class="text-end pe-3">Update</th></tr>
       </thead>
       <tbody>
         @forelse($applications as $app)
@@ -56,7 +56,7 @@
   <div class="modal-dialog modal-dialog-centered" style="max-width:380px">
     <div class="modal-content">
       <div class="modal-header"><h6 class="modal-title mb-0">Update Application</h6>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" aria-label="Close dialog" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="updateForm" method="POST">
         @csrf @method('PATCH')
@@ -80,7 +80,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary">Update</button>
+          <button type="submit" class="btn btn-sm btn-primary">Update application</button>
         </div>
       </form>
     </div>

@@ -24,10 +24,10 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Student</th>
-                            <th>Drive / Company</th>
-                            <th>Package</th>
-                            <th>Date</th>
+                            <th scope="col" class="ps-3">Student</th>
+                            <th scope="col">Drive / Company</th>
+                            <th scope="col">Package</th>
+                            <th scope="col">Date</th>
                         </tr>
                     </thead>
                     <tbody>

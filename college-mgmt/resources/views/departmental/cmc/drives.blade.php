@@ -25,7 +25,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All statuses</option>
                         <option value="active" @selected(request('status') === 'active')>Active (upcoming or ongoing)</option>
                         @foreach(['upcoming','ongoing','completed','cancelled'] as $status)
@@ -35,7 +35,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-semibold">Company</label>
-                    <select name="company_id" class="form-select form-select-sm">
+                    <select aria-label="Company" name="company_id" class="form-select form-select-sm">
                         <option value="">All companies</option>
                         @foreach($companies as $company)
                             <option value="{{ $company->id }}" @selected((string) request('company_id') === (string) $company->id)>{{ $company->name }}</option>
@@ -57,12 +57,12 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Company / Drive</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Applications</th>
-                            <th>Date</th>
-                            <th class="text-end pe-3">Action</th>
+                            <th scope="col" class="ps-3">Company / Drive</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Applications</th>
+                            <th scope="col">Date</th>
+                            <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,7 +84,7 @@
                                 <a href="{{ route('cmc.drives.edit', $drive) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
                                     data-bs-toggle="modal" data-bs-target="#deleteModal"
                                     data-action="{{ route('cmc.drives.destroy', $drive) }}"
                                     data-name="{{ $drive->title }}" title="Delete">

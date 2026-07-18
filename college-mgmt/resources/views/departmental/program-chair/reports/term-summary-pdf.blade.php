@@ -112,10 +112,10 @@
         <table class="stats-table">
             <thead>
                 <tr>
-                    <th>Enrollment</th>
-                    <th>Avg Marks</th>
-                    <th>Pass Rate %</th>
-                    <th>Attendance %</th>
+                    <th scope="col">Enrollment</th>
+                    <th scope="col">Avg Marks</th>
+                    <th scope="col">Pass Rate %</th>
+                    <th scope="col">Attendance %</th>
                 </tr>
             </thead>
             <tbody>
@@ -134,9 +134,9 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width:40px">#</th>
-                    <th>Student Name</th>
-                    <th>Enrollment Number</th>
+                    <th scope="col" style="width:40px">#</th>
+                    <th scope="col">Student Name</th>
+                    <th scope="col">Enrollment Number</th>
                 </tr>
             </thead>
             <tbody>

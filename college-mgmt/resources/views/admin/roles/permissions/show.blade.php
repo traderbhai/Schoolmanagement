@@ -22,7 +22,7 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -77,7 +77,7 @@
                                     </div>
                                     @foreach($perms as $perm)
                                     <div class="form-check mb-1">
-                                        <input class="form-check-input perm-check" type="checkbox"
+                                        <input aria-label="Permissions" class="form-check-input perm-check" type="checkbox"
                                                name="permissions[]"
                                                value="{{ $perm->id }}"
                                                id="perm_{{ $perm->id }}"
@@ -107,8 +107,8 @@
                             <table class="table table-sm align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Program</th>
-                                        <th>Permissions</th>
+                                        <th scope="col">Program</th>
+                                        <th scope="col">Permissions</th>
                                     </tr>
                                 </thead>
                                 <tbody>

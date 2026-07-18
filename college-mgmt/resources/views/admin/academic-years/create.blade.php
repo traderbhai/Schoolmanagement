@@ -20,26 +20,26 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. 2025-2026" required>
+                    <input aria-label="Academic year name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. 2025-2026" required>
                     <div class="form-text">Descriptive label for this academic year.</div>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Year <span class="text-danger">*</span></label>
-                    <input type="number" name="start_year" class="form-control" value="{{ old('start_year', date('Y')) }}" min="2000" max="2100" required>
+                    <input aria-label="Start Year" type="number" name="start_year" class="form-control" value="{{ old('start_year', date('Y')) }}" min="2000" max="2100" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Year <span class="text-danger">*</span></label>
-                    <input type="number" name="end_year" class="form-control" value="{{ old('end_year', date('Y')+1) }}" min="2000" max="2100" required>
+                    <input aria-label="End Year" type="number" name="end_year" class="form-control" value="{{ old('end_year', date('Y')+1) }}" min="2000" max="2100" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Date <span class="text-danger">*</span></label>
-                    <input type="date" name="start_date" class="form-control @error('start_date') is-invalid @enderror" value="{{ old('start_date') }}" required>
+                    <input aria-label="Start Date" type="date" name="start_date" class="form-control @error('start_date') is-invalid @enderror" value="{{ old('start_date') }}" required>
                     @error('start_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Date <span class="text-danger">*</span></label>
-                    <input type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date') }}" required>
+                    <input aria-label="End Date" type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date') }}" required>
                     @error('end_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">

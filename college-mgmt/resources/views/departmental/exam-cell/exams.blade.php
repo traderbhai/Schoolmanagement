@@ -12,13 +12,13 @@
 
 <form method="GET" class="row g-2 mb-3">
     <div class="col-sm-3">
-        <select name="program_id" class="form-select form-select-sm">
+        <select aria-label="Program" name="program_id" class="form-select form-select-sm">
             <option value="">All Programs</option>
             @foreach($programs as $p)<option value="{{ $p->id }}" @selected(request('program_id')==$p->id)>{{ $p->name }}</option>@endforeach
         </select>
     </div>
     <div class="col-sm-2">
-        <select name="status" class="form-select form-select-sm">
+        <select aria-label="Status" name="status" class="form-select form-select-sm">
             <option value="">All</option>
             <option value="upcoming" @selected(request('status')=='upcoming')>Upcoming</option>
             <option value="past" @selected(request('status')=='past')>Past</option>
@@ -33,7 +33,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Date</th><th>Exam</th><th>Program</th><th>Subject</th><th>Results</th><th>Actions</th></tr>
+                    <tr><th scope="col">Date</th><th scope="col">Exam</th><th scope="col">Program</th><th scope="col">Subject</th><th scope="col">Results</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
                 @forelse($exams as $exam)
@@ -48,8 +48,8 @@
                             @if($exam->published_at)
                                 <span class="btn btn-sm btn-outline-secondary py-0 px-2 disabled" title="Published exam locked"><i class="bi bi-lock"></i></span>
                             @else
-                                <a href="{{ route('exam-cell.exams.edit', $exam) }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-pencil"></i></a>
-                                <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                <a href="{{ route('exam-cell.exams.edit', $exam) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" aria-label="Edit exam {{ $exam->name }}"><i class="bi bi-pencil"></i></a>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
                                     data-bs-toggle="modal" data-bs-target="#deleteModal"
                                     data-action="{{ route('exam-cell.exams.destroy', $exam) }}"
                                     data-name="{{ $exam->name }}">

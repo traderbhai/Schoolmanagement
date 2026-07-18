@@ -7,7 +7,7 @@
 
     {{-- Header --}}
     <div class="d-flex align-items-center mb-3">
-        <a href="{{ route('teacher.assignments.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <a href="{{ route('teacher.assignments.index') }}" class="btn btn-sm btn-outline-secondary me-3" aria-label="Back to assignments">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
@@ -58,7 +58,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(!$canGradeSubmissions)
@@ -91,13 +91,13 @@
                     <table class="table align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Student</th>
-                                <th>Submitted At</th>
-                                <th class="text-center">Late</th>
-                                <th class="text-center">Status</th>
-                                <th style="width:120px;">Marks</th>
-                                <th style="width:220px;">Feedback</th>
-                                <th class="text-center">Save</th>
+                                <th scope="col">Student</th>
+                                <th scope="col">Submitted At</th>
+                                <th scope="col" class="text-center">Late</th>
+                                <th scope="col" class="text-center">Status</th>
+                                <th scope="col" style="width:120px;">Marks</th>
+                                <th scope="col" style="width:220px;">Feedback</th>
+                                <th scope="col" class="text-center">Save</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -135,19 +135,19 @@
                                         <td>
                                             <form method="POST" action="{{ route('teacher.assignments.grade', $submission) }}">
                                                 @csrf
-                                                <input type="number" name="marks_obtained" value="{{ $submission->marks_obtained }}"
+                                                <input aria-label="Marks Obtained" type="number" name="marks_obtained" value="{{ $submission->marks_obtained }}"
                                                        class="form-control form-control-sm"
                                                        step="0.01"
                                                        min="0" max="{{ $assignment->max_marks }}"
                                                        placeholder="/ {{ $assignment->max_marks }}">
                                         </td>
                                         <td>
-                                                <input type="text" name="feedback" value="{{ $submission->feedback }}"
+                                                <input aria-label="Feedback" type="text" name="feedback" value="{{ $submission->feedback }}"
                                                        class="form-control form-control-sm"
                                                        placeholder="Optional feedback">
                                         </td>
                                         <td class="text-center">
-                                                <button type="submit" class="btn btn-sm btn-success">
+                <button type="submit" class="btn btn-sm btn-success" aria-label="Save marks for {{ $sub->student->user->name ?? 'student' }}">
                                                     <i class="bi bi-check-lg"></i>
                                                 </button>
                                             </form>

@@ -83,7 +83,7 @@
 @if((!isset($students) || !$students->count()) && (!isset($teachers) || !$teachers->count()) && (!isset($notices) || !$notices->count()))
 <div class="text-center py-5 text-muted">
     <i class="bi bi-search fs-1 d-block mb-3"></i>
-    No results found for "{{ $q }}"
+    No students, teachers, or notices match "{{ $q }}". Check the spelling or try a broader search term.
 </div>
 @endif
 @endif

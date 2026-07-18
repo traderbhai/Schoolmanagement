@@ -25,7 +25,7 @@
                 <div class="list-group">
                     @foreach($question->options as $option)
                     <label class="list-group-item list-group-item-action cursor-pointer">
-                        <input type="radio" class="form-check-input me-2" name="answers[{{ $question->id }}]" value="{{ $option->id }}">
+                        <input aria-label="Select answer {{ $option->option_text }} for question {{ $i + 1 }}" type="radio" class="form-check-input me-2" name="answers[{{ $question->id }}]" value="{{ $option->id }}">
                         {{ $option->option_text }}
                     </label>
                     @endforeach
@@ -33,10 +33,10 @@
                 @elseif($question->type === 'true_false')
                 <div class="list-group">
                     <label class="list-group-item list-group-item-action cursor-pointer">
-                        <input type="radio" name="answers[{{ $question->id }}]" value="true" class="form-check-input me-2"> True
+                        <input aria-label="Select true for question {{ $i + 1 }}" type="radio" name="answers[{{ $question->id }}]" value="true" class="form-check-input me-2"> True
                     </label>
                     <label class="list-group-item list-group-item-action cursor-pointer">
-                        <input type="radio" name="answers[{{ $question->id }}]" value="false" class="form-check-input me-2"> False
+                        <input aria-label="Select false for question {{ $i + 1 }}" type="radio" name="answers[{{ $question->id }}]" value="false" class="form-check-input me-2"> False
                     </label>
                 </div>
                 @endif
@@ -46,7 +46,7 @@
 
         <div class="d-flex justify-content-between align-items-center mt-4">
             <span class="text-muted">{{ $questions->count() }} questions</span>
-            <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Submit quiz? You cannot change answers after submission.')">
+            <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Submit this quiz attempt now? Confirm every answer is final because the attempt is locked and cannot be changed after submission.')">
                 <i class="bi bi-send me-2"></i>Submit Quiz
             </button>
         </div>

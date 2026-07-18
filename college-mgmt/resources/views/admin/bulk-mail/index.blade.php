@@ -29,7 +29,7 @@
             {{-- Applicant status filter --}}
             <div id="filter-applicant-status" class="hidden mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Applicant Status</label>
-                <select name="applicant_status" class="w-full border rounded px-3 py-2 text-sm">
+                <select aria-label="Applicant Status" name="applicant_status" class="w-full border rounded px-3 py-2 text-sm">
                     @foreach(['draft','submitted','under_review','shortlisted','selected','rejected','withdrawn'] as $s)
                         <option value="{{ $s }}">{{ ucfirst(str_replace('_',' ',$s)) }}</option>
                     @endforeach
@@ -40,7 +40,7 @@
             <div id="filter-program-batch" class="hidden grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Program</label>
-                    <select name="program_id" class="w-full border rounded px-3 py-2 text-sm">
+                    <select aria-label="Program" name="program_id" class="w-full border rounded px-3 py-2 text-sm">
                         <option value="">All Programs</option>
                         @foreach($programs as $p)
                             <option value="{{ $p->id }}">{{ $p->name }}</option>
@@ -49,7 +49,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Batch</label>
-                    <select name="batch_id" class="w-full border rounded px-3 py-2 text-sm">
+                    <select aria-label="Batch" name="batch_id" class="w-full border rounded px-3 py-2 text-sm">
                         <option value="">All Batches</option>
                         @foreach($batches as $b)
                             <option value="{{ $b->id }}">{{ $b->name }}</option>
@@ -61,7 +61,7 @@
             {{-- Role filter --}}
             <div id="filter-role" class="hidden mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select name="role" class="w-full border rounded px-3 py-2 text-sm">
+                <select aria-label="Role" name="role" class="w-full border rounded px-3 py-2 text-sm">
                     <option value="student">Student</option>
                     <option value="applicant">Applicant</option>
                     <option value="teacher">Teacher</option>
@@ -85,19 +85,19 @@
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
-                <input type="text" name="subject" value="{{ old('subject') }}" class="w-full border rounded px-3 py-2 text-sm" required placeholder="Email subject">
+                <input aria-label="Email subject" type="text" name="subject" value="{{ old('subject') }}" class="w-full border rounded px-3 py-2 text-sm" required placeholder="Email subject">
                 @error('subject') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Message Body <span class="text-red-500">*</span></label>
-                <textarea name="body" rows="10" class="w-full border rounded px-3 py-2 text-sm" required placeholder="Write your message here...">{{ old('body') }}</textarea>
+                <textarea aria-label="Bulk email message" name="body" rows="10" class="w-full border rounded px-3 py-2 text-sm" required placeholder="Write your message here...">{{ old('body') }}</textarea>
                 @error('body') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
             </div>
         </div>
 
         <div class="flex justify-end">
-            <button type="submit" onclick="return confirm('Send this email to all selected recipients?')"
+            <button type="submit" onclick="return confirm('Send this bulk email to all selected recipients? Confirm audience filters, subject, message body, and unsubscribe/contact policy before dispatch.')"
                 class="bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-2 rounded">
                 Send Bulk Email
             </button>

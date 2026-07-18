@@ -43,7 +43,7 @@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
-                <tr><th>Subject</th><th>Reason</th><th>Status</th><th>Remarks</th><th>Submitted</th></tr>
+                <tr><th scope="col">Subject</th><th scope="col">Reason</th><th scope="col">Status</th><th scope="col">Remarks</th><th scope="col">Submitted</th></tr>
             </thead>
             <tbody>
                 @foreach($condonations as $c)

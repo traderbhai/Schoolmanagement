@@ -15,7 +15,7 @@
                 <form method="GET" class="row g-2 align-items-end">
                     <div class="col-sm-4">
                         <label class="form-label small mb-1">Program</label>
-                        <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">— Select Program —</option>
                             @foreach($programs as $p)
                                 <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -25,7 +25,7 @@
                     @if(request('program_id') && $subjects->isNotEmpty())
                     <div class="col-sm-4">
                         <label class="form-label small mb-1">Subject</label>
-                        <select name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">— Select Subject —</option>
                             @foreach($subjects as $s)
                                 <option value="{{ $s->id }}" @selected(request('subject_id') == $s->id)>{{ $s->name }}</option>
@@ -65,11 +65,11 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th style="width:80px">Code</th>
-                            <th>Description</th>
-                            <th style="width:110px">Bloom Level</th>
-                            <th style="width:60px">Active</th>
-                            <th style="width:80px"></th>
+                            <th scope="col" style="width:80px">Code</th>
+                            <th scope="col">Description</th>
+                            <th scope="col" style="width:110px">Bloom Level</th>
+                            <th scope="col" style="width:60px">Active</th>
+                            <th aria-label="Actions" scope="col" style="width:80px"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,12 +89,12 @@
                                 @else<span class="text-muted"><i class="bi bi-x-circle"></i></span>@endif
                             </td>
                             <td>
-                                <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal"
+                                <button type="button" class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal"
                                     data-bs-target="#editCo{{ $co->id }}"><i class="bi bi-pencil"></i></button>
                                 <form method="POST" action="{{ route('academic.obe.co.destroy', $co) }}" class="d-inline"
-                                      onsubmit="return confirm('Remove {{ $co->code }}?')">
+                                      onsubmit="return confirm('Remove course outcome {{ addslashes($co->code) }}? Confirm it is not used in OBE mappings, attainment records, assessment rubrics, curriculum reports, or accreditation evidence.')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger" aria-label="Remove course outcome {{ $co->code }}"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -104,19 +104,19 @@
                                 <form method="POST" action="{{ route('academic.obe.co.update', $co) }}">
                                     @csrf @method('PUT')
                                     <div class="modal-header"><h6 class="modal-title">Edit {{ $co->code }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                     <div class="modal-body">
                                         <div class="mb-2">
                                             <label class="form-label small">Code</label>
-                                            <input type="text" name="code" class="form-control form-control-sm" value="{{ $co->code }}" required>
+                                            <input aria-label="Code" type="text" name="code" class="form-control form-control-sm" value="{{ $co->code }}" required>
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small">Description</label>
-                                            <textarea name="description" class="form-control form-control-sm" rows="3" required>{{ $co->description }}</textarea>
+                                            <textarea aria-label="Description" name="description" class="form-control form-control-sm" rows="3" required>{{ $co->description }}</textarea>
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small">Bloom's Level</label>
-                                            <select name="bloom_level" class="form-select form-select-sm">
+                                            <select aria-label="Bloom Level" name="bloom_level" class="form-select form-select-sm">
                                                 @foreach(['remember','understand','apply','analyze','evaluate','create'] as $bl)
                                                     <option value="{{ $bl }}" @selected($co->bloom_level === $bl)>{{ ucfirst($bl) }}</option>
                                                 @endforeach
@@ -124,13 +124,13 @@
                                         </div>
                                         <div class="form-check">
                                             <input type="hidden" name="is_active" value="0">
-                                            <input class="form-check-input" type="checkbox" name="is_active" value="1" @checked($co->is_active) id="active{{ $co->id }}">
+                                            <input aria-label="Course outcome is active" class="form-check-input" type="checkbox" name="is_active" value="1" @checked($co->is_active) id="active{{ $co->id }}">
                                             <label class="form-check-label small" for="active{{ $co->id }}">Active</label>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save outcome</button>
                                     </div>
                                 </form>
                             </div></div>
@@ -154,19 +154,19 @@
                     <input type="hidden" name="subject_id" value="{{ $subject->id }}">
                     <div class="mb-3">
                         <label class="form-label">Code <span class="text-danger">*</span></label>
-                        <input type="text" name="code" class="form-control form-control-sm @error('code') is-invalid @enderror"
+                        <input aria-label="Course outcome code" type="text" name="code" class="form-control form-control-sm @error('code') is-invalid @enderror"
                                placeholder="CO1, CO2 …" value="{{ old('code') }}" required>
                         @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea name="description" class="form-control form-control-sm @error('description') is-invalid @enderror"
+                        <textarea aria-label="Course outcome description" name="description" class="form-control form-control-sm @error('description') is-invalid @enderror"
                                   rows="3" placeholder="Understand and apply sorting algorithms…" required>{{ old('description') }}</textarea>
                         @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Bloom's Taxonomy Level</label>
-                        <select name="bloom_level" class="form-select form-select-sm">
+                        <select aria-label="Bloom Level" name="bloom_level" class="form-select form-select-sm">
                             @php $bloomDesc = ['remember'=>'Recall facts','understand'=>'Explain concepts','apply'=>'Use in new situations','analyze'=>'Break into parts','evaluate'=>'Justify decisions','create'=>'Produce original work']; @endphp
                             @foreach($bloomDesc as $level => $desc)
                                 <option value="{{ $level }}" @selected(old('bloom_level', 'understand') === $level)>

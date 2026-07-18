@@ -406,28 +406,28 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
     {
         $expectations = [
             resource_path('views/admin/assets/index.blade.php') => [
-                "confirm('Assign this asset to the selected user?')",
-                "confirm('Return this asset in good condition?')",
-                "confirm('Receive this stock quantity into inventory?')",
-                "confirm('Issue this stock quantity and reduce current inventory?')",
+                'Confirm custodian, handover date, accessories, and return expectations before changing asset custody.',
+                'Confirm physical inspection, accessories, custody handover, and maintenance status before closing the assignment.',
+                'Confirm quantity, vendor/reference, date, and storage location before increasing available stock.',
+                'Confirm quantity, recipient, purpose, and low-stock impact before recording the movement.',
             ],
             resource_path('views/admin/transport/index.blade.php') => [
-                "confirm('End this transport assignment from today?')",
+                'Confirm route/stop removal, monthly fee impact, vehicle capacity release, and student communication before ending access.',
             ],
             resource_path('views/admin/hostel/fees.blade.php') => [
-                "confirm('Mark this hostel fee demand as paid?')",
-                "confirm('Waive this hostel fee demand?')",
+                'Confirm receipt, month, room allocation, and reconciliation reference before closing the demand.',
+                'Confirm approved waiver authority, audit reason, and NOC/clearance impact before closing the demand.',
             ],
             resource_path('views/admin/hostel/outpasses.blade.php') => [
-                "confirm('Approve this hostel outpass?')",
-                "confirm('Mark this student as returned from outpass?')",
+                'Confirm reason, expected return, guardian/campus policy, and active hostel allocation before allowing exit.',
+                'Confirm physical return, actual time, and any late/escalation notes before closing the movement record.',
             ],
             resource_path('views/admin/library/reservations.blade.php') => [
-                "confirm('Fulfil this reservation and issue the available copy?')",
-                "confirm('Cancel this library reservation?')",
+                'Confirm copy availability, borrower eligibility, due date, and queue fairness before issuing.',
+                'Confirm borrower communication and queue impact before cancellation.',
             ],
             resource_path('views/admin/library/fines.blade.php') => [
-                "confirm('Mark this library fine as paid?')",
+                'Confirm receipt/reference and unresolved book-return status before closing the fine.',
             ],
         ];
 
@@ -438,6 +438,210 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
                 $this->assertStringContainsString($guard, $contents, $path);
             }
         }
+
+        $issuesContents = file_get_contents(resource_path('views/admin/library/issues.blade.php'));
+        $this->assertStringContainsString('Confirm copy condition, borrower, due/fine status, and shelf availability before closing the issue.', $issuesContents);
+        $this->assertStringContainsString('aria-label="Mark', $issuesContents);
+        $this->assertStringNotContainsString("confirm('Mark this book as returned?')", $issuesContents);
+    }
+
+    public function test_role_permission_revoke_actions_explain_access_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admin/users/roles/index.blade.php') => [
+                'Confirm dashboard access, approvals, reports, and portal permissions no longer require this assignment.',
+                'aria-label="Revoke role',
+            ],
+            resource_path('views/admin/role-assignments/index.blade.php') => [
+                'Confirm program/batch visibility, approvals, reports, and portal access should be removed for this scope.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Revoke this role assignment?')", file_get_contents(resource_path('views/admin/users/roles/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Revoke this assignment?')", file_get_contents(resource_path('views/admin/role-assignments/index.blade.php')));
+    }
+
+    public function test_admin_admission_seat_document_and_hostel_actions_explain_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admin/admissions/index.blade.php') => [
+                'Confirm this record is not needed for applicant history, enrollment audit, fee records, or reports.',
+                'aria-label="Delete admission record',
+            ],
+            resource_path('views/admin/admissions/show.blade.php') => [
+                'Confirm this record is not needed for applicant history, enrollment audit, fee records, or reports.',
+            ],
+            resource_path('views/admin/seat-matrix/index.blade.php') => [
+                'Confirm no offer round, waitlist movement, category allocation, or enrollment report depends on this capacity setup.',
+                'aria-label="Delete seat matrix',
+            ],
+            resource_path('views/admin/document-requests/index.blade.php') => [
+                'Confirm the rejection reason explains the missing/invalid requirement and the student can act on it before the request is closed.',
+            ],
+            resource_path('views/admin/hostel/allocations.blade.php') => [
+                'Confirm room keys, fee clearance, inventory/inspection, and bed capacity release before ending the allocation.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this record?')", file_get_contents(resource_path('views/admin/admissions/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this seat matrix?')", file_get_contents(resource_path('views/admin/seat-matrix/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Reject this document request?')", file_get_contents(resource_path('views/admin/document-requests/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Mark as vacated?')", file_get_contents(resource_path('views/admin/hostel/allocations.blade.php')));
+    }
+
+    public function test_admin_cmc_timetable_mail_company_and_program_actions_explain_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admin/bulk-mail/index.blade.php') => [
+                'Confirm audience filters, subject, message body, and unsubscribe/contact policy before dispatch.',
+            ],
+            resource_path('views/admin/timetable/index.blade.php') => [
+                'Apply timetable filters',
+                'Confirm this is not the canonical PMC official session and check attendance, teacher/student timetable, and reporting impact before deletion.',
+                'aria-label="Edit legacy timetable entry',
+                'aria-label="Remove legacy timetable entry',
+            ],
+            resource_path('views/admin/companies/index.blade.php') => [
+                'Confirm placement drives, student applications, offer history, and CMC reports no longer depend on this company record.',
+                'aria-label="Delete company',
+            ],
+            resource_path('views/admin/placement-drives/index.blade.php') => [
+                'Confirm student applications, shortlist/interview records, company communication, and placement reports no longer depend on it.',
+                'aria-label="Delete placement drive',
+            ],
+            resource_path('views/admin/programs/show.blade.php') => [
+                'Confirm curriculum, admissions, seat matrix, course groups, and student records no longer depend on it.',
+                'aria-label="Remove specialization',
+            ],
+            resource_path('views/departmental/cmc/create-drive.blade.php') => [
+                'Confirm company, eligibility, application deadline, student visibility, and communication readiness before saving.',
+            ],
+            resource_path('views/departmental/cmc/create-event.blade.php') => [
+                'Confirm date, venue, seats, registration deadline, student visibility, and communication readiness before saving.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Remove?')", file_get_contents(resource_path('views/admin/timetable/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this company?')", file_get_contents(resource_path('views/admin/companies/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this drive?')", file_get_contents(resource_path('views/admin/placement-drives/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Remove specialization?')", file_get_contents(resource_path('views/admin/programs/show.blade.php')));
+    }
+
+    public function test_core_admin_icon_actions_have_accessible_names(): void
+    {
+        $expectations = [
+            resource_path('views/admin/academic-years/index.blade.php') => [
+                'aria-label="View academic year',
+                'aria-label="Edit academic year',
+                'aria-label="Delete academic year',
+            ],
+            resource_path('views/admin/courses/index.blade.php') => [
+                'aria-label="View course',
+                'aria-label="Edit course',
+                'aria-label="Delete course',
+            ],
+            resource_path('views/admin/timetable-slots/index.blade.php') => [
+                'aria-label="Edit timetable slot',
+                'aria-label="Delete timetable slot',
+            ],
+            resource_path('views/admin/teachers/index.blade.php') => [
+                'aria-label="View teacher',
+                'aria-label="Edit teacher',
+                'aria-label="Delete teacher',
+            ],
+            resource_path('views/admin/classrooms/index.blade.php') => [
+                'aria-label="View classroom',
+                'aria-label="Edit classroom',
+                'aria-label="Delete classroom',
+            ],
+            resource_path('views/admin/subjects/index.blade.php') => [
+                'aria-label="Edit subject',
+                'aria-label="Delete subject',
+            ],
+            resource_path('views/admin/batches/index.blade.php') => [
+                'aria-label="View batch',
+                'aria-label="Edit batch',
+                'aria-label="Delete batch',
+            ],
+            resource_path('views/admin/admissions/index.blade.php') => [
+                'aria-label="View admission record',
+                'aria-label="Edit admission record',
+            ],
+            resource_path('views/admin/library/books.blade.php') => [
+                'aria-label="Search library books',
+                'aria-label="View library book',
+            ],
+            resource_path('views/admin/grievances/index.blade.php') => [
+                'aria-label="View grievance',
+            ],
+            resource_path('views/admin/leaves/index.blade.php') => [
+                'aria-label="View leave request',
+                'aria-label="Approve leave request',
+                'aria-label="Reject leave request',
+                'aria-label="Delete leave request',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+    }
+
+    public function test_finance_and_admission_setup_risky_actions_explain_downstream_impact(): void
+    {
+        $expectations = [
+            resource_path('views/academic/fee-demands/index.blade.php') => [
+                'Confirm the fee structure, due dates, scholarships, and active student list are final before creating finance ledger records.',
+                'Confirm the penalty policy, due dates, and any approved waivers before updating student balances.',
+            ],
+            resource_path('views/admin/admission-config/index.blade.php') => [
+                'Confirm no active applicants still need this checklist item before changing admission readiness rules.',
+                'Confirm this will not invalidate active assessments, scores, merit rules, or evaluator workflow history.',
+                'Confirm no applicant payment, offer deadline, or finance reconciliation depends on this installment.',
+                'aria-label="Remove required document',
+                'aria-label="Remove selection step',
+                'aria-label="Remove admission fee installment',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Generate fee demands for all active students in this batch/term?')", file_get_contents(resource_path('views/academic/fee-demands/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Remove?')", file_get_contents(resource_path('views/admin/admission-config/index.blade.php')));
     }
 
     public function test_batch_g_operations_action_entry_surfaces_are_guided(): void

@@ -5,21 +5,21 @@
 <div class="container-fluid py-4">
   <form method="GET" class="row g-2 mb-4">
     <div class="col-md-3">
-      <select name="program_id" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Program" name="program_id" class="form-select" onchange="this.form.submit()">
         @foreach($programs as $p)
           <option value="{{ $p->id }}" @selected($selectedProgram?->id == $p->id)>{{ $p->name }}</option>
         @endforeach
       </select>
     </div>
     <div class="col-md-3">
-      <select name="term_id" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Term" name="term_id" class="form-select" onchange="this.form.submit()">
         @foreach($terms as $t)
           <option value="{{ $t->id }}" @selected($selectedTerm?->id == $t->id)>{{ $t->name }}</option>
         @endforeach
       </select>
     </div>
     <div class="col-md-3">
-      <select name="batch_id" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Batch" name="batch_id" class="form-select" onchange="this.form.submit()">
         <option value="">All Batches</option>
         @foreach($batches as $b)
           <option value="{{ $b->id }}" @selected($selectedBatch?->id == $b->id)>{{ $b->name }}</option>
@@ -36,7 +36,7 @@
       <a href="{{ route('chair.timetable.availability') }}" class="btn btn-outline-secondary btn-sm">Availability</a>
     </div>
     <div class="col-md-2">
-      <select name="teacher_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select aria-label="Teacher" name="teacher_id" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Faculty</option>
         @foreach($teachers ?? collect() as $teacher)
           <option value="{{ $teacher->id }}" @selected(($builderFilters['teacher_id'] ?? null) == $teacher->id)>{{ $teacher->user->name ?? $teacher->id }}</option>
@@ -44,7 +44,7 @@
       </select>
     </div>
     <div class="col-md-2">
-      <select name="classroom_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select aria-label="Classroom" name="classroom_id" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Rooms</option>
         @foreach($classrooms ?? collect() as $classroom)
           <option value="{{ $classroom->id }}" @selected(($builderFilters['classroom_id'] ?? null) == $classroom->id)>{{ $classroom->name ?? $classroom->room_number ?? $classroom->id }}</option>
@@ -52,7 +52,7 @@
       </select>
     </div>
     <div class="col-md-3">
-      <select name="course_group_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select aria-label="Course Group" name="course_group_id" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Sections / Groups</option>
         @foreach($courseGroups ?? collect() as $group)
           <option value="{{ $group->id }}" @selected(($builderFilters['course_group_id'] ?? null) == $group->id)>{{ $group->name }} - {{ str_replace('_', ' ', $group->group_type) }}</option>
@@ -60,7 +60,7 @@
       </select>
     </div>
     <div class="col-md-2">
-      <select name="session_type" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select aria-label="Session Type" name="session_type" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Types</option>
         @foreach(['lecture' => 'Lecture', 'tutorial' => 'Tutorial', 'lab' => 'Lab / Practical', 'seminar' => 'Seminar'] as $value => $label)
           <option value="{{ $value }}" @selected(($builderFilters['session_type'] ?? null) === $value)>{{ $label }}</option>
@@ -68,7 +68,7 @@
       </select>
     </div>
     <div class="col-md-2">
-      <select name="timetable_status" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select aria-label="Timetable Status" name="timetable_status" class="form-select form-select-sm" onchange="this.form.submit()">
         <option value="">All Statuses</option>
         @foreach(['scheduled' => 'Scheduled', 'published' => 'Published', 'locked' => 'Locked'] as $value => $label)
           <option value="{{ $value }}" @selected(($builderFilters['timetable_status'] ?? null) === $value)>{{ $label }}</option>
@@ -77,8 +77,8 @@
     </div>
   </form>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
-  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Timetable Builder @if($selectedProgram)- <span class="text-muted fs-6">{{ $selectedProgram->name }}</span>@endif</h4>
@@ -87,7 +87,7 @@
       <input type="hidden" name="program_id" value="{{ $selectedProgram?->id }}">
       <input type="hidden" name="term_id" value="{{ $selectedTerm?->id }}">
       <input type="hidden" name="batch_id" value="{{ $selectedBatch?->id }}">
-      <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Run conflict audit and publish?')">Publish Timetable</button>
+      <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Run the conflict audit and publish this timetable for the selected program, batch, and term? Publishing affects faculty, rooms, student timetables, attendance, and downstream reports.')">Publish Timetable</button>
     </form>
   </div>
 
@@ -95,9 +95,9 @@
     <table class="table table-bordered text-center align-middle" style="min-width:900px">
       <thead class="table-dark">
         <tr>
-          <th style="width:100px">Day / Slot</th>
+          <th scope="col" style="width:100px">Day / Slot</th>
           @foreach($slots as $slot)
-            <th class="{{ $slot->is_break ? 'table-secondary' : '' }}">
+            <th scope="col" class="{{ $slot->is_break ? 'table-secondary' : '' }}">
               {{ $slot->name }}<br>
               <small class="fw-normal opacity-75">{{ substr($slot->start_time,0,5) }}-{{ substr($slot->end_time,0,5) }}</small>
             </th>
@@ -180,7 +180,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Assign Slot - <span id="modal-label"></span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div id="conflict-alert" class="alert alert-danger d-none small mb-3"></div>
@@ -243,7 +243,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-danger btn-sm me-auto" onclick="saveSlot(true)">Clear Slot</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="save-btn" onclick="saveSlot(false)">Save</button>
+        <button type="button" class="btn btn-primary" id="save-btn" onclick="saveSlot(false)">Save slot</button>
       </div>
     </div>
   </div>

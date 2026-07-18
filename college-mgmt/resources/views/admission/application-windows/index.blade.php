@@ -40,7 +40,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -90,12 +90,12 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Batch</th>
-                        <th>Opens</th>
-                        <th>Closes</th>
-                        <th>Capacity Meter</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Opens</th>
+                        <th scope="col">Closes</th>
+                        <th scope="col">Capacity Meter</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,10 +166,10 @@
                                     </form>
                                     <form action="{{ route('admission.application-windows.destroy', $window) }}"
                                         method="POST" style="display: inline;"
-                                        onsubmit="return confirm('Delete this window? This cannot be undone.')">
+                                        onsubmit="return confirm('Delete this application window for {{ addslashes($program->name) }}? Confirm no applicants, published dates, capacity limits, or campaign links still depend on this window.')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete application window for {{ $program->name }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>

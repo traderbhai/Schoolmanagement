@@ -1,7 +1,7 @@
 <div class="card shadow-sm mt-3">
     <div class="card-header py-2 fw-semibold">Section And Group Adjustments</div>
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-        <thead><tr><th>Adjustment</th><th>Groups</th><th>Strength</th><th>Approval</th><th>Decision</th></tr></thead>
+        <thead><tr><th scope="col">Adjustment</th><th scope="col">Groups</th><th scope="col">Strength</th><th scope="col">Approval</th><th scope="col">Decision</th></tr></thead>
         <tbody>
             @forelse($groupAdjustments as $adjustment)
                 <tr>
@@ -12,13 +12,13 @@
                     <td>
                         <form method="POST" action="{{ route('academics.pmc.course-group-adjustments.decide', $adjustment) }}" class="d-flex flex-column gap-1">
                             @csrf @method('PATCH')
-                            <select name="status" class="form-select form-select-sm">
+                            <select aria-label="Status" name="status" class="form-select form-select-sm">
                                 <option value="approved">approved</option>
                                 <option value="returned">returned</option>
                                 <option value="rejected">rejected</option>
                             </select>
-                            <input name="decision_note" class="form-control form-control-sm" placeholder="Decision note" required>
-                            <button class="btn btn-sm btn-outline-primary">Save</button>
+                            <input aria-label="Decision note" name="decision_note" class="form-control form-control-sm" placeholder="Decision note" required>
+                            <button class="btn btn-sm btn-outline-primary">Save decision</button>
                         </form>
                     </td>
                 </tr>

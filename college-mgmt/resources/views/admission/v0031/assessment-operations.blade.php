@@ -17,7 +17,7 @@
             <div class="card-header bg-transparent fw-bold">Pending Score Queue</div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Applicant</th><th>Panel</th><th>Evaluator</th><th>Status</th><th>Recommendation</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Applicant</th><th scope="col">Panel</th><th scope="col">Evaluator</th><th scope="col">Status</th><th scope="col">Recommendation</th></tr></thead>
                     <tbody>
                     @foreach($pendingScores as $assignment)
                         <tr>

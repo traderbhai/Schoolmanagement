@@ -39,12 +39,12 @@
         @if($canChangeStatus && count($allowedTransitions) > 0)
         <form action="{{ route('admission.applicants.status', $applicant) }}" method="POST" class="d-flex gap-2">
             @csrf
-            <select name="status" class="form-select form-select-sm" style="width:auto">
+            <select aria-label="Applicant status transition" name="status" class="form-select form-select-sm" style="width:auto">
                 @foreach($allowedTransitions as $s)
                     <option value="{{ $s }}">To {{ ucfirst(str_replace('_',' ',$s)) }}</option>
                 @endforeach
             </select>
-            <button type="submit" class="btn btn-sm btn-primary">Update</button>
+            <button type="submit" class="btn btn-sm btn-primary">Update applicant status</button>
         </form>
         @endif
         {{-- Enrollment Actions --}}
@@ -69,12 +69,12 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
     <div class="alert alert-danger alert-dismissible fade show">
         @foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -182,7 +182,7 @@
                         @endif
                         <div class="d-flex gap-2 mt-2 flex-wrap">
                             @if($doc->file_available)
-                            <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank"
+                            <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank" rel="noopener"
                                class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-eye"></i> Preview
                             </a>
@@ -199,7 +199,7 @@
                             <form method="POST" action="{{ route('admission.documents.verify', $doc) }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-outline-success"
-                                        onclick="return confirm('Verify this document?')">
+                                        onclick="return confirm('Verify this document for {{ addslashes($applicant->user->name ?? 'this applicant') }}? Confirm file preview, required-document match, applicant identity, and verification evidence before approval.')">
                                     <i class="bi bi-check-circle"></i> Verify
                                 </button>
                             </form>
@@ -210,7 +210,7 @@
                                 data-doc-id="{{ $doc->id }}"
                                 data-doc-name="{{ $doc->requiredDocument->name ?? $doc->original_name }}"
                                 data-applicant="{{ $applicant->user->name ?? 'Applicant name missing' }}">
-                                <i class="bi bi-x-circle"></i> Reject
+                                <i class="bi bi-x-circle"></i> Reject document
                             </button>
                             @endif
                         </div>
@@ -281,7 +281,7 @@
                             @csrf
                             <div class="mb-3">
                                 <label class="form-label small">Type</label>
-                                <select name="interaction_type" class="form-select form-select-sm" required>
+                                <select aria-label="Interaction type" name="interaction_type" class="form-select form-select-sm" required>
                                     <option value="call">Call</option>
                                     <option value="email">Email</option>
                                     <option value="whatsapp">WhatsApp</option>
@@ -291,7 +291,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small">Outcome</label>
-                                <select name="outcome" class="form-select form-select-sm" required>
+                                <select aria-label="Interaction outcome" name="outcome" class="form-select form-select-sm" required>
                                     <option value="interested">Interested</option>
                                     <option value="callback">Callback</option>
                                     <option value="follow_up">Follow Up</option>
@@ -302,15 +302,15 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small">Notes</label>
-                                <textarea name="notes" class="form-control form-control-sm" rows="3" required></textarea>
+                                <textarea aria-label="Interaction notes" name="notes" class="form-control form-control-sm" rows="3" required></textarea>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small">Next Follow-up Date</label>
-                                <input type="date" name="next_followup_date" class="form-control form-control-sm">
+                                <input aria-label="Next follow-up date" type="date" name="next_followup_date" class="form-control form-control-sm">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small">Duration (minutes)</label>
-                                <input type="number" name="duration_minutes" class="form-control form-control-sm" min="1" placeholder="e.g. 15">
+                                <input aria-label="Duration in minutes" type="number" name="duration_minutes" class="form-control form-control-sm" min="1" placeholder="e.g. 15">
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm w-100">Log Interaction</button>
                         </form>
@@ -368,7 +368,7 @@
                     <div class="card-body">
                         <form action="{{ route('admission.applicants.notes', $applicant) }}" method="POST">
                             @csrf
-                            <textarea name="note" class="form-control form-control-sm mb-2" rows="4" required placeholder="Internal note..."></textarea>
+                            <textarea aria-label="Internal team note" name="note" class="form-control form-control-sm mb-2" rows="4" required placeholder="Internal note..."></textarea>
                             <button type="submit" class="btn btn-primary btn-sm w-100">Add Note</button>
                         </form>
                     </div>
@@ -383,7 +383,7 @@
     <div class="card-header bg-white border-bottom py-3">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-semibold"><i class="bi bi-award me-2"></i>Scholarship Awards</h5>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#awardScholarshipForm">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#awardScholarshipForm">
                 <i class="bi bi-plus-lg me-1"></i>Award Scholarship
             </button>
         </div>
@@ -427,8 +427,8 @@
                         @error('awarded_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
-                        <label for="notes" class="form-label fw-semibold">Notes</label>
-                        <input type="text" name="notes" id="notes"
+                        <label for="scholarship_notes" class="form-label fw-semibold">Notes</label>
+                        <input type="text" name="notes" id="scholarship_notes"
                                class="form-control @error('notes') is-invalid @enderror"
                                placeholder="Optional notes">
                         @error('notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -454,12 +454,12 @@
                 <table class="table table-sm mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Scheme</th>
-                            <th class="text-end">Amount (Rs.)</th>
-                            <th>Status</th>
-                            <th>Awarded By</th>
-                            <th>Awarded On</th>
-                            <th></th>
+                            <th scope="col">Scheme</th>
+                            <th scope="col" class="text-end">Amount (Rs.)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Awarded By</th>
+                            <th scope="col">Awarded On</th>
+                            <th scope="col" aria-label="Actions"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -476,10 +476,10 @@
                             <td>
                                 @if($award->status === 'awarded')
                                 <form action="{{ route('admission.scholarships.destroy', $award) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Cancel this scholarship award?')">
+                                      onsubmit="return confirm('Cancel this scholarship award for {{ addslashes($applicant->user->name ?? 'this applicant') }}? Confirm fee-demand impact, disbursement status, award audit trail, and applicant communication before cancellation.')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Cancel scholarship award">
                                         <i class="bi bi-x-circle"></i>
                                     </button>
                                 </form>

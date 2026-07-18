@@ -29,7 +29,7 @@
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead class="table-light"><tr><th>Route</th><th>Method</th><th>URI</th><th>Scope</th><th>Risk</th><th>Status</th></tr></thead>
+            <thead class="table-light"><tr><th scope="col">Route</th><th scope="col">Method</th><th scope="col">URI</th><th scope="col">Scope</th><th scope="col">Risk</th><th scope="col">Status</th></tr></thead>
             <tbody>
             @forelse($dashboard['audits'] as $audit)
                 <tr>
@@ -61,7 +61,7 @@
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead class="table-light"><tr><th>Route</th><th>Method</th><th>URI</th><th>Expected Scope</th><th>Middleware</th><th>Risk</th><th>Missing Enforcement</th></tr></thead>
+            <thead class="table-light"><tr><th scope="col">Route</th><th scope="col">Method</th><th scope="col">URI</th><th scope="col">Expected Scope</th><th scope="col">Middleware</th><th scope="col">Risk</th><th scope="col">Missing Enforcement</th></tr></thead>
             <tbody>
             @forelse($enforcement as $route)
                 <tr>

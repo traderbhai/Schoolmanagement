@@ -26,7 +26,7 @@
     <div class="card-header bg-transparent fw-bold">Target Scorecards</div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead class="table-light"><tr><th>Counsellor</th><th>Calls</th><th>Follow-ups</th><th>Applications</th><th>Enrollments</th><th>Script</th><th>Overall</th><th>Coaching</th></tr></thead>
+            <thead class="table-light"><tr><th scope="col">Counsellor</th><th scope="col">Calls</th><th scope="col">Follow-ups</th><th scope="col">Applications</th><th scope="col">Enrollments</th><th scope="col">Script</th><th scope="col">Overall</th><th scope="col">Coaching</th></tr></thead>
             <tbody>
             @forelse($dashboard['rows'] as $row)
                 <tr>
@@ -64,7 +64,7 @@
     <div class="card-header bg-transparent fw-bold">Coaching Notes</div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead class="table-light"><tr><th>Counsellor</th><th>Band</th><th>Action Plan</th><th>Next Review</th><th>Status</th></tr></thead>
+            <thead class="table-light"><tr><th scope="col">Counsellor</th><th scope="col">Band</th><th scope="col">Action Plan</th><th scope="col">Next Review</th><th scope="col">Status</th></tr></thead>
             <tbody>
             @forelse($dashboard['coaching'] as $note)
                 <tr>

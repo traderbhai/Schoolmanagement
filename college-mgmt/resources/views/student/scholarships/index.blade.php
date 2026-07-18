@@ -16,7 +16,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @if($errors->any())
@@ -51,7 +51,7 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>Scholarship</th><th>CGPA</th><th>Status</th><th>Applied</th></tr>
+                    <tr><th scope="col">Scholarship</th><th scope="col">CGPA</th><th scope="col">Status</th><th scope="col">Applied</th></tr>
                 </thead>
                 <tbody>
                     @foreach($myApplications as $app)
@@ -138,7 +138,7 @@
                         @elseif(!$canApplyForScholarships)
                             <span class="badge bg-secondary">Locked</span>
                         @else
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#applyScholarship{{ $scheme->id }}">Apply</button>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#applyScholarship{{ $scheme->id }}">Apply for scholarship</button>
                         @endif
                     </div>
                 </div>
@@ -148,10 +148,10 @@
                         <form method="POST" action="{{ route('student.scholarships.apply', $scheme) }}" enctype="multipart/form-data">
                             @csrf
                             <label class="form-label small fw-semibold">Why should you be considered? <span class="text-danger">*</span></label>
-                            <textarea name="reason" class="form-control form-control-sm mb-2" rows="4" minlength="50" maxlength="2000" required placeholder="Mention academic performance, financial need, achievements, or relevant circumstances.">{{ old('reason') }}</textarea>
+                            <textarea aria-label="Mention academic performance, financial need, achievements, or relevant circumstances." name="reason" class="form-control form-control-sm mb-2" rows="4" minlength="50" maxlength="2000" required placeholder="Mention academic performance, financial need, achievements, or relevant circumstances.">{{ old('reason') }}</textarea>
                             @if($scheme->requires_document)
                                 <label class="form-label small fw-semibold">Proof document <span class="text-danger">*</span></label>
-                                <input type="file" name="proof_document" class="form-control form-control-sm mb-2" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <input aria-label="Proof Document" type="file" name="proof_document" class="form-control form-control-sm mb-2" accept=".pdf,.jpg,.jpeg,.png" required>
                             @endif
                             <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                                 <div class="small text-muted">Minimum 50 characters. Staff will review this with your academic record.</div>

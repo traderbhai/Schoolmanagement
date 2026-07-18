@@ -35,7 +35,7 @@
         <p class="text-muted mb-2" style="font-size:.85rem">{{ Str::limit(strip_tags($notice->content), 150) }}</p>
         <div class="d-flex align-items-center justify-content-between">
             <span class="text-muted" style="font-size:.78rem"><i class="bi bi-calendar me-1"></i>{{ $notice->publish_date->format('d M Y') }}</span>
-            <a href="{{ route('student.notices.show', $notice) }}" class="btn btn-sm btn-outline-primary">Read More</a>
+            <a href="{{ route('student.notices.show', $notice) }}" class="btn btn-sm btn-outline-primary">Read Notice</a>
         </div>
     </div>
 </div>

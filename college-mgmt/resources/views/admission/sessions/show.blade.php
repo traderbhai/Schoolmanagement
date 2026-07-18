@@ -4,10 +4,10 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="d-flex justify-content-end gap-2 mb-3">
@@ -62,7 +62,7 @@
                     </a>
                 @endif
                 @if($session->status !== 'completed' && app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
-                    <form method="POST" action="{{ route('admission.sessions.complete', $session) }}" class="d-inline" onsubmit="return confirm('Mark session as completed?')">
+                    <form method="POST" action="{{ route('admission.sessions.complete', $session) }}" class="d-inline" onsubmit="return confirm('Mark this assessment session as completed? Confirm attendance, panel score readiness, evaluator notes, and unresolved candidate exceptions before closing the session.')">
                         @csrf
                         <button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle me-1"></i> Complete Session</button>
                     </form>
@@ -70,7 +70,7 @@
                 <form action="{{ route('admission.sessions.dispatch-call-letters', $session) }}" method="POST" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-sm btn-outline-info"
-                        onclick="return confirm('Send call letter emails to all {{ $session->sessionApplicants->count() }} assigned candidates?')"
+                        onclick="return confirm('Send call letter emails to all {{ $session->sessionApplicants->count() }} assigned candidates? Confirm date, time, venue, candidate list, and contact details before dispatch.')"
                         {{ $session->sessionApplicants->count() === 0 ? 'disabled' : '' }}>
                         <i class="bi bi-envelope me-1"></i> Send Call Letters ({{ $session->sessionApplicants->count() }})
                     </button>
@@ -112,13 +112,13 @@
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Panel</th>
-                    <th>Type</th>
-                    <th>Evaluators</th>
-                    <th>Capacity</th>
-                    <th>Candidates</th>
-                    <th>Pending Scores</th>
-                    <th>Status</th>
+                    <th scope="col">Panel</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Evaluators</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col">Candidates</th>
+                    <th scope="col">Pending Scores</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -157,12 +157,12 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>App #</th>
-                                <th>Attendance</th>
-                                <th>Panel #</th>
-                                <th>Action</th>
+                                <th scope="col">#</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">App #</th>
+                                <th scope="col">Attendance</th>
+                                <th scope="col">Panel #</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -177,7 +177,7 @@
                                     <div class="d-flex gap-1 flex-wrap">
                                         @foreach(['present'=>'success','absent'=>'danger','excused'=>'warning','pending'=>'secondary'] as $val => $color)
                                         <div class="form-check form-check-inline mb-0">
-                                            <input class="form-check-input" type="radio"
+                                            <input aria-label="{{ ucfirst($val) }} attendance for {{ $sa->applicant->user->name ?? 'applicant' }}" class="form-check-input" type="radio"
                                                    name="attendance[{{ $sa->applicant_id }}]"
                                                    id="att_{{ $sa->applicant_id }}_{{ $val }}"
                                                    value="{{ $val }}"
@@ -190,16 +190,16 @@
                                     </div>
                                 </td>
                                 <td style="width:80px">
-                                    <input type="number" name="panel_number[{{ $sa->applicant_id }}]"
+                                    <input aria-label="Panel number for {{ $sa->applicant->user->name ?? 'applicant' }}" type="number" name="panel_number[{{ $sa->applicant_id }}]"
                                            class="form-control form-control-sm" min="1" placeholder="Panel"
                                            value="{{ $sa->panel_number }}">
                                 </td>
                                 <td>
                                     @if($sa->attendance_status === 'pending')
-                                    <form method="POST" action="{{ route('admission.sessions.remove-applicant', [$session, $sa->applicant_id]) }}" class="d-inline" onsubmit="return confirm('Remove this candidate?')">
+                                    <form method="POST" action="{{ route('admission.sessions.remove-applicant', [$session, $sa->applicant_id]) }}" class="d-inline" onsubmit="return confirm('Remove {{ addslashes($sa->applicant->user->name ?? 'this candidate') }} from this assessment session? Confirm the candidate has not attended, scored, or been notified for this session before removal.')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Remove">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Remove" aria-label="Remove {{ $sa->applicant->user->name ?? 'candidate' }} from assessment session">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -247,22 +247,22 @@
                 <i class="bi bi-person-plus me-2 text-success"></i>Add Candidates
                 <small class="text-muted fw-normal">(shortlisted, not yet assigned)</small>
             </div>
-            <form method="POST" action="{{ route('admission.sessions.assign', $session) }}">
+            <form method="POST" action="{{ route('admission.sessions.assign', $session) }}" onsubmit="return confirm('Add the selected candidates to this assessment session? Confirm they are shortlisted, eligible for this program step, and not already scheduled in a conflicting session.')">
                 @csrf
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:40px"><input type="checkbox" id="selectAll"></th>
-                                <th>Name</th>
-                                <th>App #</th>
-                                <th>Program</th>
+                                <th scope="col" style="width:40px"><input type="checkbox" id="selectAll"></th>
+                                <th scope="col">Name</th>
+                                <th scope="col">App #</th>
+                                <th scope="col">Program</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($availableApplicants as $applicant)
                             <tr>
-                                <td><input type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="applicant-check"></td>
+                                <td><input aria-label="Select applicant {{ $applicant->application_number }}" type="checkbox" name="applicant_ids[]" value="{{ $applicant->id }}" class="applicant-check"></td>
                                 <td>{{ $applicant->user->name ?? 'Applicant name missing' }}</td>
                                 <td><code class="small">{{ $applicant->application_number }}</code></td>
                                 <td class="small text-muted">{{ $applicant->program->abbreviation ?? 'Program not assigned' }}</td>

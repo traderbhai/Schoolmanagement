@@ -8,7 +8,7 @@
                     <h5 class="modal-title text-danger">
                         <i class="bi bi-x-circle me-2"></i>Reject Document
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-light border mb-3 py-2">

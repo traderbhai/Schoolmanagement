@@ -74,7 +74,7 @@
             <div class="col-md-3"><span class="text-muted">Date:</span> <strong>{{ $payment->payment_date->format('d M Y') }}</strong></div>
             <div class="col-md-3">
                 @if($payment->payment_proof_path)
-                    <a href="{{ route('admission.payments.proof', $payment) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                    <a href="{{ route('admission.payments.proof', $payment) }}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">
                         <i class="bi bi-download me-1"></i>Proof
                     </a>
                 @endif
@@ -94,13 +94,13 @@
         <div class="mt-2 d-flex gap-2">
             <form method="POST" action="{{ route('admission.payments.verify', $payment) }}">
                 @csrf
-                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify this payment?')">
+                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify payment of Rs. {{ number_format($payment->amount_paid, 0) }} for {{ addslashes($payment->applicant->user->name ?? 'this applicant') }}? Confirm bank/gateway reference, proof file, installment, and applicant record before marking it verified.')">
                     <i class="bi bi-check-lg"></i> Verify
                 </button>
             </form>
-            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
                 data-bs-target="#rejectModal-{{ $payment->id }}">
-                <i class="bi bi-x-lg"></i> Reject
+                <i class="bi bi-x-lg"></i> Reject payment
             </button>
             @include('admission.payments._reject-modal', ['payment' => $payment])
         </div>

@@ -31,7 +31,7 @@
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead><tr><th>Name</th><th>Number</th><th>Start</th><th>End</th><th>Current</th></tr></thead>
+                    <thead><tr><th scope="col">Name</th><th scope="col">Number</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Current</th></tr></thead>
                     <tbody>
                     @forelse($academicYear->semesters as $s)
                     <tr>

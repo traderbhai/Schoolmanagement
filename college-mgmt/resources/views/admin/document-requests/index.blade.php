@@ -42,7 +42,7 @@
         <form method="GET" action="{{ route('admin.document-requests.index') }}" class="row g-2 align-items-end">
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Statuses</option>
                     @foreach(['pending' => 'Pending', 'approved' => 'Processing', 'ready' => 'Ready', 'rejected' => 'Rejected'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
@@ -51,7 +51,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Document Type</label>
-                <select name="document_type" class="form-select form-select-sm">
+                <select aria-label="Document Type" name="document_type" class="form-select form-select-sm">
                     <option value="">All Types</option>
                     @foreach($types as $type)
                         <option value="{{ $type }}" @selected(request('document_type') === $type)>{{ \App\Models\DocumentRequest::typeLabel($type) }}</option>
@@ -60,7 +60,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Program</label>
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $program)
                         <option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->name }}</option>
@@ -69,7 +69,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">Student</label>
-                <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
+                <input aria-label="Name or email" type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
             </div>
             <div class="col-md-2 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel me-1"></i>Filter</button>
@@ -82,14 +82,14 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -119,12 +119,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Document</th>
-                        <th>Purpose</th>
-                        <th>Status</th>
-                        <th>Requested</th>
-                        <th style="min-width:360px">Staff Action</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Document</th>
+                        <th scope="col">Purpose</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Requested</th>
+                        <th scope="col" style="min-width:360px">Staff Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -174,16 +174,16 @@
                                         <form method="POST" action="{{ route('admin.document-requests.approve', $request) }}" class="d-flex gap-2">
                                             @csrf
                                             @method('PATCH')
-                                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional processing note">
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Approve</button>
+                                            <input aria-label="Processing note" type="text" name="notes" class="form-control form-control-sm" placeholder="Optional processing note">
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Approve document request</button>
                                         </form>
                                     @endif
 
                                     @if($request->status === 'approved')
                                         <form method="POST" action="{{ route('admin.document-requests.fulfill', $request) }}" enctype="multipart/form-data" class="d-flex gap-2">
                                             @csrf
-                                            <input type="file" name="document_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
-                                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Student note">
+                                            <input aria-label="Document File" type="file" name="document_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
+                                            <input aria-label="Student note" type="text" name="notes" class="form-control form-control-sm" placeholder="Student note">
                                             <button type="submit" class="btn btn-sm btn-primary">Mark Ready</button>
                                         </form>
                                     @endif
@@ -191,8 +191,8 @@
                                     <form method="POST" action="{{ route('admin.document-requests.reject', $request) }}" class="d-flex gap-2">
                                         @csrf
                                         @method('PATCH')
-                                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="Rejection reason" required>
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject this document request?')">Reject</button>
+                                        <input aria-label="Rejection reason" type="text" name="notes" class="form-control form-control-sm" placeholder="Rejection reason" required>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject this student document request? Confirm the rejection reason explains the missing/invalid requirement and the student can act on it before the request is closed.')">Reject document request</button>
                                     </form>
                                 </div>
                             @else

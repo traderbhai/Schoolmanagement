@@ -24,7 +24,7 @@
                 <a href="{{ route('academic.scholarships.edit', $scholarship) }}" class="btn btn-warning">Edit</a>
                 <form action="{{ route('academic.scholarships.destroy', $scholarship) }}" method="POST" class="d-inline">
                     @csrf @method('DELETE')
-                    <button class="btn btn-danger" onclick="return confirm('Delete this scholarship?')">Delete</button>
+                    <button class="btn btn-danger" onclick="return confirm('Delete scholarship {{ addslashes($scholarship->name) }}? Confirm no student awards, fee-demand discounts, eligibility rules, or finance reports still depend on this scheme.')">Delete</button>
                 </form>
             </div>
         </div>

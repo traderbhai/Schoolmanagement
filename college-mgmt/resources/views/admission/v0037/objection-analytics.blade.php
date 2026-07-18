@@ -41,11 +41,11 @@
             <table class="table table-sm align-middle mb-0" aria-label="Objection events">
                 <thead class="table-light">
                     <tr>
-                        <th>Type</th>
-                        <th>Category</th>
-                        <th>Stage</th>
-                        <th>Status</th>
-                        <th>Notes</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Stage</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Notes</th>
                     </tr>
                 </thead>
                 <tbody>

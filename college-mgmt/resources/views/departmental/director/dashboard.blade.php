@@ -106,7 +106,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-light"><tr><th>Program</th><th>Code</th><th class="text-end">Students</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Program</th><th scope="col">Code</th><th scope="col" class="text-end">Students</th></tr></thead>
                     <tbody>
                         @forelse($programs as $prog)
                         <tr>

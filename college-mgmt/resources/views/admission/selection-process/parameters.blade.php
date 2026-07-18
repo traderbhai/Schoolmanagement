@@ -21,7 +21,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @php $totalMaxScore = $parameters->sum('max_score'); @endphp
@@ -42,11 +42,11 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Order</th>
-                        <th>Parameter Name</th>
-                        <th>Max Score</th>
-                        <th>Description</th>
-                        <th></th>
+                        <th scope="col">Order</th>
+                        <th scope="col">Parameter Name</th>
+                        <th scope="col">Max Score</th>
+                        <th scope="col">Description</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,9 +59,9 @@
                         <td>
                             <div class="d-flex gap-1 justify-content-end">
                                 <a href="{{ route('admission.selection-process.parameters.edit', $param) }}" class="btn btn-sm btn-outline-secondary py-0 px-1" aria-label="Edit scoring parameter"><i class="bi bi-pencil"></i></a>
-                                <form action="{{ route('admission.selection-process.parameters.destroy', $param) }}" method="POST" onsubmit="return confirm('Delete this parameter?')">
+                                <form action="{{ route('admission.selection-process.parameters.destroy', $param) }}" method="POST" onsubmit="return confirm('Delete scoring parameter {{ addslashes($param->name) }}? Confirm assessment rubrics, evaluator scoring, merit calculations, and historical score reports no longer depend on it.')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" aria-label="Delete scoring parameter"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" aria-label="Delete scoring parameter {{ $param->name }}"><i class="bi bi-trash"></i></button>
                                 </form>
                             </div>
                         </td>

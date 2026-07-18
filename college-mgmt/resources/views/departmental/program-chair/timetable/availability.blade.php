@@ -8,12 +8,12 @@
     <a href="{{ route('chair.timetable.builder') }}" class="btn btn-outline-secondary btn-sm">← Builder</a>
   </div>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <form method="GET" class="mb-4">
     <div class="row g-2">
       <div class="col-md-4">
-        <select name="teacher_id" class="form-select" onchange="this.form.submit()">
+        <select aria-label="Teacher" name="teacher_id" class="form-select" onchange="this.form.submit()">
           @foreach($teachers as $t)
             <option value="{{ $t->id }}" @selected($selectedTeacher?->id == $t->id)>{{ $t->user->name ?? $t->id }}</option>
           @endforeach
@@ -42,9 +42,9 @@
             <table class="table table-bordered text-center mb-0">
               <thead class="table-dark">
                 <tr>
-                  <th>Day</th>
+                  <th scope="col">Day</th>
                   @foreach($slots as $slot)
-                    <th class="{{ $slot->is_break ? 'table-secondary' : '' }}">
+                    <th scope="col" class="{{ $slot->is_break ? 'table-secondary' : '' }}">
                       {{ $slot->name }}<br>
                       <small class="fw-normal opacity-75">{{ substr($slot->start_time,0,5) }}</small>
                     </th>
@@ -61,7 +61,7 @@
                         @if($slot->is_break)
                           <small class="text-muted">—</small>
                         @else
-                          <select name="availability[{{ $dayNum }}-{{ $slot->id }}]"
+                          <select aria-label="Availability for {{ $dayName }} {{ $slot->name }}" name="availability[{{ $dayNum }}-{{ $slot->id }}]"
                             class="form-select form-select-sm border-0 bg-transparent avail-select"
                             data-val="{{ $avail }}" onchange="colorSelect(this)">
                             <option value="available"   @selected($avail==='available')>Available</option>

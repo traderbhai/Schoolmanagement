@@ -15,12 +15,12 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Title</th>
-                            <th>Subject</th>
-                            <th>Term</th>
-                            <th>Closes</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Term</th>
+                            <th scope="col">Closes</th>
+                            <th scope="col">Status</th>
+                            <th aria-label="Actions" scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,7 +66,7 @@
                     @csrf
                     <div class="mb-2">
                         <label class="form-label small">Subject</label>
-                        <select name="subject_id" class="form-select form-select-sm" required>
+                        <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" required>
                             <option value="">— Select —</option>
                             @foreach(\App\Models\Subject::where('is_active',true)->orderBy('name')->get() as $sub)
                                 <option value="{{ $sub->id }}">{{ $sub->name }}</option>
@@ -75,7 +75,7 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Term</label>
-                        <select name="term_id" class="form-select form-select-sm" required>
+                        <select aria-label="Term" name="term_id" class="form-select form-select-sm" required>
                             <option value="">— Select —</option>
                             @foreach(\App\Models\Term::orderBy('name')->get() as $t)
                                 <option value="{{ $t->id }}">{{ $t->name }}</option>
@@ -84,11 +84,11 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Title</label>
-                        <input type="text" name="title" class="form-control form-control-sm" required placeholder="Exit Survey — Semester VI">
+                        <input aria-label="Exit Survey — Semester VI" type="text" name="title" class="form-control form-control-sm" required placeholder="Exit Survey — Semester VI">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small">Closes On</label>
-                        <input type="date" name="closes_at" class="form-control form-control-sm">
+                        <input aria-label="Closes At" type="date" name="closes_at" class="form-control form-control-sm">
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100">
                         <i class="bi bi-plus-lg me-1"></i>Create Survey

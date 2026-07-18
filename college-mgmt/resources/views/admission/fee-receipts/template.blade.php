@@ -245,7 +245,7 @@ function amountInWords(float $amount): string {
 {{-- ===== APPLICANT DETAILS TABLE ===== --}}
 <table class="section-table">
     <tr>
-        <th colspan="2">Applicant Details</th>
+        <th scope="row" colspan="2">Applicant Details</th>
     </tr>
     <tr>
         <td class="label-col">Name</td>

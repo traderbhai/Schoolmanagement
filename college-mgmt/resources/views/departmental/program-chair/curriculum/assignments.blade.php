@@ -26,13 +26,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -43,7 +43,7 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold mb-1">Program</label>
-                        <select name="program_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                        <select aria-label="Program" name="program_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
                             <option value="">— All Programs —</option>
                             @foreach($programs as $program)
                                 <option value="{{ $program->id }}"
@@ -55,7 +55,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold mb-1">Term</label>
-                        <select name="term_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                        <select aria-label="Term" name="term_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
                             <option value="">— All Terms —</option>
                             @foreach($terms as $term)
                                 <option value="{{ $term->id }}"
@@ -67,7 +67,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold mb-1">Batch</label>
-                        <select name="batch_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                        <select aria-label="Batch" name="batch_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
                             <option value="">— All Batches —</option>
                             @foreach($batches as $batch)
                                 <option value="{{ $batch->id }}"
@@ -127,13 +127,13 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3" style="width:50px;">#</th>
-                                <th>Subject</th>
-                                <th>Faculty</th>
-                                <th>Batch</th>
-                                <th>Role</th>
-                                <th>Workload</th>
-                                <th class="text-end pe-3">Action</th>
+                                <th scope="col" class="ps-3" style="width:50px;">#</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Faculty</th>
+                                <th scope="col">Batch</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Workload</th>
+                                <th scope="col" class="text-end pe-3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -177,10 +177,10 @@
                                         <form method="POST"
                                               action="{{ route('chair.curriculum.unassign-faculty', $assignment->id) }}"
                                               class="d-inline"
-                                              onsubmit="return confirm('Remove this faculty assignment?')">
+                                              onsubmit="return confirm('Remove faculty assignment for {{ addslashes($assignment->teacher->user->name ?? 'this faculty') }}? Confirm course group coverage, timetable sessions, workload approval, and student communication before unassigning faculty.')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove" aria-label="Remove faculty assignment for {{ $assignment->teacher->user->name ?? 'faculty' }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -212,14 +212,14 @@
                     <h5 class="modal-title fw-semibold" id="assignFacultyModalLabel">
                         <i class="bi bi-person-plus me-2"></i>Assign Faculty to Subject
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
-                            <select name="subject_id" class="form-select" required>
+                            <select aria-label="Subject" name="subject_id" class="form-select" required>
                                 <option value="">— Select Subject —</option>
                                 @foreach($programSubjects as $ps)
                                     <option value="{{ $ps->subject_id ?? $ps->id }}">
@@ -253,7 +253,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Batch</label>
-                            <select name="batch_id" class="form-select">
+                            <select aria-label="Batch" name="batch_id" class="form-select">
                                 <option value="">— All Batches / Not Specific —</option>
                                 @foreach($batches as $batch)
                                     <option value="{{ $batch->id }}"

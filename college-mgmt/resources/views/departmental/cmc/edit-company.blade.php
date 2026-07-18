@@ -9,36 +9,36 @@
     <div class="alert alert-warning small py-2">
       Deactivating a recruiter is blocked while active drives exist. Company name changes may be locked once placement or internship history exists.
     </div>
-    <form method="POST" action="{{ route('cmc.companies.update', $company) }}" onsubmit="return confirm('Save company changes?')">
+    <form method="POST" action="{{ route('cmc.companies.update', $company) }}" onsubmit="return confirm('Save company changes? Confirm recruiter identity, active-drive restrictions, contact changes, and placement/internship history impact before updating.')">
       @csrf @method('PUT')
       <div class="row g-3">
         <div class="col-md-8">
           <label class="form-label small fw-semibold">Company Name <span class="text-danger">*</span></label>
-          <input type="text" name="name" class="form-control" value="{{ old('name',$company->name) }}" required>
+          <input aria-label="Name" type="text" name="name" class="form-control" value="{{ old('name',$company->name) }}" required>
         </div>
         <div class="col-md-4">
           <label class="form-label small fw-semibold">Industry</label>
-          <input type="text" name="industry" class="form-control" value="{{ old('industry',$company->industry) }}">
+          <input aria-label="Industry" type="text" name="industry" class="form-control" value="{{ old('industry',$company->industry) }}">
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Website</label>
-          <input type="url" name="website" class="form-control" value="{{ old('website',$company->website) }}">
+          <input aria-label="Website" type="url" name="website" class="form-control" value="{{ old('website',$company->website) }}">
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Contact Person</label>
-          <input type="text" name="contact_person" class="form-control" value="{{ old('contact_person',$company->contact_person) }}">
+          <input aria-label="Contact Person" type="text" name="contact_person" class="form-control" value="{{ old('contact_person',$company->contact_person) }}">
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Contact Email</label>
-          <input type="email" name="contact_email" class="form-control" value="{{ old('contact_email',$company->contact_email) }}">
+          <input aria-label="Contact Email" type="email" name="contact_email" class="form-control" value="{{ old('contact_email',$company->contact_email) }}">
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Contact Phone</label>
-          <input type="text" name="contact_phone" class="form-control" value="{{ old('contact_phone',$company->contact_phone) }}">
+          <input aria-label="Contact Phone" type="text" name="contact_phone" class="form-control" value="{{ old('contact_phone',$company->contact_phone) }}">
         </div>
         <div class="col-12">
           <label class="form-label small fw-semibold">Description</label>
-          <textarea name="description" class="form-control" rows="3">{{ old('description',$company->description) }}</textarea>
+          <textarea aria-label="Description" name="description" class="form-control" rows="3">{{ old('description',$company->description) }}</textarea>
         </div>
         <div class="col-12">
           <div class="form-check">

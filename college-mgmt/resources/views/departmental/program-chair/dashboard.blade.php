@@ -99,11 +99,11 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                 <span class="fw-semibold"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>At-Risk Students</span>
-                <a href="{{ route('chair.students.at-risk') }}" class="btn btn-sm btn-outline-danger">View All</a>
+                <a href="{{ route('chair.students.at-risk') }}" class="btn btn-sm btn-outline-danger">View at-risk students</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-light"><tr><th>Student</th><th>Batch</th><th>Program</th><th>Risk Flags</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Student</th><th scope="col">Batch</th><th scope="col">Program</th><th scope="col">Risk Flags</th></tr></thead>
                     <tbody>
                         @forelse($atRiskStudents as $s)
                         <tr>
@@ -134,7 +134,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-light"><tr><th>Exam</th><th>Subject</th><th>Date</th><th>Results</th><th>Pass Rate</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Exam</th><th scope="col">Subject</th><th scope="col">Date</th><th scope="col">Results</th><th scope="col">Pass Rate</th></tr></thead>
                     <tbody>
                         @forelse($recentExams as $exam)
                         @php $passRate = $exam->result_count > 0 ? round(($exam->pass_count/$exam->result_count)*100) : null; @endphp
@@ -167,7 +167,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-light"><tr><th>Teacher</th><th>Sessions/Week</th><th>Load Status</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Teacher</th><th scope="col">Sessions/Week</th><th scope="col">Load Status</th></tr></thead>
                     <tbody>
                         @forelse($workloadSummary as $row)
                         <tr>
@@ -250,7 +250,7 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                 <span class="fw-semibold"><i class="bi bi-list-check me-2"></i>Elective Registration</span>
-                <a href="{{ route('chair.curriculum.electives') }}" class="btn btn-sm btn-outline-secondary">Manage</a>
+                <a href="{{ route('chair.curriculum.electives') }}" class="btn btn-sm btn-outline-secondary">Manage Elective Registration</a>
             </div>
             <div class="list-group list-group-flush">
                 @forelse($electiveWindows as $w)
@@ -306,7 +306,7 @@
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0 small">
-            <thead class="table-light"><tr><th>Subject</th><th>Code</th><th>Program</th><th>Attendance</th></tr></thead>
+            <thead class="table-light"><tr><th scope="col">Subject</th><th scope="col">Code</th><th scope="col">Program</th><th scope="col">Attendance</th></tr></thead>
             <tbody>
                 @foreach($lowAttSubjects as $s)
                 <tr>

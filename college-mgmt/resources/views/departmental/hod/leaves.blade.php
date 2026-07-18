@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0">Student Leave Applications</h5>
     <form method="GET" class="d-flex gap-2">
-        <select name="status" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
+        <select aria-label="Status" name="status" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
             <option value="">All Status</option>
             <option value="pending" {{ request('status')==='pending'?'selected':'' }}>Pending</option>
             <option value="approved" {{ request('status')==='approved'?'selected':'' }}>Approved</option>
@@ -17,7 +17,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">Student</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th><th class="text-end pe-3">Action</th></tr>
+        <tr><th scope="col" class="ps-3">Student</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Days</th><th scope="col">Reason</th><th scope="col">Status</th><th scope="col" class="text-end pe-3">Action</th></tr>
       </thead>
       <tbody>
         @forelse($leaves as $leave)
@@ -36,11 +36,11 @@
             <button class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:.75rem;"
                 data-review-url="{{ route('hod.leaves.review', $leave) }}"
                 data-review-action="approved"
-                onclick="openReview(this)">Approve</button>
+                onclick="openReview(this)">Approve leave</button>
             <button class="btn btn-xs btn-outline-danger py-0 px-2 ms-1" style="font-size:.75rem;"
                 data-review-url="{{ route('hod.leaves.review', $leave) }}"
                 data-review-action="rejected"
-                onclick="openReview(this)">Reject</button>
+                onclick="openReview(this)">Reject leave</button>
             @else
             <span class="text-muted small">{{ $leave->review_remarks ?? '—' }}</span>
             @endif
@@ -60,18 +60,18 @@
   <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
     <div class="modal-content">
       <div class="modal-header"><h6 class="modal-title mb-0">Review Leave</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="reviewForm" method="POST">
         @csrf
         <input type="hidden" name="action" id="reviewAction">
         <div class="modal-body">
           <label class="form-label small fw-semibold">Remarks (optional)</label>
-          <textarea name="remarks" class="form-control" rows="3" placeholder="Add remarks..."></textarea>
+          <textarea aria-label="HOD leave remarks" name="remarks" class="form-control" rows="3" placeholder="Add remarks..."></textarea>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-sm btn-primary" id="reviewSubmitBtn">Submit</button>
+          <button type="submit" class="btn btn-sm btn-primary" id="reviewSubmitBtn">Submit review</button>
         </div>
       </form>
     </div>

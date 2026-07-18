@@ -19,10 +19,10 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Applicant</th>
-                            <th>Program</th>
-                            <th>Capacity Info</th>
-                            <th class="text-end">Actions</th>
+                            <th scope="col">Applicant</th>
+                            <th scope="col">Program</th>
+                            <th scope="col">Capacity Info</th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -43,11 +43,11 @@
                                 @endif
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $approval->id }}">
-                                    <i class="bi bi-check"></i> Approve
+                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $approval->id }}">
+                                    <i class="bi bi-check"></i> Approve request
                                 </button>
-                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $approval->id }}">
-                                    <i class="bi bi-x"></i> Reject
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $approval->id }}">
+                                    <i class="bi bi-x"></i> Reject request
                                 </button>
                             </td>
 
@@ -57,7 +57,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Approve Applicant</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('chair.approve', $approval) }}" method="POST">
                                             @csrf
@@ -67,7 +67,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-success">Approve</button>
+                                                <button type="submit" class="btn btn-success">Approve request</button>
                                             </div>
                                         </form>
                                     </div>
@@ -80,7 +80,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Reject Approval</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('chair.reject', $approval) }}" method="POST">
                                             @csrf
@@ -90,7 +90,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-danger">Reject</button>
+                                                <button type="submit" class="btn btn-danger">Reject request</button>
                                             </div>
                                         </form>
                                     </div>

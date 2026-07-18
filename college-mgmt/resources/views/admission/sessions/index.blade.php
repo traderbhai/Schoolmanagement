@@ -14,10 +14,10 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Filters --}}
@@ -25,7 +25,7 @@
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $p)
                         <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->abbreviation }}</option>
@@ -33,7 +33,7 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <select name="step_type" class="form-select form-select-sm">
+                <select aria-label="Step Type" name="step_type" class="form-select form-select-sm">
                     <option value="">All Types</option>
                     @foreach($stepTypes as $key => $label)
                         <option value="{{ $key }}" @selected(request('step_type') == $key)>{{ $label }}</option>
@@ -41,7 +41,7 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Status</option>
                     @foreach(['scheduled','ongoing','completed','cancelled'] as $s)
                         <option value="{{ $s }}" @selected(request('status') == $s)>{{ ucfirst($s) }}</option>
@@ -49,13 +49,13 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" placeholder="From">
+                <input aria-label="From" type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}" placeholder="From">
             </div>
             <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" placeholder="To">
+                <input aria-label="To" type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}" placeholder="To">
             </div>
             <div class="col-md-1">
-                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i></button>
+                <button type="submit" class="btn btn-primary btn-sm w-100" aria-label="Search admission sessions"><i class="bi bi-search"></i></button>
             </div>
         </form>
     </div>

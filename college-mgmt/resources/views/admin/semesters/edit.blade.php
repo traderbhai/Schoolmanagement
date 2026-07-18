@@ -20,27 +20,27 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Academic Year <span class="text-danger">*</span></label>
-                    <select name="academic_year_id" class="form-select @error('academic_year_id') is-invalid @enderror" required>
+                    <select aria-label="Academic Year" name="academic_year_id" class="form-select @error('academic_year_id') is-invalid @enderror" required>
                         @foreach($years as $y)<option value="{{ $y->id }}" @selected($y->id==old('academic_year_id',$semester->academic_year_id))>{{ $y->name }}</option>@endforeach
                     </select>
                     @error('academic_year_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-8">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $semester->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $semester->name) }}" required>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Number <span class="text-danger">*</span></label>
-                    <input type="number" name="number" class="form-control" value="{{ old('number', $semester->number) }}" min="1" max="12" required>
+                    <input aria-label="Number" type="number" name="number" class="form-control" value="{{ old('number', $semester->number) }}" min="1" max="12" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Date <span class="text-danger">*</span></label>
-                    <input type="date" name="start_date" class="form-control" value="{{ old('start_date', $semester->start_date->format('Y-m-d')) }}" required>
+                    <input aria-label="Start Date" type="date" name="start_date" class="form-control" value="{{ old('start_date', $semester->start_date->format('Y-m-d')) }}" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Date <span class="text-danger">*</span></label>
-                    <input type="date" name="end_date" class="form-control" value="{{ old('end_date', $semester->end_date->format('Y-m-d')) }}" required>
+                    <input aria-label="End Date" type="date" name="end_date" class="form-control" value="{{ old('end_date', $semester->end_date->format('Y-m-d')) }}" required>
                 </div>
                 <div class="col-12">
                     <div class="form-check">

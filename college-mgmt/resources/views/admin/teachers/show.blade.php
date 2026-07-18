@@ -77,7 +77,7 @@
                 <div class="tab-pane fade show active" id="tab-schedule">
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0">
-                            <thead class="table-light"><tr><th>Day</th><th>Time Slot</th><th>Subject</th><th>Course</th><th>Room</th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Day</th><th scope="col">Time Slot</th><th scope="col">Subject</th><th scope="col">Course</th><th scope="col">Room</th></tr></thead>
                             <tbody>
                             @forelse(($officialSchedule ?? collect()) as $e)
                             <tr>
@@ -101,7 +101,7 @@
                 <div class="tab-pane fade" id="tab-subjects">
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0">
-                            <thead class="table-light"><tr><th>Subject</th><th>Code</th><th>Course</th><th>Type</th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Subject</th><th scope="col">Code</th><th scope="col">Course</th><th scope="col">Type</th></tr></thead>
                             <tbody>
                             @php $subjects = ($officialSchedule ?? collect())->pluck('subject')->filter()->unique('id'); @endphp
                             @forelse($subjects as $sub)
@@ -126,7 +126,7 @@
                 <div class="tab-pane fade" id="tab-leaves">
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0">
-                            <thead class="table-light"><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Applied</th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Type</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Days</th><th scope="col">Status</th><th scope="col">Applied</th></tr></thead>
                             <tbody>
                             @forelse($teacher->leaveApplications()->latest()->take(10)->get() as $leave)
                             <tr>

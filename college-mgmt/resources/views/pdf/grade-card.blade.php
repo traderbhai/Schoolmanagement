@@ -67,13 +67,13 @@
 <table>
   <thead>
     <tr>
-      <th>Subject</th>
-      <th>Credits</th>
-      <th>Marks Obtained</th>
-      <th>Total Marks</th>
-      <th>%</th>
-      <th>Grade</th>
-      <th>Status</th>
+      <th scope="col">Subject</th>
+      <th scope="col">Credits</th>
+      <th scope="col">Marks Obtained</th>
+      <th scope="col">Total Marks</th>
+      <th scope="col">%</th>
+      <th scope="col">Grade</th>
+      <th scope="col">Status</th>
     </tr>
   </thead>
   <tbody>

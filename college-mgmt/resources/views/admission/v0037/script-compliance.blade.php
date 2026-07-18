@@ -49,10 +49,10 @@
                     <table class="table table-sm align-middle mb-0" aria-label="Script compliance logs">
                         <thead class="table-light">
                             <tr>
-                                <th>Script</th>
-                                <th>Subject</th>
-                                <th>Compliance</th>
-                                <th>When</th>
+                                <th scope="col">Script</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Compliance</th>
+                                <th scope="col">When</th>
                             </tr>
                         </thead>
                         <tbody>

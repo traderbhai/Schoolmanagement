@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid px-4">
     <div class="d-flex align-items-center mb-3">
-        <a href="{{ route('teacher.quizzes.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <a href="{{ route('teacher.quizzes.index') }}" class="btn btn-sm btn-outline-secondary me-3" aria-label="Back to quizzes">
             <i class="bi bi-arrow-left"></i>
         </a>
         <h4 class="mb-0"><i class="bi bi-patch-question me-2 text-primary"></i>Create Quiz</h4>
@@ -50,7 +50,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
-                            <select name="subject_id" class="form-select" required>
+                            <select aria-label="Subject" name="subject_id" class="form-select" required>
                                 <option value="">Select published teaching subject</option>
                                 @foreach($subjects as $subject)
                                     <option value="{{ $subject->id }}" @selected(old('subject_id') == $subject->id)>
@@ -62,29 +62,29 @@
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Duration</label>
                             <div class="input-group">
-                                <input type="number" name="duration_minutes" value="{{ old('duration_minutes', 20) }}" class="form-control" min="1" max="300">
+                                <input aria-label="Duration Minutes" type="number" name="duration_minutes" value="{{ old('duration_minutes', 20) }}" class="form-control" min="1" max="300">
                                 <span class="input-group-text">min</span>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Pass Marks</label>
-                            <input type="number" name="pass_marks" value="{{ old('pass_marks') }}" class="form-control" step="0.5" min="0" placeholder="Optional">
+                            <input aria-label="Passing marks" type="number" name="pass_marks" value="{{ old('pass_marks') }}" class="form-control" step="0.5" min="0" placeholder="Optional">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                            <input type="text" name="title" value="{{ old('title') }}" class="form-control" required placeholder="e.g. Unit 1 MCQ Quiz">
+                            <input aria-label="Quiz title" type="text" name="title" value="{{ old('title') }}" class="form-control" required placeholder="e.g. Unit 1 MCQ Quiz">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" rows="3" class="form-control" placeholder="Short instructions visible before students start.">{{ old('description') }}</textarea>
+                            <textarea aria-label="Short instructions visible before students start." name="description" rows="3" class="form-control" placeholder="Short instructions visible before students start.">{{ old('description') }}</textarea>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Starts At <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="starts_at" value="{{ old('starts_at', now()->subMinutes(5)->format('Y-m-d\TH:i')) }}" class="form-control" required>
+                            <input aria-label="Starts At" type="datetime-local" name="starts_at" value="{{ old('starts_at', now()->subMinutes(5)->format('Y-m-d\TH:i')) }}" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Ends At <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="ends_at" value="{{ old('ends_at', now()->addDays(7)->format('Y-m-d\TH:i')) }}" class="form-control" required>
+                            <input aria-label="Ends At" type="datetime-local" name="ends_at" value="{{ old('ends_at', now()->addDays(7)->format('Y-m-d\TH:i')) }}" class="form-control" required>
                         </div>
                     </div>
 
@@ -96,18 +96,18 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div class="fw-semibold">Question {{ $i + 1 }} @if($i === 0)<span class="text-danger">*</span>@else<span class="text-muted small">(optional)</span>@endif</div>
                                 <div style="width:120px">
-                                    <input type="number" name="questions[{{ $i }}][marks]" value="{{ old("questions.$i.marks", $i === 0 ? 1 : '') }}" class="form-control form-control-sm" step="0.5" min="0.5" placeholder="Marks" @if($i === 0) required @endif>
+                                    <input aria-label="Marks" type="number" name="questions[{{ $i }}][marks]" value="{{ old("questions.$i.marks", $i === 0 ? 1 : '') }}" class="form-control form-control-sm" step="0.5" min="0.5" placeholder="Marks" @if($i === 0) required @endif>
                                 </div>
                             </div>
-                            <textarea name="questions[{{ $i }}][question_text]" rows="2" class="form-control mb-2" placeholder="Question text" @if($i === 0) required @endif>{{ old("questions.$i.question_text") }}</textarea>
+                            <textarea aria-label="Question text" name="questions[{{ $i }}][question_text]" rows="2" class="form-control mb-2" placeholder="Question text" @if($i === 0) required @endif>{{ old("questions.$i.question_text") }}</textarea>
                             <div class="row g-2">
                                 @for($j = 0; $j < 4; $j++)
                                     <div class="col-md-6">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">
-                                                <input class="form-check-input mt-0" type="radio" name="questions[{{ $i }}][correct_option]" value="{{ $j }}" @checked((string) old("questions.$i.correct_option", $j === 0 ? '0' : '') === (string) $j) @if($i === 0) required @endif>
+                                                <input aria-label="Questions" class="form-check-input mt-0" type="radio" name="questions[{{ $i }}][correct_option]" value="{{ $j }}" @checked((string) old("questions.$i.correct_option", $j === 0 ? '0' : '') === (string) $j) @if($i === 0) required @endif>
                                             </span>
-                                            <input type="text" name="questions[{{ $i }}][options][{{ $j }}]" value="{{ old("questions.$i.options.$j") }}" class="form-control" placeholder="Option {{ $j + 1 }}" @if($i === 0 && $j < 2) required @endif>
+                                            <input aria-label="Option {{ $j + 1 }}" type="text" name="questions[{{ $i }}][options][{{ $j }}]" value="{{ old("questions.$i.options.$j") }}" class="form-control" placeholder="Option {{ $j + 1 }}" @if($i === 0 && $j < 2) required @endif>
                                         </div>
                                     </div>
                                 @endfor

@@ -17,13 +17,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Teacher Name</th>
-                    <th>Department</th>
-                    <th>Designation</th>
-                    <th>Weekly Periods</th>
-                    <th>Total Students</th>
-                    <th>Leaves This Month</th>
-                    <th>Pending Leaves</th>
+                    <th scope="col">Teacher Name</th>
+                    <th scope="col">Department</th>
+                    <th scope="col">Designation</th>
+                    <th scope="col">Weekly Periods</th>
+                    <th scope="col">Total Students</th>
+                    <th scope="col">Leaves This Month</th>
+                    <th scope="col">Pending Leaves</th>
                 </tr>
             </thead>
             <tbody>

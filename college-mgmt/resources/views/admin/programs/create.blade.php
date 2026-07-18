@@ -22,25 +22,25 @@
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Program Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                            <input aria-label="Program name" type="text" name="name" class="form-control @error('name') is-invalid @enderror"
                                 value="{{ old('name') }}" placeholder="e.g. Post Graduate Diploma in Management" required>
                             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Code <span class="text-danger">*</span></label>
-                            <input type="text" name="code" class="form-control @error('code') is-invalid @enderror"
+                            <input aria-label="PGDM" type="text" name="code" class="form-control @error('code') is-invalid @enderror"
                                 value="{{ old('code') }}" placeholder="PGDM" maxlength="20" required>
                             @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Abbreviation</label>
-                            <input type="text" name="abbreviation" class="form-control"
+                            <input aria-label="PGDM" type="text" name="abbreviation" class="form-control"
                                 value="{{ old('abbreviation') }}" placeholder="PGDM" maxlength="10">
                             <div class="form-text">Short form used in reports</div>
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Department <span class="text-danger">*</span></label>
-                            <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
+                            <select aria-label="Department" name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
                                 <option value="">Select Department</option>
                                 @foreach($departments as $dept)
                                     <option value="{{ $dept->id }}" {{ old('department_id') == $dept->id ? 'selected' : '' }}>
@@ -77,12 +77,12 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Default Intake Capacity</label>
-                            <input type="number" name="default_intake_capacity" class="form-control"
+                            <input aria-label="Default Intake Capacity" type="number" name="default_intake_capacity" class="form-control"
                                 value="{{ old('default_intake_capacity', 60) }}" min="1" max="500">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="2"
+                            <textarea aria-label="Brief description of the program" name="description" class="form-control" rows="2"
                                 placeholder="Brief description of the program">{{ old('description') }}</textarea>
                         </div>
                         <div class="col-12">

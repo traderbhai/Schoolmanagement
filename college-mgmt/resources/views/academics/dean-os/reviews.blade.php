@@ -25,13 +25,13 @@
             <form method="POST" action="{{ route('academics.dean-os.reviews.store') }}" class="card shadow-sm">@csrf
                 <div class="card-header py-2"><div class="fw-semibold">Create Review Meeting</div><div class="small text-muted">Start here for weekly academic, exam, IQAC, handoff, or emergency reviews.</div></div>
                 <div class="card-body row g-2">
-                    <div class="col-12"><input name="title" class="form-control form-control-sm" placeholder="Review title" required></div>
-                    <div class="col-md-6"><select name="review_type" class="form-select form-select-sm" required>@foreach(['weekly_academic','program_review','attendance_review','exam_review','iqac_review','handoff_review','emergency_review'] as $type)<option value="{{ $type }}">{{ str_replace('_',' ', $type) }}</option>@endforeach</select></div>
-                    <div class="col-md-6"><input type="datetime-local" name="scheduled_for" class="form-control form-control-sm"></div>
-                    <div class="col-md-6"><select name="scope_type" class="form-select form-select-sm"><option value="department">Department</option><option value="branch">Branch</option><option value="program">Program</option><option value="batch">Batch</option><option value="term">Term</option></select></div>
-                    <div class="col-md-6"><input name="scope_id" type="number" class="form-control form-control-sm" placeholder="Scope ID"></div>
-                    <div class="col-12"><textarea name="summary" class="form-control form-control-sm" rows="2" placeholder="Summary / agenda"></textarea></div>
-                    <div class="col-12 text-end"><button class="btn btn-sm btn-primary" onclick="return confirm('Create this Dean review meeting?')">Create Meeting</button></div>
+                    <div class="col-12"><input aria-label="Review title" name="title" class="form-control form-control-sm" placeholder="Review title" required></div>
+                    <div class="col-md-6"><select aria-label="Review Type" name="review_type" class="form-select form-select-sm" required>@foreach(['weekly_academic','program_review','attendance_review','exam_review','iqac_review','handoff_review','emergency_review'] as $type)<option value="{{ $type }}">{{ str_replace('_',' ', $type) }}</option>@endforeach</select></div>
+                    <div class="col-md-6"><input aria-label="Scheduled For" type="datetime-local" name="scheduled_for" class="form-control form-control-sm"></div>
+                    <div class="col-md-6"><select aria-label="Scope Type" name="scope_type" class="form-select form-select-sm"><option value="department">Department</option><option value="branch">Branch</option><option value="program">Program</option><option value="batch">Batch</option><option value="term">Term</option></select></div>
+                    <div class="col-md-6"><input aria-label="Scope ID" name="scope_id" type="number" class="form-control form-control-sm" placeholder="Scope ID"></div>
+                    <div class="col-12"><textarea aria-label="Summary / agenda" name="summary" class="form-control form-control-sm" rows="2" placeholder="Summary / agenda"></textarea></div>
+                    <div class="col-12 text-end"><button class="btn btn-sm btn-primary" onclick="return confirm('Create this Dean review meeting? Confirm scope, agenda, owner expectations, and whether this needs formal follow-up before recording it.')">Create Meeting</button></div>
                 </div>
             </form>
         </div>
@@ -39,14 +39,14 @@
             <form method="POST" action="{{ route('academics.dean-os.actions.store') }}" class="card shadow-sm">@csrf
                 <div class="card-header py-2"><div class="fw-semibold">Create Action Item</div><div class="small text-muted">Action items should have a clear source, owner, priority, and due date.</div></div>
                 <div class="card-body row g-2">
-                    <div class="col-md-6"><input name="title" class="form-control form-control-sm" placeholder="Action title" required></div>
-                    <div class="col-md-3"><select name="priority" class="form-select form-select-sm">@foreach(['normal','low','high','critical'] as $p)<option value="{{ $p }}">{{ ucfirst($p) }}</option>@endforeach</select></div>
-                    <div class="col-md-3"><input type="datetime-local" name="due_at" class="form-control form-control-sm"></div>
-                    <div class="col-md-4"><select name="meeting_id" class="form-select form-select-sm"><option value="">No meeting</option>@foreach($meetings as $meeting)<option value="{{ $meeting->id }}">{{ $meeting->title }}</option>@endforeach</select></div>
-                    <div class="col-md-4"><select name="owner_user_id" class="form-select form-select-sm"><option value="">Unassigned</option>@foreach($members as $member)<option value="{{ $member->id }}">{{ $member->name }}</option>@endforeach</select></div>
-                    <div class="col-md-4"><select name="source_type" class="form-select form-select-sm">@foreach(['manual','pmc','coe','iqac','program','course_delivery','attendance','approval','handoff','grievance'] as $s)<option value="{{ $s }}">{{ str_replace('_',' ', $s) }}</option>@endforeach</select></div>
-                    <div class="col-12"><textarea name="description" class="form-control form-control-sm" rows="2" placeholder="Description"></textarea></div>
-                    <div class="col-12 text-end"><button class="btn btn-sm btn-primary" onclick="return confirm('Create this Dean action item?')">Create Action</button></div>
+                    <div class="col-md-6"><input aria-label="Action title" name="title" class="form-control form-control-sm" placeholder="Action title" required></div>
+                    <div class="col-md-3"><select aria-label="Priority" name="priority" class="form-select form-select-sm">@foreach(['normal','low','high','critical'] as $p)<option value="{{ $p }}">{{ ucfirst($p) }}</option>@endforeach</select></div>
+                    <div class="col-md-3"><input aria-label="Due At" type="datetime-local" name="due_at" class="form-control form-control-sm"></div>
+                    <div class="col-md-4"><select aria-label="Meeting" name="meeting_id" class="form-select form-select-sm"><option value="">No meeting</option>@foreach($meetings as $meeting)<option value="{{ $meeting->id }}">{{ $meeting->title }}</option>@endforeach</select></div>
+                    <div class="col-md-4"><select aria-label="Owner User" name="owner_user_id" class="form-select form-select-sm"><option value="">Unassigned</option>@foreach($members as $member)<option value="{{ $member->id }}">{{ $member->name }}</option>@endforeach</select></div>
+                    <div class="col-md-4"><select aria-label="Source Type" name="source_type" class="form-select form-select-sm">@foreach(['manual','pmc','coe','iqac','program','course_delivery','attendance','approval','handoff','grievance'] as $s)<option value="{{ $s }}">{{ str_replace('_',' ', $s) }}</option>@endforeach</select></div>
+                    <div class="col-12"><textarea aria-label="Description" name="description" class="form-control form-control-sm" rows="2" placeholder="Description"></textarea></div>
+                    <div class="col-12 text-end"><button class="btn btn-sm btn-primary" onclick="return confirm('Create this Dean action item? Confirm owner, priority, due date, source workflow, and escalation expectation before adding it to the tracker.')">Create Action</button></div>
                 </div>
             </form>
         </div>
@@ -63,7 +63,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Action</th><th>Owner</th><th>Priority</th><th>Due</th><th>Status</th><th>Update</th></tr></thead>
+                <thead><tr><th scope="col">Action</th><th scope="col">Owner</th><th scope="col">Priority</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Update</th></tr></thead>
                 <tbody>
                 @foreach($actions as $action)
                     <tr>
@@ -77,9 +77,9 @@
                                 <input type="hidden" name="owner_user_id" value="{{ $action->owner_user_id }}">
                                 <input type="hidden" name="priority" value="{{ $action->priority }}">
                                 <input type="hidden" name="due_at" value="{{ $action->due_at?->format('Y-m-d H:i:s') }}">
-                                <select name="status" class="form-select form-select-sm">@foreach(['open','in_progress','blocked','done','cancelled'] as $status)<option value="{{ $status }}" @selected($action->status===$status)>{{ $status }}</option>@endforeach</select>
-                                <input name="closure_note" class="form-control form-control-sm" placeholder="Closure note required when closing without evidence">
-                                <button class="btn btn-sm btn-outline-primary" onclick="return confirm('Update this Dean action item?')">Save</button>
+                                <select aria-label="Status" name="status" class="form-select form-select-sm">@foreach(['open','in_progress','blocked','done','cancelled'] as $status)<option value="{{ $status }}" @selected($action->status===$status)>{{ $status }}</option>@endforeach</select>
+                                <input aria-label="Closure note required when closing without evidence" name="closure_note" class="form-control form-control-sm" placeholder="Closure note required when closing without evidence">
+                                <button class="btn btn-sm btn-outline-primary" onclick="return confirm('Update this Dean action item? Confirm status, owner, due date, and closure evidence before changing the accountability record.')">Save action status</button>
                             </form>
                         </td>
                     </tr>

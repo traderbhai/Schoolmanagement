@@ -11,6 +11,7 @@
     @stack('styles')
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
@@ -81,7 +82,7 @@
             </a>
 
             <div class="dropdown">
-                <button class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
+                <button type="button" class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
                     {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px;font-size:.84rem;border-color:var(--clr-border);">
@@ -108,7 +109,7 @@
     </div>
 
     {{-- PAGE BODY --}}
-    <div class="page-body">
+    <main id="main-content" class="page-body" tabindex="-1">
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert" aria-live="polite">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
@@ -142,7 +143,7 @@
         @endif
 
         @yield('content')
-    </div>
+    </main>
 </div>
 
 {{-- ===== DELETE CONFIRMATION MODAL ===== --}}
@@ -157,7 +158,7 @@
             <div class="modal-body pt-2">
                 <h6 class="mb-1" id="deleteModalLabel" style="font-size:1rem;font-weight:700;">Delete Record</h6>
                 <p class="mb-0" style="font-size:.85rem;color:var(--clr-text-muted);">
-                    Are you sure you want to delete <strong id="deleteModalName"></strong>? This action cannot be undone.
+                    Are you sure you want to delete <strong id="deleteModalName"></strong>? This action cannot be undone. Check linked timetable, attendance, materials, assignments, reports, or audit records before continuing.
                 </p>
             </div>
             <div class="modal-footer pt-0 gap-2">

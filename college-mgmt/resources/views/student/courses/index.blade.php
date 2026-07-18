@@ -20,7 +20,7 @@
                     <p class="text-muted small mb-3">
                         {{ !empty($subject->faculty_names) ? implode(', ', $subject->faculty_names) : 'Faculty not assigned' }}
                     </p>
-                    <div class="d-flex gap-2 flex-wrap">
+                    <div class="d-grid d-sm-flex gap-2 flex-wrap">
                         <a href="{{ route('student.courses.show', $subject) }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-book me-1"></i>Course Hub
                         </a>

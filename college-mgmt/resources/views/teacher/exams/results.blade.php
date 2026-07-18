@@ -82,12 +82,12 @@
                 <table class="table table-hover align-middle mb-0" id="resultsTable">
                     <thead class="table-light">
                         <tr>
-                            <th style="width:50px">#</th>
-                            <th style="width:90px">Roll No.</th>
-                            <th>Student</th>
-                            <th style="width:110px" class="text-center">Absent</th>
-                            <th style="width:180px">Marks <span class="text-muted fw-normal">/ {{ $exam->total_marks }}</span></th>
-                            <th style="width:180px">Remarks</th>
+                            <th scope="col" style="width:50px">#</th>
+                            <th scope="col" style="width:90px">Roll No.</th>
+                            <th scope="col">Student</th>
+                            <th scope="col" style="width:110px" class="text-center">Absent</th>
+                            <th scope="col" style="width:180px">Marks <span class="text-muted fw-normal">/ {{ $exam->total_marks }}</span></th>
+                            <th scope="col" style="width:180px">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,7 +110,7 @@
                         </td>
                         <td class="text-center">
                             <div class="form-check d-flex justify-content-center mb-0">
-                                <input type="checkbox"
+                                <input aria-label="Mark {{ $s->user->name }} absent" type="checkbox"
                                        name="results[{{ $s->id }}][is_absent]"
                                        value="1"
                                        class="form-check-input absent-cb"
@@ -122,7 +122,7 @@
                             </div>
                         </td>
                         <td>
-                            <input type="number"
+                            <input aria-label="Marks for {{ $s->user->name }}" type="number"
                                    name="results[{{ $s->id }}][marks_obtained]"
                                    class="form-control form-control-sm marks-input marks-input-{{ $s->id }}"
                                    min="0"
@@ -134,7 +134,7 @@
                             <div class="form-text" style="font-size:.68rem">Out of {{ $exam->total_marks }} | Pass: {{ $exam->passing_marks }}</div>
                         </td>
                         <td>
-                            <input type="text"
+                            <input aria-label="Result remarks for {{ $s->user->name }}" type="text"
                                    name="results[{{ $s->id }}][remarks]"
                                    class="form-control form-control-sm"
                                    placeholder="Optional note for Exam Cell"

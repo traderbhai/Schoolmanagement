@@ -26,7 +26,7 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-4">
-                <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Programs</option>
                     @foreach(\App\Models\Program::orderBy('name')->get() as $prog)
                         <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>{{ $prog->name }}</option>
@@ -34,7 +34,7 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select aria-label="Status" name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
                     @foreach(['upcoming','active','completed','cancelled'] as $s)
                         <option value="{{ $s }}" {{ request('status') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
@@ -72,15 +72,15 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Batch</th>
-                        <th>Program</th>
-                        <th>Academic Year</th>
-                        <th>Dates</th>
-                        <th>Capacity</th>
-                        <th>Students</th>
-                        <th>Terms</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Academic Year</th>
+                        <th scope="col">Dates</th>
+                        <th scope="col">Capacity</th>
+                        <th scope="col">Students</th>
+                        <th scope="col">Terms</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,9 +113,10 @@
                         </td>
                         <td><span class="badge {{ $statusBadge }}">{{ ucfirst($batch->status) }}</span></td>
                         <td class="text-end">
-                            <a href="{{ route('admin.batches.show', $batch) }}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-eye"></i></a>
-                            <a href="{{ route('admin.batches.edit', $batch) }}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
+                            <a href="{{ route('admin.batches.show', $batch) }}" class="btn btn-sm btn-outline-secondary me-1" aria-label="View batch {{ $batch->name }}"><i class="bi bi-eye"></i></a>
+                            <a href="{{ route('admin.batches.edit', $batch) }}" class="btn btn-sm btn-outline-primary me-1" aria-label="Edit batch {{ $batch->name }}"><i class="bi bi-pencil"></i></a>
                             <button type="button" class="btn btn-sm btn-outline-danger"
+                                aria-label="Delete batch {{ $batch->name }}"
                                 data-bs-toggle="modal" data-bs-target="#deleteModal"
                                 data-action="{{ route('admin.batches.destroy', $batch) }}"
                                 data-name="{{ $batch->name }}">

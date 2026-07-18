@@ -15,7 +15,7 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 @php
@@ -46,14 +46,14 @@ $roleLabels = [
             <table class="table table-sm table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Program Scope</th>
-                        <th>Batch Scope</th>
-                        <th>Assigned By</th>
-                        <th>Assigned At</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">User</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Program Scope</th>
+                        <th scope="col">Batch Scope</th>
+                        <th scope="col">Assigned By</th>
+                        <th scope="col">Assigned At</th>
+                        <th scope="col">Status</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,7 +73,7 @@ $roleLabels = [
                         @endif
                     </td>
                     <td>
-                        <form method="POST" action="{{ route('admin.role-assignments.destroy', $a) }}" onsubmit="return confirm('Revoke this assignment?')">
+                        <form method="POST" action="{{ route('admin.role-assignments.destroy', $a) }}" onsubmit="return confirm('Revoke scoped role assignment for {{ addslashes($a->user?->name ?? 'this user') }}? Confirm program/batch visibility, approvals, reports, and portal access should be removed for this scope.')">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Revoke</button>
                         </form>

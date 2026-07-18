@@ -135,12 +135,12 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Program</th>
-                            <th class="text-center">Students</th>
-                            <th class="text-center">Pass Rate</th>
-                            <th class="text-center">Attendance</th>
-                            <th class="text-center">Placement ({{ $currentYear }})</th>
-                            <th class="text-center">Overall</th>
+                            <th scope="col" class="ps-3">Program</th>
+                            <th scope="col" class="text-center">Students</th>
+                            <th scope="col" class="text-center">Pass Rate</th>
+                            <th scope="col" class="text-center">Attendance</th>
+                            <th scope="col" class="text-center">Placement ({{ $currentYear }})</th>
+                            <th scope="col" class="text-center">Overall</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -215,10 +215,10 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Student</th>
-                            <th>Program</th>
-                            <th class="text-center">Attendance %</th>
-                            <th>Actions</th>
+                            <th scope="col" class="ps-3">Student</th>
+                            <th scope="col">Program</th>
+                            <th scope="col" class="text-center">Attendance %</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -233,8 +233,8 @@
                                 <span class="badge bg-danger">{{ $s->att_pct }}%</span>
                             </td>
                             <td>
-                                <a href="{{ route('admin.students.show', $s) }}"
-                                   class="btn btn-sm btn-outline-secondary py-0 px-2">
+                            <a href="{{ route('admin.students.show', $s) }}"
+                               class="btn btn-sm btn-outline-secondary py-0 px-2" aria-label="View student {{ $s->user->name ?? $s->name ?? 'student' }}">
                                     <i class="bi bi-eye"></i>
                                 </a>
                             </td>

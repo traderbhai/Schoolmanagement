@@ -26,7 +26,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Selection committee candidates">
-                <thead><tr><th>Applicant</th><th>Program</th><th>Status</th><th>Documents</th><th>Paid</th><th>Decision</th></tr></thead>
+                <thead><tr><th scope="col">Applicant</th><th scope="col">Program</th><th scope="col">Status</th><th scope="col">Documents</th><th scope="col">Paid</th><th scope="col">Decision</th></tr></thead>
                 <tbody>
                 @foreach($candidates as $applicant)
                     <tr>
@@ -43,7 +43,7 @@
                                     <option>selected</option><option>waitlist</option><option>rejected</option><option>hold</option><option>reschedule</option>
                                 </select>
                                 <input name="reason" class="form-control form-control-sm" value="Committee reviewed readiness and score evidence." aria-label="Decision reason">
-                                <button class="btn btn-sm btn-primary">Save</button>
+                                <button class="btn btn-sm btn-primary">Save committee decision</button>
                             </form>
                         </td>
                     </tr>
@@ -60,7 +60,7 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Recent Decisions</span><span class="small text-muted">Audit trail for committee outcomes</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Recent selection decisions">
-                        <thead><tr><th>Applicant</th><th>Decision</th><th>Reason</th><th>When</th></tr></thead>
+                        <thead><tr><th scope="col">Applicant</th><th scope="col">Decision</th><th scope="col">Reason</th><th scope="col">When</th></tr></thead>
                         <tbody>@foreach($decisions as $decision)<tr><td>{{ $applicantNames[$decision->applicant_id] ?? 'Applicant pending' }}</td><td>{{ $decision->decision }}</td><td>{{ Str::limit($decision->reason, 70) }}</td><td>{{ $decision->decided_at }}</td></tr>@endforeach</tbody>
                     </table>
                 </div>
@@ -71,7 +71,7 @@
                 <div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Score Evidence</span><span class="small text-muted">Use normalized/outlier signals before deciding</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Score evidence">
-                        <thead><tr><th>Applicant</th><th>Raw</th><th>Normalized</th><th>Outlier</th></tr></thead>
+                        <thead><tr><th scope="col">Applicant</th><th scope="col">Raw</th><th scope="col">Normalized</th><th scope="col">Outlier</th></tr></thead>
                         <tbody>@foreach($scores as $score)<tr><td>{{ $applicantNames[$score->applicant_id] ?? 'Applicant pending' }}</td><td>{{ $score->raw_score }}</td><td>{{ $score->normalized_score }}</td><td>{{ $score->outlier_flag ? 'Yes' : 'No' }}</td></tr>@endforeach</tbody>
                     </table>
                 </div>

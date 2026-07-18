@@ -20,7 +20,7 @@
 <div class="card mb-3">
     <div class="card-body py-2">
         <form method="GET" class="d-flex gap-2">
-            <input type="search" name="search" class="form-control form-control-sm" style="max-width:300px"
+            <input aria-label="Parent search" type="search" name="search" class="form-control form-control-sm" style="max-width:300px"
                 placeholder="Search by name, email or phone..." value="{{ request('search') }}">
             <button class="btn btn-sm btn-outline-secondary">Search</button>
             @if(request('search'))
@@ -35,12 +35,12 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Relation</th>
-                    <th>Children</th>
-                    <th>Actions</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone</th>
+                    <th scope="col">Relation</th>
+                    <th scope="col">Children</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -89,7 +89,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Delete Parent</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">Delete <strong id="deleteName"></strong>? This will also delete their login account.</div>
             <div class="modal-footer">

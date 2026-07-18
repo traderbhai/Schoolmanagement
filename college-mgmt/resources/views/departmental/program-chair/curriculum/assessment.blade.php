@@ -26,13 +26,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -43,7 +43,7 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold mb-1">Program</label>
-                        <select name="program_id" class="form-select"
+                        <select aria-label="Program" name="program_id" class="form-select"
                                 onchange="document.getElementById('filterForm').submit()">
                             <option value="">— Select Program —</option>
                             @foreach($programs as $program)
@@ -56,7 +56,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold mb-1">Term</label>
-                        <select name="term_id" class="form-select"
+                        <select aria-label="Term" name="term_id" class="form-select"
                                 onchange="document.getElementById('filterForm').submit()">
                             <option value="">— All Terms —</option>
                             @foreach($terms as $term)
@@ -134,9 +134,9 @@
                             <table class="table table-sm table-bordered align-middle mb-0">
                                 <thead class="table-light small">
                                     <tr>
-                                        <th class="ps-3">Component</th>
-                                        <th class="text-center">Max Marks</th>
-                                        <th class="text-center">Weightage %</th>
+                                        <th scope="col" class="ps-3">Component</th>
+                                        <th scope="col" class="text-center">Max Marks</th>
+                                        <th scope="col" class="text-center">Weightage %</th>
                                     </tr>
                                 </thead>
                                 <tbody>

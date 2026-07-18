@@ -9,10 +9,16 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">
+        {{ session('success') }}
+        <button aria-label="Close success alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">
+        {{ session('error') }}
+        <button aria-label="Close error alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 @endif
 @if($errors->any())
     <div class="alert alert-danger">{{ $errors->first() }}</div>
@@ -28,20 +34,20 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small text-muted mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <label for="payment_request_status" class="form-label small text-muted mb-1">Status</label>
+                <select id="payment_request_status" name="status" class="form-select form-select-sm">
                     @foreach(['pending' => 'Pending', 'verified' => 'Verified', 'rejected' => 'Rejected', 'all' => 'All'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status', 'pending') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-5">
-                <label class="form-label small text-muted mb-1">Student</label>
-                <input type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
+                <label for="payment_request_search" class="form-label small text-muted mb-1">Student</label>
+                <input id="payment_request_search" type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-sm btn-primary">Apply</button>
-                <a href="{{ route('admin.fees.payment-requests.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                <button type="submit" class="btn btn-sm btn-primary">Apply payment filters</button>
+                <a href="{{ route('admin.fees.payment-requests.index') }}" class="btn btn-sm btn-outline-secondary">Clear payment filters</a>
                 <a href="{{ route('admin.fees.collect') }}" class="btn btn-sm btn-outline-primary ms-auto">Collect Fee</a>
             </div>
         </form>
@@ -53,13 +59,13 @@
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Student</th>
-                    <th>Demand</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Submitted</th>
-                    <th>Status</th>
-                    <th style="min-width:360px">Decision</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Demand</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Method</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" style="min-width:360px">Decision</th>
                 </tr>
             </thead>
             <tbody>
@@ -98,17 +104,17 @@
                     </td>
                     <td>
                         @if($request->status === 'pending')
-                            <form method="POST" action="{{ route('admin.fees.payment-requests.verify', $request) }}" class="d-flex gap-1 mb-1">
+                            <form method="POST" action="{{ route('admin.fees.payment-requests.verify', $request) }}" class="d-flex gap-1 mb-1" onsubmit="return confirm('Verify fee payment proof for {{ addslashes($request->student?->user?->name ?? 'this student') }}? Confirm amount, demand balance, transaction reference, proof file, and finance reconciliation impact before approval.')">
                                 @csrf
                                 @method('PATCH')
-                                <input class="form-control form-control-sm" name="notes" placeholder="Verification note">
-                                <button class="btn btn-sm btn-success">Verify</button>
+                                <input aria-label="Verification note" class="form-control form-control-sm" name="notes" placeholder="Verification note">
+                                <button type="submit" class="btn btn-sm btn-success">Verify payment proof</button>
                             </form>
-                            <form method="POST" action="{{ route('admin.fees.payment-requests.reject', $request) }}" class="d-flex gap-1">
+                            <form method="POST" action="{{ route('admin.fees.payment-requests.reject', $request) }}" class="d-flex gap-1" onsubmit="return confirm('Reject fee payment proof for {{ addslashes($request->student?->user?->name ?? 'this student') }}? Confirm rejection reason, student communication, demand balance, and audit trail before closing this proof.')">
                                 @csrf
                                 @method('PATCH')
-                                <input class="form-control form-control-sm" name="notes" placeholder="Rejection reason" required>
-                                <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                <input aria-label="Rejection reason" class="form-control form-control-sm" name="notes" placeholder="Rejection reason" required>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Reject payment proof</button>
                             </form>
                         @else
                             <div class="small text-muted">{{ $request->notes ?: 'No notes recorded.' }}</div>

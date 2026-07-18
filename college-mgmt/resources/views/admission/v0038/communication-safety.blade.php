@@ -68,7 +68,7 @@
                                 <option>opt_out</option>
                             </select>
                         </div>
-                        <div class="col-12"><input name="reason" class="form-control form-control-sm" placeholder="Reason/source note"></div>
+                        <div class="col-12"><input aria-label="Reason/source note" name="reason" class="form-control form-control-sm" placeholder="Reason/source note"></div>
                         <div class="col-12"><button class="btn btn-sm btn-primary">Save Consent</button></div>
                     </form>
                 </div>
@@ -80,7 +80,7 @@
                 <div class="card-header bg-white fw-bold">Template Approval</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Template approval">
-                        <thead><tr><th>Template</th><th>Channel</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Template</th><th scope="col">Channel</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                         @forelse($templates as $template)
                             <tr>
@@ -134,7 +134,7 @@
                 <div class="card-header bg-white fw-bold">Approvals</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Template approvals">
-                        <thead><tr><th>Template</th><th>Version</th><th>Status</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Template</th><th scope="col">Version</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                         @forelse($approvals as $approval)
                             <tr>
@@ -145,7 +145,7 @@
                                     @if($approval->status !== 'approved')
                                         <form method="POST" action="{{ route('admission.template-approvals.approve', $approval->id) }}">
                                             @csrf
-                                            <button class="btn btn-sm btn-outline-success">Approve</button>
+                                            <button class="btn btn-sm btn-outline-success">Approve template</button>
                                         </form>
                                     @endif
                                 </td>
@@ -164,7 +164,7 @@
                 <div class="card-header bg-white fw-bold">Bulk Send Previews</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Bulk send previews">
-                        <thead><tr><th>Channel</th><th>Audience</th><th>Blocked</th><th>Duplicates</th></tr></thead>
+                        <thead><tr><th scope="col">Channel</th><th scope="col">Audience</th><th scope="col">Blocked</th><th scope="col">Duplicates</th></tr></thead>
                         <tbody>
                         @forelse($previews as $preview)
                             <tr><td>{{ $preview->channel }}</td><td>{{ $preview->audience_count }}</td><td>{{ $preview->blocked_count }}</td><td>{{ $preview->duplicate_count }}</td></tr>
@@ -184,7 +184,7 @@
                 <div class="card-header bg-white fw-bold">Consent Records</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Consent records">
-                        <thead><tr><th>Subject</th><th>Channel</th><th>Status</th><th>Reason</th></tr></thead>
+                        <thead><tr><th scope="col">Subject</th><th scope="col">Channel</th><th scope="col">Status</th><th scope="col">Reason</th></tr></thead>
                         <tbody>
                         @forelse($consents as $consent)
                             <tr>
@@ -207,7 +207,7 @@
                 <div class="card-header bg-white fw-bold">Quiet Hours</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0" aria-label="Quiet hours">
-                        <thead><tr><th>Channel</th><th>Start</th><th>End</th><th>Emergency</th></tr></thead>
+                        <thead><tr><th scope="col">Channel</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Emergency</th></tr></thead>
                         <tbody>
                         @forelse($quietHours as $rule)
                             <tr><td>{{ $rule->channel }}</td><td>{{ $rule->starts_at_time }}</td><td>{{ $rule->ends_at_time }}</td><td>{{ $rule->emergency_override_allowed ? 'Allowed' : 'Blocked' }}</td></tr>
@@ -225,7 +225,7 @@
         <div class="card-header bg-white fw-bold">Blocked And Delayed Send Queue</div>
         <div class="table-responsive">
             <table class="table table-sm mb-0" aria-label="Blocked communications">
-                <thead><tr><th>Subject</th><th>Channel</th><th>Recipient</th><th>Rule</th><th>Status</th><th>Scheduled</th></tr></thead>
+                <thead><tr><th scope="col">Subject</th><th scope="col">Channel</th><th scope="col">Recipient</th><th scope="col">Rule</th><th scope="col">Status</th><th scope="col">Scheduled</th></tr></thead>
                 <tbody>
                 @forelse($blocked as $item)
                     <tr>

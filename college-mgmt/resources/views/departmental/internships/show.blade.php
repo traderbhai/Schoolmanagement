@@ -4,7 +4,7 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="{{ route('cmc.internships.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <a href="{{ route('cmc.internships.index') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to internships"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h4 class="fw-bold mb-0">{{ $internship->role_title }} @ {{ $internship->company_name }}</h4>
             <span class="text-muted small">Internship #{{ $internship->id }}</span>
@@ -12,10 +12,10 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if($errors->any())
         <div class="alert alert-danger">
@@ -80,15 +80,15 @@
                         @csrf
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">End Date <span class="text-danger">*</span></label>
-                            <input type="date" name="end_date" class="form-control form-control-sm" required value="{{ old('end_date', now()->toDateString()) }}">
+                            <input aria-label="End Date" type="date" name="end_date" class="form-control form-control-sm" required value="{{ old('end_date', now()->toDateString()) }}">
                         </div>
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Supervisor Feedback</label>
-                            <textarea name="feedback" rows="3" class="form-control form-control-sm" placeholder="Optional">{{ old('feedback') }}</textarea>
+                            <textarea aria-label="Internship feedback" name="feedback" rows="3" class="form-control form-control-sm" placeholder="Optional">{{ old('feedback') }}</textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Rating (1-5)</label>
-                            <input type="number" name="rating" class="form-control form-control-sm" min="1" max="5" value="{{ old('rating') }}" placeholder="e.g. 4">
+                            <input aria-label="Internship rating" type="number" name="rating" class="form-control form-control-sm" min="1" max="5" value="{{ old('rating') }}" placeholder="e.g. 4">
                         </div>
                         <button type="submit" class="btn btn-success btn-sm w-100">Mark Completed</button>
                     </form>

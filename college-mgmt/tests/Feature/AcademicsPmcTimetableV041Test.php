@@ -654,6 +654,8 @@ class AcademicsPmcTimetableV041Test extends TestCase
             ->assertSee('Master Parallel Slot Board')
             ->assertSee('Parallel Core Section A')
             ->assertSee('Parallel Core Section B')
+            ->assertSee('Open details')
+            ->assertSee(route('academics.pmc.canonical-sessions.show', $publishedItems->first()), false)
             ->assertSee('2 parallel');
     }
 

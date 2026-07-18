@@ -4,7 +4,7 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="{{ route('exam-cell.anomalies.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <a href="{{ route('exam-cell.anomalies.index') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to exam anomalies"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="h4 fw-bold mb-0">Report Exam Anomaly</h1>
             <span class="text-muted small">Log a malpractice or irregularity for investigation</span>
@@ -22,7 +22,7 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Exam <span class="text-danger">*</span></label>
-                            <select name="exam_id" class="form-select @error('exam_id') is-invalid @enderror" required>
+                            <select aria-label="Exam" name="exam_id" class="form-select @error('exam_id') is-invalid @enderror" required>
                                 <option value="">Select Exam</option>
                                 @foreach($exams as $e)
                                 <option value="{{ $e->id }}" @selected(old('exam_id')==$e->id)>
@@ -34,7 +34,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Student <span class="text-danger">*</span></label>
-                            <select name="student_id" class="form-select @error('student_id') is-invalid @enderror" required>
+                            <select aria-label="Student" name="student_id" class="form-select @error('student_id') is-invalid @enderror" required>
                                 <option value="">Select Student</option>
                                 @foreach($students as $s)
                                 <option value="{{ $s->id }}" @selected(old('student_id')==$s->id)>{{ $s->user->name }} ({{ $s->enrollment_number }})</option>
@@ -45,7 +45,7 @@
                         <div class="row g-3 mb-3">
                             <div class="col-sm-6">
                                 <label class="form-label fw-semibold">Anomaly Type <span class="text-danger">*</span></label>
-                                <select name="anomaly_type" class="form-select @error('anomaly_type') is-invalid @enderror" required>
+                                <select aria-label="Anomaly Type" name="anomaly_type" class="form-select @error('anomaly_type') is-invalid @enderror" required>
                                     <option value="">Select Type</option>
                                     @foreach(['malpractice'=>'Malpractice','absent_without_reason'=>'Absent Without Reason','late_entry'=>'Late Entry','paper_leak'=>'Paper Leak','other'=>'Other'] as $v=>$l)
                                     <option value="{{ $v }}" @selected(old('anomaly_type')===$v)>{{ $l }}</option>
@@ -55,7 +55,7 @@
                             </div>
                             <div class="col-sm-6">
                                 <label class="form-label fw-semibold">Severity <span class="text-danger">*</span></label>
-                                <select name="severity" class="form-select @error('severity') is-invalid @enderror" required>
+                                <select aria-label="Severity" name="severity" class="form-select @error('severity') is-invalid @enderror" required>
                                     <option value="">Select Severity</option>
                                     @foreach(['low'=>'Low','medium'=>'Medium','high'=>'High','critical'=>'Critical'] as $v=>$l)
                                     <option value="{{ $v }}" @selected(old('severity')===$v)>{{ $l }}</option>
@@ -66,7 +66,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Action Taken <span class="text-muted fw-normal">(optional)</span></label>
-                            <select name="action_taken" class="form-select">
+                            <select aria-label="Action Taken" name="action_taken" class="form-select">
                                 <option value="">— Not yet decided —</option>
                                 @foreach(['none'=>'No Action','warning'=>'Warning Issued','debarred'=>'Student Debarred','cancelled'=>'Exam Cancelled'] as $v=>$l)
                                 <option value="{{ $v }}" @selected(old('action_taken')===$v)>{{ $l }}</option>
@@ -75,7 +75,7 @@
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                            <textarea name="description" rows="4" class="form-control @error('description') is-invalid @enderror" required placeholder="Describe the anomaly in detail...">{{ old('description') }}</textarea>
+                            <textarea aria-label="Exam anomaly description" name="description" rows="4" class="form-control @error('description') is-invalid @enderror" required placeholder="Describe the anomaly in detail...">{{ old('description') }}</textarea>
                             @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="d-flex gap-2">

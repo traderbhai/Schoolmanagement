@@ -10,7 +10,7 @@
     <form method="GET" class="row g-3">
       <div class="col-md-8">
         <label class="form-label small fw-semibold">Upcoming Exam</label>
-        <select name="exam_id" class="form-select" required>
+        <select aria-label="Exam" name="exam_id" class="form-select" required>
           <option value="">- Select Exam -</option>
           @foreach($exams as $e)
           <option value="{{ $e->id }}" {{ request('exam_id')==$e->id?'selected':'' }}>
@@ -38,7 +38,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">#</th><th>Name</th><th>Enrollment No.</th><th>Program</th><th class="text-end pe-3">Hall Ticket</th></tr>
+        <tr><th scope="col" class="ps-3">#</th><th scope="col">Name</th><th scope="col">Enrollment No.</th><th scope="col">Program</th><th scope="col" class="text-end pe-3">Hall Ticket</th></tr>
       </thead>
       <tbody>
         @forelse($students as $s)
@@ -48,7 +48,7 @@
           <td class="small">{{ $s->enrollment_number ?? '-' }}</td>
           <td class="small text-muted">{{ $selectedExam->program?->name }}</td>
           <td class="text-end pe-3">
-            <a href="{{ route('exam-cell.hall-ticket.download', [$selectedExam, $s]) }}"
+            <a rel="noopener" href="{{ route('exam-cell.hall-ticket.download', [$selectedExam, $s]) }}"
                class="btn btn-sm btn-outline-primary py-0 px-2" target="_blank">
               <i class="bi bi-download me-1"></i>PDF
             </a>
@@ -71,11 +71,11 @@
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>
-          <th class="ps-3">Student</th>
-          <th>Eligibility</th>
-          <th>Status</th>
-          <th>Remarks</th>
-          <th class="text-end pe-3">Review</th>
+          <th scope="col" class="ps-3">Student</th>
+          <th scope="col">Eligibility</th>
+          <th scope="col">Status</th>
+          <th scope="col">Remarks</th>
+          <th scope="col" class="text-end pe-3">Review</th>
         </tr>
       </thead>
       <tbody>
@@ -105,14 +105,14 @@
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="action" value="approved">
-                <input type="text" name="remarks" class="form-control form-control-sm" placeholder="Optional remarks" style="max-width: 180px">
-                <button class="btn btn-sm btn-success py-0 px-2">Approve</button>
+                <input aria-label="Hall ticket remarks" type="text" name="remarks" class="form-control form-control-sm" placeholder="Optional remarks" style="max-width: 180px">
+                <button class="btn btn-sm btn-success py-0 px-2">Approve hall ticket</button>
               </form>
               <form method="POST" action="{{ route('exam-cell.registrations.review', $registration) }}" class="d-inline">
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="action" value="rejected">
-                <button class="btn btn-sm btn-outline-danger py-0 px-2">Reject</button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-2">Reject hall ticket</button>
               </form>
             @else
               <span class="text-muted small">Reviewed by {{ $registration->approver?->name ?? 'Exam Cell' }}</span>

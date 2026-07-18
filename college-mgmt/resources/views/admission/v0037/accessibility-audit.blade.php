@@ -25,9 +25,9 @@
             <table class="table table-sm align-middle mb-0" aria-label="Accessibility audit checklist">
                 <thead class="table-light">
                     <tr>
-                        <th>Surface</th>
-                        <th>Status</th>
-                        <th>Note</th>
+                        <th scope="col">Surface</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Note</th>
                     </tr>
                 </thead>
                 <tbody>

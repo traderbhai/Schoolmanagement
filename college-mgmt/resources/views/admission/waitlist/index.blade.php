@@ -13,13 +13,13 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show">
         <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -108,12 +108,12 @@
                 <caption class="visually-hidden">Waitlisted applicants in merit order for seat promotion</caption>
                 <thead class="table-light">
                     <tr>
-                        <th style="width:70px">Rank</th>
-                        <th>Applicant Name</th>
-                        <th>Application No</th>
-                        <th>Batch</th>
-                        <th>Merit Score</th>
-                        <th class="text-end">Action</th>
+                        <th scope="col" style="width:70px">Rank</th>
+                        <th scope="col">Applicant Name</th>
+                        <th scope="col">Application No</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Merit Score</th>
+                        <th scope="col" class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -30,7 +30,7 @@
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
 
@@ -145,9 +145,9 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <form method="POST" action="{{ route('admin.admission-config.documents.destroy', $doc) }}" onsubmit="return confirm('Remove this document?')">
+                    <form method="POST" action="{{ route('admin.admission-config.documents.destroy', $doc) }}" onsubmit="return confirm('Remove required document {{ addslashes($doc->name) }} from {{ addslashes($program->name) }} admission setup? Confirm no active applicants still need this checklist item before changing admission readiness rules.')">
                         @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash3"></i></button>
+                        <button class="btn btn-sm btn-outline-danger py-0 px-2" aria-label="Remove required document {{ $doc->name }}"><i class="bi bi-trash3"></i></button>
                     </form>
                 </div>
             </div>
@@ -161,13 +161,13 @@
                 <form method="POST" action="{{ route('admin.admission-config.documents.store', $program) }}" class="row g-2">
                     @csrf
                     <div class="col-md-4">
-                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Document name *" required>
+                        <input aria-label="Document name *" type="text" name="name" class="form-control form-control-sm" placeholder="Document name *" required>
                     </div>
                     <div class="col-md-4">
-                        <input type="text" name="description" class="form-control form-control-sm" placeholder="Description (optional)">
+                        <input aria-label="Configuration description" type="text" name="description" class="form-control form-control-sm" placeholder="Description (optional)">
                     </div>
                     <div class="col-md-2">
-                        <select name="is_mandatory" class="form-select form-select-sm">
+                        <select aria-label="Is Mandatory" name="is_mandatory" class="form-select form-select-sm">
                             <option value="1">Required</option>
                             <option value="0">Optional</option>
                         </select>
@@ -202,9 +202,9 @@
                 <div class="d-flex gap-2 align-items-center text-muted small">
                     <span>Max: {{ $step->max_score }}</span>
                     <span>Weight: {{ $step->weightage }}%</span>
-                    <form method="POST" action="{{ route('admin.admission-config.steps.destroy', $step) }}" onsubmit="return confirm('Remove this step?')">
+                    <form method="POST" action="{{ route('admin.admission-config.steps.destroy', $step) }}" onsubmit="return confirm('Remove selection step {{ addslashes($step->name) }} from {{ addslashes($program->name) }}? Confirm this will not invalidate active assessments, scores, merit rules, or evaluator workflow history.')">
                         @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash3"></i></button>
+                        <button class="btn btn-sm btn-outline-danger py-0 px-2" aria-label="Remove selection step {{ $step->name }}"><i class="bi bi-trash3"></i></button>
                     </form>
                 </div>
             </div>
@@ -218,7 +218,7 @@
                         <span class="badge bg-light text-dark border">Max: {{ $param->max_score }}</span>
                         <form method="POST" action="{{ route('admin.admission-config.parameters.destroy', $param) }}">
                             @csrf @method('DELETE')
-                            <button class="btn btn-sm py-0 px-1 text-danger border-0 bg-transparent"><i class="bi bi-x"></i></button>
+                            <button class="btn btn-sm py-0 px-1 text-danger border-0 bg-transparent" aria-label="Remove selection parameter {{ $param->name }}"><i class="bi bi-x"></i></button>
                         </form>
                     </div>
                 </div>
@@ -228,8 +228,8 @@
                 {{-- Add parameter --}}
                 <form method="POST" action="{{ route('admin.admission-config.parameters.store', $step) }}" class="row g-1 mt-2">
                     @csrf
-                    <div class="col"><input type="text" name="name" class="form-control form-control-sm" placeholder="Parameter name (e.g. Communication)" required></div>
-                    <div class="col-2"><input type="number" name="max_score" class="form-control form-control-sm" placeholder="Max" value="10" min="1" max="100" required></div>
+                    <div class="col"><input aria-label="Parameter name" type="text" name="name" class="form-control form-control-sm" placeholder="Parameter name (e.g. Communication)" required></div>
+                    <div class="col-2"><input aria-label="Max" type="number" name="max_score" class="form-control form-control-sm" placeholder="Max" value="10" min="1" max="100" required></div>
                     <div class="col-auto"><button class="btn btn-sm btn-outline-primary">Add</button></div>
                 </form>
             </div>
@@ -247,10 +247,10 @@
                 <form method="POST" action="{{ route('admin.admission-config.steps.store', $program) }}" class="row g-2">
                     @csrf
                     <div class="col-md-3">
-                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Step name *" required>
+                        <input aria-label="Step name *" type="text" name="name" class="form-control form-control-sm" placeholder="Step name *" required>
                     </div>
                     <div class="col-md-2">
-                        <select name="type" class="form-select form-select-sm" required>
+                        <select aria-label="Type" name="type" class="form-select form-select-sm" required>
                             <option value="gd">Group Discussion</option>
                             <option value="pi" selected>Personal Interview</option>
                             <option value="wat">Written Ability Test</option>
@@ -260,19 +260,19 @@
                         </select>
                     </div>
                     <div class="col-md-1">
-                        <input type="number" name="step_order" class="form-control form-control-sm" placeholder="Order" value="{{ $program->selectionProcessSteps->count() + 1 }}" min="1" required>
+                        <input aria-label="Order" type="number" name="step_order" class="form-control form-control-sm" placeholder="Order" value="{{ $program->selectionProcessSteps->count() + 1 }}" min="1" required>
                     </div>
                     <div class="col-md-2">
-                        <input type="number" name="max_score" class="form-control form-control-sm" placeholder="Max Score" value="100" min="1" required>
+                        <input aria-label="Max Score" type="number" name="max_score" class="form-control form-control-sm" placeholder="Max Score" value="100" min="1" required>
                     </div>
                     <div class="col-md-2">
-                        <input type="number" name="weightage" class="form-control form-control-sm" placeholder="Weightage %" value="100" min="1" max="100" step="0.01" required>
+                        <input aria-label="Weightage %" type="number" name="weightage" class="form-control form-control-sm" placeholder="Weightage %" value="100" min="1" max="100" step="0.01" required>
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary btn-sm w-100">Add Step</button>
                     </div>
                     <div class="col-12">
-                        <input type="text" name="instructions" class="form-control form-control-sm" placeholder="Instructions for evaluators (optional)">
+                        <input aria-label="Evaluator instructions" type="text" name="instructions" class="form-control form-control-sm" placeholder="Instructions for evaluators (optional)">
                     </div>
                 </form>
             </div>
@@ -301,7 +301,7 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>#</th><th>Name</th><th>Amount</th><th>Due Date</th><th>Batch</th><th>Status</th><th></th></tr>
+                    <tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Amount</th><th scope="col">Due Date</th><th scope="col">Batch</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr>
                 </thead>
                 <tbody>
                 @forelse($program->admissionFeeInstallments as $inst)
@@ -315,9 +315,9 @@
                         <span class="badge {{ $inst->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $inst->is_active ? 'Active' : 'Inactive' }}</span>
                     </td>
                     <td>
-                        <form method="POST" action="{{ route('admin.admission-config.fee.destroy', $inst) }}" onsubmit="return confirm('Remove?')">
+                        <form method="POST" action="{{ route('admin.admission-config.fee.destroy', $inst) }}" onsubmit="return confirm('Remove admission fee installment {{ addslashes($inst->name) }} worth Rs. {{ number_format($inst->amount, 2) }}? Confirm no applicant payment, offer deadline, or finance reconciliation depends on this installment.')">
                             @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash3"></i></button>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2" aria-label="Remove admission fee installment {{ $inst->name }}"><i class="bi bi-trash3"></i></button>
                         </form>
                     </td>
                 </tr>
@@ -340,19 +340,19 @@
                 <form method="POST" action="{{ route('admin.admission-config.fee.store', $program) }}" class="row g-2">
                     @csrf
                     <div class="col-md-3">
-                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Name (e.g. Registration Fee)" required>
+                        <input aria-label="Fee configuration name" type="text" name="name" class="form-control form-control-sm" placeholder="Name (e.g. Registration Fee)" required>
                     </div>
                     <div class="col-md-2">
-                        <input type="number" name="amount" class="form-control form-control-sm" placeholder="Amount (₹)" min="0" step="0.01" required>
+                        <input aria-label="Amount (₹)" type="number" name="amount" class="form-control form-control-sm" placeholder="Amount (₹)" min="0" step="0.01" required>
                     </div>
                     <div class="col-md-1">
-                        <input type="number" name="installment_number" class="form-control form-control-sm" placeholder="#" value="{{ $program->admissionFeeInstallments->count() + 1 }}" min="1" required>
+                        <input aria-label="#" type="number" name="installment_number" class="form-control form-control-sm" placeholder="#" value="{{ $program->admissionFeeInstallments->count() + 1 }}" min="1" required>
                     </div>
                     <div class="col-md-2">
-                        <input type="date" name="due_date" class="form-control form-control-sm">
+                        <input aria-label="Due Date" type="date" name="due_date" class="form-control form-control-sm">
                     </div>
                     <div class="col-md-2">
-                        <select name="batch_id" class="form-select form-select-sm">
+                        <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
                             <option value="">All batches</option>
                             @foreach($program->batches as $b)
                             <option value="{{ $b->id }}">{{ $b->name }}</option>

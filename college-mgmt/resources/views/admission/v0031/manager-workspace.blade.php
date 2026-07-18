@@ -46,7 +46,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Team Member</th><th>Workload</th><th>Converted</th><th>SLA</th><th>Stale</th><th>Follow-up %</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Team Member</th><th scope="col">Workload</th><th scope="col">Converted</th><th scope="col">SLA</th><th scope="col">Stale</th><th scope="col">Follow-up %</th></tr></thead>
                     <tbody>
                     @forelse($teamKpis as $row)
                         <tr>
@@ -74,11 +74,11 @@
             <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
                 <span>Unassigned And Stale Leads</span>
                 <span class="small text-muted fw-normal">Assign owner or update next action</span>
-                <a href="{{ route('admission.leads.index', ['per_page' => 25, 'sort' => 'last_contacted_at', 'direction' => 'asc']) }}" class="btn btn-sm btn-outline-primary py-0">View all</a>
+                <a href="{{ route('admission.leads.index', ['per_page' => 25, 'sort' => 'last_contacted_at', 'direction' => 'asc']) }}" class="btn btn-sm btn-outline-primary py-0">View lead queue</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Name</th><th>Source</th><th>Priority</th><th>Age</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Name</th><th scope="col">Source</th><th scope="col">Priority</th><th scope="col">Age</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                     @forelse($unassignedLeads->merge($staleLeads)->unique('id')->take(15) as $lead)
                         <tr>
@@ -86,7 +86,7 @@
                             <td>{{ $lead->source_label ?: 'Source not captured' }}</td>
                             <td>{{ ucfirst($lead->priority ?? 'normal') }}</td>
                             <td class="small text-muted">{{ optional($lead->last_activity_at)->diffForHumans() ?? 'No activity' }}</td>
-                            <td><a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+                            <td><a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary">Open lead</a></td>
                         </tr>
                     @empty
                         <tr>

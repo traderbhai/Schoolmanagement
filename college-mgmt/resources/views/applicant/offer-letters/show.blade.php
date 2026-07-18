@@ -18,7 +18,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -130,12 +130,12 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <button class="btn btn-success btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptModal">
+                                <button type="button" class="btn btn-success btn-lg w-100" data-bs-toggle="modal" data-bs-target="#acceptModal">
                                     Accept Offer
                                 </button>
                             </div>
                             <div class="col-md-6">
-                                <button class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#declineModal">
+                                <button type="button" class="btn btn-danger btn-lg w-100" data-bs-toggle="modal" data-bs-target="#declineModal">
                                     Decline Offer
                                 </button>
                             </div>
@@ -148,7 +148,7 @@
                         <div class="modal-content">
                             <div class="modal-header border-success">
                                 <h5 class="modal-title">Confirm Acceptance</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
                                 <p>Are you sure you want to accept this offer for <strong>{{ $offerLetter->program->name }}</strong>?</p>
@@ -175,7 +175,7 @@
                         <div class="modal-content">
                             <div class="modal-header border-danger">
                                 <h5 class="modal-title">Confirm Decline</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <form action="{{ route('applicant.offer-letters.decline', $offerLetter) }}" method="POST">
                                 @csrf
@@ -183,7 +183,7 @@
                                     <p>Are you sure you want to decline this offer?</p>
                                     <div class="mb-3">
                                         <label class="form-label">Reason for Declining (Optional)</label>
-                                        <textarea name="reason" class="form-control" rows="4" placeholder="Help us improve by sharing your feedback..."></textarea>
+                                        <textarea aria-label="Offer decline feedback" name="reason" class="form-control" rows="4" placeholder="Help us improve by sharing your feedback..."></textarea>
                                     </div>
                                     <div class="alert alert-danger">
                                         <small>

@@ -64,9 +64,9 @@
                     <form method="POST" action="{{ route('student.mentor.message') }}">
                         @csrf
                         <div class="d-flex gap-2">
-                            <textarea name="message" rows="2" class="form-control form-control-sm @error('message') is-invalid @enderror"
+                            <textarea aria-label="Mentor message" name="message" rows="2" class="form-control form-control-sm @error('message') is-invalid @enderror"
                                 placeholder="Write a message...">{{ old('message') }}</textarea>
-                            <button class="btn btn-sm btn-primary align-self-end">Send</button>
+                            <button class="btn btn-sm btn-primary align-self-end">Send mentor message</button>
                         </div>
                         @error('message')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </form>
@@ -87,13 +87,13 @@
                         @csrf
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Preferred Date <span class="text-danger">*</span></label>
-                            <input type="date" name="meeting_date" class="form-control form-control-sm @error('meeting_date') is-invalid @enderror"
+                            <input aria-label="Meeting Date" type="date" name="meeting_date" class="form-control form-control-sm @error('meeting_date') is-invalid @enderror"
                                    min="{{ now()->addDay()->toDateString() }}" value="{{ old('meeting_date') }}" required>
                             @error('meeting_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Topic / Agenda <span class="text-danger">*</span></label>
-                            <input type="text" name="topic" class="form-control form-control-sm @error('topic') is-invalid @enderror"
+                            <input aria-label="Meeting topic" type="text" name="topic" class="form-control form-control-sm @error('topic') is-invalid @enderror"
                                    value="{{ old('topic') }}" placeholder="e.g. Academic guidance, Career advice" required>
                             @error('topic')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>

@@ -24,7 +24,7 @@
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">
                     <i class="bi bi-calendar3 me-1 text-primary"></i>Date
                 </label>
-                <input type="date" name="date" value="{{ $date }}"
+                <input aria-label="Date" type="date" name="date" value="{{ $date }}"
                        class="form-control form-control-sm" style="min-width:180px"
                        max="{{ today()->toDateString() }}">
             </div>
@@ -128,7 +128,7 @@
                                 </div>
                                 <div class="btn-group w-100" role="group">
                                     @foreach(['present' => ['success','check-circle'],'absent' => ['danger','x-circle'],'late' => ['warning','clock']] as $status => [$color,$icon])
-                                        <input class="btn-check att-radio" type="radio"
+                                        <input aria-label="{{ ucfirst($status) }} attendance for {{ $s->user->name }}" class="btn-check att-radio" type="radio"
                                                name="attendance[{{ $s->id }}]"
                                                id="mob_att_{{ $s->id }}_{{ $status }}"
                                                value="{{ $status }}"
@@ -146,10 +146,10 @@
                     <table class="table table-hover align-middle mb-0 d-none d-md-table">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:50px">#</th>
-                                <th>Student</th>
-                                <th>Roll No.</th>
-                                <th>Status</th>
+                                <th scope="col" style="width:50px">#</th>
+                                <th scope="col">Student</th>
+                                <th scope="col">Roll No.</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -173,7 +173,7 @@
                                 <td>
                                     <div class="btn-group" role="group">
                                         @foreach(['present' => ['success','check-circle'],'absent' => ['danger','x-circle'],'late' => ['warning','clock']] as $status => [$color,$icon])
-                                            <input class="btn-check att-radio" type="radio"
+                                            <input aria-label="{{ ucfirst($status) }} attendance for {{ $s->user->name }}" class="btn-check att-radio" type="radio"
                                                    name="attendance[{{ $s->id }}]"
                                                    id="att_{{ $s->id }}_{{ $status }}"
                                                    value="{{ $status }}"
@@ -238,6 +238,17 @@
                     You have no published classes scheduled for <strong>{{ \Carbon\Carbon::parse($date)->format('l, d M Y') }}</strong>.
                     Check another date, or ask the academic office to verify teacher assignment, timetable publication, and section/group allocation.
                 </p>
+                <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                    <a href="{{ route('teacher.pmc-timetable.index') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-calendar-week me-1"></i>My timetable
+                    </a>
+                    <a href="{{ route('teacher.pmc-availability.index') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-person-check me-1"></i>Availability profile
+                    </a>
+                    <a href="{{ route('teacher.profile') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-person-badge me-1"></i>Teacher profile
+                    </a>
+                </div>
             </div>
         </div>
     </div>

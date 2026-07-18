@@ -19,7 +19,7 @@
             <li>{{ $error }}</li>
         @endforeach
     </ul>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
 

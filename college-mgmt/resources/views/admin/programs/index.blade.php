@@ -38,15 +38,15 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Program</th>
-                        <th>Department</th>
-                        <th>Type</th>
-                        <th>Duration</th>
-                        <th>Terms</th>
-                        <th>Batches</th>
-                        <th>Students</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Duration</th>
+                        <th scope="col">Terms</th>
+                        <th scope="col">Batches</th>
+                        <th scope="col">Students</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

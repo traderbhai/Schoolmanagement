@@ -21,13 +21,13 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -37,13 +37,13 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">User</th>
-                            <th>Role</th>
-                            <th>Program Scope</th>
-                            <th>Assigned By</th>
-                            <th>Active Until</th>
-                            <th>Status</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th scope="col" class="ps-3">User</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Program Scope</th>
+                            <th scope="col">Assigned By</th>
+                            <th scope="col">Active Until</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-end pe-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,10 +84,10 @@
                             </td>
                             <td class="text-end pe-3">
                                 <form method="POST" action="{{ route('admin.users.roles.destroy', $ur) }}"
-                                      onsubmit="return confirm('Revoke this role assignment?')" class="d-inline">
+                                      onsubmit="return confirm('Revoke role {{ addslashes($ur->role?->name ?? 'this role') }} from {{ addslashes($ur->user?->name ?? 'this user') }}? Confirm dashboard access, approvals, reports, and portal permissions no longer require this assignment.')" class="d-inline">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" aria-label="Revoke role {{ $ur->role?->name ?? 'assignment' }} from {{ $ur->user?->name ?? 'user' }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>

@@ -25,13 +25,13 @@
                 @if($termPromotion->canPromote())
                     <form action="{{ route('academic.term-promotions.approve', $termPromotion) }}" method="POST" class="d-inline">
                         @csrf
-                        <button class="btn btn-success">Approve</button>
+                        <button class="btn btn-success">Approve promotion</button>
                     </form>
                 @endif
                 <form action="{{ route('academic.term-promotions.reject', $termPromotion) }}" method="POST" class="d-inline">
                     @csrf
-                    <textarea name="remarks" class="form-control mb-2" placeholder="Rejection reason" required></textarea>
-                    <button class="btn btn-danger">Reject</button>
+                    <textarea aria-label="Rejection reason" name="remarks" class="form-control mb-2" placeholder="Rejection reason" required></textarea>
+                    <button class="btn btn-danger">Reject promotion</button>
                 </form>
             @endif
         </div>

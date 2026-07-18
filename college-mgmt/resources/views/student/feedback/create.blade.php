@@ -47,7 +47,7 @@
 
                 <div class="mb-4">
                     <label class="form-label fw-semibold">Comments (optional)</label>
-                    <textarea name="comments" rows="4" class="form-control"
+                    <textarea aria-label="Feedback comments" name="comments" rows="4" class="form-control"
                               placeholder="Any suggestions or observations..." @disabled($actionBlockedReason)>{{ old('comments') }}</textarea>
                 </div>
 

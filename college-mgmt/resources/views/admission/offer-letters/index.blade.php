@@ -17,7 +17,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -68,7 +68,7 @@
                 <div class="row">
                     <div class="col-md-4">
                         <label class="form-label">Batch</label>
-                        <select name="batch_id" class="form-control">
+                        <select aria-label="Batch" name="batch_id" class="form-control">
                             <option value="">All Batches</option>
                             @foreach($batches as $batch)
                                 <option value="{{ $batch->id }}" {{ request('batch_id') == $batch->id ? 'selected' : '' }}>
@@ -79,7 +79,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Acceptance Days</label>
-                        <input type="number" name="acceptance_days" class="form-control" value="14" min="1" max="180" required>
+                        <input aria-label="Acceptance Days" type="number" name="acceptance_days" class="form-control" value="14" min="1" max="180" required>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <button type="submit" class="btn btn-success w-100">Generate for All Selected</button>
@@ -95,7 +95,7 @@
             <form action="{{ route('admission.offer-letters.index', $program) }}" method="GET" class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">Batch</label>
-                    <select name="batch_id" class="form-control">
+                    <select aria-label="Batch" name="batch_id" class="form-control">
                         <option value="">All Batches</option>
                         @foreach($batches as $batch)
                             <option value="{{ $batch->id }}" {{ $batchId == $batch->id ? 'selected' : '' }}>
@@ -106,7 +106,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-control">
+                    <select aria-label="Status" name="status" class="form-control">
                         <option value="">All Status</option>
                         <option value="issued" {{ $status == 'issued' ? 'selected' : '' }}>Issued</option>
                         <option value="accepted" {{ $status == 'accepted' ? 'selected' : '' }}>Accepted</option>
@@ -130,13 +130,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Offer #</th>
-                        <th>Applicant</th>
-                        <th>Email</th>
-                        <th>Batch</th>
-                        <th>Status</th>
-                        <th>Deadline</th>
-                        <th>Actions</th>
+                        <th scope="col">Offer #</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Deadline</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

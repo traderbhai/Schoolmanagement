@@ -54,13 +54,13 @@
                 <div class="card-header py-2 fw-semibold">Submit Ranked Choices</div>
                 <div class="card-body vstack gap-2">
                     <label class="form-label small mb-0">Term</label>
-                    <select class="form-select form-select-sm" name="term_id" required>
+                    <select aria-label="Term" class="form-select form-select-sm" name="term_id" required>
                         @foreach($terms as $term)
                             <option value="{{ $term->id }}" @selected((string) $termId === (string) $term->id)>{{ $term->name }}</option>
                         @endforeach
                     </select>
                     <label class="form-label small mb-0">Electives In Preference Order</label>
-                    <select class="form-select form-select-sm" name="subject_ids[]" multiple size="8" required @disabled(! $isOpen)>
+                    <select aria-label="Elective subjects in preference order" class="form-select form-select-sm" name="subject_ids[]" multiple size="8" required @disabled(! $isOpen)>
                         @foreach($subjects as $subject)
                             <option value="{{ $subject->id }}">{{ $subject->code ?: $subject->name }} - {{ $subject->name }} ({{ $subject->credits ?? 0 }} credits)</option>
                         @endforeach
@@ -79,7 +79,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Rank</th><th>Elective</th><th>Priority</th><th>Status</th><th>Decision</th></tr></thead>
+                        <thead><tr><th scope="col">Rank</th><th scope="col">Elective</th><th scope="col">Priority</th><th scope="col">Status</th><th scope="col">Decision</th></tr></thead>
                         <tbody>
                             @forelse($choices as $choice)
                                 <tr>

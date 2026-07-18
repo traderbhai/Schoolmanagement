@@ -10,24 +10,24 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <form method="GET" class="d-flex gap-2">
-        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search student..." value="{{ request('search') }}">
+        <input aria-label="Hostel allocation student search" type="text" name="search" class="form-control form-control-sm" placeholder="Search student..." value="{{ request('search') }}">
         <button class="btn btn-sm btn-primary">Search</button>
         @if(request('search'))<a href="{{ route('admin.hostel.allocations') }}" class="btn btn-sm btn-outline-secondary">Clear</a>@endif
     </form>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.hostel.allocations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#allocateModal"><i class="bi bi-plus-circle me-1"></i>Allocate Student</button>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#allocateModal"><i class="bi bi-plus-circle me-1"></i>Allocate Student</button>
     </div>
 </div>
 <div class="text-muted small mb-2">Showing {{ $allocations->total() }} active allocation record(s){{ request('search') ? ' for search: '.request('search') : '' }}.</div>
@@ -38,13 +38,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Enrollment No.</th>
-                        <th>Block</th>
-                        <th>Room</th>
-                        <th>Bed</th>
-                        <th>Allocated From</th>
-                        <th>Actions</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment No.</th>
+                        <th scope="col">Block</th>
+                        <th scope="col">Room</th>
+                        <th scope="col">Bed</th>
+                        <th scope="col">Allocated From</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,7 +59,7 @@
                             <td>
                                 <div class="d-flex gap-1">
                                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transferModal{{ $alloc->id }}">Transfer</button>
-                                    <form method="POST" action="{{ route('admin.hostel.allocations.vacate', $alloc) }}" onsubmit="return confirm('Mark as vacated?')">
+                                    <form method="POST" action="{{ route('admin.hostel.allocations.vacate', $alloc) }}" onsubmit="return confirm('Vacate hostel allocation for {{ addslashes($alloc->student?->user?->name ?? 'this student') }}? Confirm room keys, fee clearance, inventory/inspection, and bed capacity release before ending the allocation.')">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Vacate</button>
                                     </form>
@@ -86,7 +86,7 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Transfer Room</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info small">
@@ -96,7 +96,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">New Block <span class="text-danger">*</span></label>
-                        <select class="form-select transfer-block-select" data-room-target="transferRoomSelect{{ $alloc->id }}" required>
+                        <select aria-label="New hostel block for {{ $alloc->student->user->name ?? 'student' }}" class="form-select transfer-block-select" data-room-target="transferRoomSelect{{ $alloc->id }}" required>
                             <option value="">- Select Block -</option>
                             @foreach($blocks as $b)
                                 <option value="{{ $b->id }}">{{ $b->name }}</option>
@@ -112,16 +112,16 @@
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">New Bed Number <span class="text-danger">*</span></label>
-                            <input type="number" name="bed_number" class="form-control" min="1" value="1" required>
+                            <input aria-label="Bed Number" type="number" name="bed_number" class="form-control" min="1" value="1" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Transfer Date <span class="text-danger">*</span></label>
-                            <input type="date" name="allocated_from" class="form-control" value="{{ date('Y-m-d') }}" required>
+                            <input aria-label="Allocated From" type="date" name="allocated_from" class="form-control" value="{{ date('Y-m-d') }}" required>
                         </div>
                     </div>
                     <div class="mt-3">
                         <label class="form-label">Reason</label>
-                        <input type="text" name="transfer_reason" class="form-control" maxlength="255" placeholder="Maintenance, student request, capacity adjustment...">
+                        <input aria-label="Room transfer reason" type="text" name="transfer_reason" class="form-control" maxlength="255" placeholder="Maintenance, student request, capacity adjustment...">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -141,12 +141,12 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Allocate Student</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Student <span class="text-danger">*</span></label>
-                        <select name="student_id" class="form-select" required>
+                        <select aria-label="Student" name="student_id" class="form-select" required>
                             <option value="">- Select Student -</option>
                             @foreach($students as $s)
                                 <option value="{{ $s->id }}">{{ $s->user?->name }} ({{ $s->enrollment_number }})</option>
@@ -171,11 +171,11 @@
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">Bed Number <span class="text-danger">*</span></label>
-                            <input type="number" name="bed_number" class="form-control" min="1" value="1" required>
+                            <input aria-label="Bed Number" type="number" name="bed_number" class="form-control" min="1" value="1" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">From Date <span class="text-danger">*</span></label>
-                            <input type="date" name="allocated_from" class="form-control" value="{{ date('Y-m-d') }}" required>
+                            <input aria-label="Allocated From" type="date" name="allocated_from" class="form-control" value="{{ date('Y-m-d') }}" required>
                         </div>
                     </div>
                 </div>

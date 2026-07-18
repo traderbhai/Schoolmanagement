@@ -15,12 +15,12 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Drive / Company</th>
-                            <th>Job Role</th>
-                            <th>Package</th>
-                            <th>Status</th>
-                            <th>Applied On</th>
-                            <th>Next Step</th>
+                            <th scope="col">Drive / Company</th>
+                            <th scope="col">Job Role</th>
+                            <th scope="col">Package</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Applied On</th>
+                            <th scope="col">Next Step</th>
                         </tr>
                     </thead>
                     <tbody>

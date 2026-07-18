@@ -3,10 +3,10 @@
 @section('page-title', 'Library')
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 <div class="row g-3">
     <div class="col-lg-6">
@@ -20,7 +20,7 @@
                     </div>
                 @else
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Book</th><th>Due Date</th><th>Status</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Book</th><th scope="col">Due Date</th><th scope="col">Status</th></tr></thead>
                     <tbody>
                         @foreach($currentIssues as $issue)
                         <tr>
@@ -41,7 +41,7 @@
             <div class="card-header bg-danger text-white fw-semibold"><i class="bi bi-exclamation-triangle me-2"></i>Outstanding Fines</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Book</th><th>Fine</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Book</th><th scope="col">Fine</th></tr></thead>
                     <tbody>@foreach($fines as $f)<tr><td><small>{{ $f->bookCopy?->book?->title ?? 'Book title unavailable' }}</small></td><td><strong class="text-danger">Rs. {{ number_format($f->fine_amount, 2) }}</strong></td></tr>@endforeach</tbody>
                 </table>
                 <div class="p-2 border-top"><small class="text-muted">Please pay at the library counter. NOC clearance may remain blocked until overdue books and unpaid fines are cleared.</small></div>
@@ -60,7 +60,7 @@
                     </div>
                 @else
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Book</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Book</th><th scope="col">Status</th><th scope="col">Expires</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                         @foreach($reservations as $reservation)
                         <tr>
@@ -89,7 +89,7 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0 align-middle">
-                        <thead class="table-light"><tr><th>Book</th><th>Author</th><th>Available</th><th>Queue</th><th></th></tr></thead>
+                        <thead class="table-light"><tr><th scope="col">Book</th><th scope="col">Author</th><th scope="col">Available</th><th scope="col">Queue</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($books as $book)
                             <tr>
@@ -133,7 +133,7 @@
                     </div>
                 @else
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Book</th><th>Issued</th><th>Returned</th><th>Fine</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Book</th><th scope="col">Issued</th><th scope="col">Returned</th><th scope="col">Fine</th></tr></thead>
                     <tbody>
                         @foreach($history as $h)
                         <tr>

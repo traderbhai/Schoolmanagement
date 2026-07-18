@@ -4,10 +4,10 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card border-0 shadow-sm mb-4">
@@ -77,7 +77,7 @@
                 @foreach($parameters as $param)
                 <div class="col-md-4 col-sm-6">
                     <label class="form-label small fw-semibold">{{ $param->name }} <span class="text-muted">(max: {{ $param->max_score }})</span></label>
-                    <input type="number"
+                    <input aria-label="{{ $param->name }} score for {{ $applicant->user?->name ?? 'applicant' }}" type="number"
                         name="scores[{{ $applicant->id }}][param_{{ $param->id }}]"
                         class="form-control param-score"
                         data-applicant="{{ $applicant->id }}"
@@ -98,7 +98,7 @@
 
                 <div class="col-12">
                     <label class="form-label small fw-semibold">Remarks</label>
-                    <textarea name="scores[{{ $applicant->id }}][remarks]" class="form-control" rows="2"
+                    <textarea aria-label="Assessment remarks for {{ $applicant->user?->name ?? 'applicant' }}" name="scores[{{ $applicant->id }}][remarks]" class="form-control" rows="2"
                         placeholder="Optional assessment remarks for the selection committee">{{ $existing->remarks ?? '' }}</textarea>
                 </div>
             </div>

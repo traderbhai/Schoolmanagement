@@ -60,10 +60,10 @@
         <table class="table table-sm table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Date</th>
-                    <th>Day</th>
-                    <th>Time Slot</th>
-                    <th>Status</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Day</th>
+                    <th scope="col">Time Slot</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>

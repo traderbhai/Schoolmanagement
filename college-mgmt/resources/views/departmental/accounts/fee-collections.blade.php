@@ -27,26 +27,26 @@
 
 <form method="GET" class="row g-2 mb-3">
     <div class="col-sm-2">
-        <select name="program_id" class="form-select form-select-sm">
+        <select aria-label="Program" name="program_id" class="form-select form-select-sm">
             <option value="">All Programs</option>
             @foreach($programs as $p)<option value="{{ $p->id }}" @selected(request('program_id')==$p->id)>{{ $p->name }}</option>@endforeach
         </select>
     </div>
     <div class="col-sm-2">
-        <select name="batch_id" class="form-select form-select-sm">
+        <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
             <option value="">All Batches</option>
             @foreach($batches as $b)<option value="{{ $b->id }}" @selected(request('batch_id')==$b->id)>{{ $b->name }}</option>@endforeach
         </select>
     </div>
     <div class="col-sm-2">
-        <select name="status" class="form-select form-select-sm">
+        <select aria-label="Status" name="status" class="form-select form-select-sm">
             <option value="">All Status</option>
             <option value="paid" @selected(request('status')=='paid')>Paid</option>
             <option value="pending" @selected(request('status')=='pending')>Pending</option>
         </select>
     </div>
-    <div class="col-sm-2"><input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}"></div>
-    <div class="col-sm-2"><input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}"></div>
+    <div class="col-sm-2"><input aria-label="Date From" type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}"></div>
+    <div class="col-sm-2"><input aria-label="Date To" type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}"></div>
     <div class="col-auto"><button class="btn btn-sm btn-primary">Filter</button></div>
     <div class="col-auto"><a href="{{ route('accounts.fee-collections') }}" class="btn btn-sm btn-outline-secondary">Clear</a></div>
     <div class="col-auto">
@@ -65,7 +65,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Receipt</th><th>Student</th><th>Program</th><th>Owner / Source</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th></tr>
+                    <tr><th scope="col">Receipt</th><th scope="col">Student</th><th scope="col">Program</th><th scope="col">Owner / Source</th><th scope="col">Amount</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Status</th></tr>
                 </thead>
                 <tbody>
                 @forelse($payments as $pay)

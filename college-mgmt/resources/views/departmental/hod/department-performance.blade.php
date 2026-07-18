@@ -44,7 +44,7 @@ $avgAtt  = $subjects->whereNotNull('attendance_pct')->avg('attendance_pct');
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">Subject</th><th>Program</th><th>Exams</th><th>Avg Marks</th><th>Pass Rate</th><th>Attendance</th></tr>
+        <tr><th scope="col" class="ps-3">Subject</th><th scope="col">Program</th><th scope="col">Exams</th><th scope="col">Avg Marks</th><th scope="col">Pass Rate</th><th scope="col">Attendance</th></tr>
       </thead>
       <tbody>
         @forelse($subjects as $s)

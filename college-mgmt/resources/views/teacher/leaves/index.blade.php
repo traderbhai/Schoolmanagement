@@ -27,10 +27,10 @@
 </div>
 
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card">
@@ -38,15 +38,15 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Leave Type</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Days</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                    <th>Applied</th>
-                    <th></th>
+                    <th scope="col">Leave Type</th>
+                    <th scope="col">From</th>
+                    <th scope="col">To</th>
+                    <th scope="col">Days</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Remarks</th>
+                    <th scope="col">Applied</th>
+                    <th aria-label="Actions" scope="col"></th>
                 </tr>
             </thead>
             <tbody>
@@ -70,7 +70,7 @@
                 <td style="font-size:.83rem">{{ $leave->created_at->format('d M Y') }}</td>
                 <td>
                     @if($canApplyForLeave && $leave->status === 'pending')
-                    <button class="btn btn-sm btn-outline-danger"
+                        <button class="btn btn-sm btn-outline-danger" aria-label="Cancel leave application"
                         data-confirm-delete="true"
                         data-action="{{ route('teacher.leaves.destroy', $leave) }}"
                         data-name="this leave application">

@@ -48,7 +48,7 @@
         <form method="GET" action="{{ route('teacher.students.index') }}" class="row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label small mb-1">Search roster</label>
-                <input type="search" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, enrollment, roll, or phone">
+                <input aria-label="Name, email, enrollment, roll, or phone" type="search" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, enrollment, roll, or phone">
             </div>
             <div class="col-md-auto">
                 <button type="submit" class="btn btn-sm btn-primary">
@@ -94,13 +94,13 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Enrollment</th>
-                        <th>Course & Semester</th>
-                        <th>Department</th>
-                        <th>Attendance</th>
-                        <th>Actions</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment</th>
+                        <th scope="col">Course & Semester</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Attendance</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

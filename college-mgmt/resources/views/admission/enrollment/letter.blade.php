@@ -41,20 +41,20 @@
     </p>
 
     <table class="details">
-        <tr><th>Enrollment Number</th><td><strong>{{ $confirmation->enrollment_number }}</strong></td></tr>
-        <tr><th>Roll Number</th><td>{{ $confirmation->roll_number ?: 'Roll number not assigned' }}</td></tr>
-        <tr><th>Student Name</th><td>{{ $confirmation->student->user->name ?? ($confirmation->applicant->user->name ?? 'Student name not linked') }}</td></tr>
-        <tr><th>Email</th><td>{{ $confirmation->student->user->email ?? 'Student email not linked' }}</td></tr>
-        <tr><th>Program</th><td>{{ $confirmation->applicant->program->name ?? 'Program not linked' }}</td></tr>
-        <tr><th>Batch</th><td>{{ $confirmation->batch->name ?? 'Batch not linked' }}</td></tr>
-        <tr><th>Term / Semester</th><td>{{ $confirmation->term->name ?? 'Semester I' }}</td></tr>
-        <tr><th>Admission Date</th><td>{{ $confirmation->confirmed_at?->format('d F Y') ?? 'Admission date pending' }}</td></tr>
-        <tr><th>Application Number</th><td>{{ $confirmation->applicant->application_number }}</td></tr>
+        <tr><th scope="row">Enrollment Number</th><td><strong>{{ $confirmation->enrollment_number }}</strong></td></tr>
+        <tr><th scope="row">Roll Number</th><td>{{ $confirmation->roll_number ?: 'Roll number not assigned' }}</td></tr>
+        <tr><th scope="row">Student Name</th><td>{{ $confirmation->student->user->name ?? ($confirmation->applicant->user->name ?? 'Student name not linked') }}</td></tr>
+        <tr><th scope="row">Email</th><td>{{ $confirmation->student->user->email ?? 'Student email not linked' }}</td></tr>
+        <tr><th scope="row">Program</th><td>{{ $confirmation->applicant->program->name ?? 'Program not linked' }}</td></tr>
+        <tr><th scope="row">Batch</th><td>{{ $confirmation->batch->name ?? 'Batch not linked' }}</td></tr>
+        <tr><th scope="row">Term / Semester</th><td>{{ $confirmation->term->name ?? 'Semester I' }}</td></tr>
+        <tr><th scope="row">Admission Date</th><td>{{ $confirmation->confirmed_at?->format('d F Y') ?? 'Admission date pending' }}</td></tr>
+        <tr><th scope="row">Application Number</th><td>{{ $confirmation->applicant->application_number }}</td></tr>
     </table>
 
     <p><strong>Fee Payment Summary</strong></p>
     <table class="details">
-        <tr><th>Total Verified Payments</th><td>Rs. {{ number_format($confirmation->applicant->payments->where('status','verified')->sum('amount_paid'), 2) }}</td></tr>
+        <tr><th scope="row">Total Verified Payments</th><td>Rs. {{ number_format($confirmation->applicant->payments->where('status','verified')->sum('amount_paid'), 2) }}</td></tr>
     </table>
 
     @if($confirmation->notes)

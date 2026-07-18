@@ -7,7 +7,7 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label small fw-semibold mb-1">Teacher</label>
-                <select name="teacher_id" class="form-select form-select-sm">
+                <select aria-label="Teacher" name="teacher_id" class="form-select form-select-sm">
                     <option value="">-- Select Teacher --</option>
                     @foreach($teachers as $t)
                     <option value="{{ $t->id }}" @selected($t->id == $teacherId)>{{ $t->user->name }}</option>
@@ -16,7 +16,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold mb-1">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm">
                     <option value="">-- Select Semester --</option>
                     @foreach($semesters as $s)
                     <option value="{{ $s->id }}" @selected($s->id == $semesterId)>{{ $s->name }}</option>
@@ -33,9 +33,9 @@
         <div class="table-responsive">
             <table class="table table-bordered timetable-grid mb-0">
                 <thead><tr>
-                    <th>Slot</th>
+                    <th scope="col">Slot</th>
                     @foreach(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $d)
-                    <th class="day-header">{{ $d }}</th>
+                    <th scope="col" class="day-header">{{ $d }}</th>
                     @endforeach
                 </tr></thead>
                 <tbody>

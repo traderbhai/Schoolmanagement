@@ -26,7 +26,7 @@
                 <div class="card-header py-2 fw-semibold">Assessment Slots</div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0 align-middle">
-                        <thead><tr><th>Slot</th><th>When</th><th>Venue / Link</th><th>Status</th><th>Reschedule</th></tr></thead>
+                        <thead><tr><th scope="col">Slot</th><th scope="col">When</th><th scope="col">Venue / Link</th><th scope="col">Status</th><th scope="col">Reschedule</th></tr></thead>
                         <tbody>
                         @forelse($slots as $slot)
                             <tr>
@@ -45,8 +45,8 @@
                                                 <option value="{{ $available->id }}">{{ $available->slot_code }} - {{ \Illuminate\Support\Carbon::parse($available->starts_at)->format('d M h:i A') }}</option>
                                             @endforeach
                                         </select>
-                                        <input name="reason" class="form-control form-control-sm" placeholder="Reason" required>
-                                        <button class="btn btn-sm btn-primary">Send</button>
+                                        <input aria-label="Reason" name="reason" class="form-control form-control-sm" placeholder="Reason" required>
+                                        <button class="btn btn-sm btn-primary">Send correction request</button>
                                     </form>
                                     @else
                                         <span class="badge text-bg-secondary">Closed</span>
@@ -104,7 +104,7 @@
                 </div>
                 <div class="table-responsive border-top">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>Joining Task</th><th>Status</th><th>Due</th></tr></thead>
+                        <thead><tr><th scope="col">Joining Task</th><th scope="col">Status</th><th scope="col">Due</th></tr></thead>
                         <tbody>
                         @forelse($joiningTasks as $task)
                             <tr><td>{{ $task->title }}</td><td>{{ $task->status }}</td><td>{{ $task->due_at ? \Illuminate\Support\Carbon::parse($task->due_at)->format('d M') : '-' }}</td></tr>
@@ -130,8 +130,8 @@
                                 <option value="opt_in" @selected(($consents[$channel]->status ?? 'opt_in') === 'opt_in')>Opt in</option>
                                 <option value="opt_out" @selected(($consents[$channel]->status ?? '') === 'opt_out')>Opt out</option>
                             </select>
-                            <input name="reason" class="form-control form-control-sm" placeholder="Reason">
-                            <button class="btn btn-sm btn-outline-primary">Save</button>
+                            <input aria-label="Reason" name="reason" class="form-control form-control-sm" placeholder="Reason">
+                            <button class="btn btn-sm btn-outline-primary">Save request</button>
                         </form>
                     @endforeach
                 </div>

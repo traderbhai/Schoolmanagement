@@ -82,10 +82,10 @@
     <div class="row g-3">
         <div class="col-xl-7">
             <div class="card shadow-sm h-100">
-                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Branch Health</span><a href="{{ route('academics.dean-os.branch-health') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Branch Health</span><a href="{{ route('academics.dean-os.branch-health') }}" class="btn btn-sm btn-outline-primary">Open Branch Health</a></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Branch</th><th>Risk</th><th>Open Actions</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Branch</th><th scope="col">Risk</th><th scope="col">Open Actions</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                         @foreach($branchHealth as $branch)
                             <tr>
@@ -126,10 +126,10 @@
         </div>
         <div class="col-xl-7">
             <div class="card shadow-sm">
-                <div class="card-header py-2 d-flex justify-content-between"><div><span class="fw-semibold">Program Risk Heatmap</span><div class="small text-muted">Use reasons to decide whether the owner needs a mitigation plan or review meeting.</div></div><a href="{{ route('academics.dean-os.program-risk') }}" class="btn btn-sm btn-outline-primary">Open</a></div>
+                <div class="card-header py-2 d-flex justify-content-between"><div><span class="fw-semibold">Program Risk Heatmap</span><div class="small text-muted">Use reasons to decide whether the owner needs a mitigation plan or review meeting.</div></div><a href="{{ route('academics.dean-os.program-risk') }}" class="btn btn-sm btn-outline-primary">Open Program Risk</a></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>Program</th><th>Band</th><th>Reasons</th></tr></thead>
+                        <thead><tr><th scope="col">Program</th><th scope="col">Band</th><th scope="col">Reasons</th></tr></thead>
                         <tbody>
                         @foreach($programRisks->take(6) as $risk)
                             <tr>
@@ -145,10 +145,10 @@
         </div>
         <div class="col-xl-5">
             <div class="card shadow-sm">
-                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Review Actions</span><a href="{{ route('academics.dean-os.reviews') }}" class="btn btn-sm btn-outline-primary">Manage</a></div>
+                <div class="card-header py-2 d-flex justify-content-between"><span class="fw-semibold">Review Actions</span><a href="{{ route('academics.dean-os.reviews') }}" class="btn btn-sm btn-outline-primary">Manage Review Actions</a></div>
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead><tr><th>Action</th><th>Owner</th><th>Status</th></tr></thead>
+                        <thead><tr><th scope="col">Action</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead>
                         <tbody>
                         @forelse($actions as $action)
                             <tr><td class="small fw-semibold">{{ $action->title }}</td><td class="small">{{ $action->owner?->name ?? 'Owner not assigned' }}</td><td><span class="badge text-bg-light">{{ str($action->status)->replace('_', ' ')->title() }}</span></td></tr>

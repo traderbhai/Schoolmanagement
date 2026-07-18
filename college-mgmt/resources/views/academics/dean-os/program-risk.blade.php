@@ -12,7 +12,7 @@
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Program</th><th>Score</th><th>Attendance</th><th>Performance</th><th>Delivery</th><th>Exams</th><th>Quality</th><th>Handoff</th><th>Reasons</th></tr></thead>
+                <thead><tr><th scope="col">Program</th><th scope="col">Score</th><th scope="col">Attendance</th><th scope="col">Performance</th><th scope="col">Delivery</th><th scope="col">Exams</th><th scope="col">Quality</th><th scope="col">Handoff</th><th scope="col">Reasons</th></tr></thead>
                 <tbody>
                 @foreach($risks as $risk)
                     <tr>

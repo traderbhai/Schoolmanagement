@@ -6,7 +6,7 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-2"></i>Reject Payment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted small">
@@ -18,7 +18,7 @@
                     </p>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
-                        <textarea name="verification_notes" class="form-control" rows="3"
+                        <textarea aria-label="Payment rejection reason" name="verification_notes" class="form-control" rows="3"
                             placeholder="Provide reason for rejection (e.g., incorrect transaction reference, proof unclear)..."
                             required></textarea>
                     </div>

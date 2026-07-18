@@ -45,7 +45,7 @@
                     </li>
                 @endforeach
             </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -55,9 +55,9 @@
                 <table class="table table-bordered table-sm align-middle mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th class="text-center" style="min-width:90px;">Day</th>
+                            <th scope="col" class="text-center" style="min-width:90px;">Day</th>
                             @foreach($slots as $slot)
-                                <th class="text-center {{ $slot->is_break ? 'bg-secondary bg-opacity-75' : '' }}" style="min-width:120px;">
+                                <th scope="col" class="text-center {{ $slot->is_break ? 'bg-secondary bg-opacity-75' : '' }}" style="min-width:120px;">
                                     <div class="fw-semibold small">{{ $slot->name }}</div>
                                     <div class="fw-normal" style="font-size:0.72rem;">
                                         {{ \Carbon\Carbon::parse($slot->start_time)->format('H:i') }}

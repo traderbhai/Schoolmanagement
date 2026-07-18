@@ -9,7 +9,7 @@
             <h4 class="fw-bold mb-0">Applications</h4>
             <p class="text-muted small mb-0">Manage all applicants</p>
         </div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createApplicantModal">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createApplicantModal">
             <i class="bi bi-person-plus me-2"></i>Add Applicant
         </button>
     </div>
@@ -20,7 +20,7 @@
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Program</label>
-                    <select name="program_id" class="form-select form-select-sm">
+                    <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                         <option value="">All Programs</option>
                         @foreach($programs as $p)
                             <option value="{{ $p->id }}" {{ request('program_id') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
@@ -29,7 +29,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Batch</label>
-                    <select name="batch_id" class="form-select form-select-sm">
+                    <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
                         <option value="">All Batches</option>
                         @foreach($batches as $b)
                             <option value="{{ $b->id }}" {{ request('batch_id') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
@@ -38,7 +38,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All Statuses</option>
                         @foreach($statuses as $s)
                             <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucwords(str_replace('_', ' ', $s)) }}</option>
@@ -59,14 +59,14 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Application #</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Program</th>
-                        <th>Batch</th>
-                        <th>Status</th>
-                        <th>Applied At</th>
-                        <th>Actions</th>
+                        <th scope="col">Application #</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Applied At</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -108,26 +108,26 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add Applicant</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ route('admin.applicants.store') }}">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required>
+                        <input aria-label="Name" type="text" name="name" class="form-control" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
-                        <input type="email" name="email" class="form-control" required>
+                        <input aria-label="Email" type="email" name="email" class="form-control" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Phone</label>
-                        <input type="tel" name="phone" class="form-control">
+                        <input aria-label="Phone" type="tel" name="phone" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Program <span class="text-danger">*</span></label>
-                        <select name="program_id" class="form-select" required>
+                        <select aria-label="Program" name="program_id" class="form-select" required>
                             <option value="">— Select Program —</option>
                             @foreach($programs as $p)
                                 <option value="{{ $p->id }}">{{ $p->name }}</option>
@@ -136,7 +136,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Batch</label>
-                        <select name="batch_id" class="form-select">
+                        <select aria-label="Batch" name="batch_id" class="form-select">
                             <option value="">— Select Batch (optional) —</option>
                             @foreach($batches as $b)
                                 <option value="{{ $b->id }}">{{ $b->name }}</option>

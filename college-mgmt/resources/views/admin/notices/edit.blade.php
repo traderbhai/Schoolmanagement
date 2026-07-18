@@ -39,17 +39,17 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Title <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title', $notice->title) }}" required>
+                    <input aria-label="Title" type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title', $notice->title) }}" required>
                     @error('title')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">
                     <label class="form-label">Content <span class="text-danger">*</span></label>
-                    <textarea name="content" class="form-control @error('content') is-invalid @enderror" rows="5" required>{{ old('content', $notice->content) }}</textarea>
+                    <textarea aria-label="Content" name="content" class="form-control @error('content') is-invalid @enderror" rows="5" required>{{ old('content', $notice->content) }}</textarea>
                     @error('content')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Audience <span class="text-danger">*</span></label>
-                    <select name="audience" class="form-select" required>
+                    <select aria-label="Audience" name="audience" class="form-select" required>
                         @foreach(['all' => 'All users', 'students' => 'Students / parents', 'teachers' => 'Teachers', 'admin' => 'Admin / staff'] as $a => $label)
                             <option value="{{ $a }}" @selected(old('audience',$notice->audience)==$a)>{{ $label }}</option>
                         @endforeach
@@ -58,11 +58,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Publish Date <span class="text-danger">*</span></label>
-                    <input type="date" name="publish_date" class="form-control" value="{{ old('publish_date', $notice->publish_date->format('Y-m-d')) }}" required>
+                    <input aria-label="Publish Date" type="date" name="publish_date" class="form-control" value="{{ old('publish_date', $notice->publish_date->format('Y-m-d')) }}" required>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Expiry Date</label>
-                    <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date', optional($notice->expiry_date)->format('Y-m-d')) }}">
+                    <input aria-label="Expiry Date" type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date', optional($notice->expiry_date)->format('Y-m-d')) }}">
                 </div>
                 <div class="col-12">
                     <div class="form-check">

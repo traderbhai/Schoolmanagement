@@ -22,7 +22,7 @@
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
     <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
 
@@ -160,7 +160,7 @@
                         <div class="form-text">Max: Rs. {{ number_format($refund->requested_amount, 2) }} (requested amount)</div>
                     </div>
                     <button type="submit" class="btn btn-success"
-                            onclick="return confirm('Approve this refund for the entered amount?')">
+                            onclick="return confirm('Approve refund for {{ addslashes($refund->applicant->user->name ?? 'this applicant') }} using the entered amount? Confirm verified payment balance, bank details, policy eligibility, and audit notes before approval.')">
                         <i class="bi bi-check-circle me-1"></i>Approve Refund
                     </button>
                 </form>
@@ -188,7 +188,7 @@
                         @enderror
                     </div>
                     <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('Are you sure you want to reject this refund request?')">
+                            onclick="return confirm('Reject this refund request for {{ addslashes($refund->applicant->user->name ?? 'this applicant') }}? Confirm the rejection reason is specific enough for applicant communication and audit review.')">
                         <i class="bi bi-x-circle me-1"></i>Reject Request
                     </button>
                 </form>
@@ -226,7 +226,7 @@
                         @enderror
                     </div>
                     <button type="submit" class="btn btn-primary"
-                            onclick="return confirm('Mark this refund as processed with UTR: ' + document.getElementById('utr_number').value + '?')">
+                            onclick="return confirm('Mark this refund as processed with UTR: ' + document.getElementById('utr_number').value + '? Confirm the bank transfer is complete, the UTR is final, and finance reconciliation can use this reference.')">
                         <i class="bi bi-send-check me-1"></i>Mark as Processed
                     </button>
                 </form>

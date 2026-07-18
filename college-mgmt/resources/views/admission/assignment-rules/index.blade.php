@@ -16,19 +16,19 @@
                 @csrf
                 <div class="card-header fw-semibold">Create Rule</div>
                 <div class="card-body vstack gap-3">
-                    <input name="name" class="form-control" placeholder="Rule name" required>
+                    <input aria-label="Rule name" name="name" class="form-control" placeholder="Rule name" required>
                     <div class="row g-2">
-                        <div class="col"><select name="object_type" class="form-select"><option value="lead">Lead</option><option value="applicant">Applicant</option></select></div>
-                        <div class="col"><input name="priority" type="number" class="form-control" value="100" min="1"></div>
+                        <div class="col"><select aria-label="Object Type" name="object_type" class="form-select"><option value="lead">Lead</option><option value="applicant">Applicant</option></select></div>
+                        <div class="col"><input aria-label="Priority" name="priority" type="number" class="form-control" value="100" min="1"></div>
                     </div>
-                    <select name="assignee_strategy" class="form-select">
+                    <select aria-label="Assignee Strategy" name="assignee_strategy" class="form-select">
                         @foreach(['round_robin','least_workload','fixed_user','fixed_team','role_under_manager','keep_current_level'] as $strategy)
                             <option value="{{ $strategy }}">{{ ucwords(str_replace('_', ' ', $strategy)) }}</option>
                         @endforeach
                     </select>
-                    <select name="target_user_id" class="form-select"><option value="">Target user</option>@foreach($users as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach</select>
-                    <select name="target_team_id" class="form-select"><option value="">Target team</option>@foreach($teams as $team)<option value="{{ $team->id }}">{{ $team->name }}</option>@endforeach</select>
-                    <select name="target_role_id" class="form-select"><option value="">Target role</option>@foreach($roles as $role)<option value="{{ $role->id }}">{{ $role->name }}</option>@endforeach</select>
+                    <select aria-label="Target User" name="target_user_id" class="form-select"><option value="">Target user</option>@foreach($users as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach</select>
+                    <select aria-label="Target Team" name="target_team_id" class="form-select"><option value="">Target team</option>@foreach($teams as $team)<option value="{{ $team->id }}">{{ $team->name }}</option>@endforeach</select>
+                    <select aria-label="Target Role" name="target_role_id" class="form-select"><option value="">Target role</option>@foreach($roles as $role)<option value="{{ $role->id }}">{{ $role->name }}</option>@endforeach</select>
                     <button class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Rule</button>
                 </div>
             </form>
@@ -37,7 +37,7 @@
             <div class="card">
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
-                        <thead><tr><th>Priority</th><th>Name</th><th>Object</th><th>Strategy</th><th>Target</th><th>Status</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Priority</th><th scope="col">Name</th><th scope="col">Object</th><th scope="col">Strategy</th><th scope="col">Target</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                         @forelse($rules as $rule)
                             <tr>

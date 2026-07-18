@@ -19,7 +19,7 @@
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -37,7 +37,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Subject</label>
-                        <select name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
+                        <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
                             <option value="">All Subjects</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ request('subject_id') == $subject->id ? 'selected' : '' }}>
@@ -48,7 +48,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Type</label>
-                        <select name="type" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
+                        <select aria-label="Type" name="type" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
                             <option value="">All Types</option>
                             <option value="pre_read"        {{ request('type') === 'pre_read'        ? 'selected' : '' }}>Pre-Read</option>
                             <option value="post_read"       {{ request('type') === 'post_read'       ? 'selected' : '' }}>Post-Read</option>
@@ -108,13 +108,13 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Title</th>
-                                <th>Subject</th>
-                                <th>Type</th>
-                                <th>Published</th>
-                                <th>Size</th>
-                                <th>Uploaded</th>
-                                <th class="text-end">Actions</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Published</th>
+                                <th scope="col">Size</th>
+                                <th scope="col">Uploaded</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -157,10 +157,10 @@
                                     <td class="text-end">
                                         @if($canManageMaterials)
                                             <form method="POST" action="{{ route('teacher.materials.destroy', $material) }}"
-                                                  onsubmit="return confirm('Delete this material?')">
+                                                  onsubmit="return confirm('Delete course material {{ addslashes($material->title) }}? Confirm students no longer need this file/link for the subject, lecture plan, or assessment preparation.')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete course material {{ $material->title }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>

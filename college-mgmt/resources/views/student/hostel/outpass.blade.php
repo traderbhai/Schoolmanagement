@@ -9,10 +9,10 @@
 @section('content')
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 @if(!$allocation)
@@ -43,17 +43,17 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label">Reason for Going Out <span class="text-danger">*</span></label>
-                            <textarea name="reason" class="form-control @error('reason') is-invalid @enderror" rows="3" required placeholder="Please explain the reason...">{{ old('reason') }}</textarea>
+                            <textarea aria-label="Outpass reason" name="reason" class="form-control @error('reason') is-invalid @enderror" rows="3" required placeholder="Please explain the reason...">{{ old('reason') }}</textarea>
                             @error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Out Date &amp; Time <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="out_datetime" class="form-control @error('out_datetime') is-invalid @enderror" value="{{ old('out_datetime') }}" required>
+                            <input aria-label="Out Datetime" type="datetime-local" name="out_datetime" class="form-control @error('out_datetime') is-invalid @enderror" value="{{ old('out_datetime') }}" required>
                             @error('out_datetime')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Expected Return <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="expected_return" class="form-control @error('expected_return') is-invalid @enderror" value="{{ old('expected_return') }}" required>
+                            <input aria-label="Expected Return" type="datetime-local" name="expected_return" class="form-control @error('expected_return') is-invalid @enderror" value="{{ old('expected_return') }}" required>
                             @error('expected_return')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Submit Request</button>
@@ -70,10 +70,10 @@
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Out DateTime</th>
-                                <th>Expected Return</th>
-                                <th>Status</th>
-                                <th>Remarks</th>
+                                <th scope="col">Out DateTime</th>
+                                <th scope="col">Expected Return</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Remarks</th>
                             </tr>
                         </thead>
                         <tbody>

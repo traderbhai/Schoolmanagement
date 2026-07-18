@@ -14,13 +14,13 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Name</th>
-                        <th>Enrollment</th>
-                        <th>Program</th>
-                        <th>Department</th>
-                        <th>Term</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Enrollment</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Term</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

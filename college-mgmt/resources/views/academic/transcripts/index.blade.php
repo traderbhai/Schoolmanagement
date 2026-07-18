@@ -12,7 +12,7 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-sm-4">
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $program)
                         <option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->name }}</option>
@@ -20,7 +20,7 @@
                 </select>
             </div>
             <div class="col-sm-5">
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by name, email, enrollment no..." value="{{ request('search') }}">
+                <input aria-label="Transcript student search" type="text" name="search" class="form-control form-control-sm" placeholder="Search by name, email, enrollment no..." value="{{ request('search') }}">
             </div>
             <div class="col-auto">
                 <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search me-1"></i>Search</button>
@@ -45,13 +45,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Enrollment No.</th>
-                        <th>Program</th>
-                        <th>Batch</th>
-                        <th>CGPA</th>
-                        <th>Transcript Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment No.</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">CGPA</th>
+                        <th scope="col">Transcript Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,7 +82,7 @@
                             <a href="{{ route('academic.transcripts.show', $student) }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye me-1"></i>View
                             </a>
-                            <a href="{{ route('academic.transcripts.pdf', $student) }}" class="btn btn-sm btn-outline-danger" target="_blank">
+                            <a rel="noopener" href="{{ route('academic.transcripts.pdf', $student) }}" class="btn btn-sm btn-outline-danger" target="_blank">
                                 <i class="bi bi-file-pdf me-1"></i>PDF
                             </a>
                         </td>

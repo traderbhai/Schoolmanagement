@@ -52,7 +52,7 @@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
-                <tr><th>Amount</th><th>Method</th><th>Transaction Ref</th><th>Submitted</th><th>Status</th><th>Notes</th></tr>
+                <tr><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Transaction Ref</th><th scope="col">Submitted</th><th scope="col">Status</th><th scope="col">Notes</th></tr>
             </thead>
             <tbody>
                 @foreach($requests as $r)

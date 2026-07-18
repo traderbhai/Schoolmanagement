@@ -10,7 +10,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Date</th><th>Exam</th><th>Program</th><th>Subject</th><th>Term</th><th>Marks</th></tr>
+                    <tr><th scope="col">Date</th><th scope="col">Exam</th><th scope="col">Program</th><th scope="col">Subject</th><th scope="col">Term</th><th scope="col">Marks</th></tr>
                 </thead>
                 <tbody>
                 @forelse($upcoming as $exam)
@@ -37,7 +37,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Date</th><th>Exam</th><th>Program</th><th>Subject</th><th>Marks</th></tr>
+                    <tr><th scope="col">Date</th><th scope="col">Exam</th><th scope="col">Program</th><th scope="col">Subject</th><th scope="col">Marks</th></tr>
                 </thead>
                 <tbody>
                 @forelse($past as $exam)

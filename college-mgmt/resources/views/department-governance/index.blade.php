@@ -8,7 +8,7 @@
             <div class="text-muted">Manage department features, visibility, activity, and controlled impersonation.</div>
         </div>
         <form method="GET" class="d-flex gap-2">
-            <select name="department_id" class="form-select" onchange="this.form.submit()">
+            <select aria-label="Department" name="department_id" class="form-select" onchange="this.form.submit()">
                 @foreach($departments as $dept)
                     <option value="{{ $dept->id }}" @selected($department->id === $dept->id)>{{ $dept->name }}</option>
                 @endforeach
@@ -25,7 +25,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Feature</label>
-                        <select name="feature_key" class="form-select" required>
+                        <select aria-label="Feature Key" name="feature_key" class="form-select" required>
                             @foreach($features as $feature)
                                 <option value="{{ $feature->feature_key }}">{{ $feature->feature_name }} - {{ $feature->feature_key }}</option>
                             @endforeach

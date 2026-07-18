@@ -14,7 +14,7 @@
     </div>
 
     @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <form method="GET" class="card border-0 shadow-sm mb-4">
@@ -22,7 +22,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-sm-3">
                     <label class="form-label small fw-semibold text-muted">Severity</label>
-                    <select name="severity" class="form-select form-select-sm">
+                    <select aria-label="Severity" name="severity" class="form-select form-select-sm">
                         <option value="">All</option>
                         @foreach(['critical','high','medium','low'] as $s)
                             <option value="{{ $s }}" @selected(request('severity')===$s)>{{ ucfirst($s) }}</option>
@@ -31,7 +31,7 @@
                 </div>
                 <div class="col-sm-3">
                     <label class="form-label small fw-semibold text-muted">Type</label>
-                    <select name="anomaly_type" class="form-select form-select-sm">
+                    <select aria-label="Anomaly Type" name="anomaly_type" class="form-select form-select-sm">
                         <option value="">All Types</option>
                         @foreach(['malpractice','absent_without_reason','late_entry','paper_leak','other'] as $t)
                             <option value="{{ $t }}" @selected(request('anomaly_type')===$t)>{{ ucwords(str_replace('_',' ',$t)) }}</option>
@@ -51,14 +51,14 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Exam</th>
-                        <th>Student</th>
-                        <th>Type</th>
-                        <th>Severity</th>
-                        <th>Action Taken</th>
-                        <th>Reported By</th>
-                        <th>Date</th>
-                        <th></th>
+                        <th scope="col">Exam</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Severity</th>
+                        <th scope="col">Action Taken</th>
+                        <th scope="col">Reported By</th>
+                        <th scope="col">Date</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

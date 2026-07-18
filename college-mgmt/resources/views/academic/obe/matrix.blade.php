@@ -25,7 +25,7 @@
         <form method="GET" class="row g-2 align-items-end" id="filterForm">
             <div class="col-sm-4">
                 <label class="form-label small mb-1">Program</label>
-                <select name="program_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
                     <option value="">— Select Program —</option>
                     @foreach($programs as $p)
                         <option value="{{ $p->id }}" @selected($programId == $p->id)>{{ $p->name }}</option>
@@ -35,7 +35,7 @@
             @if($programId && $subjects->isNotEmpty())
             <div class="col-sm-4">
                 <label class="form-label small mb-1">Subject (for COs)</label>
-                <select name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
+                <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
                     <option value="">— Select Subject —</option>
                     @foreach($subjects as $s)
                         <option value="{{ $s->id }}" @selected($subjectId == $s->id)>{{ $s->name }}</option>
@@ -67,12 +67,12 @@
             <table class="matrix-table table table-bordered mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="co-col">Course Outcome</th>
+                        <th scope="col" class="co-col">Course Outcome</th>
                         @foreach($pos as $po)
-                            <th title="{{ $po->description }}">{{ $po->code }}</th>
+                            <th scope="col" title="{{ $po->description }}">{{ $po->code }}</th>
                         @endforeach
                         @foreach($psos as $pso)
-                            <th class="table-warning" title="{{ $pso->description }}">{{ $pso->code }}</th>
+                            <th scope="col" class="table-warning" title="{{ $pso->description }}">{{ $pso->code }}</th>
                         @endforeach
                     </tr>
                 </thead>
@@ -91,7 +91,7 @@
                         @foreach($pos as $po)
                         @php $level = $coMappings->get('po_'.$po->id)?->correlation_level ?? 0; @endphp
                         <td class="matrix-cell level-{{ $level }}" id="cell-{{ $co->id }}-po-{{ $po->id }}">
-                            <select name="mappings[{{ $co->id }}][po_{{ $po->id }}]"
+                            <select aria-label="Correlation level for {{ $co->code }} and {{ $po->code }}" name="mappings[{{ $co->id }}][po_{{ $po->id }}]"
                                     onchange="updateCell(this, 'cell-{{ $co->id }}-po-{{ $po->id }}')">
                                 @for($i = 0; $i <= 3; $i++)
                                     <option value="{{ $i }}" @selected($level == $i)>{{ $i }}</option>
@@ -102,7 +102,7 @@
                         @foreach($psos as $pso)
                         @php $level = $coMappings->get('pso_'.$pso->id)?->correlation_level ?? 0; @endphp
                         <td class="matrix-cell level-{{ $level }}" id="cell-{{ $co->id }}-pso-{{ $pso->id }}">
-                            <select name="mappings[{{ $co->id }}][pso_{{ $pso->id }}]"
+                            <select aria-label="Correlation level for {{ $co->code }} and {{ $pso->code }}" name="mappings[{{ $co->id }}][pso_{{ $pso->id }}]"
                                     onchange="updateCell(this, 'cell-{{ $co->id }}-pso-{{ $pso->id }}')">
                                 @for($i = 0; $i <= 3; $i++)
                                     <option value="{{ $i }}" @selected($level == $i)>{{ $i }}</option>

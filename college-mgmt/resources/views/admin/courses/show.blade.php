@@ -31,7 +31,7 @@
             <div class="card-header">Enrolled Students</div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead><tr><th>Name</th><th>Enrollment No.</th><th>Semester</th><th>Status</th></tr></thead>
+                    <thead><tr><th scope="col">Name</th><th scope="col">Enrollment No.</th><th scope="col">Semester</th><th scope="col">Status</th></tr></thead>
                     <tbody>
                     @forelse($course->students as $s)
                     <tr>

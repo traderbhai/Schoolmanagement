@@ -72,8 +72,8 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Field</th>
-                                <th>Value</th>
+                                <th scope="col">Field</th>
+                                <th scope="col">Value</th>
                             </tr>
                         </thead>
                         <tbody>

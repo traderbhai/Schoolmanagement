@@ -58,6 +58,39 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
             ->assertDontSee('Laravel\\', false);
     }
 
+    public function test_reminder_queue_prioritizes_send_action_and_deemphasizes_secondary_actions(): void
+    {
+        $manager = User::where('email', 'admission.manager@college.com')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->get(route('admission.reminders.index'))
+            ->assertOk()
+            ->assertSee('Reminder Queue')
+            ->assertSee('btn btn-sm btn-success', false)
+            ->assertSee('Send')
+            ->assertSee('Done')
+            ->assertSee('Pause')
+            ->assertSee('Mark this reminder as completed after the student or lead action has been recorded?', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('Whoops', false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('Laravel\\', false);
+    }
+
+    public function test_admission_payment_verification_confirms_amount_applicant_and_reference_checks(): void
+    {
+        foreach ([
+            'admission/payments/queue.blade.php',
+            'admission/payments/applicant.blade.php',
+        ] as $view) {
+            $contents = file_get_contents(resource_path("views/{$view}"));
+
+            $this->assertStringContainsString('Verify payment of Rs.', $contents);
+            $this->assertStringContainsString('Confirm bank/gateway reference, proof file, installment, and applicant record before marking it verified.', $contents);
+            $this->assertStringNotContainsString("confirm('Verify this payment?')", $contents);
+        }
+    }
+
     public function test_bulk_communication_and_safety_pages_explain_recipient_controls(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
@@ -220,5 +253,16 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
         $this->assertStringNotContainsString('N/A', $html);
         $this->assertStringNotContainsString('â', $html);
         $this->assertStringNotContainsString('Ã', $html);
+    }
+
+    public function test_integration_health_actions_explain_retry_and_check_impact(): void
+    {
+        $contents = file_get_contents(resource_path('views/admission/v0038/integration-health.blade.php'));
+
+        $this->assertStringContainsString('Run integration health check', $contents);
+        $this->assertStringContainsString('Retry integration job', $contents);
+        $this->assertStringContainsString('refresh provider status, credential readiness, webhook health, and retry diagnostics', $contents);
+        $this->assertStringContainsString('the applicant communication or webhook payload will not be duplicated incorrectly', $contents);
+        $this->assertStringNotContainsString('>Retry</button>', $contents);
     }
 }

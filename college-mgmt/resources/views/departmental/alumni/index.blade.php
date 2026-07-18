@@ -14,7 +14,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="card border-0 shadow-sm mb-4">
@@ -50,7 +50,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-sm-3">
                     <label class="form-label small fw-semibold text-muted">Graduation Year</label>
-                    <select name="graduation_year" class="form-select form-select-sm">
+                    <select aria-label="Graduation Year" name="graduation_year" class="form-select form-select-sm">
                         <option value="">All Years</option>
                         @foreach($years as $y)
                             <option value="{{ $y }}" @selected(request('graduation_year')==$y)>{{ $y }}</option>
@@ -59,7 +59,7 @@
                 </div>
                 <div class="col-sm-3">
                     <label class="form-label small fw-semibold text-muted">Verification</label>
-                    <select name="verified" class="form-select form-select-sm">
+                    <select aria-label="Verified" name="verified" class="form-select form-select-sm">
                         <option value="">All</option>
                         <option value="1" @selected(request('verified')==='1')>Verified</option>
                         <option value="0" @selected(request('verified')==='0')>Unverified</option>
@@ -78,15 +78,15 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Name</th>
-                        <th>Program</th>
-                        <th>Year</th>
-                        <th>Employer</th>
-                        <th>Role</th>
-                        <th>Location</th>
-                        <th>Salary</th>
-                        <th>Verification</th>
-                        <th></th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Year</th>
+                        <th scope="col">Employer</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Location</th>
+                        <th scope="col">Salary</th>
+                        <th scope="col">Verification</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

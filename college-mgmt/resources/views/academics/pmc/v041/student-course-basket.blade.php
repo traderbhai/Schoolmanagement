@@ -37,7 +37,7 @@
             <form class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small">Basket Status</label>
-                    <select class="form-select form-select-sm" name="status">
+                    <select aria-label="Status" class="form-select form-select-sm" name="status">
                         <option value="">All statuses</option>
                         @foreach(['draft', 'allocated', 'conflict_review', 'approved', 'locked', 'dropped'] as $status)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
@@ -46,7 +46,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small">Course Type</label>
-                    <select class="form-select form-select-sm" name="type">
+                    <select aria-label="Type" class="form-select form-select-sm" name="type">
                         <option value="">All types</option>
                         @foreach(['core', 'elective', 'lab', 'tutorial', 'repeat', 'backlog', 'improvement', 'audit', 'open_elective'] as $type)
                             <option value="{{ $type }}" @selected(request('type') === $type)>{{ str($type)->headline() }}</option>
@@ -68,7 +68,7 @@
                 <div class="card-header py-2 fw-semibold">Allocated Courses</div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Course</th><th>Term</th><th>Type</th><th>Status</th><th>Group/Section</th><th>Flags</th></tr></thead>
+                        <thead><tr><th scope="col">Course</th><th scope="col">Term</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Group/Section</th><th scope="col">Flags</th></tr></thead>
                         <tbody>
                             @forelse($allocations as $allocation)
                                 <tr>
@@ -110,7 +110,7 @@
                 <div class="card-header py-2 fw-semibold">Timetable Preview</div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Day</th><th>Slot</th><th>Course Group</th><th>Faculty</th><th>Room</th></tr></thead>
+                        <thead><tr><th scope="col">Day</th><th scope="col">Slot</th><th scope="col">Course Group</th><th scope="col">Faculty</th><th scope="col">Room</th></tr></thead>
                         <tbody>
                             @forelse($timetableItems as $item)
                                 <tr>
@@ -135,22 +135,22 @@
                 <div class="card-header py-2 fw-semibold">Submit Response</div>
                 <div class="card-body vstack gap-2">
                     <label class="form-label small mb-0">Course</label>
-                    <select class="form-select form-select-sm" name="student_course_allocation_id">
+                    <select aria-label="Student Course Allocation" class="form-select form-select-sm" name="student_course_allocation_id">
                         <option value="">General basket/timetable response</option>
                         @foreach($allocationOptions as $option)
                             <option value="{{ $option->id }}">{{ $option->subject?->code }} - {{ $option->subject?->name }} ({{ str($option->basket_status)->headline() }})</option>
                         @endforeach
                     </select>
                     <label class="form-label small mb-0">Response Type</label>
-                    <select class="form-select form-select-sm" name="acknowledgement_type" required>
+                    <select aria-label="Acknowledgement Type" class="form-select form-select-sm" name="acknowledgement_type" required>
                         <option value="allocation_review">Allocation reviewed</option>
                         <option value="timetable_acknowledgement">Timetable acknowledged</option>
                         <option value="objection">Raise objection</option>
                         <option value="add_drop_request">Add/drop request</option>
                         <option value="waitlist_followup">Waitlist follow-up</option>
                     </select>
-                    <input class="form-control form-control-sm" name="reason" placeholder="Short reason, if applicable">
-                    <textarea class="form-control form-control-sm" name="student_note" rows="4" placeholder="Explain your request or confirmation"></textarea>
+                    <input aria-label="Short reason, if applicable" class="form-control form-control-sm" name="reason" placeholder="Short reason, if applicable">
+                    <textarea aria-label="Explain your request or confirmation" class="form-control form-control-sm" name="student_note" rows="4" placeholder="Explain your request or confirmation"></textarea>
                     <button class="btn btn-sm btn-primary">Submit To PMC</button>
                 </div>
             </form>

@@ -20,20 +20,20 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $timetableSlot->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $timetableSlot->name) }}" required>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                    <input type="time" name="start_time" class="form-control" value="{{ old('start_time', $timetableSlot->start_time) }}" required>
+                    <input aria-label="Start Time" type="time" name="start_time" class="form-control" value="{{ old('start_time', $timetableSlot->start_time) }}" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Time <span class="text-danger">*</span></label>
-                    <input type="time" name="end_time" class="form-control" value="{{ old('end_time', $timetableSlot->end_time) }}" required>
+                    <input aria-label="End Time" type="time" name="end_time" class="form-control" value="{{ old('end_time', $timetableSlot->end_time) }}" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Sort Order</label>
-                    <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', $timetableSlot->sort_order) }}">
+                    <input aria-label="Sort Order" type="number" name="sort_order" class="form-control" value="{{ old('sort_order', $timetableSlot->sort_order) }}">
                 </div>
                 <div class="col-12">
                     <div class="form-check">

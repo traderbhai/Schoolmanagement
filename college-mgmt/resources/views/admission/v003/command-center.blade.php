@@ -38,21 +38,27 @@
         action-icon="bi-kanban"
     />
 
-    <div class="alert alert-primary border-0 shadow-sm d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 py-3 mb-4">
-        <div class="d-flex gap-3">
-            <div class="ui-kpi-tile-icon bg-white text-primary"><i class="bi bi-command"></i></div>
-            <div>
-                <div class="fw-bold">Supervisor control cycle</div>
-                <div class="small">1. Clear immediate attention &nbsp; 2. Assign or rebalance work &nbsp; 3. Unblock documents/payments/offers &nbsp; 4. Review forecast and automation.</div>
+    <details class="card border-0 shadow-sm mb-4 admission-control-cycle">
+        <summary class="card-body py-3 d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3" aria-label="Show Admission supervisor control cycle">
+            <div class="d-flex gap-3">
+                <div class="ui-kpi-tile-icon bg-primary-subtle text-primary"><i class="bi bi-command"></i></div>
+                <div>
+                    <div class="fw-bold">Supervisor control cycle</div>
+                    <div class="small text-muted">Use this when queues look noisy or the team needs a daily operating order.</div>
+                </div>
             </div>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
+            <span class="btn btn-sm btn-outline-primary">View cycle</span>
+        </summary>
+        <div class="card-body border-top pt-3">
+            <div class="small mb-3">1. Clear immediate attention &nbsp; 2. Assign or rebalance work &nbsp; 3. Unblock documents/payments/offers &nbsp; 4. Review forecast and automation.</div>
+            <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-primary btn-sm" href="{{ route('admission.attention.index') }}">Attention Queues</a>
             <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.manager-workspace.index') }}">Team Workspace</a>
             <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.forecasting.index') }}">Forecast</a>
             <a class="btn btn-outline-primary btn-sm" href="{{ route('admission.automations.index') }}">Automations</a>
+            </div>
         </div>
-    </div>
+    </details>
     <div class="row g-3 mb-4">
         @foreach($kpiCards as $card)
             <div class="col-6 col-lg-3">

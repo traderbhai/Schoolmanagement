@@ -23,7 +23,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small mb-1">Graduation Year</label>
-                    <select name="year" class="form-select form-select-sm">
+                    <select aria-label="Year" name="year" class="form-select form-select-sm">
                         <option value="">All Years</option>
                         @foreach($years as $y)
                         <option value="{{ $y }}" {{ request('year')==$y?'selected':'' }}>{{ $y }}</option>
@@ -32,7 +32,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small mb-1">Company</label>
-                    <input type="text" name="company" class="form-control form-control-sm" value="{{ request('company') }}" placeholder="Search by employer">
+                    <input aria-label="Search by employer" type="text" name="company" class="form-control form-control-sm" value="{{ request('company') }}" placeholder="Search by employer">
                 </div>
                 <div class="col-md-3">
                     <div class="form-check mt-3">

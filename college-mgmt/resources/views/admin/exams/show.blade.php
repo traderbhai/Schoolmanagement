@@ -44,7 +44,7 @@
             <div class="card-header">Results Summary</div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead><tr><th>Student</th><th>Enrollment</th><th>Marks</th><th>Grade</th><th>Result</th></tr></thead>
+                    <thead><tr><th scope="col">Student</th><th scope="col">Enrollment</th><th scope="col">Marks</th><th scope="col">Grade</th><th scope="col">Result</th></tr></thead>
                     <tbody>
                     @forelse($exam->results as $r)
                     <tr>

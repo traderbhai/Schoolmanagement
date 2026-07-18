@@ -21,7 +21,7 @@
         <form class="row g-3 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label">Student</label>
-                <select name="student_id" class="form-select form-select-sm">
+                <select aria-label="Student" name="student_id" class="form-select form-select-sm">
                     <option value="">Select student</option>
                     @foreach($students as $s)
                         <option value="{{ $s->id }}" @selected(request('student_id')==$s->id)>{{ $s->user->name }} ({{ $s->enrollment_number }})</option>
@@ -30,7 +30,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm">
                     <option value="">Select semester</option>
                     @foreach($semesters as $s)
                         <option value="{{ $s->id }}" @selected(request('semester_id')==$s->id)>{{ $s->name }}</option>
@@ -89,13 +89,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Subject</th>
-                    <th>Credits</th>
-                    <th>Marks Obtained</th>
-                    <th>Percentage</th>
-                    <th>Grade</th>
-                    <th>Grade Points</th>
-                    <th>Status</th>
+                    <th scope="col">Subject</th>
+                    <th scope="col">Credits</th>
+                    <th scope="col">Marks Obtained</th>
+                    <th scope="col">Percentage</th>
+                    <th scope="col">Grade</th>
+                    <th scope="col">Grade Points</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -157,7 +157,7 @@
     <div class="card-body">
         <div class="empty-state py-4">
             <div class="empty-icon"><i class="bi bi-search"></i></div>
-            <div class="mt-2 fw-semibold">No results found</div>
+            <div class="mt-2 fw-semibold">No published results for this selection</div>
             <div class="text-muted" style="font-size:.85rem">No published result records match the selected student and semester. Confirm that the Exam Cell has published marks for this roster, or choose another semester.</div>
         </div>
     </div>

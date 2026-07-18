@@ -81,6 +81,33 @@ class AcademicsDeanUxGuidanceTest extends TestCase
             ->assertDontSee('href="#"', false);
     }
 
+    public function test_dean_planning_and_review_actions_explain_accountability_impact(): void
+    {
+        $expectations = [
+            resource_path('views/academics/dean-os/reviews.blade.php') => [
+                'Confirm scope, agenda, owner expectations, and whether this needs formal follow-up before recording it.',
+                'Confirm owner, priority, due date, source workflow, and escalation expectation before adding it to the tracker.',
+                'Confirm status, owner, due date, and closure evidence before changing the accountability record.',
+            ],
+            resource_path('views/academics/dean-os/v008/planning.blade.php') => [
+                'Confirm cycle type, academic year, current status, owners, and readiness evidence expectations before opening the planning record.',
+                'Confirm readiness blockers, calendar/curriculum impact, workload evidence, and action ownership before approval.',
+                'Confirm owner, due date, source section, and resolution expectation before tracking it.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Create this Dean review meeting?')", file_get_contents(resource_path('views/academics/dean-os/reviews.blade.php')));
+        $this->assertStringNotContainsString("confirm('Create this Dean academic plan?')", file_get_contents(resource_path('views/academics/dean-os/v008/planning.blade.php')));
+    }
+
     public function test_dean_risk_operating_records_and_analytics_explain_follow_up_workflow(): void
     {
         $dean = User::where('email', 'dean@college.com')->firstOrFail();

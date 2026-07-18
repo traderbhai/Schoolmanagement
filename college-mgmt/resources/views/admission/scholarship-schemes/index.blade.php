@@ -16,14 +16,14 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mb-4">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show mb-4">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -55,15 +55,15 @@
                     <caption class="visually-hidden">Admission scholarship schemes and eligibility rules</caption>
                     <thead class="bg-light">
                         <tr>
-                            <th>Scheme</th>
-                            <th>Code</th>
-                            <th>Type</th>
-                            <th>Program</th>
-                            <th>Eligibility</th>
-                            <th class="text-end">Max Amount (Rs.)</th>
-                            <th class="text-center">Seats</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-end">Actions</th>
+                            <th scope="col">Scheme</th>
+                            <th scope="col">Code</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Program</th>
+                            <th scope="col">Eligibility</th>
+                            <th scope="col" class="text-end">Max Amount (Rs.)</th>
+                            <th scope="col" class="text-center">Seats</th>
+                            <th scope="col" class="text-center">Status</th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>

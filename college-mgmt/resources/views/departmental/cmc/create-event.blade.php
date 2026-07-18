@@ -9,16 +9,16 @@
     <div class="alert alert-info small py-2">
       Publish only after the date, venue, seats, and registration deadline are confirmed. Published events are visible to students.
     </div>
-    <form method="POST" action="{{ route('cmc.events.store') }}" onsubmit="return confirm('Create this career event with the selected publication setting?')">
+    <form method="POST" action="{{ route('cmc.events.store') }}" onsubmit="return confirm('Create this career event with the selected publication setting? Confirm date, venue, seats, registration deadline, student visibility, and communication readiness before saving.')">
       @csrf
       <div class="row g-3">
         <div class="col-12">
           <label class="form-label small fw-semibold">Event Title <span class="text-danger">*</span></label>
-          <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
+          <input aria-label="Title" type="text" name="title" class="form-control" value="{{ old('title') }}" required>
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Event Type <span class="text-danger">*</span></label>
-          <select name="event_type" class="form-select" required>
+          <select aria-label="Event Type" name="event_type" class="form-select" required>
             @foreach(\App\Models\CareerEvent::TYPE_LABELS as $t => $label)
             <option value="{{ $t }}" {{ old('event_type')===$t?'selected':'' }}>{{ $label }}</option>
             @endforeach
@@ -26,19 +26,19 @@
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Event Date <span class="text-danger">*</span></label>
-          <input type="date" name="event_date" class="form-control" value="{{ old('event_date') }}" required>
+          <input aria-label="Event Date" type="date" name="event_date" class="form-control" value="{{ old('event_date') }}" required>
         </div>
         <div class="col-md-8">
           <label class="form-label small fw-semibold">Venue</label>
-          <input type="text" name="venue" class="form-control" value="{{ old('venue') }}" placeholder="e.g. Seminar Hall A">
+          <input aria-label="Event venue" type="text" name="venue" class="form-control" value="{{ old('venue') }}" placeholder="e.g. Seminar Hall A">
         </div>
         <div class="col-md-4">
           <label class="form-label small fw-semibold">Seats</label>
-          <input type="number" name="seats" class="form-control" value="{{ old('seats') }}" min="1" placeholder="Leave blank for unlimited">
+          <input aria-label="Leave blank for unlimited" type="number" name="seats" class="form-control" value="{{ old('seats') }}" min="1" placeholder="Leave blank for unlimited">
         </div>
         <div class="col-md-6">
           <label class="form-label small fw-semibold">Registration Deadline</label>
-          <input type="date" name="registration_deadline" class="form-control" value="{{ old('registration_deadline') }}">
+          <input aria-label="Registration Deadline" type="date" name="registration_deadline" class="form-control" value="{{ old('registration_deadline') }}">
         </div>
         <div class="col-md-6 d-flex align-items-end">
           <div class="form-check mb-2">
@@ -48,7 +48,7 @@
         </div>
         <div class="col-12">
           <label class="form-label small fw-semibold">Description</label>
-          <textarea name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
+          <textarea aria-label="Description" name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
         </div>
         <div class="col-12 d-flex gap-2 pt-2">
           <button type="submit" class="btn btn-primary">Create Event</button>

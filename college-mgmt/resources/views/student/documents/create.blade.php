@@ -12,7 +12,7 @@
     <p class="text-muted small mb-4">Choose the exact document and explain the purpose so staff can process it correctly.</p>
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @if($actionBlockedReason)
@@ -27,7 +27,7 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Document Type <span class="text-danger">*</span></label>
-                    <select name="document_type" class="form-select @error('document_type') is-invalid @enderror" required @disabled($actionBlockedReason)>
+                    <select aria-label="Document Type" name="document_type" class="form-select @error('document_type') is-invalid @enderror" required @disabled($actionBlockedReason)>
                         <option value="">Select document</option>
                         @foreach($types as $type)
                         <option value="{{ $type }}" @selected(old('document_type') == $type)>{{ \App\Models\DocumentRequest::typeLabel($type) }}</option>
@@ -37,12 +37,12 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Purpose <span class="text-danger">*</span></label>
-                    <input type="text" name="purpose" value="{{ old('purpose') }}" class="form-control @error('purpose') is-invalid @enderror" required placeholder="e.g. Bank loan, scholarship, visa application" @disabled($actionBlockedReason)>
+                    <input aria-label="Document purpose" type="text" name="purpose" value="{{ old('purpose') }}" class="form-control @error('purpose') is-invalid @enderror" required placeholder="e.g. Bank loan, scholarship, visa application" @disabled($actionBlockedReason)>
                     @error('purpose')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Additional Information <span class="text-muted">(optional)</span></label>
-                    <textarea name="additional_info" rows="3" class="form-control @error('additional_info') is-invalid @enderror" placeholder="Any specific details required in the document" @disabled($actionBlockedReason)>{{ old('additional_info') }}</textarea>
+                    <textarea aria-label="Any specific details required in the document" name="additional_info" rows="3" class="form-control @error('additional_info') is-invalid @enderror" placeholder="Any specific details required in the document" @disabled($actionBlockedReason)>{{ old('additional_info') }}</textarea>
                     @error('additional_info')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="alert alert-info py-2 small">

@@ -47,7 +47,7 @@
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
-                        <tr><th>Student</th><th>Receipt</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th><th></th></tr>
+                        <tr><th scope="col">Student</th><th scope="col">Receipt</th><th scope="col">Amount</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr>
                     </thead>
                     <tbody>
                     @forelse($fee->payments as $p)

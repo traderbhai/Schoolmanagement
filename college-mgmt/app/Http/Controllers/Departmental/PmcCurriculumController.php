@@ -2,7 +2,7 @@
 namespace App\Http\Controllers\Departmental;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AcademicPmcElectiveChoice, AcademicPmcTimetableGenerationItem, Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
+use App\Models\{AcademicPmcCourseGroup, AcademicPmcElectiveChoice, AcademicPmcTimetableGenerationItem, Program, Subject, ProgramSubject, Term, Teacher, SubjectFacultyAssignment,
                 ElectiveRegistrationWindow, Department, PmcAssessmentComponentConfig, TimetableEntry};
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -32,14 +32,18 @@ class PmcCurriculumController extends Controller {
                 ->with('subject')
                 ->when($request->filled('term_id'), fn($q) => $q->where('term_id', $request->term_id))
                 ->orderBy('term_id')
-                ->get()
-                ->groupBy('term_id');
+                ->get();
         }
+
+        $curriculumUsage = collect($programSubjects)
+            ->mapWithKeys(fn (ProgramSubject $programSubject): array => [
+                $programSubject->id => $this->curriculumSubjectUsage($programSubject),
+            ]);
 
         $allSubjects = Subject::orderBy('name')->get();
 
         return view('departmental.program-chair.curriculum.index', compact(
-            'programs', 'terms', 'selectedProgram', 'programSubjects', 'allSubjects'
+            'programs', 'terms', 'selectedProgram', 'programSubjects', 'allSubjects', 'curriculumUsage'
         ));
     }
 
@@ -85,6 +89,13 @@ class PmcCurriculumController extends Controller {
     // ── Remove subject from program-term ─────────────────────────────────────
     public function removeSubject(ProgramSubject $programSubject) {
         $this->authorizeProgramScope((int) $programSubject->program_id);
+
+        $usage = $this->curriculumSubjectUsage($programSubject);
+
+        if ($usage['locked']) {
+            return back()->with('error', 'Curriculum subject is locked because it is already connected to ' . implode(', ', $usage['labels']) . '. Use a formal curriculum revision instead of deleting the source row.');
+        }
+
         $programSubject->delete();
         return back()->with('success', 'Subject removed from curriculum.');
     }
@@ -410,6 +421,49 @@ class PmcCurriculumController extends Controller {
     private function programTermKey(mixed $programId, mixed $termId): string
     {
         return ((string) ($programId ?? 'none')) . ':' . ((string) ($termId ?? 'none'));
+    }
+
+    private function curriculumSubjectUsage(ProgramSubject $programSubject): array
+    {
+        $programId = (int) $programSubject->program_id;
+        $subjectId = (int) $programSubject->subject_id;
+        $termId = (int) $programSubject->term_id;
+
+        $usage = [
+            'published timetable sessions' => AcademicPmcTimetableGenerationItem::where('program_id', $programId)
+                ->where('subject_id', $subjectId)
+                ->where('term_id', $termId)
+                ->whereIn('official_status', ['published', 'locked'])
+                ->whereIn('status', ['scheduled', 'published', 'locked'])
+                ->whereHas('timetableVersion', fn ($version) => $version->where('status', 'published'))
+                ->exists(),
+            'published legacy timetable rows' => TimetableEntry::where('program_id', $programId)
+                ->where('subject_id', $subjectId)
+                ->where('term_id', $termId)
+                ->where(fn ($query) => $this->publishedTimetableScope($query))
+                ->exists(),
+            'course groups' => AcademicPmcCourseGroup::where('program_id', $programId)
+                ->where('subject_id', $subjectId)
+                ->where('term_id', $termId)
+                ->whereIn('status', ['active', 'ready', 'locked', 'approved'])
+                ->exists(),
+            'faculty assignments' => SubjectFacultyAssignment::where('program_id', $programId)
+                ->where('subject_id', $subjectId)
+                ->where('term_id', $termId)
+                ->exists(),
+            'student enrollments' => \App\Models\StudentSubjectEnrollment::where('subject_id', $subjectId)
+                ->where('term_id', $termId)
+                ->whereIn('status', ['active', 'approved', 'allocated', 'locked'])
+                ->exists(),
+        ];
+
+        $labels = collect($usage)->filter()->keys()->values()->all();
+
+        return [
+            'locked' => ! empty($labels),
+            'labels' => $labels,
+            'summary' => empty($labels) ? 'No downstream usage found.' : implode(', ', $labels),
+        ];
     }
 
     private function windowHasSubmittedChoices(ElectiveRegistrationWindow $window): bool

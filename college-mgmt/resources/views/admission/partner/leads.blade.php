@@ -29,7 +29,7 @@
                 </select>
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-sm btn-primary">Apply</button>
+                <button class="btn btn-sm btn-primary">Apply filters</button>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ route('admission.partner-portal.leads') }}">Reset</a>
             </div>
         </div>
@@ -45,7 +45,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">Submitted partner leads</caption>
-                <thead><tr><th>Lead</th><th>Program</th><th>Status</th><th>Priority</th><th>Reference</th><th>Submitted</th></tr></thead>
+                <thead><tr><th scope="col">Lead</th><th scope="col">Program</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Reference</th><th scope="col">Submitted</th></tr></thead>
                 <tbody>
                     @forelse($leads as $lead)
                         <tr>

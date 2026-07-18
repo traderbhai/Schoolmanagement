@@ -47,7 +47,7 @@
 <form method="GET" class="row g-2 mb-4">
     <div class="col-sm-4">
         <label class="form-label small">Program</label>
-        <select name="program_id" class="form-select form-select-sm">
+        <select aria-label="Program" name="program_id" class="form-select form-select-sm">
             <option value="">All Programs</option>
             @foreach($programs as $p)
                 <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -56,7 +56,7 @@
     </div>
     <div class="col-sm-4">
         <label class="form-label small">Batch</label>
-        <select name="batch_id" class="form-select form-select-sm">
+        <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
             <option value="">All Batches</option>
             @foreach($batches as $b)
                 <option value="{{ $b->id }}" @selected(request('batch_id') == $b->id)>{{ $b->name }}</option>
@@ -85,13 +85,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Enrollment #</th>
-                        <th>Student</th>
-                        <th>Program</th>
-                        <th>Batch</th>
-                        <th>Roll #</th>
-                        <th>Enrolled At</th>
-                        <th>Actions</th>
+                        <th scope="col">Enrollment #</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Roll #</th>
+                        <th scope="col">Enrolled At</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

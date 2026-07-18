@@ -18,10 +18,10 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Method</th>
-                                <th>Endpoint</th>
-                                <th>Auth</th>
-                                <th>Description</th>
+                                <th scope="col">Method</th>
+                                <th scope="col">Endpoint</th>
+                                <th scope="col">Auth</th>
+                                <th scope="col">Description</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -28,9 +28,9 @@
 <table>
   <thead>
     <tr>
-      <th style="width:12%">Slot</th>
+      <th scope="col" style="width:12%">Slot</th>
       @foreach(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $d)
-      <th>{{ $d }}</th>
+      <th scope="col">{{ $d }}</th>
       @endforeach
     </tr>
   </thead>

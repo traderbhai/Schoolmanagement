@@ -62,7 +62,7 @@
         <ul class="nav nav-tabs border-0">
             <li class="nav-item">
                 <a class="nav-link {{ is_null($status) ? 'active' : '' }}"
-                   href="{{ route('admission.refunds.index') }}">All</a>
+                   href="{{ route('admission.refunds.index') }}">All refunds</a>
             </li>
             @foreach(['pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'processed' => 'Processed'] as $val => $label)
             <li class="nav-item">
@@ -77,7 +77,7 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mx-3 mt-3 mb-0" role="alert">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -85,14 +85,14 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="bg-light">
                 <tr>
-                    <th class="ps-4">Applicant</th>
-                    <th>Application No.</th>
-                    <th>Program</th>
-                    <th class="text-end">Requested (Rs.)</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th class="text-center">Action</th>
+                    <th scope="col" class="ps-4">Applicant</th>
+                    <th scope="col">Application No.</th>
+                    <th scope="col">Program</th>
+                    <th scope="col" class="text-end">Requested (Rs.)</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col" class="text-center">Action</th>
                 </tr>
             </thead>
             <tbody>

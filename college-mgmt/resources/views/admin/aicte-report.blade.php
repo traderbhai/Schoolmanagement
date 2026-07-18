@@ -9,7 +9,7 @@
         <h5 class="mb-1">AICTE Compliance Report — {{ $reportYear }}</h5>
         <p class="text-muted small mb-0">Academic Performance &amp; Institutional Data</p>
     </div>
-    <a href="{{ route('admin.aicte-report.pdf') }}" class="btn btn-primary" target="_blank">
+    <a rel="noopener" href="{{ route('admin.aicte-report.pdf') }}" class="btn btn-primary" target="_blank">
         <i class="bi bi-file-earmark-pdf me-2"></i>Export PDF
     </a>
 </div>
@@ -23,14 +23,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th>Program</th>
-                    <th>Department</th>
-                    <th>Students</th>
-                    <th>Faculty</th>
-                    <th>Subjects</th>
-                    <th>Exams ({{ $reportYear }})</th>
-                    <th>Pass Rate %</th>
-                    <th>Attendance %</th>
+                    <th scope="col">Program</th>
+                    <th scope="col">Department</th>
+                    <th scope="col">Students</th>
+                    <th scope="col">Faculty</th>
+                    <th scope="col">Subjects</th>
+                    <th scope="col">Exams ({{ $reportYear }})</th>
+                    <th scope="col">Pass Rate %</th>
+                    <th scope="col">Attendance %</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,7 +79,7 @@
 
 <div class="alert alert-info d-flex align-items-center gap-2">
     <i class="bi bi-info-circle-fill fs-5"></i>
-    <div><strong>Note:</strong> For official AICTE submission, use the <a href="{{ route('admin.aicte-report.pdf') }}" target="_blank">PDF export</a>. Color coding: <span class="badge bg-success">Green</span> &gt;75% | <span class="badge bg-warning text-dark">Yellow</span> 60–75% | <span class="badge bg-danger">Red</span> &lt;60%.</div>
+    <div><strong>Note:</strong> For official AICTE submission, use the <a rel="noopener" href="{{ route('admin.aicte-report.pdf') }}" target="_blank">PDF export</a>. Color coding: <span class="badge bg-success">Green</span> &gt;75% | <span class="badge bg-warning text-dark">Yellow</span> 60–75% | <span class="badge bg-danger">Red</span> &lt;60%.</div>
 </div>
 
 @endsection

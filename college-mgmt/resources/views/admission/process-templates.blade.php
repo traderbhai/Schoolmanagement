@@ -18,7 +18,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Program</label>
-                        <select name="program_id" class="form-select" required>
+                        <select aria-label="Program" name="program_id" class="form-select" required>
                             @foreach($programs as $program)
                                 <option value="{{ $program->id }}">{{ $program->name }}</option>
                             @endforeach
@@ -26,15 +26,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Template Name</label>
-                        <input name="name" class="form-control" required placeholder="MBA 2026 Admission Process">
+                        <input aria-label="MBA 2026 Admission Process" name="name" class="form-control" required placeholder="MBA 2026 Admission Process">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Offer Validity Days</label>
-                        <input name="offer_validity_days" type="number" min="1" class="form-control" value="15">
+                        <input aria-label="Offer Validity Days" name="offer_validity_days" type="number" min="1" class="form-control" value="15">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Waitlist Rule</label>
-                        <input name="waitlist_rule" class="form-control" placeholder="Auto-promote by merit rank after expiry">
+                        <input aria-label="Auto-promote by merit rank after expiry" name="waitlist_rule" class="form-control" placeholder="Auto-promote by merit rank after expiry">
                     </div>
                     <button class="btn btn-primary w-100">Create Template</button>
                 </div>
@@ -58,10 +58,10 @@
                         </div>
                         <form method="POST" action="{{ route('admission.process-templates.stages.store', $template) }}" class="row g-2">
                             @csrf
-                            <div class="col-md-3"><input name="name" class="form-control form-control-sm" placeholder="Stage name" required></div>
-                            <div class="col-md-3"><input name="stage_key" class="form-control form-control-sm" placeholder="stage_key" required></div>
-                            <div class="col-md-2"><input name="sequence" type="number" min="1" class="form-control form-control-sm" placeholder="Order" required></div>
-                            <div class="col-md-2"><input name="sla_hours" type="number" min="1" class="form-control form-control-sm" placeholder="SLA hrs"></div>
+                            <div class="col-md-3"><input aria-label="Stage name" name="name" class="form-control form-control-sm" placeholder="Stage name" required></div>
+                            <div class="col-md-3"><input aria-label="stage_key" name="stage_key" class="form-control form-control-sm" placeholder="stage_key" required></div>
+                            <div class="col-md-2"><input aria-label="Order" name="sequence" type="number" min="1" class="form-control form-control-sm" placeholder="Order" required></div>
+                            <div class="col-md-2"><input aria-label="SLA hrs" name="sla_hours" type="number" min="1" class="form-control form-control-sm" placeholder="SLA hrs"></div>
                             <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100">Save Stage</button></div>
                         </form>
                     </div>

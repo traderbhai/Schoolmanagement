@@ -94,10 +94,10 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Queue</th>
-                                <th>Branch</th>
-                                <th>Severity</th>
-                                <th class="text-end">Open</th>
+                                <th scope="col">Queue</th>
+                                <th scope="col">Branch</th>
+                                <th scope="col">Severity</th>
+                                <th scope="col" class="text-end">Open</th>
                             </tr>
                         </thead>
                         <tbody>

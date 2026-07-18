@@ -1,4 +1,4 @@
-<div class="alert alert-primary border-0 shadow-sm py-2 mb-3">
+<div class="alert alert-primary border-0 {{ ($compact ?? false) ? 'rounded-0 shadow-none mb-0' : 'shadow-sm mb-3' }} py-2">
     <div class="d-flex flex-column flex-xl-row justify-content-between gap-2">
         <div>
             <div class="fw-semibold">Admin setup sequence</div>

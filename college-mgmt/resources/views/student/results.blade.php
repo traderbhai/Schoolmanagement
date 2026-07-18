@@ -11,7 +11,7 @@
             <form method="GET" action="{{ route('student.results') }}" class="row g-2 align-items-end">
                 <div class="col-auto">
                     <label class="form-label small fw-semibold mb-1">Semester / Term</label>
-                    <select name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
+                    <select aria-label="Semester" name="semester_id" class="form-select form-select-sm" style="min-width:220px" onchange="this.form.submit()">
                         @forelse($semesters as $sem)
                             <option value="{{ $sem->id }}" @selected($sem->id == $semesterId)>
                                 {{ $sem->name }}@if($sem->academicYear) &mdash; {{ $sem->academicYear->name }}@endif
@@ -85,7 +85,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-table me-2"></i>Subject-wise Results</span>
         @if($semesterId && $gradeCardAvailable)
-        <a href="{{ route('student.reports.grade-card', $semesterId) }}" target="_blank" class="btn btn-sm btn-primary">
+        <a rel="noopener" href="{{ route('student.reports.grade-card', $semesterId) }}" target="_blank" class="btn btn-sm btn-primary">
             <i class="bi bi-file-earmark-pdf me-1"></i>Grade Card PDF
         </a>
         @elseif($semesterId)
@@ -96,15 +96,15 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Subject</th>
-                    <th class="text-center">Credits</th>
-                    <th class="text-center">IA1</th>
-                    <th class="text-center">IA2</th>
-                    <th class="text-center">End-Sem</th>
-                    <th class="text-center">Total</th>
-                    <th class="text-center">%</th>
-                    <th class="text-center">Grade</th>
-                    <th class="text-center">Status</th>
+                    <th scope="col">Subject</th>
+                    <th scope="col" class="text-center">Credits</th>
+                    <th scope="col" class="text-center">IA1</th>
+                    <th scope="col" class="text-center">IA2</th>
+                    <th scope="col" class="text-center">End-Sem</th>
+                    <th scope="col" class="text-center">Total</th>
+                    <th scope="col" class="text-center">%</th>
+                    <th scope="col" class="text-center">Grade</th>
+                    <th scope="col" class="text-center">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -218,7 +218,7 @@
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
-                <tr><th>Subject</th><th>Semester</th><th>Marks</th><th>%</th><th>Grade</th></tr>
+                <tr><th scope="col">Subject</th><th scope="col">Semester</th><th scope="col">Marks</th><th scope="col">%</th><th scope="col">Grade</th></tr>
             </thead>
             <tbody>
                 @foreach($backlogs as $r)

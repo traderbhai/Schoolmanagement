@@ -12,7 +12,7 @@
                 <form method="GET" action="{{ route('chair.reports.term-summary') }}" class="row g-2 align-items-end flex-grow-1">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold mb-1">Term</label>
-                        <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select aria-label="Term" name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">— Select Term —</option>
                             @foreach($terms as $term)
                                 <option value="{{ $term->id }}" {{ $selectedTerm?->id == $term->id ? 'selected' : '' }}>
@@ -78,9 +78,9 @@
                     <table class="table table-sm table-bordered align-middle mb-0 small">
                         <thead class="table-light">
                             <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Enrollment No.</th>
+                                <th scope="col">#</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Enrollment No.</th>
                             </tr>
                         </thead>
                         <tbody>

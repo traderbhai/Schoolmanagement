@@ -8,7 +8,7 @@
     <form method="GET" class="bg-white rounded shadow p-4 mb-6 flex gap-4 flex-wrap items-end">
         <div>
             <label class="block text-xs text-gray-500 mb-1">Status</label>
-            <select name="status" class="border rounded px-3 py-2 text-sm">
+            <select aria-label="Status" name="status" class="border rounded px-3 py-2 text-sm">
                 <option value="">All</option>
                 <option value="queued" @selected(request('status') === 'queued')>Queued</option>
                 <option value="sent" @selected(request('status') === 'sent')>Sent</option>
@@ -17,7 +17,7 @@
         </div>
         <div>
             <label class="block text-xs text-gray-500 mb-1">Search</label>
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Email / Subject..." class="border rounded px-3 py-2 text-sm">
+            <input aria-label="Email log search" type="text" name="search" value="{{ request('search') }}" placeholder="Email / Subject..." class="border rounded px-3 py-2 text-sm">
         </div>
         <button type="submit" class="bg-blue-900 text-white px-4 py-2 rounded text-sm">Filter</button>
         <a href="{{ route('admin.email-logs.index') }}" class="text-sm text-gray-500 py-2">Reset</a>
@@ -27,12 +27,12 @@
         <table class="min-w-full text-sm">
             <thead class="bg-gray-50 border-b">
                 <tr>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Type</th>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">To</th>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Subject</th>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Status</th>
-                    <th class="px-4 py-3 text-left text-gray-600 font-medium">Queued At</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">ID</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">Type</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">To</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">Subject</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">Status</th>
+                    <th scope="col" class="px-4 py-3 text-left text-gray-600 font-medium">Queued At</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">

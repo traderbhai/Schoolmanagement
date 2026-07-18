@@ -20,23 +20,23 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. 1st Period" required>
+                    <input aria-label="Timetable slot name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. 1st Period" required>
                     <div class="form-text">Descriptive label for this period.</div>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                    <input type="time" name="start_time" class="form-control @error('start_time') is-invalid @enderror" value="{{ old('start_time') }}" required>
+                    <input aria-label="Start Time" type="time" name="start_time" class="form-control @error('start_time') is-invalid @enderror" value="{{ old('start_time') }}" required>
                     @error('start_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Time <span class="text-danger">*</span></label>
-                    <input type="time" name="end_time" class="form-control @error('end_time') is-invalid @enderror" value="{{ old('end_time') }}" required>
+                    <input aria-label="End Time" type="time" name="end_time" class="form-control @error('end_time') is-invalid @enderror" value="{{ old('end_time') }}" required>
                     @error('end_time')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Sort Order</label>
-                    <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', 1) }}">
+                    <input aria-label="Sort Order" type="number" name="sort_order" class="form-control" value="{{ old('sort_order', 1) }}">
                     <div class="form-text">Lower numbers appear first.</div>
                 </div>
                 <div class="col-12">

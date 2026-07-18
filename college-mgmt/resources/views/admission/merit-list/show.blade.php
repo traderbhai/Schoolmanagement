@@ -5,7 +5,7 @@
 @section('content')
 @php($canApproveAdmission = app(\App\Services\DepartmentHierarchyService::class)->canApproveAdmission(auth()->user()))
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card border-0 shadow-sm mb-4">
@@ -36,7 +36,7 @@
     <div class="row g-2 align-items-end">
         <div class="col-sm-3">
             <label class="form-label small">Batch</label>
-            <select name="batch_id" class="form-select form-select-sm">
+            <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
                 <option value="">All Batches</option>
                 @foreach($batches as $b)
                     <option value="{{ $b->id }}" @selected($batchId == $b->id)>{{ $b->name }}</option>
@@ -45,7 +45,7 @@
         </div>
         <div class="col-sm-3">
             <label class="form-label small">Decision</label>
-            <select name="decision" class="form-select form-select-sm">
+            <select aria-label="Decision" name="decision" class="form-select form-select-sm">
                 <option value="">All Decisions</option>
                 <option value="pending" @selected($decision == 'pending')>Pending</option>
                 <option value="selected" @selected($decision == 'selected')>Selected</option>
@@ -79,16 +79,16 @@
 @if($canApproveAdmission)
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-        <form method="POST" action="{{ route('admission.merit-list.bulk-decide', $program) }}" class="row g-2 align-items-end" onsubmit="return confirm('Apply bulk decisions?')">
+        <form method="POST" action="{{ route('admission.merit-list.bulk-decide', $program) }}" class="row g-2 align-items-end" onsubmit="return confirm('Apply bulk selected/waitlist decisions for the current program, batch, and filtered rank list? This can affect offer letters, seat holds, waitlist movement, and enrollment readiness.')">
             @csrf
             @if($batchId) <input type="hidden" name="batch_id" value="{{ $batchId }}"> @endif
             <div class="col-sm-3">
                 <label class="form-label small fw-semibold">Accept Top N</label>
-                <input type="number" name="accept_top" class="form-control form-control-sm" min="1" value="10" required>
+                <input aria-label="Accept Top" type="number" name="accept_top" class="form-control form-control-sm" min="1" value="10" required>
             </div>
             <div class="col-sm-3">
                 <label class="form-label small fw-semibold">Waitlist Next M</label>
-                <input type="number" name="waitlist_next" class="form-control form-control-sm" min="0" value="5">
+                <input aria-label="Waitlist Next" type="number" name="waitlist_next" class="form-control form-control-sm" min="0" value="5">
             </div>
             <div class="col-sm-3">
                 <button type="submit" class="btn btn-sm btn-warning">
@@ -107,7 +107,7 @@
     <input type="hidden" name="program_id" value="{{ $program->id }}">
     <div class="d-flex gap-2 mb-3">
         <button type="button" onclick="selectAll()" class="btn btn-outline-secondary btn-sm">Select All</button>
-        <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Generate offer letters for selected applicants?')">
+        <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Generate offer letters for the selected applicants? Confirm merit decisions, seat capacity, payment deadlines, and contact details before creating official offers.')">
             <i class="bi bi-envelope-check me-1"></i>Generate Offer Letters
         </button>
     </div>
@@ -119,18 +119,18 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th><input type="checkbox" id="selectAllChk" onchange="document.querySelectorAll('input[name=\'applicant_ids[]\']').forEach(c=>c.checked=this.checked)" title="Select all"></th>
-                        <th>Rank</th>
-                        <th>Name</th>
-                        <th>Application #</th>
+                        <th scope="col"><input type="checkbox" id="selectAllChk" onchange="document.querySelectorAll('input[name=\'applicant_ids[]\']').forEach(c=>c.checked=this.checked)" title="Select all"></th>
+                        <th scope="col">Rank</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Application #</th>
                         @foreach($steps as $step)
-                        <th class="text-center small">{{ $step->name ?? $step->typeLabel }}</th>
+                        <th scope="col" class="text-center small">{{ $step->name ?? $step->typeLabel }}</th>
                         @endforeach
-                        <th class="text-center">Academic</th>
-                        <th class="text-center">Composite</th>
-                        <th class="text-center">Decision</th>
+                        <th scope="col" class="text-center">Academic</th>
+                        <th scope="col" class="text-center">Composite</th>
+                        <th scope="col" class="text-center">Decision</th>
                         @if($canApproveAdmission)
-                        <th>Action</th>
+                        <th scope="col">Action</th>
                         @endif
                     </tr>
                 </thead>
@@ -139,7 +139,7 @@
                     <tr>
                         <td>
                             @if($canApproveAdmission)
-                            <input type="checkbox" name="applicant_ids[]" value="{{ $entry->applicant_id }}" form="bulkOfferForm">
+                            <input aria-label="Select applicant {{ $entry->applicant->application_number ?? $entry->applicant_id }} for offer generation" type="checkbox" name="applicant_ids[]" value="{{ $entry->applicant_id }}" form="bulkOfferForm">
                             @endif
                         </td>
                         <td><strong>#{{ $entry->rank }}</strong></td>
@@ -166,12 +166,12 @@
                         <td>
                             <form method="POST" action="{{ route('admission.merit-list.decide', $entry) }}" class="d-flex gap-1 align-items-center">
                                 @csrf
-                                <select name="decision" class="form-select form-select-sm" style="width:130px">
+                                <select aria-label="Decision" name="decision" class="form-select form-select-sm" style="width:130px">
                                     <option value="selected" @selected($entry->decision=='selected')>Selected</option>
                                     <option value="waitlisted" @selected($entry->decision=='waitlisted')>Waitlisted</option>
                                     <option value="rejected" @selected($entry->decision=='rejected')>Rejected</option>
                                 </select>
-                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save decision</button>
                             </form>
                         </td>
                         @endif

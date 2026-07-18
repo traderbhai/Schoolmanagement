@@ -4,7 +4,7 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="{{ route('exam-cell.anomalies.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <a href="{{ route('exam-cell.anomalies.index') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to exam anomalies"><i class="bi bi-arrow-left"></i></a>
         <div>
             <h1 class="h4 fw-bold mb-0">Exam Anomaly #{{ $anomalyLog->id }}</h1>
             <span class="text-muted small">{{ ucwords(str_replace('_',' ',$anomalyLog->anomaly_type)) }}</span>
@@ -12,10 +12,10 @@
     </div>
 
     @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @php $sev = ['critical'=>'danger','high'=>'warning','medium'=>'info','low'=>'secondary'][$anomalyLog->severity] ?? 'secondary'; @endphp
@@ -57,7 +57,7 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Action <span class="text-danger">*</span></label>
-                            <select name="action_taken" class="form-select form-select-sm" required>
+                            <select aria-label="Action Taken" name="action_taken" class="form-select form-select-sm" required>
                                 <option value="">Select Action</option>
                                 <option value="none">No Action</option>
                                 <option value="warning">Issue Warning</option>
@@ -67,7 +67,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Resolution Notes <span class="text-danger">*</span></label>
-                            <textarea name="resolution_notes" class="form-control form-control-sm @error('resolution_notes') is-invalid @enderror" rows="3" required>{{ old('resolution_notes') }}</textarea>
+                            <textarea aria-label="Resolution Notes" name="resolution_notes" class="form-control form-control-sm @error('resolution_notes') is-invalid @enderror" rows="3" required>{{ old('resolution_notes') }}</textarea>
                             @error('resolution_notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <button type="submit" class="btn btn-warning btn-sm w-100">Resolve Anomaly</button>

@@ -25,7 +25,7 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -78,13 +78,13 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Step</th>
-                            <th>Role</th>
-                            <th>Actioned By</th>
-                            <th>Status</th>
-                            <th>SLA</th>
-                            <th>Date</th>
-                            <th>Remarks</th>
+                            <th scope="col" class="ps-3">Step</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Actioned By</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">SLA</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>

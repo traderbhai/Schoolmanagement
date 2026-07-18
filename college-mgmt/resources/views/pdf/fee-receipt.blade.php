@@ -49,11 +49,11 @@
 <table>
   <thead>
     <tr>
-      <th>Description</th>
-      <th>Fee Type</th>
-      <th>Payment Method</th>
-      <th>Status</th>
-      <th style="text-align:right">Amount</th>
+      <th scope="col">Description</th>
+      <th scope="col">Fee Type</th>
+      <th scope="col">Payment Method</th>
+      <th scope="col">Status</th>
+      <th scope="col" style="text-align:right">Amount</th>
     </tr>
   </thead>
   <tbody>

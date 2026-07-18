@@ -11,7 +11,7 @@
             <form method="GET" action="{{ route('chair.reports.attendance-defaulters') }}" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Program</label>
-                    <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">— All Programs —</option>
                         @foreach($programs as $program)
                             <option value="{{ $program->id }}" {{ request('program_id') == $program->id ? 'selected' : '' }}>
@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Batch</label>
-                    <select name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Batch" name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">— All Batches —</option>
                         @foreach($batches as $batch)
                             <option value="{{ $batch->id }}" {{ request('batch_id') == $batch->id ? 'selected' : '' }}>
@@ -33,7 +33,7 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-semibold mb-1">Threshold %</label>
-                    <input type="number" name="threshold" class="form-control form-control-sm"
+                    <input aria-label="Threshold" type="number" name="threshold" class="form-control form-control-sm"
                         value="{{ $threshold }}" min="1" max="100"
                         onchange="this.form.submit()">
                 </div>
@@ -63,13 +63,13 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Program</th>
-                        <th>Batch</th>
-                        <th>Overall Att %</th>
-                        <th>Low-Att Subjects</th>
-                        <th>Parent Phone</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Overall Att %</th>
+                        <th scope="col">Low-Att Subjects</th>
+                        <th scope="col">Parent Phone</th>
                     </tr>
                 </thead>
                 <tbody>

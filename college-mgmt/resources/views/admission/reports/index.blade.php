@@ -199,13 +199,13 @@
                 <table class="table table-hover table-sm mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Program</th>
-                            <th>Code</th>
-                            <th class="text-center">Total</th>
-                            <th class="text-center">Submitted</th>
-                            <th class="text-center">Shortlisted</th>
-                            <th class="text-center">Selected</th>
-                            <th class="text-center">Rejected</th>
+                            <th scope="col" class="ps-3">Program</th>
+                            <th scope="col">Code</th>
+                            <th scope="col" class="text-center">Total</th>
+                            <th scope="col" class="text-center">Submitted</th>
+                            <th scope="col" class="text-center">Shortlisted</th>
+                            <th scope="col" class="text-center">Selected</th>
+                            <th scope="col" class="text-center">Rejected</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -305,10 +305,10 @@
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Year</th>
-                            <th class="text-center">Applications</th>
-                            <th class="text-center">Enrolled</th>
-                            <th class="text-center">Conversion Rate</th>
+                            <th scope="col">Year</th>
+                            <th scope="col" class="text-center">Applications</th>
+                            <th scope="col" class="text-center">Enrolled</th>
+                            <th scope="col" class="text-center">Conversion Rate</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -343,12 +343,12 @@
                 <table class="table table-sm mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Category</th>
-                            <th class="text-center">Mandate %</th>
-                            <th class="text-center">Mandate Seats</th>
-                            <th class="text-center">Filled</th>
-                            <th>Fill Progress</th>
-                            <th class="text-center">Status</th>
+                            <th scope="col">Category</th>
+                            <th scope="col" class="text-center">Mandate %</th>
+                            <th scope="col" class="text-center">Mandate Seats</th>
+                            <th scope="col" class="text-center">Filled</th>
+                            <th scope="col">Fill Progress</th>
+                            <th scope="col" class="text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -397,10 +397,10 @@
                     <table class="table table-sm mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th>Counsellor</th>
-                                <th class="text-center">Leads</th>
-                                <th class="text-center">Converted</th>
-                                <th class="text-center">Rate</th>
+                                <th scope="col">Counsellor</th>
+                                <th scope="col" class="text-center">Leads</th>
+                                <th scope="col" class="text-center">Converted</th>
+                                <th scope="col" class="text-center">Rate</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -438,7 +438,7 @@
                     @else
                     <table class="table table-sm mb-0">
                         <thead class="bg-light">
-                            <tr><th>State / City</th><th class="text-center">Applicants</th></tr>
+                            <tr><th scope="col">State / City</th><th scope="col" class="text-center">Applicants</th></tr>
                         </thead>
                         <tbody>
                             @foreach($geoStats as $place => $count)

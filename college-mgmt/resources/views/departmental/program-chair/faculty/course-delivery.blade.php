@@ -11,7 +11,7 @@
             <form method="GET" action="{{ route('chair.faculty.course-delivery') }}" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Term</label>
-                    <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Term" name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">— All Terms —</option>
                         @foreach($terms as $term)
                             <option value="{{ $term->id }}" {{ $selectedTerm?->id == $term->id ? 'selected' : '' }}>
@@ -33,13 +33,13 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
-                        <th>Subject</th>
-                        <th>Teacher</th>
-                        <th>Batch</th>
-                        <th>Planned</th>
-                        <th>Conducted</th>
-                        <th style="min-width:160px">Progress</th>
-                        <th>%</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Teacher</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Planned</th>
+                        <th scope="col">Conducted</th>
+                        <th scope="col" style="min-width:160px">Progress</th>
+                        <th scope="col">%</th>
                     </tr>
                 </thead>
                 <tbody>

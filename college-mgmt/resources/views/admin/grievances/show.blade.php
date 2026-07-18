@@ -20,7 +20,7 @@
 
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
-        {{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        {{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
     @if($errors->any())
@@ -56,7 +56,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Status</label>
-                                <select name="status" class="form-select form-select-sm">
+                                <select aria-label="Status" name="status" class="form-select form-select-sm">
                                     @foreach(['open','under_review','escalated','resolved','closed'] as $s)
                                     <option value="{{ $s }}" @selected($grievance->status === $s)>{{ ucwords(str_replace('_',' ',$s)) }}</option>
                                     @endforeach
@@ -64,7 +64,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Assign To</label>
-                                <select name="assigned_to" class="form-select form-select-sm">
+                                <select aria-label="Assigned To" name="assigned_to" class="form-select form-select-sm">
                                     <option value="">Unassigned</option>
                                     @foreach($staffUsers as $user)
                                     <option value="{{ $user->id }}" @selected($grievance->assigned_to == $user->id)>{{ $user->name }}</option>
@@ -73,7 +73,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label small fw-semibold">Resolution / Response Notes <span class="text-muted fw-normal">(required for resolved/closed)</span></label>
-                                <textarea name="resolution_notes" rows="5" maxlength="3000" class="form-control form-control-sm" placeholder="Describe actions taken, staff response, and final resolution before resolving or closing.">{{ old('resolution_notes', $grievance->resolution_notes) }}</textarea>
+                                <textarea aria-label="Describe actions taken, staff response, and final resolution before resolving or closing." name="resolution_notes" rows="5" maxlength="3000" class="form-control form-control-sm" placeholder="Describe actions taken, staff response, and final resolution before resolving or closing.">{{ old('resolution_notes', $grievance->resolution_notes) }}</textarea>
                             </div>
                         </div>
 

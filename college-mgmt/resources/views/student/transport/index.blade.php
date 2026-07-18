@@ -85,11 +85,11 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Route</th>
-                        <th>Stop</th>
-                        <th>Vehicle</th>
-                        <th>Period</th>
-                        <th>Status</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Stop</th>
+                        <th scope="col">Vehicle</th>
+                        <th scope="col">Period</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

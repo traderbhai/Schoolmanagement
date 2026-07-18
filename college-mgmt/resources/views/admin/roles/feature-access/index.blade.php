@@ -21,7 +21,7 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -45,9 +45,9 @@
                 <table class="table table-bordered table-sm align-middle mb-0" style="font-size:.8rem">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3" style="min-width:180px">Feature</th>
+                            <th scope="col" class="ps-3" style="min-width:180px">Feature</th>
                             @foreach($roles as $role)
-                            <th class="text-center" style="min-width:100px">
+                            <th scope="col" class="text-center" style="min-width:100px">
                                 <div>{{ ucwords(str_replace('_', ' ', $role->name)) }}</div>
                                 <a href="{{ route('admin.roles.feature-access.edit', $role) }}"
                                    class="btn btn-xs btn-outline-secondary py-0 px-1 mt-1" style="font-size:.65rem">

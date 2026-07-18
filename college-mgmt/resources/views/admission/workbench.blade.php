@@ -28,7 +28,7 @@
         <div class="card-body row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Program</label>
-                <select name="program_id" class="form-select">
+                <select aria-label="Program" name="program_id" class="form-select">
                     <option value="">All programs</option>
                     @foreach($programs as $program)
                         <option value="{{ $program->id }}" @selected($programId == $program->id)>{{ $program->name }}</option>
@@ -37,7 +37,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Counsellor</label>
-                <select name="counsellor_id" class="form-select">
+                <select aria-label="Counsellor" name="counsellor_id" class="form-select">
                     <option value="">All counsellors</option>
                     @foreach($counsellors as $counsellor)
                         <option value="{{ $counsellor->id }}" @selected($counsellorId == $counsellor->id)>{{ $counsellor->name }}</option>
@@ -46,7 +46,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Priority</label>
-                <select name="priority" class="form-select">
+                <select aria-label="Priority" name="priority" class="form-select">
                     <option value="">All</option>
                     @foreach(['urgent', 'high', 'normal', 'low'] as $level)
                         <option value="{{ $level }}" @selected($priority === $level)>{{ ucfirst($level) }}</option>
@@ -54,7 +54,7 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i> Apply</button>
+                <button class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i> Apply filters</button>
             </div>
         </div>
     </form>
@@ -136,7 +136,7 @@
             <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Hot Leads And Assignment</span><span class="small text-muted">Open, assign, or set next action</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Lead</th><th>Program</th><th>Owner</th><th>Next Action</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Lead</th><th scope="col">Program</th><th scope="col">Owner</th><th scope="col">Next Action</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($leads->take(12) as $lead)
                                 <tr>
@@ -147,7 +147,7 @@
                                     <td>{{ $lead->program?->name ?? 'Program not selected' }}</td>
                                     <td>{{ $lead->assignedTo?->name ?? 'Unassigned' }}</td>
                                     <td>{{ $lead->next_action ?? 'Next action not set' }}</td>
-                                    <td><a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+                                    <td><a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary">Open lead</a></td>
                                 </tr>
                             @empty
                                 <tr>
@@ -173,7 +173,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Enrollment-Ready Applicants</span><span class="small text-muted">Verify blockers before enrolling</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Applicant</th><th>Program</th><th>Priority</th><th>Next Action</th><th></th></tr></thead>
+                        <thead><tr><th scope="col">Applicant</th><th scope="col">Program</th><th scope="col">Priority</th><th scope="col">Next Action</th><th aria-label="Actions" scope="col"></th></tr></thead>
                         <tbody>
                             @forelse($enrollmentReady as $applicant)
                                 <tr>

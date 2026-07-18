@@ -36,13 +36,13 @@
                             @csrf
                             <div class="mb-3">
                                 <label class="form-label">Title <span class="text-danger">*</span></label>
-                                <input type="text" name="title" value="{{ old('title') }}" class="form-control @error('title') is-invalid @enderror" required maxlength="255" placeholder="e.g. Fan not working">
+                                <input aria-label="Complaint title" type="text" name="title" value="{{ old('title') }}" class="form-control @error('title') is-invalid @enderror" required maxlength="255" placeholder="e.g. Fan not working">
                                 @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Category <span class="text-danger">*</span></label>
-                                    <select name="category" class="form-select @error('category') is-invalid @enderror" required>
+                                    <select aria-label="Category" name="category" class="form-select @error('category') is-invalid @enderror" required>
                                         @foreach(['maintenance' => 'Maintenance', 'hygiene' => 'Hygiene', 'food' => 'Food', 'security' => 'Security', 'ragging' => 'Ragging', 'other' => 'Other'] as $value => $label)
                                             <option value="{{ $value }}" @selected(old('category') === $value)>{{ $label }}</option>
                                         @endforeach
@@ -51,7 +51,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Priority <span class="text-danger">*</span></label>
-                                    <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
+                                    <select aria-label="Priority" name="priority" class="form-select @error('priority') is-invalid @enderror" required>
                                         @foreach(['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'] as $value => $label)
                                             <option value="{{ $value }}" @selected(old('priority', 'medium') === $value)>{{ $label }}</option>
                                         @endforeach
@@ -61,7 +61,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Details <span class="text-danger">*</span></label>
-                                <textarea name="description" rows="5" class="form-control @error('description') is-invalid @enderror" required minlength="20" maxlength="2000" placeholder="Describe the issue, location, and urgency.">{{ old('description') }}</textarea>
+                                <textarea aria-label="Describe the issue, location, and urgency." name="description" rows="5" class="form-control @error('description') is-invalid @enderror" required minlength="20" maxlength="2000" placeholder="Describe the issue, location, and urgency.">{{ old('description') }}</textarea>
                                 @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <button class="btn btn-primary w-100">Submit Complaint</button>
@@ -78,10 +78,10 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Issue</th>
-                                    <th>Priority</th>
-                                    <th>Status</th>
-                                    <th>Updated</th>
+                                    <th scope="col">Issue</th>
+                                    <th scope="col">Priority</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Updated</th>
                                 </tr>
                             </thead>
                             <tbody>

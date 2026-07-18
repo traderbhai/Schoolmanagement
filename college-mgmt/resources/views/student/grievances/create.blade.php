@@ -17,7 +17,7 @@
 
             <div class="mb-3">
                 <label class="form-label">Category <span class="text-danger">*</span></label>
-                <select name="category" class="form-select @error('category') is-invalid @enderror" required>
+                <select aria-label="Category" name="category" class="form-select @error('category') is-invalid @enderror" required>
                     <option value="">Select Category</option>
                     @foreach(['academic'=>'Academic','financial'=>'Financial','facility'=>'Facility','faculty'=>'Faculty','administrative'=>'Administrative','other'=>'Other'] as $val=>$label)
                         <option value="{{ $val }}" @selected(old('category') === $val)>{{ $label }}</option>
@@ -28,7 +28,7 @@
 
             <div class="mb-3">
                 <label class="form-label">Priority <span class="text-danger">*</span></label>
-                <select name="priority" class="form-select @error('priority') is-invalid @enderror" required>
+                <select aria-label="Priority" name="priority" class="form-select @error('priority') is-invalid @enderror" required>
                     <option value="">Select Priority</option>
                     @foreach(['low'=>'Low','normal'=>'Normal','high'=>'High','urgent'=>'Urgent'] as $val=>$label)
                         <option value="{{ $val }}" @selected(old('priority') === $val)>{{ $label }}</option>
@@ -40,13 +40,13 @@
 
             <div class="mb-3">
                 <label class="form-label">Title <span class="text-danger">*</span></label>
-                <input type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title') }}" required maxlength="255" placeholder="Short summary of the issue">
+                <input aria-label="Short summary of the issue" type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title') }}" required maxlength="255" placeholder="Short summary of the issue">
                 @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Description <span class="text-danger">*</span></label>
-                <textarea name="description" rows="5" class="form-control @error('description') is-invalid @enderror" required placeholder="Describe what happened, when it happened, and what help you need.">{{ old('description') }}</textarea>
+                <textarea aria-label="Describe what happened, when it happened, and what help you need." name="description" rows="5" class="form-control @error('description') is-invalid @enderror" required placeholder="Describe what happened, when it happened, and what help you need.">{{ old('description') }}</textarea>
                 @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 

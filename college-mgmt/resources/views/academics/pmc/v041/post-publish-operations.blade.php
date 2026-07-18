@@ -29,7 +29,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm mb-0">
-                <thead><tr><th>Area</th><th>Status</th><th>Message</th></tr></thead>
+                <thead><tr><th scope="col">Area</th><th scope="col">Status</th><th scope="col">Message</th></tr></thead>
                 <tbody>
                     @foreach($readiness['checks'] as $check)
                         <tr><td>{{ $check['label'] }}</td><td>{{ $check['status'] }}</td><td class="small">{{ $check['message'] }}</td></tr>

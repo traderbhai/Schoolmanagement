@@ -11,7 +11,7 @@
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Record</th><th>Severity</th><th>Owner</th><th>Due</th><th>Recommended Action</th><th></th></tr></thead>
+                <thead><tr><th scope="col">Record</th><th scope="col">Severity</th><th scope="col">Owner</th><th scope="col">Due</th><th scope="col">Recommended Action</th><th aria-label="Actions" scope="col"></th></tr></thead>
                 <tbody>
                 @forelse($queue['items'] as $item)
                     <tr>

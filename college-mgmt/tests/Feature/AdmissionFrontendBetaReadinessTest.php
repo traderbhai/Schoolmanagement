@@ -79,6 +79,24 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee(route('admission.parent-journeys.index'), false);
     }
 
+    public function test_admission_command_center_uses_collapsible_control_cycle(): void
+    {
+        $head = User::where('email', 'head@college.com')->firstOrFail();
+
+        $this->actingAs($head)
+            ->get(route('admission.command-center.index'))
+            ->assertOk()
+            ->assertSee('admission-control-cycle', false)
+            ->assertSee('Show Admission supervisor control cycle', false)
+            ->assertSee('View cycle')
+            ->assertSee('Supervisor control cycle')
+            ->assertSee('Use this when queues look noisy')
+            ->assertSee(route('admission.attention.index'), false)
+            ->assertSee(route('admission.manager-workspace.index'), false)
+            ->assertDontSee('SERVICE ERROR', false)
+            ->assertDontSee('href="#"', false);
+    }
+
     public function test_primary_admission_views_do_not_have_broken_action_markup(): void
     {
         foreach ([
@@ -469,14 +487,14 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.reminders.index'))
             ->assertOk()
             ->assertSee('send, complete, and pause actions are audited')
-            ->assertSee("confirm('Queue this reminder through the communication hub?')", false)
-            ->assertSee("confirm('Mark this reminder as completed?')", false)
-            ->assertSee("confirm('Pause this reminder cadence for this record?')", false);
+            ->assertSee('Confirm recipient, channel, approved template, consent state, and provider readiness before sending.', false)
+            ->assertSee('Confirm the follow-up outcome, next action, and audit trail before closing it.', false)
+            ->assertSee('Confirm reason, next follow-up owner, delayed communication impact, and applicant/lead risk before pausing.', false);
 
         $this->actingAs($counsellor)
             ->get(route('admission.counsellor-desk.index'))
             ->assertOk()
-            ->assertSee("confirm('Queue this reminder through the communication hub?')", false);
+            ->assertSee('Confirm recipient, channel, approved template, consent state, and provider readiness before sending.', false);
     }
 
     public function test_reminder_queue_explains_workflow_empty_filters_and_target_context(): void
@@ -630,6 +648,74 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertDontSee(route('admission.documents.preview', $document), false);
     }
 
+    public function test_document_verification_actions_explain_policy_and_identity_checks(): void
+    {
+        $contents = file_get_contents(resource_path('views/admission/documents/queue.blade.php'));
+        $applicantContents = file_get_contents(resource_path('views/admission/applicants/show.blade.php'));
+
+        $this->assertStringContainsString('Confirm each uploaded file, applicant match, required-document type, and local file availability before marking them verified.', $contents);
+        $this->assertStringContainsString('Confirm file preview, required-document match, applicant identity, and verification evidence before approval.', $contents);
+        $this->assertStringContainsString('Confirm file preview, required-document match, applicant identity, and verification evidence before approval.', $applicantContents);
+        $this->assertStringNotContainsString("confirm('Verify all selected documents?')", $contents);
+        $this->assertStringNotContainsString("confirm('Verify this document?')", $contents);
+        $this->assertStringNotContainsString("confirm('Verify this document?')", $applicantContents);
+    }
+
+    public function test_admission_window_fee_and_scholarship_risky_actions_explain_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admission/application-windows/index.blade.php') => [
+                'Confirm no applicants, published dates, capacity limits, or campaign links still depend on this window.',
+                'aria-label="Delete application window for',
+            ],
+            resource_path('views/admission/fee-installments/index.blade.php') => [
+                'Confirm no applicant payment, offer deadline, or finance reconciliation depends on this installment.',
+                'aria-label="Delete admission fee installment',
+            ],
+            resource_path('views/admission/applicants/show.blade.php') => [
+                'Confirm fee-demand impact, disbursement status, award audit trail, and applicant communication before cancellation.',
+                'aria-label="Cancel scholarship award',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this window? This cannot be undone.')", file_get_contents(resource_path('views/admission/application-windows/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this installment?')", file_get_contents(resource_path('views/admission/fee-installments/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Cancel this scholarship award?')", file_get_contents(resource_path('views/admission/applicants/show.blade.php')));
+    }
+
+    public function test_selection_process_delete_actions_explain_scoring_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admission/selection-process/steps.blade.php') => [
+                'Confirm no active assessments, scores, merit calculations, or evaluator assignments depend on this step.',
+                'aria-label="Delete selection step',
+            ],
+            resource_path('views/admission/selection-process/parameters.blade.php') => [
+                'Confirm assessment rubrics, evaluator scoring, merit calculations, and historical score reports no longer depend on it.',
+                'aria-label="Delete scoring parameter',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this step?')", file_get_contents(resource_path('views/admission/selection-process/steps.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this parameter?')", file_get_contents(resource_path('views/admission/selection-process/parameters.blade.php')));
+    }
+
     public function test_offer_seat_control_is_read_only_for_lower_roles_and_write_protected(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
@@ -642,7 +728,7 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.offer-rounds.index'))
             ->assertOk()
             ->assertDontSee('Read-only view for your Admission scope')
-            ->assertSee("confirm('Publish this offer round and create seat holds for eligible selected applicants?')", false);
+            ->assertSee("confirm('Publish this offer round and create seat holds for eligible selected applicants? Confirm merit approval, capacity, payment deadlines, waitlist rules, and applicant communication before publishing.')", false);
 
         $this->actingAs($officer)
             ->get(route('admission.offer-rounds.index'))
@@ -704,7 +790,7 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.assessment-slots.index'))
             ->assertOk()
             ->assertDontSee('Read-only view for your Admission scope')
-            ->assertSee("confirm('Create this assessment slot?')", false);
+            ->assertSee('Confirm panel, resource, capacity, date/time, and evaluator readiness before candidates can be assigned or notified.', false);
 
         $this->actingAs($officer)
             ->get(route('admission.assessment-slots.index'))
@@ -748,6 +834,48 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
         ]);
     }
 
+    public function test_assessment_offer_and_session_actions_explain_operational_impact(): void
+    {
+        $expectations = [
+            resource_path('views/admission/v0038/assessment-scheduling.blade.php') => [
+                'Confirm panel, resource, capacity, date/time, and evaluator readiness before candidates can be assigned or notified.',
+                'Confirm all selected candidates match the slot scope and capacity before changing their assessment schedule.',
+                'Confirm panel fit, availability, conflict impact, and candidate communication before replacing the evaluator.',
+                'Confirm attendance/check-in evidence, panel readiness, and downstream scoring impact before saving.',
+            ],
+            resource_path('views/admission/v0038/offer-seat-control.blade.php') => [
+                'Confirm merit decisions, seat matrix, validity deadline, and communication readiness before opening a new offer cycle.',
+                'Confirm merit approval, capacity, payment deadlines, waitlist rules, and applicant communication before publishing.',
+                'Confirm payment deadline, applicant communication, reason, and next eligible waitlist candidate before releasing capacity.',
+                'Confirm carry-forward notes, target batch readiness, fee/document state, and applicant communication before approval.',
+            ],
+            resource_path('views/admission/sessions/show.blade.php') => [
+                'Confirm attendance, panel score readiness, evaluator notes, and unresolved candidate exceptions before closing the session.',
+                'Confirm date, time, venue, candidate list, and contact details before dispatch.',
+                'Confirm the candidate has not attended, scored, or been notified for this session before removal.',
+                'Confirm they are shortlisted, eligible for this program step, and not already scheduled in a conflicting session.',
+                'aria-label="Remove',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $assessmentContents = file_get_contents(resource_path('views/admission/v0038/assessment-scheduling.blade.php'));
+        $offerContents = file_get_contents(resource_path('views/admission/v0038/offer-seat-control.blade.php'));
+        $sessionContents = file_get_contents(resource_path('views/admission/sessions/show.blade.php'));
+
+        $this->assertStringNotContainsString("confirm('Create this assessment slot?')", $assessmentContents);
+        $this->assertStringNotContainsString("confirm('Release this held seat and check waitlist promotion?')", $offerContents);
+        $this->assertStringNotContainsString("confirm('Mark session as completed?')", $sessionContents);
+        $this->assertStringNotContainsString("confirm('Remove this candidate?')", $sessionContents);
+    }
+
     public function test_communication_and_automation_controls_are_read_only_for_lower_roles(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
@@ -761,7 +889,7 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.communication.index'))
             ->assertOk()
             ->assertDontSee('Read-only view for your Admission scope')
-            ->assertSee("confirm('Save this communication template for Admission use?')", false);
+            ->assertSee('Confirm channel, purpose, variables, approval readiness, and future automated/bulk-send usage before saving.', false);
 
         $this->actingAs($telecaller)
             ->get(route('admission.communication.index'))
@@ -798,7 +926,7 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->get(route('admission.automations.index'))
             ->assertOk()
             ->assertDontSee('Read-only view for your Admission scope')
-            ->assertSee("confirm('Save this Admission automation rule?')", false);
+            ->assertSee('Confirm trigger, conditions, priority, affected records, message-safety dependencies, and execution-log review before activation.', false);
 
         $this->actingAs($telecaller)
             ->get(route('admission.automations.index'))
@@ -962,13 +1090,27 @@ class AdmissionFrontendBetaReadinessTest extends TestCase
             ->assertSee('Read-only view for your Admission scope')
             ->assertSee('Offer Rounds')
             ->assertSee('Waitlist')
-            ->assertDontSee("confirm('Publish this offer round and create seat holds for eligible selected applicants?')", false);
+            ->assertDontSee("confirm('Publish this offer round and create seat holds for eligible selected applicants? Confirm merit approval, capacity, payment deadlines, waitlist rules, and applicant communication before publishing.')", false);
 
         $this->actingAs($manager)
             ->get(route('admission.handoff.index', ['status' => 'blocked']))
             ->assertOk()
             ->assertSee('Admission To Academics / PMC Handoff')
-            ->assertSee('Filters: status=blocked');
+            ->assertSee('Filters: status=blocked')
+            ->assertSee('Apply handoff filters');
+
+        $this->actingAs($manager)
+            ->get(route('admission.handoff.index'))
+            ->assertOk()
+            ->assertSee('Refresh readiness')
+            ->assertSee('Hand off to Academics')
+            ->assertSee('Return for correction')
+            ->assertSee('Confirm document, fee, joining-kit, and student-profile checks should be recalculated before acting.', false)
+            ->assertSee('Confirm admission completion, verified documents, fee clearance, joining kit, and roll/student-profile readiness before transfer.', false)
+            ->assertSee('Confirm the reason is specific enough for the owning team and applicant timeline before returning.', false)
+            ->assertDontSee('>Refresh</button>', false)
+            ->assertDontSee('>Hand off</button>', false)
+            ->assertDontSee('>Return</button>', false);
 
         $this->actingAs($counsellor)
             ->get(route('admission.handoff.index', ['status' => 'blocked']))

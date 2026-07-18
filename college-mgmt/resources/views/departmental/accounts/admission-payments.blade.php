@@ -35,7 +35,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>Applicant</th><th>Program</th><th>Owner / Source</th><th>Amount</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th scope="col">Applicant</th><th scope="col">Program</th><th scope="col">Owner / Source</th><th scope="col">Amount</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
                 @forelse($payments as $pay)

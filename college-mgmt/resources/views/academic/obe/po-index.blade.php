@@ -14,7 +14,7 @@
                 <form method="GET" class="row g-2 align-items-end">
                     <div class="col-sm-4">
                         <label class="form-label small mb-1">Program</label>
-                        <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="">— Select Program —</option>
                             @foreach($programs as $p)
                                 <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -42,10 +42,10 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th style="width:70px">Code</th>
-                            <th>Description</th>
-                            <th style="width:100px">Category</th>
-                            <th style="width:50px"></th>
+                            <th scope="col" style="width:70px">Code</th>
+                            <th scope="col">Description</th>
+                            <th scope="col" style="width:100px">Category</th>
+                            <th aria-label="Actions" scope="col" style="width:50px"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -55,12 +55,12 @@
                             <td><small>{{ $po->description }}</small></td>
                             <td><small class="text-muted text-capitalize">{{ $po->category }}</small></td>
                             <td>
-                                <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal"
+                                <button type="button" class="btn btn-xs btn-outline-secondary" data-bs-toggle="modal"
                                     data-bs-target="#editPo{{ $po->id }}"><i class="bi bi-pencil"></i></button>
                                 <form method="POST" action="{{ route('academic.obe.po.destroy', $po) }}" class="d-inline"
-                                      onsubmit="return confirm('Remove {{ $po->code }}?')">
+                                      onsubmit="return confirm('Remove program outcome {{ addslashes($po->code) }}? Confirm it is not used in OBE mappings, attainment records, curriculum reports, or accreditation evidence.')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger" aria-label="Remove program outcome {{ $po->code }}"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -69,19 +69,19 @@
                                 <form method="POST" action="{{ route('academic.obe.po.update', $po) }}">
                                     @csrf @method('PUT')
                                     <div class="modal-header"><h6 class="modal-title">Edit {{ $po->code }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                     <div class="modal-body">
                                         <div class="mb-2">
                                             <label class="form-label small">Code</label>
-                                            <input type="text" name="code" class="form-control form-control-sm" value="{{ $po->code }}" required>
+                                            <input aria-label="Code" type="text" name="code" class="form-control form-control-sm" value="{{ $po->code }}" required>
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small">Description</label>
-                                            <textarea name="description" class="form-control form-control-sm" rows="3" required>{{ $po->description }}</textarea>
+                                            <textarea aria-label="Description" name="description" class="form-control form-control-sm" rows="3" required>{{ $po->description }}</textarea>
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small">Category</label>
-                                            <select name="category" class="form-select form-select-sm">
+                                            <select aria-label="Category" name="category" class="form-select form-select-sm">
                                                 @foreach(['engineering','management','science','commerce','general'] as $cat)
                                                     <option value="{{ $cat }}" @selected($po->category === $cat)>{{ ucfirst($cat) }}</option>
                                                 @endforeach
@@ -90,7 +90,7 @@
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save outcome</button>
                                     </div>
                                 </form>
                             </div></div>
@@ -111,7 +111,7 @@
             <div class="card-body p-0">
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light">
-                        <tr><th style="width:80px">Code</th><th>Description</th><th style="width:50px"></th></tr>
+                        <tr><th scope="col" style="width:80px">Code</th><th scope="col">Description</th><th aria-label="Actions" scope="col" style="width:50px"></th></tr>
                     </thead>
                     <tbody>
                         @foreach($psos as $pso)
@@ -120,9 +120,9 @@
                             <td><small>{{ $pso->description }}</small></td>
                             <td>
                                 <form method="POST" action="{{ route('academic.obe.pso.destroy', $pso) }}" class="d-inline"
-                                      onsubmit="return confirm('Remove {{ $pso->code }}?')">
+                                      onsubmit="return confirm('Remove program specific outcome {{ addslashes($pso->code) }}? Confirm it is not used in OBE mappings, specialization evidence, curriculum reports, or accreditation submissions.')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-xs btn-outline-danger" aria-label="Remove program specific outcome {{ $pso->code }}"><i class="bi bi-trash"></i></button>
                                 </form>
                             </td>
                         </tr>
@@ -145,16 +145,16 @@
                     <input type="hidden" name="program_id" value="{{ $program->id }}">
                     <div class="mb-2">
                         <label class="form-label small">Code <span class="text-danger">*</span></label>
-                        <input type="text" name="code" class="form-control form-control-sm"
+                        <input aria-label="Program outcome code" type="text" name="code" class="form-control form-control-sm"
                                placeholder="PO1 … PO12" value="{{ old('code') }}" required>
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Description <span class="text-danger">*</span></label>
-                        <textarea name="description" class="form-control form-control-sm" rows="2" required>{{ old('description') }}</textarea>
+                        <textarea aria-label="Description" name="description" class="form-control form-control-sm" rows="2" required>{{ old('description') }}</textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small">Category</label>
-                        <select name="category" class="form-select form-select-sm">
+                        <select aria-label="Category" name="category" class="form-select form-select-sm">
                             @foreach(['engineering','management','science','commerce','general'] as $cat)
                                 <option value="{{ $cat }}" @selected(old('category', 'general') === $cat)>{{ ucfirst($cat) }}</option>
                             @endforeach
@@ -177,11 +177,11 @@
                     <input type="hidden" name="program_id" value="{{ $program->id }}">
                     <div class="mb-2">
                         <label class="form-label small">Code <span class="text-danger">*</span></label>
-                        <input type="text" name="code" class="form-control form-control-sm" placeholder="PSO1, PSO2 …" required>
+                        <input aria-label="Program specific outcome code" type="text" name="code" class="form-control form-control-sm" placeholder="PSO1, PSO2 …" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small">Description <span class="text-danger">*</span></label>
-                        <textarea name="description" class="form-control form-control-sm" rows="2" required></textarea>
+                        <textarea aria-label="Description" name="description" class="form-control form-control-sm" rows="2" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-warning btn-sm w-100">
                         <i class="bi bi-plus-lg me-1"></i>Add PSO

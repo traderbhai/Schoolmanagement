@@ -4,7 +4,7 @@
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="{{ route('academic.curriculum-changes.index') }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ route('academic.curriculum-changes.index') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to curriculum changes">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
@@ -73,10 +73,10 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Remarks (optional)</label>
-                            <textarea name="remarks" rows="3" class="form-control form-control-sm" placeholder="Optional approval remarks..."></textarea>
+                            <textarea aria-label="Approval remarks" name="remarks" rows="3" class="form-control form-control-sm" placeholder="Optional approval remarks..."></textarea>
                         </div>
                         <button type="submit" class="btn btn-success btn-sm w-100"
-                            onclick="return confirm('Approve this curriculum change?')">
+                            onclick="return confirm('Approve curriculum change {{ addslashes($curriculumChange->title ?? 'this request') }}? Confirm downstream timetable, course groups, OBE mapping, faculty load, and student communication impact before approval.')">
                             <i class="bi bi-check-lg me-1"></i>Approve Change
                         </button>
                     </form>
@@ -90,10 +90,10 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Reason <span class="text-danger">*</span></label>
-                            <textarea name="remarks" rows="3" class="form-control form-control-sm" placeholder="Explain why this is rejected..." required></textarea>
+                            <textarea aria-label="Rejection reason" name="remarks" rows="3" class="form-control form-control-sm" placeholder="Explain why this is rejected..." required></textarea>
                         </div>
                         <button type="submit" class="btn btn-danger btn-sm w-100"
-                            onclick="return confirm('Reject this curriculum change?')">
+                            onclick="return confirm('Reject curriculum change {{ addslashes($curriculumChange->title ?? 'this request') }}? Confirm the rejection reason is specific enough for Program Chair, Dean, and audit review.')">
                             <i class="bi bi-x-lg me-1"></i>Reject Change
                         </button>
                     </form>

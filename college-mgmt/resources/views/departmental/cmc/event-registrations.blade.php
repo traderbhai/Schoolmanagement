@@ -3,10 +3,10 @@
 @section('page-title','Event Registrations')
 @section('content')
 @if(session('success'))
-  <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-  <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
@@ -35,12 +35,12 @@
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th class="ps-3">#</th>
-            <th>Student Name</th>
-            <th>Enrollment No.</th>
-            <th>Registered On</th>
-            <th>Status</th>
-            <th class="text-end pe-3">Attendance</th>
+            <th scope="col" class="ps-3">#</th>
+            <th scope="col">Student Name</th>
+            <th scope="col">Enrollment No.</th>
+            <th scope="col">Registered On</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end pe-3">Attendance</th>
           </tr>
         </thead>
         <tbody>

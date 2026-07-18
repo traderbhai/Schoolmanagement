@@ -41,11 +41,11 @@
                     <table class="table table-sm mb-0" aria-label="Dean risk history">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Program</th>
-                                <th>Score</th>
-                                <th>Band</th>
-                                <th>Trend</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Program</th>
+                                <th scope="col">Score</th>
+                                <th scope="col">Band</th>
+                                <th scope="col">Trend</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,9 +79,9 @@
                 @csrf
                 <div class="card-header py-2"><div class="fw-semibold">Mitigation Plan</div><div class="small text-muted">Capture the practical intervention, target date, and follow-up owner for risk review.</div></div>
                 <div class="card-body vstack gap-2">
-                    <textarea class="form-control form-control-sm" name="plan" placeholder="Mitigation plan" required></textarea>
-                    <input class="form-control form-control-sm" type="date" name="due_at">
-                    <button class="btn btn-sm btn-primary" onclick="return confirm('Save this Dean risk mitigation plan?')">Save Mitigation</button>
+                    <textarea aria-label="Mitigation plan" class="form-control form-control-sm" name="plan" placeholder="Mitigation plan" required></textarea>
+                    <input aria-label="Due At" class="form-control form-control-sm" type="date" name="due_at">
+                    <button class="btn btn-sm btn-primary" onclick="return confirm('Save this Dean risk mitigation plan? Confirm intervention owner, due date, affected program risk, and follow-up evidence before saving mitigation.')">Save Mitigation</button>
                 </div>
             </form>
         </div>

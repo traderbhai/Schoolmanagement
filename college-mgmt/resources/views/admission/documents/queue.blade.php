@@ -53,7 +53,7 @@
         <form method="GET" action="{{ route('admission.documents.queue') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Program</label>
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $p)
                         <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -62,7 +62,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Batch</label>
-                <select name="batch_id" class="form-select form-select-sm">
+                <select aria-label="Batch" name="batch_id" class="form-select form-select-sm">
                     <option value="">All Batches</option>
                     @foreach($batches as $b)
                         <option value="{{ $b->id }}" @selected(request('batch_id') == $b->id)>{{ $b->name }}</option>
@@ -71,17 +71,17 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Document Name</label>
-                <input type="text" name="document_name" class="form-control form-control-sm"
+                <input aria-label="Document search" type="text" name="document_name" class="form-control form-control-sm"
                        placeholder="Search document..." value="{{ request('document_name') }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Uploaded From</label>
-                <input type="date" name="uploaded_from" class="form-control form-control-sm"
+                <input aria-label="Uploaded from" type="date" name="uploaded_from" class="form-control form-control-sm"
                        value="{{ request('uploaded_from') }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Uploaded To</label>
-                <input type="date" name="uploaded_to" class="form-control form-control-sm"
+                <input aria-label="Uploaded to" type="date" name="uploaded_to" class="form-control form-control-sm"
                        value="{{ request('uploaded_to') }}">
             </div>
             <div class="col-md-3 d-flex gap-2">
@@ -99,14 +99,14 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -119,7 +119,7 @@
             <span class="fw-semibold">Pending Documents ({{ $documents->total() }})</span>
             <span class="small text-muted">Showing {{ $documents->firstItem() ?? 0 }}-{{ $documents->lastItem() ?? 0 }} of {{ $documents->total() }}</span>
             <button type="submit" class="btn btn-success btn-sm" id="bulkVerifyBtn" disabled
-                    onclick="return confirm('Verify all selected documents?')">
+                    onclick="return confirm('Verify all selected documents? Confirm each uploaded file, applicant match, required-document type, and local file availability before marking them verified.')">
                 <i class="bi bi-check-all me-1"></i>Verify Selected (<span id="selectedCount">0</span>)
             </button>
         </div>
@@ -141,22 +141,22 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th width="40">
-                            <input type="checkbox" class="form-check-input" id="selectAll"
+                        <th scope="col" width="40" aria-label="Select documents">
+                            <input aria-label="Select all documents" type="checkbox" class="form-check-input" id="selectAll"
                                    onchange="toggleAll(this)">
                         </th>
-                        <th>Applicant</th>
-                        <th>Document</th>
-                        <th>Uploaded</th>
-                        <th>Size / Type</th>
-                        <th>Actions</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Document</th>
+                        <th scope="col">Uploaded</th>
+                        <th scope="col">Size / Type</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($documents as $doc)
                     <tr>
                         <td>
-                            <input type="checkbox" name="document_ids[]" value="{{ $doc->id }}"
+                            <input aria-label="Select {{ $doc->requiredDocument->name ?? $doc->original_name }} for {{ $doc->applicant->user->name ?? 'applicant' }}" type="checkbox" name="document_ids[]" value="{{ $doc->id }}"
                                    class="form-check-input doc-checkbox" onchange="updateBulkBtn()">
                         </td>
                         <td>
@@ -190,7 +190,7 @@
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
                                 @if($doc->file_available)
-                                <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank"
+                                <a href="{{ route('admission.documents.preview', $doc) }}" target="_blank" rel="noopener"
                                    class="btn btn-sm btn-outline-secondary" title="Preview">
                                     <i class="bi bi-eye"></i>
                                 </a>
@@ -206,7 +206,7 @@
                                 <form method="POST" action="{{ route('admission.documents.verify', $doc) }}" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success" title="Verify"
-                                            onclick="return confirm('Verify this document?')">
+                                            onclick="return confirm('Verify this document for {{ addslashes($doc->applicant->user->name ?? 'this applicant') }}? Confirm file preview, required-document match, applicant identity, and verification evidence before approval.')">
                                         <i class="bi bi-check-circle"></i> Verify
                                     </button>
                                 </form>
@@ -215,7 +215,7 @@
                                         data-doc-id="{{ $doc->id }}"
                                         data-doc-name="{{ $doc->requiredDocument->name ?? $doc->original_name }}"
                                         data-applicant="{{ $doc->applicant->user->name ?? 'Applicant name missing' }}">
-                                    <i class="bi bi-x-circle"></i> Reject
+                                    <i class="bi bi-x-circle"></i> Reject document
                                 </button>
                                 <a href="{{ route('admission.applicants.show', $doc->applicant) }}"
                                    class="btn btn-sm btn-outline-primary" title="View Applicant">

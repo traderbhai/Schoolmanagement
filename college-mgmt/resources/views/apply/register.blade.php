@@ -48,35 +48,35 @@
                         @csrf
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                            <input aria-label="Full name" type="text" name="name" class="form-control @error('name') is-invalid @enderror"
                                    value="{{ old('name') }}" placeholder="Enter your full name" required>
                             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
+                            <input aria-label="Email address" type="email" name="email" class="form-control @error('email') is-invalid @enderror"
                                    value="{{ old('email') }}" placeholder="you@example.com" required>
                             @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Mobile Number <span class="text-danger">*</span></label>
-                            <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror"
+                            <input aria-label="Mobile number" type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror"
                                    value="{{ old('phone') }}" placeholder="+91 98765 43210" required>
                             @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
+                            <input aria-label="Password" type="password" name="password" class="form-control @error('password') is-invalid @enderror"
                                    placeholder="Minimum 8 characters" required>
                             @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
-                            <input type="password" name="password_confirmation" class="form-control" required>
+                            <input aria-label="Confirm password" type="password" name="password_confirmation" class="form-control" required>
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">

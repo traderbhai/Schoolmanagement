@@ -24,7 +24,7 @@
     <div class="card">
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
-                <thead><tr><th>#</th><th>Student</th><th>Enrollment</th><th>Absent?</th><th>Marks (out of {{ $exam->total_marks }})</th><th>Grade</th><th>Remarks</th></tr></thead>
+                <thead><tr><th scope="col">#</th><th scope="col">Student</th><th scope="col">Enrollment</th><th scope="col">Absent?</th><th scope="col">Marks (out of {{ $exam->total_marks }})</th><th scope="col">Grade</th><th scope="col">Remarks</th></tr></thead>
                 <tbody>
                 @foreach($students as $s)
                 @php $existingResult = $s->examResults->first(); @endphp
@@ -33,16 +33,16 @@
                     <td class="fw-semibold">{{ $s->user->name }}</td>
                     <td><code>{{ $s->enrollment_number }}</code></td>
                     <td class="text-center">
-                        <input type="checkbox" name="results[{{ $s->id }}][is_absent]" value="1" class="form-check-input absent-cb" data-student="{{ $s->id }}" @checked($existingResult && $existingResult->is_absent) @disabled($exam->published_at)>
+                        <input aria-label="Mark {{ $s->user->name }} absent" type="checkbox" name="results[{{ $s->id }}][is_absent]" value="1" class="form-check-input absent-cb" data-student="{{ $s->id }}" @checked($existingResult && $existingResult->is_absent) @disabled($exam->published_at)>
                     </td>
                     <td>
-                        <input type="number" name="results[{{ $s->id }}][marks]" class="form-control form-control-sm marks-input-{{ $s->id }}" style="max-width:100px" min="0" max="{{ $exam->total_marks }}" step="0.5" value="{{ $existingResult && !$existingResult->is_absent ? $existingResult->marks_obtained : '' }}" @disabled($exam->published_at || ($existingResult && $existingResult->is_absent))>
+                        <input aria-label="Marks for {{ $s->user->name }}" type="number" name="results[{{ $s->id }}][marks]" class="form-control form-control-sm marks-input-{{ $s->id }}" style="max-width:100px" min="0" max="{{ $exam->total_marks }}" step="0.5" value="{{ $existingResult && !$existingResult->is_absent ? $existingResult->marks_obtained : '' }}" @disabled($exam->published_at || ($existingResult && $existingResult->is_absent))>
                     </td>
                     <td>
-                        <input type="text" name="results[{{ $s->id }}][grade]" class="form-control form-control-sm" style="max-width:70px" placeholder="A/B/C..." value="{{ $existingResult ? $existingResult->grade : '' }}" @disabled($exam->published_at)>
+                        <input aria-label="Grade for {{ $s->user->name }}" type="text" name="results[{{ $s->id }}][grade]" class="form-control form-control-sm" style="max-width:70px" placeholder="A/B/C..." value="{{ $existingResult ? $existingResult->grade : '' }}" @disabled($exam->published_at)>
                     </td>
                     <td>
-                        <input type="text" name="results[{{ $s->id }}][remarks]" class="form-control form-control-sm" placeholder="Optional" value="{{ $existingResult ? $existingResult->remarks : '' }}" @disabled($exam->published_at)>
+                        <input aria-label="Result remarks for {{ $s->user->name }}" type="text" name="results[{{ $s->id }}][remarks]" class="form-control form-control-sm" placeholder="Optional" value="{{ $existingResult ? $existingResult->remarks : '' }}" @disabled($exam->published_at)>
                     </td>
                 </tr>
                 @endforeach

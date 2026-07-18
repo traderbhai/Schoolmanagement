@@ -23,14 +23,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Code</th>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Credits</th>
-                    <th>Type</th>
-                    <th>Hrs/Week</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Department</th>
+                    <th scope="col">Credits</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Hrs/Week</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,8 +49,9 @@
                 <td><span class="badge {{ $s->is_active ? 'badge-active' : 'badge-danger' }}">{{ $s->is_active ? 'Active' : 'Inactive' }}</span></td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.subjects.edit', $s) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.subjects.edit', $s) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit subject {{ $s->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete subject {{ $s->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.subjects.destroy', $s) }}"
                             data-name="{{ $s->name }}">

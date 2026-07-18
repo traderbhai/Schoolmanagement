@@ -347,36 +347,36 @@ class CmcDashboardGuidanceTest extends TestCase
             ->get(route('cmc.drives.create'))
             ->assertOk()
             ->assertSee('Published drive details become student-facing')
-            ->assertSee("confirm('Create this placement drive with the selected status and dates?')", false);
+            ->assertSee('Confirm company, eligibility, application deadline, student visibility, and communication readiness before saving.', false);
 
         $this->actingAs($cmc)
             ->get(route('cmc.drives.edit', $drive))
             ->assertOk()
             ->assertSee('Changing an active drive can affect student applications')
-            ->assertSee("confirm('Save placement drive changes?')", false);
+            ->assertSee('Confirm recruiter, dates, eligibility, application status, and student communication impact before updating this drive.', false);
 
         $this->actingAs($cmc)
             ->get(route('cmc.companies.create'))
             ->assertOk()
             ->assertSee('verified recruiter contact details')
-            ->assertSee("confirm('Add this company to the recruiter database?')", false);
+            ->assertSee('Confirm recruiter identity, contact details, industry, and future drive/application traceability before saving.', false);
 
         $this->actingAs($cmc)
             ->get(route('cmc.companies.edit', $company))
             ->assertOk()
             ->assertSee('Deactivating a recruiter is blocked while active drives exist')
-            ->assertSee("confirm('Save company changes?')", false);
+            ->assertSee('Confirm recruiter identity, active-drive restrictions, contact changes, and placement/internship history impact before updating.', false);
 
         $this->actingAs($cmc)
             ->get(route('cmc.events.create'))
             ->assertOk()
             ->assertSee('Published events are visible to students')
-            ->assertSee("confirm('Create this career event with the selected publication setting?')", false);
+            ->assertSee('Confirm date, venue, seats, registration deadline, student visibility, and communication readiness before saving.', false);
 
         $this->actingAs($cmc)
             ->get(route('cmc.events.edit', $event))
             ->assertOk()
             ->assertSee('If students have registered, date/type/venue/registration deadline changes are restricted')
-            ->assertSee("confirm('Save career event changes?')", false);
+            ->assertSee('Confirm registrations, event date/type/venue, registration deadline, and published student visibility before updating.', false);
     }
 }

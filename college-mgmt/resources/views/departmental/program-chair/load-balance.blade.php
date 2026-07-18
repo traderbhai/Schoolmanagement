@@ -73,10 +73,10 @@
                     <table class="table table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th>Teacher</th>
-                                <th>Hours</th>
-                                <th>vs Avg</th>
-                                <th>Status</th>
+                                <th scope="col">Teacher</th>
+                                <th scope="col">Hours</th>
+                                <th scope="col">vs Avg</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -60,12 +60,12 @@
     <table>
         <thead>
             <tr>
-                <th>Program</th>
-                <th>Code</th>
-                <th style="text-align:right">Applied</th>
-                <th style="text-align:right">Shortlisted</th>
-                <th style="text-align:right">Selected</th>
-                <th style="text-align:right">Rejected</th>
+                <th scope="col">Program</th>
+                <th scope="col">Code</th>
+                <th scope="col" style="text-align:right">Applied</th>
+                <th scope="col" style="text-align:right">Shortlisted</th>
+                <th scope="col" style="text-align:right">Selected</th>
+                <th scope="col" style="text-align:right">Rejected</th>
             </tr>
         </thead>
         <tbody>
@@ -87,10 +87,10 @@
     <table>
         <thead>
             <tr>
-                <th>Source</th>
-                <th style="text-align:right">Total Leads</th>
-                <th style="text-align:right">Converted</th>
-                <th style="text-align:right">Conversion %</th>
+                <th scope="col">Source</th>
+                <th scope="col" style="text-align:right">Total Leads</th>
+                <th scope="col" style="text-align:right">Converted</th>
+                <th scope="col" style="text-align:right">Conversion %</th>
             </tr>
         </thead>
         <tbody>
@@ -110,12 +110,12 @@
     <table>
         <thead>
             <tr>
-                <th>Category</th>
-                <th style="text-align:right">Mandate %</th>
-                <th style="text-align:right">Mandate Seats</th>
-                <th style="text-align:right">Filled</th>
-                <th style="text-align:right">Fill %</th>
-                <th>Status</th>
+                <th scope="col">Category</th>
+                <th scope="col" style="text-align:right">Mandate %</th>
+                <th scope="col" style="text-align:right">Mandate Seats</th>
+                <th scope="col" style="text-align:right">Filled</th>
+                <th scope="col" style="text-align:right">Fill %</th>
+                <th scope="col">Status</th>
             </tr>
         </thead>
         <tbody>

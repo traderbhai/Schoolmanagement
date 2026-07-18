@@ -1,4 +1,4 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 @section('title', 'Collect Fee Payment')
 @section('page-title', 'Collect Fee Payment')
 @section('breadcrumb')
@@ -20,12 +20,12 @@
                 <div class="text-muted small">{{ $selectedStudent->enrollment_number }}</div>
             </div>
             <div>
-                <span class="badge bg-primary bg-opacity-10 text-primary">{{ $selectedStudent->course->name ?? '—' }}</span>
+                <span class="badge bg-primary bg-opacity-10 text-primary">{{ $selectedStudent->course->name ?? 'Course not assigned' }}</span>
             </div>
             <div class="ms-auto text-end">
                 <div class="text-muted small">Balance Due</div>
                 <div class="fw-bold fs-5 {{ $balanceDue > 0 ? 'text-danger' : 'text-success' }}">
-                    ₹{{ number_format($balanceDue, 2) }}
+                    Rs. {{ number_format($balanceDue, 2) }}
                 </div>
             </div>
         </div>
@@ -46,7 +46,7 @@
                     <label class="form-label">Student <span class="text-danger">*</span></label>
                     <select name="student_id" id="studentSelect" class="form-select @error('student_id') is-invalid @enderror" required
                         onchange="window.location='{{ route('admin.fees.collect') }}?student_id='+this.value">
-                        <option value="">Select student…</option>
+                        <option value="">Select student</option>
                         @foreach($students as $s)
                             <option value="{{ $s->id }}" @selected(old('student_id', $selectedStudent?->id) == $s->id)>
                                 {{ $s->user->name }} ({{ $s->enrollment_number }})
@@ -57,11 +57,11 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Fee Structure <span class="text-danger">*</span></label>
-                    <select name="fee_structure_id" class="form-select @error('fee_structure_id') is-invalid @enderror" required>
-                        <option value="">Select fee type…</option>
+                    <select aria-label="Fee Structure" name="fee_structure_id" class="form-select @error('fee_structure_id') is-invalid @enderror" required>
+                        <option value="">Select fee type</option>
                         @foreach($structures as $f)
                             <option value="{{ $f->id }}" @selected(old('fee_structure_id') == $f->id)>
-                                {{ $f->course->code ?? $f->course->name ?? '?' }} – {{ $f->fee_type }} (₹{{ number_format($f->amount,2) }})
+                                {{ $f->course->code ?? $f->course->name ?? 'Course not assigned' }} - {{ $f->fee_type }} (Rs. {{ number_format($f->amount,2) }})
                             </option>
                         @endforeach
                     </select>
@@ -69,15 +69,15 @@
                 </div>
 
                 <div class="col-md-4">
-                    <label class="form-label">Amount Paid (₹) <span class="text-danger">*</span></label>
-                    <input type="number" name="amount_paid" class="form-control @error('amount_paid') is-invalid @enderror"
+                    <label class="form-label">Amount Paid (Rs.) <span class="text-danger">*</span></label>
+                    <input aria-label="Amount Paid" type="number" name="amount_paid" class="form-control @error('amount_paid') is-invalid @enderror"
                         value="{{ old('amount_paid', $balanceDue ?: '') }}" min="0" step="0.01" required>
                     <div class="form-text">Actual amount received.</div>
                     @error('amount_paid')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Payment Date <span class="text-danger">*</span></label>
-                    <input type="date" name="payment_date" class="form-control @error('payment_date') is-invalid @enderror"
+                    <input aria-label="Payment Date" type="date" name="payment_date" class="form-control @error('payment_date') is-invalid @enderror"
                         value="{{ old('payment_date', date('Y-m-d')) }}" required>
                     @error('payment_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
@@ -114,14 +114,14 @@
             {{-- Transaction Reference (shown when not cash) --}}
             <div class="mb-3" id="transactionRefRow" style="{{ $selectedMethod === 'cash' ? 'display:none' : '' }}">
                 <label class="form-label">Transaction Reference</label>
-                <input type="text" name="transaction_id" class="form-control" value="{{ old('transaction_id') }}"
+                <input aria-label="Cheque number / UTR / Transaction ID" type="text" name="transaction_id" class="form-control" value="{{ old('transaction_id') }}"
                     placeholder="Cheque number / UTR / Transaction ID">
                 <div class="form-text">Reference number for non-cash payments.</div>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Remarks</label>
-                <textarea name="remarks" class="form-control" rows="2" placeholder="Any notes about this payment…">{{ old('remarks') }}</textarea>
+                <textarea aria-label="Any notes about this payment" name="remarks" class="form-control" rows="2" placeholder="Any notes about this payment">{{ old('remarks') }}</textarea>
             </div>
 
             <div class="d-flex gap-2 mt-4 pt-2 border-top">
@@ -143,12 +143,12 @@
         <table class="table table-sm mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Term</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                    <th class="text-end">Demand</th>
-                    <th class="text-end">Penalty</th>
-                    <th class="text-end">Outstanding</th>
+                    <th scope="col">Term</th>
+                    <th scope="col">Due Date</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Demand</th>
+                    <th scope="col" class="text-end">Penalty</th>
+                    <th scope="col" class="text-end">Outstanding</th>
                 </tr>
             </thead>
             <tbody>
@@ -191,10 +191,10 @@
         <table class="table table-sm mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Fee Type</th>
-                    <th class="text-end">Amount</th>
-                    <th class="text-end">Paid</th>
-                    <th class="text-end">Balance</th>
+                    <th scope="col">Fee Type</th>
+                    <th scope="col" class="text-end">Amount</th>
+                    <th scope="col" class="text-end">Paid</th>
+                    <th scope="col" class="text-end">Balance</th>
                 </tr>
             </thead>
             <tbody>
@@ -205,10 +205,10 @@
                 @endphp
                 <tr>
                     <td>{{ $fs->fee_type }}</td>
-                    <td class="text-end">₹{{ number_format($fs->amount, 2) }}</td>
-                    <td class="text-end text-success">₹{{ number_format($paid, 2) }}</td>
+                    <td class="text-end">?{{ number_format($fs->amount, 2) }}</td>
+                    <td class="text-end text-success">?{{ number_format($paid, 2) }}</td>
                     <td class="text-end fw-semibold {{ $bal > 0 ? 'text-danger' : 'text-success' }}">
-                        ₹{{ number_format($bal, 2) }}
+                        ?{{ number_format($bal, 2) }}
                     </td>
                 </tr>
             @endforeach
@@ -216,9 +216,9 @@
             <tfoot class="table-light">
                 <tr>
                     <td class="fw-bold">Total</td>
-                    <td class="text-end fw-bold">₹{{ number_format($studentFees->sum('amount'), 2) }}</td>
-                    <td class="text-end fw-bold text-success">₹{{ number_format($studentPayments->sum('amount_paid'), 2) }}</td>
-                    <td class="text-end fw-bold text-danger">₹{{ number_format($balanceDue, 2) }}</td>
+                    <td class="text-end fw-bold">?{{ number_format($studentFees->sum('amount'), 2) }}</td>
+                    <td class="text-end fw-bold text-success">?{{ number_format($studentPayments->sum('amount_paid'), 2) }}</td>
+                    <td class="text-end fw-bold text-danger">Rs. {{ number_format($balanceDue, 2) }}</td>
                 </tr>
             </tfoot>
         </table>

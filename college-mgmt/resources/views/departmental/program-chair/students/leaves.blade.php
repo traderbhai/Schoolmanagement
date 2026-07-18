@@ -5,11 +5,11 @@
 <div class="container-fluid py-4">
   <h4 class="mb-4">Student Leave Applications</h4>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
-      <select name="status" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Status" name="status" class="form-select" onchange="this.form.submit()">
         <option value="">All Status</option>
         <option value="pending"  @selected(request('status')==='pending')>Pending</option>
         <option value="approved" @selected(request('status')==='approved')>Approved</option>
@@ -26,7 +26,7 @@
       <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
           <thead class="table-dark">
-            <tr><th>Student</th><th>Batch</th><th>Period</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+            <tr><th scope="col">Student</th><th scope="col">Batch</th><th scope="col">Period</th><th scope="col">Reason</th><th scope="col">Status</th><th scope="col">Actions</th></tr>
           </thead>
           <tbody>
             @forelse($leaves as $leave)
@@ -51,17 +51,17 @@
                     <div class="d-flex gap-1">
                       <form method="POST" action="{{ route('chair.students.leaves.approve', $leave) }}">
                         @csrf
-                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                        <button type="submit" class="btn btn-sm btn-success">Approve leave</button>
                       </form>
                       <button type="button" class="btn btn-sm btn-outline-danger"
-                        onclick="document.getElementById('reject-{{ $leave->id }}').classList.toggle('d-none')">Reject</button>
+                        onclick="document.getElementById('reject-{{ $leave->id }}').classList.toggle('d-none')">Reject leave</button>
                     </div>
                     <div id="reject-{{ $leave->id }}" class="d-none mt-2">
                       <form method="POST" action="{{ route('chair.students.leaves.reject', $leave) }}">
                         @csrf
                         <div class="input-group">
-                          <input type="text" name="remarks" class="form-control form-control-sm" placeholder="Reason" required>
-                          <button type="submit" class="btn btn-sm btn-danger">Confirm</button>
+                          <input aria-label="Reason" type="text" name="remarks" class="form-control form-control-sm" placeholder="Reason" required>
+                          <button type="submit" class="btn btn-sm btn-danger">Reject leave</button>
                         </div>
                       </form>
                     </div>

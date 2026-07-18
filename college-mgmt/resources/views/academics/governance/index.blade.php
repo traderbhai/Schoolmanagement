@@ -9,9 +9,11 @@
             <div class="text-muted small">Flexible hierarchy, branches, reporting lines, scopes, and permission matrix for Dean Office, PMC, CoE, IQAC, and Program Leadership.</div>
         </div>
         <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary btn-sm" href="{{ route('department-hierarchy.index', ['department_id' => $department->id]) }}">
-                <i class="bi bi-diagram-3"></i> Generic Hierarchy
-            </a>
+            @if($canConfigure)
+                <a class="btn btn-outline-secondary btn-sm" href="{{ route('department-hierarchy.index', ['department_id' => $department->id]) }}">
+                    <i class="bi bi-diagram-3"></i> Generic Hierarchy
+                </a>
+            @endif
             <a class="btn btn-outline-secondary btn-sm" href="{{ route('department-governance.index', ['department_id' => $department->id]) }}">
                 <i class="bi bi-sliders"></i> Feature Governance
             </a>
@@ -76,11 +78,11 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Member</th>
-                                <th>Branch</th>
-                                <th>Role</th>
-                                <th>Reports To</th>
-                                <th>Visibility</th>
+                                <th scope="col">Member</th>
+                                <th scope="col">Branch</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Reports To</th>
+                                <th scope="col">Visibility</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -133,9 +135,14 @@
                 <div class="card-header fw-semibold py-2">Quick Setup Links</div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a class="btn btn-outline-primary btn-sm" href="{{ route('department-hierarchy.index', ['department_id' => $department->id]) }}">Create levels, branches, and members</a>
+                        @if($canConfigure)
+                            <a class="btn btn-outline-primary btn-sm" href="{{ route('department-hierarchy.index', ['department_id' => $department->id]) }}">Create levels, branches, and members</a>
+                        @endif
                         <a class="btn btn-outline-primary btn-sm" href="#scopes">Assign program, batch, term, and course scope</a>
                         <a class="btn btn-outline-primary btn-sm" href="#permissions">Review permission matrix</a>
+                        @unless($canConfigure)
+                            <div class="text-muted small">Hierarchy setup is available only to Department Owner, Dean, or Admin users.</div>
+                        @endunless
                     </div>
                 </div>
             </div>
@@ -153,11 +160,11 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>User</th>
-                                <th>Scope</th>
-                                <th>Context</th>
-                                <th>Manage</th>
-                                @if($canConfigure)<th></th>@endif
+                                <th scope="col">User</th>
+                                <th scope="col">Scope</th>
+                                <th scope="col">Context</th>
+                                <th scope="col">Manage</th>
+                                @if($canConfigure)<th aria-label="Actions" scope="col"></th>@endif
                             </tr>
                         </thead>
                         <tbody>
@@ -201,7 +208,7 @@
                             @csrf
                             <div class="col-12">
                                 <label class="form-label">Member</label>
-                                <select name="department_member_id" class="form-select form-select-sm" required>
+                                <select aria-label="Department Member" name="department_member_id" class="form-select form-select-sm" required>
                                     @foreach($members as $member)
                                         <option value="{{ $member->id }}">{{ $member->user?->name }} - {{ $member->role?->name }}</option>
                                     @endforeach
@@ -209,7 +216,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Scope Type</label>
-                                <select name="scope_type" class="form-select form-select-sm" required>
+                                <select aria-label="Scope Type" name="scope_type" class="form-select form-select-sm" required>
                                     @foreach(\App\Services\AcademicScopeService::SCOPE_TYPES as $type)
                                         <option value="{{ $type }}">{{ ucfirst($type) }}</option>
                                     @endforeach
@@ -217,19 +224,19 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Scope ID</label>
-                                <input name="scope_id" type="number" class="form-control form-control-sm">
+                                <input aria-label="Scope" name="scope_id" type="number" class="form-control form-control-sm">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Code</label>
-                                <input name="scope_code" class="form-control form-control-sm">
+                                <input aria-label="Scope Code" name="scope_code" class="form-control form-control-sm">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Context</label>
-                                <input name="context" class="form-control form-control-sm" value="academics">
+                                <input aria-label="Context" name="context" class="form-control form-control-sm" value="academics">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Scope Name</label>
-                                <input name="scope_name" class="form-control form-control-sm" required>
+                                <input aria-label="Scope Name" name="scope_name" class="form-control form-control-sm" required>
                             </div>
                             <div class="col-12">
                                 <div class="form-check">
@@ -258,10 +265,10 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Level</th>
-                                <th>Role</th>
-                                <th>Capabilities</th>
-                                <th>Flags</th>
+                                <th scope="col">Level</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Capabilities</th>
+                                <th scope="col">Flags</th>
                             </tr>
                         </thead>
                         <tbody>

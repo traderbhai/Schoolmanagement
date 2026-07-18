@@ -29,7 +29,7 @@
 
     <div class="mb-3">
         <label class="form-label small">Program</label>
-        <select class="form-select form-select-sm" style="width:auto" onchange="window.location='/admission/selection-process/'+this.value+'/steps'">
+        <select aria-label="Selection process program" class="form-select form-select-sm" style="width:auto" onchange="window.location='/admission/selection-process/'+this.value+'/steps'">
             @foreach($programs as $p)
                 <option value="{{ $p->id }}" {{ $p->id == $program->id ? 'selected' : '' }}>{{ $p->name }}</option>
             @endforeach
@@ -37,10 +37,10 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @php $totalWeight = $steps->sum('weightage'); @endphp
@@ -70,9 +70,9 @@
                             </div>
                             <div class="d-flex gap-1">
                                 <a href="{{ route('admission.selection-process.steps.edit', $step) }}" class="btn btn-sm btn-outline-secondary py-0 px-1" aria-label="Edit selection step"><i class="bi bi-pencil"></i></a>
-                                <form action="{{ route('admission.selection-process.steps.destroy', $step) }}" method="POST" onsubmit="return confirm('Delete this step?')">
+                                <form action="{{ route('admission.selection-process.steps.destroy', $step) }}" method="POST" onsubmit="return confirm('Delete selection step {{ addslashes($step->name) }}? Confirm no active assessments, scores, merit calculations, or evaluator assignments depend on this step.')">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" aria-label="Delete selection step"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-1" aria-label="Delete selection step {{ $step->name }}"><i class="bi bi-trash"></i></button>
                                 </form>
                             </div>
                         </div>

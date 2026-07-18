@@ -28,34 +28,34 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Applicant Name <span class="text-danger">*</span></label>
-                    <input type="text" name="applicant_name" class="form-control @error('applicant_name') is-invalid @enderror" value="{{ old('applicant_name', $admission->applicant_name) }}" required>
+                    <input aria-label="Applicant Name" type="text" name="applicant_name" class="form-control @error('applicant_name') is-invalid @enderror" value="{{ old('applicant_name', $admission->applicant_name) }}" required>
                     @error('applicant_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $admission->email) }}" required>
+                    <input aria-label="Email" type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $admission->email) }}" required>
                     @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Phone</label>
-                    <input type="text" name="phone" class="form-control" value="{{ old('phone', $admission->phone) }}">
+                    <input aria-label="Phone" type="text" name="phone" class="form-control" value="{{ old('phone', $admission->phone) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Father's Name</label>
-                    <input type="text" name="father_name" class="form-control" value="{{ old('father_name', $admission->father_name) }}">
+                    <input aria-label="Father Name" type="text" name="father_name" class="form-control" value="{{ old('father_name', $admission->father_name) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Mother's Name</label>
-                    <input type="text" name="mother_name" class="form-control" value="{{ old('mother_name', $admission->mother_name) }}">
+                    <input aria-label="Mother Name" type="text" name="mother_name" class="form-control" value="{{ old('mother_name', $admission->mother_name) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Date of Birth</label>
-                    <input type="date" name="date_of_birth" class="form-control @error('date_of_birth') is-invalid @enderror" value="{{ old('date_of_birth', $admission->date_of_birth?->format('Y-m-d')) }}">
+                    <input aria-label="Date Of Birth" type="date" name="date_of_birth" class="form-control @error('date_of_birth') is-invalid @enderror" value="{{ old('date_of_birth', $admission->date_of_birth?->format('Y-m-d')) }}">
                     @error('date_of_birth')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Gender</label>
-                    <select name="gender" class="form-select">
+                    <select aria-label="Gender" name="gender" class="form-select">
                         <option value="">Select</option>
                         @foreach(['male','female','other'] as $g)
                             <option value="{{ $g }}" @selected(old('gender',$admission->gender)==$g)>{{ ucfirst($g) }}</option>
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Category</label>
-                    <select name="category" class="form-select">
+                    <select aria-label="Category" name="category" class="form-select">
                         <option value="">Select</option>
                         @foreach(['general'=>'General','obc'=>'OBC','sc'=>'SC','st'=>'ST'] as $val=>$label)
                             <option value="{{ $val }}" @selected(old('category',$admission->category)==$val)>{{ $label }}</option>
@@ -73,7 +73,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Address</label>
-                    <textarea name="address" class="form-control" rows="2">{{ old('address', $admission->address) }}</textarea>
+                    <textarea aria-label="Address" name="address" class="form-control" rows="2">{{ old('address', $admission->address) }}</textarea>
                 </div>
             </div>
 
@@ -83,7 +83,7 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Course <span class="text-danger">*</span></label>
-                    <select name="course_id" class="form-select @error('course_id') is-invalid @enderror" required>
+                    <select aria-label="Course" name="course_id" class="form-select @error('course_id') is-invalid @enderror" required>
                         <option value="">Select Course</option>
                         @foreach($courses as $c)
                             <option value="{{ $c->id }}" @selected(old('course_id',$admission->course_id)==$c->id)>{{ $c->name }} ({{ $c->code }})</option>
@@ -93,16 +93,16 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Last Qualification</label>
-                    <input type="text" name="last_qualification" class="form-control" value="{{ old('last_qualification', $admission->last_qualification) }}">
+                    <input aria-label="Last Qualification" type="text" name="last_qualification" class="form-control" value="{{ old('last_qualification', $admission->last_qualification) }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Last Institution</label>
-                    <input type="text" name="last_institution" class="form-control" value="{{ old('last_institution', $admission->last_institution) }}">
+                    <input aria-label="Last Institution" type="text" name="last_institution" class="form-control" value="{{ old('last_institution', $admission->last_institution) }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Last Percentage</label>
                     <div class="input-group">
-                        <input type="number" step="0.01" min="0" max="100" name="last_percentage" class="form-control @error('last_percentage') is-invalid @enderror" value="{{ old('last_percentage', $admission->last_percentage) }}">
+                        <input aria-label="Last Percentage" type="number" step="0.01" min="0" max="100" name="last_percentage" class="form-control @error('last_percentage') is-invalid @enderror" value="{{ old('last_percentage', $admission->last_percentage) }}">
                         <span class="input-group-text">%</span>
                         @error('last_percentage')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
@@ -115,11 +115,11 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
                     <label class="form-label">Application Date</label>
-                    <input type="date" name="application_date" class="form-control" value="{{ old('application_date', $admission->application_date?->format('Y-m-d')) }}">
+                    <input aria-label="Application Date" type="date" name="application_date" class="form-control" value="{{ old('application_date', $admission->application_date?->format('Y-m-d')) }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Status <span class="text-danger">*</span></label>
-                    <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                    <select aria-label="Status" name="status" class="form-select @error('status') is-invalid @enderror" required>
                         @foreach(['enquiry','applied','shortlisted','admitted','rejected','withdrawn'] as $s)
                             <option value="{{ $s }}" @selected(old('status',$admission->status)==$s)>{{ ucfirst($s) }}</option>
                         @endforeach
@@ -128,12 +128,12 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Remarks</label>
-                    <textarea name="remarks" class="form-control" rows="2">{{ old('remarks', $admission->remarks) }}</textarea>
+                    <textarea aria-label="Remarks" name="remarks" class="form-control" rows="2">{{ old('remarks', $admission->remarks) }}</textarea>
                 </div>
             </div>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Update</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Update admission</button>
                 <a href="{{ route('admin.admissions.show', $admission) }}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>

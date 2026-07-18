@@ -16,7 +16,7 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Copy From Batch <span class="text-danger">*</span></label>
-                    <select name="from_batch_id" class="form-select" required>
+                    <select aria-label="From Batch" name="from_batch_id" class="form-select" required>
                         <option value="">Select source batch</option>
                         @foreach($batches as $batch)
                             <option value="{{ $batch->id }}">{{ $batch->name }}</option>
@@ -25,7 +25,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Copy To Batch <span class="text-danger">*</span></label>
-                    <select name="to_batch_id" class="form-select" required>
+                    <select aria-label="To Batch" name="to_batch_id" class="form-select" required>
                         <option value="">Select target batch</option>
                         @foreach($batches as $batch)
                             <option value="{{ $batch->id }}">{{ $batch->name }}</option>
@@ -34,7 +34,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Shift Due Dates by (days)</label>
-                    <input type="number" name="days_offset" class="form-control" value="365" placeholder="e.g. 365 for next year">
+                    <input aria-label="Installment due-date offset in days" type="number" name="days_offset" class="form-control" value="365" placeholder="e.g. 365 for next year">
                     <div class="form-text">Due dates will be moved forward by this many days. Leave 0 to copy as-is.</div>
                 </div>
                 <div class="d-flex gap-2">

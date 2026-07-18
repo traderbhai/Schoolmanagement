@@ -48,7 +48,7 @@
         <form method="GET" action="{{ route('admin.student-scholarships.index') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Statuses</option>
                     @foreach(['pending', 'shortlisted', 'approved', 'rejected', 'disbursed'] as $status)
                         <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>
@@ -57,7 +57,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Program</label>
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $program)
                         <option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->name }}</option>
@@ -66,7 +66,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label small fw-semibold">Student</label>
-                <input type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
+                <input aria-label="Name or email" type="text" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name or email">
             </div>
             <div class="col-md-2 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel me-1"></i>Filter</button>
@@ -79,14 +79,14 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -114,11 +114,11 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Scheme</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th style="min-width:360px">Staff Action</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Scheme</th>
+                        <th scope="col">Reason</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" style="min-width:360px">Staff Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,7 +173,7 @@
                                 <form method="POST" action="{{ route('admin.student-scholarships.shortlist', $application) }}" class="d-flex gap-2 mb-2">
                                     @csrf
                                     @method('PATCH')
-                                    <input type="text" name="review_note" class="form-control form-control-sm" placeholder="Optional shortlist note">
+                                    <input aria-label="Scholarship shortlist note" type="text" name="review_note" class="form-control form-control-sm" placeholder="Optional shortlist note">
                                     <button class="btn btn-sm btn-outline-info">Shortlist</button>
                                 </form>
                             @endif
@@ -182,9 +182,9 @@
                                 <form method="POST" action="{{ route('admin.student-scholarships.approve', $application) }}" class="d-flex gap-2 mb-2">
                                     @csrf
                                     @method('PATCH')
-                                    <input type="number" name="disbursed_amount" class="form-control form-control-sm" min="1" step="0.01" placeholder="Amount" required>
-                                    <input type="text" name="review_note" class="form-control form-control-sm" placeholder="Approval note">
-                                    <button class="btn btn-sm btn-success">Approve</button>
+                                    <input aria-label="Amount" type="number" name="disbursed_amount" class="form-control form-control-sm" min="1" step="0.01" placeholder="Amount" required>
+                                    <input aria-label="Approval note" type="text" name="review_note" class="form-control form-control-sm" placeholder="Approval note">
+                                    <button class="btn btn-sm btn-success">Approve scholarship</button>
                                 </form>
                             @endif
 
@@ -192,8 +192,8 @@
                                 <form method="POST" action="{{ route('admin.student-scholarships.disburse', $application) }}" class="d-flex gap-2 mb-2">
                                     @csrf
                                     @method('PATCH')
-                                    <input type="text" name="disbursement_ref" class="form-control form-control-sm" placeholder="UTR / reference" required>
-                                    <input type="text" name="review_note" class="form-control form-control-sm" placeholder="Optional note">
+                                    <input aria-label="UTR / reference" type="text" name="disbursement_ref" class="form-control form-control-sm" placeholder="UTR / reference" required>
+                                    <input aria-label="Scholarship review note" type="text" name="review_note" class="form-control form-control-sm" placeholder="Optional note">
                                     <button class="btn btn-sm btn-primary">Disburse</button>
                                 </form>
                             @endif
@@ -202,8 +202,8 @@
                                 <form method="POST" action="{{ route('admin.student-scholarships.reject', $application) }}" class="d-flex gap-2">
                                     @csrf
                                     @method('PATCH')
-                                    <input type="text" name="review_note" class="form-control form-control-sm" placeholder="Rejection reason" required>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject this scholarship application?')">Reject</button>
+                                    <input aria-label="Rejection reason" type="text" name="review_note" class="form-control form-control-sm" placeholder="Rejection reason" required>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject scholarship application for {{ addslashes($application->student->user->name ?? 'this student') }}? Confirm the rejection reason explains eligibility, fee impact, and student communication before closing the request.')">Reject scholarship</button>
                                 </form>
                             @else
                                 <div class="small text-muted">{{ $application->review_note ?: 'No staff note recorded.' }}</div>

@@ -53,9 +53,9 @@
                     <table class="table table-sm align-middle mb-0" aria-label="Automation simulations">
                         <thead class="table-light">
                             <tr>
-                                <th>Trigger</th>
-                                <th>Matched</th>
-                                <th>When</th>
+                                <th scope="col">Trigger</th>
+                                <th scope="col">Matched</th>
+                                <th scope="col">When</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,9 +89,9 @@
                     <table class="table table-sm align-middle mb-0" aria-label="Automation conflicts">
                         <thead class="table-light">
                             <tr>
-                                <th>Conflict</th>
-                                <th>Severity</th>
-                                <th>Status</th>
+                                <th scope="col">Conflict</th>
+                                <th scope="col">Severity</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>

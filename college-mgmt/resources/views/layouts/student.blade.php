@@ -11,6 +11,7 @@
     @stack('styles')
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
@@ -27,7 +28,7 @@
                 <div style="color:rgba(255,255,255,.45);font-size:.65rem;">Student Portal</div>
             </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close navigation menu"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
         <x-ui.manifest-sidebar
@@ -69,7 +70,7 @@
             <span class="text-muted small d-none d-md-inline me-2">
                 {{ Auth::user()->name }}
             </span>
-            <a href="{{ route('notifications.index') }}" class="notif-btn text-decoration-none me-1" title="Notifications">
+            <a href="{{ route('notifications.index') }}" class="notif-btn text-decoration-none me-1" aria-label="Notifications" title="Notifications">
                 <i class="bi bi-bell" style="font-size:1rem"></i>
                 <span id="studentNotifBadge" class="notif-badge" style="display:none;font-size:.6rem;width:auto;height:auto;padding:1px 4px;border-radius:8px;background:#ef4444;color:#fff;position:absolute;top:4px;right:4px;"></span>
             </a>
@@ -87,27 +88,27 @@
         @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
         </div>
         @endif
         @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
         </div>
         @endif
         @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <ul class="mb-0 ps-3">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
         </div>
         @endif
     </div>
 
-    <div class="content-area">
+    <main id="main-content" class="content-area" tabindex="-1">
         @yield('content')
-    </div>
+    </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

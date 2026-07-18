@@ -15,10 +15,10 @@
     </div>
 
     @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="card border-0 shadow-sm mb-4">
@@ -66,7 +66,7 @@
             <form method="GET" class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Status</label>
-                    <select name="status" class="form-select">
+                    <select aria-label="Status" name="status" class="form-select">
                         <option value="">All Statuses</option>
                         <option value="ongoing" @selected(request('status') === 'ongoing')>Ongoing</option>
                         <option value="completed" @selected(request('status') === 'completed')>Completed</option>
@@ -75,7 +75,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Type</label>
-                    <select name="type" class="form-select">
+                    <select aria-label="Type" name="type" class="form-select">
                         <option value="">All Types</option>
                         <option value="internship" @selected(request('type') === 'internship')>Internship</option>
                         <option value="industrial_training" @selected(request('type') === 'industrial_training')>Industrial Training</option>
@@ -96,14 +96,14 @@
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Student</th>
-                            <th>Company</th>
-                            <th>Role</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Dates</th>
-                            <th>Stipend</th>
-                            <th class="text-end">Action</th>
+                            <th scope="col">Student</th>
+                            <th scope="col">Company</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Dates</th>
+                            <th scope="col">Stipend</th>
+                            <th scope="col" class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>

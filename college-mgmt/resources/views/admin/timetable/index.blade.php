@@ -14,7 +14,7 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-3">
                 <label class="form-label small fw-semibold mb-1">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm">
                     <option value="">-- Select Semester --</option>
                     @foreach($semesters as $s)
                     <option value="{{ $s->id }}" @selected($s->id == $semesterId)>{{ $s->name }} ({{ $s->academicYear->name }})</option>
@@ -23,7 +23,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold mb-1">Course</label>
-                <select name="course_id" class="form-select form-select-sm">
+                <select aria-label="Course" name="course_id" class="form-select form-select-sm">
                     <option value="">-- All Courses --</option>
                     @foreach($courses as $c)
                     <option value="{{ $c->id }}" @selected($c->id == $courseId)>{{ $c->name }}</option>
@@ -31,7 +31,7 @@
                 </select>
             </div>
             <div class="col-auto">
-                <button class="btn btn-primary btn-sm">Filter</button>
+                <button type="submit" class="btn btn-primary btn-sm">Apply timetable filters</button>
             </div>
             <div class="col-auto ms-auto">
                 <a href="{{ route('admin.timetable.create') }}" class="btn btn-success btn-sm">
@@ -46,7 +46,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Weekly Timetable</span>
-        <a href="{{ route('admin.reports.timetable', $semesterId) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download timetable PDF">
+        <a rel="noopener" href="{{ route('admin.reports.timetable', $semesterId) }}" target="_blank" class="btn btn-sm btn-outline-primary" aria-label="Download timetable PDF">
             <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
         </a>
     </div>
@@ -55,9 +55,9 @@
             <table class="table table-bordered timetable-grid mb-0">
                 <thead>
                     <tr>
-                        <th style="min-width:100px">Slot / Day</th>
+                        <th scope="col" style="min-width:100px">Slot / Day</th>
                         @foreach(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $d)
-                        <th class="day-header">{{ $d }}</th>
+                        <th scope="col" class="day-header">{{ $d }}</th>
                         @endforeach
                     </tr>
                 </thead>
@@ -96,10 +96,10 @@
                                             <span class="room-tag">{{ $entry->classroom?->room_number ?? 'Room TBA' }}</span>
                                             @if($entry->id)
                                                 <span class="ms-1">
-                                                    <a href="{{ route('admin.timetable.edit', $entry->id) }}" class="text-primary" style="font-size:.68rem"><i class="bi bi-pencil"></i></a>
-                                                    <form method="POST" action="{{ route('admin.timetable.destroy', $entry->id) }}" class="d-inline" onsubmit="return confirm('Remove?')">
+                                                    <a href="{{ route('admin.timetable.edit', $entry->id) }}" class="text-primary" style="font-size:.68rem" aria-label="Edit legacy timetable entry"><i class="bi bi-pencil"></i></a>
+                                                    <form method="POST" action="{{ route('admin.timetable.destroy', $entry->id) }}" class="d-inline" onsubmit="return confirm('Remove this legacy timetable entry? Confirm this is not the canonical PMC official session and check attendance, teacher/student timetable, and reporting impact before deletion.')">
                                                         @csrf @method('DELETE')
-                                                        <button class="btn btn-link p-0 text-danger" style="font-size:.68rem"><i class="bi bi-x-circle"></i></button>
+                                                        <button type="submit" class="btn btn-link p-0 text-danger" style="font-size:.68rem" aria-label="Remove legacy timetable entry"><i class="bi bi-x-circle"></i></button>
                                                     </form>
                                                 </span>
                                             @else

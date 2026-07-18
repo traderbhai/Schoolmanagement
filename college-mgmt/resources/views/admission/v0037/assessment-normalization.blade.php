@@ -44,12 +44,12 @@
             <table class="table table-sm align-middle mb-0" aria-label="Normalized assessment scores">
                 <thead class="table-light">
                     <tr>
-                        <th>Candidate</th>
-                        <th>Panel</th>
-                        <th>Evaluator</th>
-                        <th>Raw</th>
-                        <th>Normalized</th>
-                        <th>Status</th>
+                        <th scope="col">Candidate</th>
+                        <th scope="col">Panel</th>
+                        <th scope="col">Evaluator</th>
+                        <th scope="col">Raw</th>
+                        <th scope="col">Normalized</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

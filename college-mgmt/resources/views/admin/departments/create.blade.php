@@ -20,24 +20,24 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-8">
                     <label class="form-label">Department Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required>
                     <div class="form-text">Full name of the department.</div>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Code <span class="text-danger">*</span></label>
-                    <input type="text" name="code" class="form-control @error('code') is-invalid @enderror" value="{{ old('code') }}" placeholder="e.g. CS" required>
+                    <input aria-label="Department code" type="text" name="code" class="form-control @error('code') is-invalid @enderror" value="{{ old('code') }}" placeholder="e.g. CS" required>
                     <div class="form-text">Short code (2–5 letters).</div>
                     @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">
                     <label class="form-label">Head of Department</label>
-                    <input type="text" name="head_name" class="form-control" value="{{ old('head_name') }}">
+                    <input aria-label="Head Name" type="text" name="head_name" class="form-control" value="{{ old('head_name') }}">
                     <div class="form-text">Name of the current HOD (optional).</div>
                 </div>
                 <div class="col-12">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
+                    <textarea aria-label="Description" name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
                     <div class="form-text">Brief overview of the department.</div>
                 </div>
             </div>

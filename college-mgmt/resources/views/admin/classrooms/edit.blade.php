@@ -20,31 +20,31 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-8">
                     <label class="form-label">Room Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $classroom->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $classroom->name) }}" required>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Room Number <span class="text-danger">*</span></label>
-                    <input type="text" name="room_number" class="form-control @error('room_number') is-invalid @enderror" value="{{ old('room_number', $classroom->room_number) }}" required>
+                    <input aria-label="Room Number" type="text" name="room_number" class="form-control @error('room_number') is-invalid @enderror" value="{{ old('room_number', $classroom->room_number) }}" required>
                     @error('room_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Type <span class="text-danger">*</span></label>
-                    <select name="type" class="form-select" required>
+                    <select aria-label="Type" name="type" class="form-select" required>
                         @foreach(['lecture','lab','seminar','auditorium'] as $t)<option value="{{ $t }}" @selected(old('type',$classroom->type)==$t)>{{ ucfirst($t) }}</option>@endforeach
                     </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Capacity <span class="text-danger">*</span></label>
-                    <input type="number" name="capacity" class="form-control" value="{{ old('capacity', $classroom->capacity) }}" min="1" required>
+                    <input aria-label="Capacity" type="number" name="capacity" class="form-control" value="{{ old('capacity', $classroom->capacity) }}" min="1" required>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Floor</label>
-                    <input type="text" name="floor" class="form-control" value="{{ old('floor', $classroom->floor) }}">
+                    <input aria-label="Floor" type="text" name="floor" class="form-control" value="{{ old('floor', $classroom->floor) }}">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Building</label>
-                    <input type="text" name="building" class="form-control" value="{{ old('building', $classroom->building) }}">
+                    <input aria-label="Building" type="text" name="building" class="form-control" value="{{ old('building', $classroom->building) }}">
                 </div>
                 <div class="col-12">
                     <label class="form-label d-block">Facilities & Status</label>

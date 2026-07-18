@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -29,15 +29,15 @@
     <table>
         <thead>
             <tr>
-                <th>Rank</th>
-                <th>Name</th>
-                <th>Application #</th>
+                <th scope="col">Rank</th>
+                <th scope="col">Name</th>
+                <th scope="col">Application #</th>
                 @foreach($steps as $step)
-                    <th>{{ $step->name ?? $step->typeLabel }} (%)</th>
+                    <th scope="col">{{ $step->name ?? $step->typeLabel }} (%)</th>
                 @endforeach
-                <th>Academic</th>
-                <th>Composite</th>
-                <th>Decision</th>
+                <th scope="col">Academic</th>
+                <th scope="col">Composite</th>
+                <th scope="col">Decision</th>
             </tr>
         </thead>
         <tbody>

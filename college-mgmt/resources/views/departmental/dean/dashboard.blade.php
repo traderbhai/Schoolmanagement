@@ -111,7 +111,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
-                            <tr><th>Program</th><th>Students</th><th>Batches</th><th>Faculty</th><th>Pass Rate</th></tr>
+                            <tr><th scope="col">Program</th><th scope="col">Students</th><th scope="col">Batches</th><th scope="col">Faculty</th><th scope="col">Pass Rate</th></tr>
                         </thead>
                         <tbody>
                         @forelse($programs as $prog)
@@ -179,7 +179,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
-                            <tr><th>Student</th><th>Program</th><th>Attendance</th></tr>
+                            <tr><th scope="col">Student</th><th scope="col">Program</th><th scope="col">Attendance</th></tr>
                         </thead>
                         <tbody>
                         @forelse($atRiskStudents as $s)
@@ -208,7 +208,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
-                            <tr><th>Student</th><th>Exam</th><th>Marks</th><th>Result</th></tr>
+                            <tr><th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Marks</th><th scope="col">Result</th></tr>
                         </thead>
                         <tbody>
                         @forelse($recentResults as $r)

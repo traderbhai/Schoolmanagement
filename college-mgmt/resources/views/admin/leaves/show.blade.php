@@ -67,9 +67,9 @@
                     @csrf @method('PATCH')
                     <div class="mb-3">
                         <label class="form-label form-label-sm">Admin Remarks (optional)</label>
-                        <textarea name="admin_remarks" class="form-control form-control-sm" rows="3" placeholder="Any remarks..."></textarea>
+                        <textarea aria-label="Leave approval remarks" name="admin_remarks" class="form-control form-control-sm" rows="3" placeholder="Any remarks..."></textarea>
                     </div>
-                    <button class="btn btn-success btn-sm w-100"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                    <button class="btn btn-success btn-sm w-100"><i class="bi bi-check-lg me-1"></i>Approve leave</button>
                 </form>
             </div>
         </div>
@@ -80,9 +80,9 @@
                     @csrf @method('PATCH')
                     <div class="mb-3">
                         <label class="form-label form-label-sm">Reason for Rejection</label>
-                        <textarea name="admin_remarks" class="form-control form-control-sm" rows="3" placeholder="Reason for rejection..."></textarea>
+                        <textarea aria-label="Leave rejection reason" name="admin_remarks" class="form-control form-control-sm" rows="3" placeholder="Reason for rejection..."></textarea>
                     </div>
-                    <button class="btn btn-danger btn-sm w-100"><i class="bi bi-x-lg me-1"></i>Reject</button>
+                    <button class="btn btn-danger btn-sm w-100"><i class="bi bi-x-lg me-1"></i>Reject leave</button>
                 </form>
             </div>
         </div>

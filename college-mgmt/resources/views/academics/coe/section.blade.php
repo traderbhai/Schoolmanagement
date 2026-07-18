@@ -49,7 +49,7 @@
                                 <div class="small text-muted">{{ str($label)->replace('_', ' ')->title() }}</div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div class="h5 mb-0">{{ $value }}</div>
-                                    <span class="small text-primary">Open</span>
+                                    <span class="small text-primary">Open {{ str($label)->replace('_', ' ')->title() }}</span>
                                 </div>
                             </div>
                         </div>
@@ -86,7 +86,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply filters</button>
                     <a href="{{ ! empty($filters['metric']) ? request()->url() . '?' . http_build_query(['metric' => $filters['metric']]) : request()->url() }}" class="btn btn-sm btn-outline-secondary flex-fill">
                         {{ ! empty($filters['metric']) ? 'Reset queue' : 'Reset' }}
                     </a>
@@ -97,7 +97,7 @@
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">{{ $section['title'] }} source records</caption>
-                <thead><tr><th>Record</th><th>Owner / Source</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <thead><tr><th scope="col">Record</th><th scope="col">Owner / Source</th><th scope="col">Status</th><th scope="col" class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse($section['items'] as $item)
                         <tr>

@@ -23,12 +23,12 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Order</th>
-                    <th>Name</th>
-                    <th>Time</th>
-                    <th>Duration</th>
-                    <th>Type</th>
-                    <th>Actions</th>
+                    <th scope="col">Order</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,8 +49,9 @@
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.timetable-slots.edit', $s) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.timetable-slots.edit', $s) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit timetable slot {{ $s->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete timetable slot {{ $s->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.timetable-slots.destroy', $s) }}"
                             data-name="{{ $s->name }}">

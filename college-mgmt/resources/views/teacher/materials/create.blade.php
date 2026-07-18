@@ -6,7 +6,7 @@
 <div class="container-fluid px-4">
 
     <div class="d-flex align-items-center mb-3">
-        <a href="{{ route('teacher.materials.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <a href="{{ route('teacher.materials.index') }}" class="btn btn-sm btn-outline-secondary me-3" aria-label="Back to materials">
             <i class="bi bi-arrow-left"></i>
         </a>
         <h4 class="mb-0"><i class="bi bi-cloud-upload me-2 text-primary"></i>Upload Study Material</h4>
@@ -43,7 +43,7 @@
                     {{-- Subject --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
-                        <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
+                        <select aria-label="Subject" name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
                             <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
@@ -59,7 +59,7 @@
                     {{-- Type --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Material Type <span class="text-danger">*</span></label>
-                        <select name="type" class="form-select @error('type') is-invalid @enderror" required @disabled($actionBlockedReason)>
+                        <select aria-label="Type" name="type" class="form-select @error('type') is-invalid @enderror" required @disabled($actionBlockedReason)>
                             <option value="">Select Type</option>
                             <option value="pre_read"  {{ old('type') === 'pre_read'  ? 'selected' : '' }}>Pre-Read</option>
                             <option value="post_read" {{ old('type') === 'post_read' ? 'selected' : '' }}>Post-Read</option>
@@ -77,7 +77,7 @@
                     {{-- Title --}}
                     <div class="col-12">
                         <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" value="{{ old('title') }}"
+                        <input aria-label="Material title" type="text" name="title" value="{{ old('title') }}"
                                class="form-control @error('title') is-invalid @enderror"
                                placeholder="e.g. Unit 3 - Sorting Algorithms" required @disabled($actionBlockedReason)>
                         @error('title')
@@ -88,7 +88,7 @@
                     {{-- Description --}}
                     <div class="col-12">
                         <label class="form-label fw-semibold">Description</label>
-                        <textarea name="description" rows="3"
+                        <textarea aria-label="Material description" name="description" rows="3"
                                   class="form-control @error('description') is-invalid @enderror"
                                   placeholder="Brief description of this material (optional)" @disabled($actionBlockedReason)>{{ old('description') }}</textarea>
                         @error('description')
@@ -99,7 +99,7 @@
                     {{-- File Upload --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">File Upload</label>
-                        <input type="file" name="file"
+                        <input aria-label="File" type="file" name="file"
                                class="form-control @error('file') is-invalid @enderror" @disabled($actionBlockedReason)>
                         <div class="form-text">Max file size: 20 MB. Accepted: PDF, DOCX, PPTX, XLSX, ZIP, MP4, etc.</div>
                         @error('file')
@@ -110,7 +110,7 @@
                     {{-- External URL --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">External URL</label>
-                        <input type="url" name="external_url" value="{{ old('external_url') }}"
+                        <input aria-label="External material URL" type="url" name="external_url" value="{{ old('external_url') }}"
                                class="form-control @error('external_url') is-invalid @enderror"
                                placeholder="https://..." @disabled($actionBlockedReason)>
                         <div class="form-text">Provide a URL instead of uploading a file.</div>

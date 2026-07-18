@@ -23,7 +23,7 @@
         <div class="card-header fw-semibold">Low Attendance Subjects</div>
         <div class="table-responsive">
             <table class="table table-sm mb-0">
-                <thead class="table-light"><tr><th>Subject</th><th>Attendance %</th><th>Absent Sessions</th></tr></thead>
+                <thead class="table-light"><tr><th scope="col">Subject</th><th scope="col">Attendance %</th><th scope="col">Absent Sessions</th></tr></thead>
                 <tbody>
                     @foreach($lowSubjects as $row)
                     <tr><td>{{ $row['subject']->name }}</td><td class="text-danger fw-semibold">{{ $row['pct'] }}%</td><td>{{ $row['deficit'] }}</td></tr>
@@ -38,7 +38,7 @@
                 @csrf
                 <div class="mb-3">
                     <label class="form-label">Select Subject</label>
-                    <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror">
+                    <select aria-label="Subject" name="subject_id" class="form-select @error('subject_id') is-invalid @enderror">
                         <option value="">— Choose subject —</option>
                         @foreach($lowSubjects as $row)
                         <option value="{{ $row['subject']->id }}" @selected(old('subject_id') == $row['subject']->id)>
@@ -50,7 +50,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Reason for Condonation</label>
-                    <textarea name="reason" rows="5" class="form-control @error('reason') is-invalid @enderror"
+                    <textarea aria-label="Explain the reason for your absence (medical, event participation, etc.)" name="reason" rows="5" class="form-control @error('reason') is-invalid @enderror"
                         placeholder="Explain the reason for your absence (medical, event participation, etc.)">{{ old('reason') }}</textarea>
                     @error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>

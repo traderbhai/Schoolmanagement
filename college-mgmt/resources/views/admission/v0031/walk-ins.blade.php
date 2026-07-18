@@ -26,11 +26,11 @@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-3"><label class="form-label small mb-1">Search</label><input name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name, phone, email"></div>
-            <div class="col-md-2"><label class="form-label small mb-1">Status</label><select name="status" class="form-select form-select-sm"><option value="">All Status</option>@foreach(['open','converted','closed'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
-            <div class="col-md-3"><label class="form-label small mb-1">Program</label><select name="program_id" class="form-select form-select-sm"><option value="">All Programs</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->abbreviation ?? $program->name }}</option>@endforeach</select></div>
-            <div class="col-md-2"><label class="form-label small mb-1">Rows</label><select name="per_page" class="form-select form-select-sm">@foreach([10,25,50,100] as $size)<option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>@endforeach</select></div>
-            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary btn-sm flex-fill">Apply</button><a href="{{ route('admission.walk-ins.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Search</label><input aria-label="Name, phone, email" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Name, phone, email"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Status</label><select aria-label="Status" name="status" class="form-select form-select-sm"><option value="">All Status</option>@foreach(['open','converted','closed'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>@endforeach</select></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Program</label><select aria-label="Program" name="program_id" class="form-select form-select-sm"><option value="">All Programs</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(request('program_id') == $program->id)>{{ $program->abbreviation ?? $program->name }}</option>@endforeach</select></div>
+            <div class="col-md-2"><label class="form-label small mb-1">Rows</label><select aria-label="Per Page" name="per_page" class="form-select form-select-sm">@foreach([10,25,50,100] as $size)<option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>@endforeach</select></div>
+            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary btn-sm flex-fill">Apply filters</button><a href="{{ route('admission.walk-ins.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
         </form>
     </div>
 </div>
@@ -41,12 +41,12 @@
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('visitor_name') }}">Visitor <i class="bi {{ $sortIcon('visitor_name') }}"></i></a></th>
-                            <th>Program</th>
-                            <th>Counsellor</th>
-                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('visited_at') }}">Visit <i class="bi {{ $sortIcon('visited_at') }}"></i></a></th>
-                            <th><a class="text-decoration-none text-reset" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
-                            <th></th>
+                            <th scope="col"><a class="text-decoration-none text-reset" href="{{ $sortUrl('visitor_name') }}">Visitor <i class="bi {{ $sortIcon('visitor_name') }}"></i></a></th>
+                            <th scope="col">Program</th>
+                            <th scope="col">Counsellor</th>
+                            <th scope="col"><a class="text-decoration-none text-reset" href="{{ $sortUrl('visited_at') }}">Visit <i class="bi {{ $sortIcon('visited_at') }}"></i></a></th>
+                            <th scope="col"><a class="text-decoration-none text-reset" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
+                            <th aria-label="Actions" scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -90,15 +90,15 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('admission.walk-ins.store') }}" class="vstack gap-2">
                     @csrf
-                    <input class="form-control form-control-sm" name="visitor_name" placeholder="Visitor name" required>
-                    <input class="form-control form-control-sm" name="visitor_phone" placeholder="Phone">
-                    <input class="form-control form-control-sm" name="visitor_email" placeholder="Email">
-                    <input class="form-control form-control-sm" name="guardian_name" placeholder="Guardian name">
-                    <select class="form-select form-select-sm" name="program_id"><option value="">Program</option>@foreach($programs as $program)<option value="{{ $program->id }}">{{ $program->name }}</option>@endforeach</select>
-                    <select class="form-select form-select-sm" name="assigned_counsellor_id"><option value="">Counsellor</option>@foreach($counsellors as $counsellor)<option value="{{ $counsellor->id }}">{{ $counsellor->name }}</option>@endforeach</select>
-                    <input class="form-control form-control-sm" name="purpose" value="admission_enquiry" required>
-                    <input class="form-control form-control-sm" type="datetime-local" name="next_followup_at">
-                    <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Visit notes"></textarea>
+                    <input aria-label="Visitor name" class="form-control form-control-sm" name="visitor_name" placeholder="Visitor name" required>
+                    <input aria-label="Phone" class="form-control form-control-sm" name="visitor_phone" placeholder="Phone">
+                    <input aria-label="Email" class="form-control form-control-sm" name="visitor_email" placeholder="Email">
+                    <input aria-label="Guardian name" class="form-control form-control-sm" name="guardian_name" placeholder="Guardian name">
+                    <select aria-label="Program" class="form-select form-select-sm" name="program_id"><option value="">Program</option>@foreach($programs as $program)<option value="{{ $program->id }}">{{ $program->name }}</option>@endforeach</select>
+                    <select aria-label="Assigned Counsellor" class="form-select form-select-sm" name="assigned_counsellor_id"><option value="">Counsellor</option>@foreach($counsellors as $counsellor)<option value="{{ $counsellor->id }}">{{ $counsellor->name }}</option>@endforeach</select>
+                    <input aria-label="Purpose" class="form-control form-control-sm" name="purpose" value="admission_enquiry" required>
+                    <input aria-label="Next Followup At" class="form-control form-control-sm" type="datetime-local" name="next_followup_at">
+                    <textarea aria-label="Visit notes" class="form-control form-control-sm" name="notes" rows="2" placeholder="Visit notes"></textarea>
                     <button class="btn btn-primary btn-sm">Record Walk-in</button>
                 </form>
             </div>

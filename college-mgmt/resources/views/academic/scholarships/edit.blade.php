@@ -12,12 +12,12 @@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="form-label">Scholarship Name</label>
-                        <input type="text" name="name" class="form-control" value="{{ old('name', $scholarship->name) }}" required>
+                        <input aria-label="Name" type="text" name="name" class="form-control" value="{{ old('name', $scholarship->name) }}" required>
                         @error('name')<div class="text-danger small">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Type</label>
-                        <select name="type" class="form-select" required>
+                        <select aria-label="Type" name="type" class="form-select" required>
                             @foreach(['merit','need_based','category','other'] as $type)
                                 <option value="{{ $type }}" {{ old('type',$scholarship->type)==$type?'selected':'' }}>{{ ucfirst(str_replace('_',' ',$type)) }}</option>
                             @endforeach
@@ -25,19 +25,19 @@
                     </div>
                     <div class="col-md-12">
                         <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="2">{{ old('description', $scholarship->description) }}</textarea>
+                        <textarea aria-label="Description" name="description" class="form-control" rows="2">{{ old('description', $scholarship->description) }}</textarea>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Percentage (%)</label>
-                        <input type="number" name="percentage" class="form-control" step="0.01" min="0" max="100" value="{{ old('percentage', $scholarship->percentage) }}">
+                        <input aria-label="Percentage" type="number" name="percentage" class="form-control" step="0.01" min="0" max="100" value="{{ old('percentage', $scholarship->percentage) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Fixed Amount (₹)</label>
-                        <input type="number" name="fixed_amount" class="form-control" step="0.01" min="0" value="{{ old('fixed_amount', $scholarship->fixed_amount) }}">
+                        <input aria-label="Fixed Amount" type="number" name="fixed_amount" class="form-control" step="0.01" min="0" value="{{ old('fixed_amount', $scholarship->fixed_amount) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
-                        <select name="status" class="form-select" required>
+                        <select aria-label="Status" name="status" class="form-select" required>
                             @foreach(['active','inactive','expired'] as $s)
                                 <option value="{{ $s }}" {{ old('status',$scholarship->status)==$s?'selected':'' }}>{{ ucfirst($s) }}</option>
                             @endforeach
@@ -45,11 +45,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Valid From</label>
-                        <input type="date" name="valid_from" class="form-control" value="{{ old('valid_from', $scholarship->valid_from?->format('Y-m-d')) }}">
+                        <input aria-label="Valid From" type="date" name="valid_from" class="form-control" value="{{ old('valid_from', $scholarship->valid_from?->format('Y-m-d')) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Valid To</label>
-                        <input type="date" name="valid_to" class="form-control" value="{{ old('valid_to', $scholarship->valid_to?->format('Y-m-d')) }}">
+                        <input aria-label="Valid To" type="date" name="valid_to" class="form-control" value="{{ old('valid_to', $scholarship->valid_to?->format('Y-m-d')) }}">
                     </div>
                 </div>
                 <div class="mt-4">

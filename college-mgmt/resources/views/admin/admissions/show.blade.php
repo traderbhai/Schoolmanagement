@@ -12,7 +12,7 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -73,7 +73,7 @@
                     <a href="{{ route('admin.admissions.edit', $admission) }}" class="btn btn-outline-primary btn-sm flex-fill">
                         <i class="bi bi-pencil me-1"></i>Edit
                     </a>
-                    <form action="{{ route('admin.admissions.destroy', $admission) }}" method="POST" onsubmit="return confirm('Delete this record?')" class="flex-fill">
+                    <form action="{{ route('admin.admissions.destroy', $admission) }}" method="POST" onsubmit="return confirm('Delete admission record for {{ addslashes($admission->student_name ?? $admission->name ?? 'this student') }}? Confirm this record is not needed for applicant history, enrollment audit, fee records, or reports.')" class="flex-fill">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger btn-sm w-100">
                             <i class="bi bi-trash me-1"></i>Delete
@@ -156,7 +156,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-5">
                                         <label class="form-label form-label-sm">Status</label>
-                                        <select name="status" class="form-select form-select-sm">
+                                        <select aria-label="Status" name="status" class="form-select form-select-sm">
                                             @foreach(['enquiry','applied','shortlisted','admitted','rejected','withdrawn'] as $s)
                                                 <option value="{{ $s }}" @selected($admission->status==$s)>{{ ucfirst($s) }}</option>
                                             @endforeach
@@ -164,7 +164,7 @@
                                     </div>
                                     <div class="col-md-7">
                                         <label class="form-label form-label-sm">Remarks</label>
-                                        <textarea name="remarks" class="form-control form-control-sm" rows="2">{{ $admission->remarks }}</textarea>
+                                        <textarea aria-label="Remarks" name="remarks" class="form-control form-control-sm" rows="2">{{ $admission->remarks }}</textarea>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-primary mt-3">
@@ -185,12 +185,12 @@
                                 <div class="row g-3">
                                     <div class="col-md-5">
                                         <label class="form-label form-label-sm">Enrollment Number <span class="text-danger">*</span></label>
-                                        <input type="text" name="enrollment_number" class="form-control form-control-sm @error('enrollment_number') is-invalid @enderror" required>
+                                        <input aria-label="Enrollment Number" type="text" name="enrollment_number" class="form-control form-control-sm @error('enrollment_number') is-invalid @enderror" required>
                                         @error('enrollment_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-md-7">
                                         <label class="form-label form-label-sm">Department <span class="text-danger">*</span></label>
-                                        <select name="department_id" class="form-select form-select-sm @error('department_id') is-invalid @enderror" required>
+                                        <select aria-label="Department" name="department_id" class="form-select form-select-sm @error('department_id') is-invalid @enderror" required>
                                             <option value="">Select Department</option>
                                             @foreach($departments as $d)
                                                 <option value="{{ $d->id }}">{{ $d->name }}</option>

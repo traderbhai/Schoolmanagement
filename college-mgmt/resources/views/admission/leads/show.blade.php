@@ -14,7 +14,7 @@
         </div>
         <div class="d-flex gap-2">
             @if(!$lead->isConverted())
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
                     <i class="bi bi-person-plus me-1"></i> Convert to Applicant
                 </button>
             @else
@@ -26,10 +26,10 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @include('admission.partials.action-center', ['actionCenter' => $actionCenter])
@@ -110,7 +110,7 @@
                         <div class="col-md-6">
                             <form action="{{ route('admission.leads.contact', $lead) }}" method="POST">
                                 @csrf
-                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Contact notes (optional)"></textarea>
+                                <textarea aria-label="Lead contact notes" name="notes" class="form-control mb-2" rows="2" placeholder="Contact notes (optional)"></textarea>
                                 <button class="btn btn-secondary w-100"><i class="bi bi-telephone me-1"></i>Mark Contacted</button>
                             </form>
                         </div>
@@ -119,7 +119,7 @@
                         <div class="col-md-6">
                             <form action="{{ route('admission.leads.interested', $lead) }}" method="POST">
                                 @csrf
-                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Notes (optional)"></textarea>
+                                <textarea aria-label="Lead follow-up notes" name="notes" class="form-control mb-2" rows="2" placeholder="Notes (optional)"></textarea>
                                 <button class="btn btn-warning w-100"><i class="bi bi-star me-1"></i>Mark Interested</button>
                             </form>
                         </div>
@@ -128,7 +128,7 @@
                         <div class="col-md-6">
                             <form action="{{ route('admission.leads.not-interested', $lead) }}" method="POST">
                                 @csrf
-                                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Reason (optional)"></textarea>
+                                <textarea aria-label="Lead status reason" name="notes" class="form-control mb-2" rows="2" placeholder="Reason (optional)"></textarea>
                                 <button class="btn btn-danger w-100"><i class="bi bi-x-circle me-1"></i>Not Interested</button>
                             </form>
                         </div>
@@ -156,7 +156,7 @@
                     @if(!$lead->isConverted())
                     <form action="{{ route('admission.leads.assign', $lead) }}" method="POST" class="d-flex gap-2">
                         @csrf
-                        <select name="assigned_to" class="form-select form-select-sm" style="width:auto" required>
+                        <select aria-label="Assigned To" name="assigned_to" class="form-select form-select-sm" style="width:auto" required>
                             <option value="">Select Counsellor</option>
                             @foreach(\App\Models\User::whereHas('roles', fn($query) => $query->whereIn('name', \App\Services\DepartmentHierarchyService::ADMISSION_ROLE_NAMES))->orderBy('name')->get() as $u)
                                 <option value="{{ $u->id }}" {{ $lead->assigned_to == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
@@ -175,7 +175,7 @@
                         <strong>Follow-ups</strong>
                         <div class="small text-muted">Schedule the next callback before leaving the page when the lead is not ready to convert.</div>
                     </div>
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleFollowUpModal">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#scheduleFollowUpModal">
                         <i class="bi bi-plus"></i> Schedule
                     </button>
                 </div>
@@ -188,7 +188,7 @@
                     @else
                     <table class="table table-sm mb-0">
                         <thead class="table-light"><tr>
-                            <th>Date/Time</th><th>Type</th><th>Notes</th><th>Status</th><th></th>
+                            <th scope="col">Date/Time</th><th scope="col">Type</th><th scope="col">Notes</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th>
                         </tr></thead>
                         <tbody>
                         @foreach($lead->followUps->sortBy('scheduled_at') as $fu)
@@ -278,7 +278,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Convert to Applicant</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ route('admission.leads.convert', $lead) }}" method="POST">
                 @csrf
@@ -286,7 +286,7 @@
                     <p class="text-muted small mb-3">This will create a new applicant account for <strong>{{ $lead->name }}</strong> ({{ $lead->email }}) and mark this lead as converted.</p>
                     <div class="mb-3">
                         <label class="form-label">Program <span class="text-danger">*</span></label>
-                        <select name="program_id" class="form-select" required>
+                        <select aria-label="Program" name="program_id" class="form-select" required>
                             <option value="">Select Program</option>
                             @foreach(\App\Models\Program::where('is_active', true)->orderBy('name')->get() as $program)
                                 <option value="{{ $program->id }}" {{ $lead->program_id == $program->id ? 'selected' : '' }}>{{ $program->name }}</option>
@@ -295,7 +295,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Batch (Optional)</label>
-                        <select name="batch_id" class="form-select">
+                        <select aria-label="Batch" name="batch_id" class="form-select">
                             <option value="">Select Batch</option>
                             @foreach(\App\Models\Batch::orderByDesc('start_date')->get() as $batch)
                                 <option value="{{ $batch->id }}">{{ $batch->name }}</option>

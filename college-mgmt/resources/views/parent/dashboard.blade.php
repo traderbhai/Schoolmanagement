@@ -125,7 +125,7 @@
 <div class="card mt-4">
     <div class="card-header d-flex align-items-center justify-content-between">
         <span class="fw-semibold"><i class="bi bi-megaphone me-2 text-primary"></i>Recent Notices</span>
-        <a href="{{ route('parent.notices') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        <a href="{{ route('parent.notices') }}" class="btn btn-sm btn-outline-primary">View notices</a>
     </div>
     <div class="list-group list-group-flush">
         @foreach($notices as $notice)

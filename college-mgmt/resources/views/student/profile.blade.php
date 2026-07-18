@@ -12,7 +12,7 @@
                 <div class="card-body py-4">
                     <div class="mb-3">
                         @if($student->photo)
-                        <img src="{{ Storage::url($student->photo) }}" alt="Photo"
+                        <img src="{{ Storage::url($student->photo) }}" alt="Profile photo of {{ $student->user->name }}"
                              class="rounded-circle" style="width:90px;height:90px;object-fit:cover;">
                         @else
                         <div style="width:90px;height:90px;border-radius:50%;background:#4f46e5;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;margin:0 auto;">
@@ -47,26 +47,26 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Full Name</label>
-                                <input type="text" name="name" value="{{ old('name', $student->user->name) }}" class="form-control @error('name') is-invalid @enderror">
+                                <input aria-label="Name" type="text" name="name" value="{{ old('name', $student->user->name) }}" class="form-control @error('name') is-invalid @enderror">
                                 @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email <span class="text-muted">(cannot change)</span></label>
-                                <input type="email" value="{{ $student->user->email }}" class="form-control" disabled>
+                                <input aria-label="Account email address" type="email" value="{{ $student->user->email }}" class="form-control" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone</label>
-                                <input type="text" name="phone" value="{{ old('phone', $student->phone) }}" class="form-control @error('phone') is-invalid @enderror">
+                                <input aria-label="Phone" type="text" name="phone" value="{{ old('phone', $student->phone) }}" class="form-control @error('phone') is-invalid @enderror">
                                 @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Address</label>
-                                <textarea name="address" rows="2" class="form-control @error('address') is-invalid @enderror">{{ old('address', $student->address) }}</textarea>
+                                <textarea aria-label="Address" name="address" rows="2" class="form-control @error('address') is-invalid @enderror">{{ old('address', $student->address) }}</textarea>
                                 @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Profile Photo <span class="text-muted">(JPG/PNG, max 2MB)</span></label>
-                                <input type="file" name="photo" accept="image/*" class="form-control @error('photo') is-invalid @enderror">
+                                <input aria-label="Photo" type="file" name="photo" accept="image/*" class="form-control @error('photo') is-invalid @enderror">
                                 @error('photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
@@ -80,12 +80,12 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Guardian Name</label>
-                                <input type="text" name="guardian_name" value="{{ old('guardian_name', $student->guardian_name) }}" class="form-control @error('guardian_name') is-invalid @enderror">
+                                <input aria-label="Guardian Name" type="text" name="guardian_name" value="{{ old('guardian_name', $student->guardian_name) }}" class="form-control @error('guardian_name') is-invalid @enderror">
                                 @error('guardian_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Guardian Phone</label>
-                                <input type="text" name="guardian_phone" value="{{ old('guardian_phone', $student->guardian_phone) }}" class="form-control @error('guardian_phone') is-invalid @enderror">
+                                <input aria-label="Guardian Phone" type="text" name="guardian_phone" value="{{ old('guardian_phone', $student->guardian_phone) }}" class="form-control @error('guardian_phone') is-invalid @enderror">
                                 @error('guardian_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
@@ -99,12 +99,12 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">New Password</label>
-                                <input type="password" name="password" class="form-control @error('password') is-invalid @enderror" autocomplete="new-password">
+                                <input aria-label="Password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" autocomplete="new-password">
                                 @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Confirm Password</label>
-                                <input type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
+                                <input aria-label="Confirm password" type="password" name="password_confirmation" class="form-control" autocomplete="new-password">
                             </div>
                         </div>
                     </div>

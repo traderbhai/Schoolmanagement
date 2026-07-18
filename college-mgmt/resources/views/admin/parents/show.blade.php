@@ -40,11 +40,11 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Name</th>
-                            <th>Enrollment</th>
-                            <th>Course</th>
-                            <th>Department</th>
-                            <th>Status</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Enrollment</th>
+                            <th scope="col">Course</th>
+                            <th scope="col">Department</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>

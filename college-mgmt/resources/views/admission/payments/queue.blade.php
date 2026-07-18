@@ -59,7 +59,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Program</label>
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $prog)
                         <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>
@@ -70,7 +70,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Installment</label>
-                <select name="installment_id" class="form-select form-select-sm">
+                <select aria-label="Installment" name="installment_id" class="form-select form-select-sm">
                     <option value="">All Installments</option>
                     @foreach($installments as $inst)
                         <option value="{{ $inst->id }}" {{ request('installment_id') == $inst->id ? 'selected' : '' }}>
@@ -81,7 +81,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">Payment Mode</label>
-                <select name="payment_mode" class="form-select form-select-sm">
+                <select aria-label="Payment mode" name="payment_mode" class="form-select form-select-sm">
                     <option value="">All Modes</option>
                     @foreach(['neft' => 'NEFT', 'rtgs' => 'RTGS', 'imps' => 'IMPS', 'upi' => 'UPI', 'dd' => 'DD', 'cash' => 'Cash', 'cheque' => 'Cheque'] as $val => $label)
                         <option value="{{ $val }}" {{ request('payment_mode') == $val ? 'selected' : '' }}>{{ $label }}</option>
@@ -90,11 +90,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">Date From</label>
-                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                <input aria-label="Date from" type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold">Date To</label>
-                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                <input aria-label="Date to" type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
             </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-sm btn-primary">
@@ -130,14 +130,14 @@
             <table class="table table-hover mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th>Applicant</th>
-                        <th>Installment</th>
-                        <th>Amount</th>
-                        <th>Mode</th>
-                        <th>Transaction Ref</th>
-                        <th>Submitted</th>
-                        <th>Proof</th>
-                        <th>Actions</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Installment</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Mode</th>
+                        <th scope="col">Transaction Ref</th>
+                        <th scope="col">Submitted</th>
+                        <th scope="col">Proof</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -167,7 +167,7 @@
                         <td>
                             @if($payment->payment_proof_path)
                                 <a href="{{ route('admission.payments.proof', $payment) }}"
-                                    class="btn btn-sm btn-outline-secondary" target="_blank">
+                                    class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">
                                     <i class="bi bi-download me-1"></i>Proof
                                 </a>
                             @else
@@ -178,13 +178,13 @@
                             <form method="POST" action="{{ route('admission.payments.verify', $payment) }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-success"
-                                    onclick="return confirm('Verify this payment?')">
+                                    onclick="return confirm('Verify payment of Rs. {{ number_format($payment->amount_paid, 0) }} for {{ addslashes($payment->applicant->user->name ?? 'this applicant') }}? Confirm bank/gateway reference, proof file, installment, and applicant record before marking it verified.')">
                                     <i class="bi bi-check-lg"></i> Verify
                                 </button>
                             </form>
                             <button type="button" class="btn btn-sm btn-outline-danger ms-1"
                                 data-bs-toggle="modal" data-bs-target="#rejectModal-{{ $payment->id }}">
-                                <i class="bi bi-x-lg"></i> Reject
+                                <i class="bi bi-x-lg"></i> Reject payment
                             </button>
 
                             @include('admission.payments._reject-modal', ['payment' => $payment])

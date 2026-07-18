@@ -10,10 +10,10 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-x-circle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-x-circle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card border-0 shadow-sm mb-4">
@@ -75,7 +75,7 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label form-label-sm">Resolution Notes <span class="text-danger">*</span></label>
-                        <textarea name="resolution_notes" rows="4" class="form-control form-control-sm" required maxlength="1000"></textarea>
+                        <textarea aria-label="Resolution Notes" name="resolution_notes" rows="4" class="form-control form-control-sm" required maxlength="1000"></textarea>
                     </div>
                     <button type="submit" class="btn btn-success btn-sm">Mark Resolved</button>
                 </form>
@@ -90,7 +90,7 @@
                 <p class="small text-muted">Escalate this grievance to Dean Academics for further action.</p>
                 <form method="POST" action="{{ route('hod.grievances.escalate', $grievance) }}">
                     @csrf
-                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Escalate this grievance?')">Escalate</button>
+                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Escalate this grievance to Dean Academics? Confirm local resolution options, urgency, student impact, and required context before escalation.')">Escalate grievance</button>
                 </form>
             </div>
         </div>

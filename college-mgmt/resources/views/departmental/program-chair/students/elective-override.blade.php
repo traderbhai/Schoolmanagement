@@ -11,7 +11,7 @@
             <form method="GET" action="{{ route('chair.students.elective-override') }}" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small fw-semibold mb-1">Filter by Subject</label>
-                    <select name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Subject" name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">— All Elective Subjects —</option>
                         @foreach($electiveSubjects as $es)
                             <option value="{{ $es->subject_id }}" {{ request('subject_id') == $es->subject_id ? 'selected' : '' }}>
@@ -36,11 +36,11 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Batch</th>
-                        <th>Current Elective</th>
-                        <th>Change</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Current Elective</th>
+                        <th scope="col">Change</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -72,7 +72,7 @@
                                     <input type="hidden" name="enrollment_id" value="{{ $enrollment->id }}">
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold mb-1">New Elective Subject</label>
-                                        <select name="new_subject_id" class="form-select form-select-sm" required>
+                                        <select aria-label="New Subject" name="new_subject_id" class="form-select form-select-sm" required>
                                             <option value="">— Select Subject —</option>
                                             @foreach($electiveSubjects as $es)
                                                 @if($es->subject_id !== $enrollment->subject_id)
@@ -85,7 +85,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold mb-1">Reason <span class="text-danger">*</span></label>
-                                        <input type="text" name="reason" class="form-control form-control-sm"
+                                        <input aria-label="Elective override reason" type="text" name="reason" class="form-control form-control-sm"
                                             placeholder="e.g. Schedule conflict, medical reason…" required>
                                     </div>
                                     <div class="col-auto">

@@ -9,7 +9,7 @@
 <div class="card">
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
-      <thead class="table-light"><tr><th class="ps-3">Name</th><th>Email</th><th>Status</th><th>Subjects</th><th>Weekly Slots</th></tr></thead>
+      <thead class="table-light"><tr><th scope="col" class="ps-3">Name</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Subjects</th><th scope="col">Weekly Slots</th></tr></thead>
       <tbody>
         @forelse($faculty as $t)
         <tr>

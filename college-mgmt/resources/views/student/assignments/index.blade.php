@@ -47,12 +47,12 @@
         <table class="table table-sm table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Assignment</th>
-                    <th>Subject</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                    <th>Marks</th>
-                    <th></th>
+                    <th scope="col">Assignment</th>
+                    <th scope="col">Subject</th>
+                    <th scope="col">Due Date</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Marks</th>
+                    <th aria-label="Actions" scope="col"></th>
                 </tr>
             </thead>
             <tbody>

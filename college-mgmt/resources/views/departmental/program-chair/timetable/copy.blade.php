@@ -275,7 +275,7 @@ document.getElementById('copyForm').addEventListener('submit', function(e) {
         return;
     }
 
-    if (!confirm('Copy timetable? This will create new entries in draft status.')) {
+    if (!confirm('Copy timetable into the selected target term? Confirm source term, target term, copied slots, faculty/room conflicts, and draft-review status before creating new timetable entries.')) {
         return;
     }
 

@@ -5,12 +5,12 @@
 <div class="container-fluid py-4">
   <h4 class="mb-4">Attendance Condonation Requests</h4>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
-  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('error'))<div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
-      <select name="status" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Status" name="status" class="form-select" onchange="this.form.submit()">
         <option value="">All Status</option>
         <option value="pending"  @selected(request('status')==='pending')>Pending</option>
         <option value="approved" @selected(request('status')==='approved')>Approved</option>
@@ -25,7 +25,7 @@
       <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
           <thead class="table-dark">
-            <tr><th>Student</th><th>Subject</th><th>Reason</th><th>Sessions Req.</th><th>Status</th><th>Action</th></tr>
+            <tr><th scope="col">Student</th><th scope="col">Subject</th><th scope="col">Reason</th><th scope="col">Sessions Req.</th><th scope="col">Status</th><th scope="col">Action</th></tr>
           </thead>
           <tbody>
             @forelse($condonations as $c)
@@ -51,16 +51,16 @@
                         @csrf
                         <div class="input-group input-group-sm mb-1">
                           <span class="input-group-text">Sessions</span>
-                          <input type="number" name="sessions_condoned" class="form-control" min="1" max="{{ max(1, (int) $c->sessions_requested) }}" value="{{ max(1, (int) $c->sessions_requested) }}" required>
+                          <input aria-label="Sessions Condoned" type="number" name="sessions_condoned" class="form-control" min="1" max="{{ max(1, (int) $c->sessions_requested) }}" value="{{ max(1, (int) $c->sessions_requested) }}" required>
                         </div>
-                        <input type="text" name="remarks" class="form-control form-control-sm mb-1" placeholder="Remarks">
-                        <button type="submit" class="btn btn-sm btn-success w-100">Approve</button>
+                        <input aria-label="Remarks" type="text" name="remarks" class="form-control form-control-sm mb-1" placeholder="Remarks">
+                        <button type="submit" class="btn btn-sm btn-success w-100">Approve condonation</button>
                       </form>
                       <form method="POST" action="{{ route('chair.students.condonations.reject', $c) }}">
                         @csrf
                         <div class="input-group input-group-sm">
-                          <input type="text" name="remarks" class="form-control" placeholder="Rejection reason" required>
-                          <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                          <input aria-label="Rejection reason" type="text" name="remarks" class="form-control" placeholder="Rejection reason" required>
+                          <button type="submit" class="btn btn-sm btn-danger">Reject condonation</button>
                         </div>
                       </form>
                     </div>

@@ -19,7 +19,7 @@ td { padding:4px 5px; border-bottom:1px solid #e5e7eb; font-size:9px; }
 <p style="text-align:center;font-size:9px;">Generated: {{ now()->format('d M Y H:i') }} | Total Students: {{ $totalStudents }} | Total Faculty: {{ $totalFaculty }}</p>
 <table>
 <thead><tr>
-<th>Program</th><th>Department</th><th>Students</th><th>Faculty</th><th>Subjects</th><th>Exams ({{ $reportYear }})</th><th>Pass Rate %</th><th>Attendance %</th>
+<th scope="col">Program</th><th scope="col">Department</th><th scope="col">Students</th><th scope="col">Faculty</th><th scope="col">Subjects</th><th scope="col">Exams ({{ $reportYear }})</th><th scope="col">Pass Rate %</th><th scope="col">Attendance %</th>
 </tr></thead>
 <tbody>
 @foreach($programs as $prog)

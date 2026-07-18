@@ -44,7 +44,7 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-center">
             <div class="col-sm-3">
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Statuses</option>
                     <option value="pending"  @selected(request('status')=='pending')>Pending</option>
                     <option value="approved" @selected(request('status')=='approved')>Approved</option>
@@ -52,7 +52,7 @@
                 </select>
             </div>
             <div class="col-sm-4">
-                <select name="teacher_id" class="form-select form-select-sm">
+                <select aria-label="Teacher" name="teacher_id" class="form-select form-select-sm">
                     <option value="">All Teachers</option>
                     @foreach($teachers as $t)
                         <option value="{{ $t->id }}" @selected(request('teacher_id')==$t->id)>{{ $t->user->name }}</option>
@@ -73,14 +73,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Requester</th>
-                    <th>Type</th>
-                    <th>Leave Type</th>
-                    <th>From - To</th>
-                    <th>Days</th>
-                    <th>Status</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
+                    <th scope="col">Requester</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Leave Type</th>
+                    <th scope="col">From - To</th>
+                    <th scope="col">Days</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -107,18 +107,19 @@
                 <td style="font-size:.83rem;max-width:180px">{{ Str::limit($leave->reason, 60) }}</td>
                 <td>
                     <div class="d-flex gap-1 flex-wrap">
-                        <a href="{{ route('admin.leaves.show', $leave) }}" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.leaves.show', $leave) }}" class="btn btn-sm btn-outline-primary" title="View" aria-label="View leave request for {{ $requesterName }}"><i class="bi bi-eye"></i></a>
                         @if($leave->status === 'pending')
                         <form method="POST" action="{{ route('admin.leaves.approve', $leave) }}">
                             @csrf @method('PATCH')
-                            <button class="btn btn-sm btn-success" title="Approve"><i class="bi bi-check-lg"></i></button>
+                            <button class="btn btn-sm btn-success" title="Approve" aria-label="Approve leave request for {{ $requesterName }}"><i class="bi bi-check-lg"></i></button>
                         </form>
                         <form method="POST" action="{{ route('admin.leaves.reject', $leave) }}">
                             @csrf @method('PATCH')
-                            <button class="btn btn-sm btn-warning" title="Reject"><i class="bi bi-x-lg"></i></button>
+                            <button class="btn btn-sm btn-warning" title="Reject" aria-label="Reject leave request for {{ $requesterName }}"><i class="bi bi-x-lg"></i></button>
                         </form>
                         @endif
                         <button class="btn btn-sm btn-outline-danger"
+                            aria-label="Delete leave request for {{ $requesterName }}"
                             data-confirm-delete="true"
                             data-action="{{ route('admin.leaves.destroy', $leave) }}"
                             data-name="{{ $requesterName }}'s leave">

@@ -95,11 +95,11 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Name, email, phone…" value="{{ request('search') }}">
+                <input aria-label="Admission search" type="text" name="search" class="form-control form-control-sm" placeholder="Name, email, phone…" value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Status</option>
                     @foreach(['enquiry','applied','shortlisted','admitted','rejected','withdrawn'] as $s)
                         <option value="{{ $s }}" @selected(request('status')==$s)>{{ ucfirst($s) }}</option>
@@ -108,7 +108,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Course</label>
-                <select name="course_id" class="form-select form-select-sm">
+                <select aria-label="Course" name="course_id" class="form-select form-select-sm">
                     <option value="">All Courses</option>
                     @foreach($courses as $c)
                         <option value="{{ $c->id }}" @selected(request('course_id')==$c->id)>{{ $c->name }}</option>
@@ -128,7 +128,7 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
@@ -146,15 +146,15 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Course</th>
-                    <th>Last Qual %</th>
-                    <th>App. Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Last Qual %</th>
+                    <th scope="col">App. Date</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -187,24 +187,24 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-center gap-1 flex-wrap">
-                            <a href="{{ route('admin.admissions.show', $adm) }}" class="btn btn-xs btn-outline-primary" title="View">
+                            <a href="{{ route('admin.admissions.show', $adm) }}" class="btn btn-xs btn-outline-primary" title="View" aria-label="View admission record for {{ $adm->student_name ?? $adm->name ?? 'student' }}">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{{ route('admin.admissions.edit', $adm) }}" class="btn btn-xs btn-outline-secondary" title="Edit">
+                            <a href="{{ route('admin.admissions.edit', $adm) }}" class="btn btn-xs btn-outline-secondary" title="Edit" aria-label="Edit admission record for {{ $adm->student_name ?? $adm->name ?? 'student' }}">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             {{-- Quick Status Change --}}
                             <form action="{{ route('admin.admissions.status', $adm) }}" method="POST" class="d-inline">
                                 @csrf @method('PATCH')
-                                <select name="status" class="form-select form-select-sm d-inline-block" style="width:auto;font-size:.75rem;padding:.2rem .4rem" onchange="this.form.submit()" title="Change status">
+                                <select aria-label="Status" name="status" class="form-select form-select-sm d-inline-block" style="width:auto;font-size:.75rem;padding:.2rem .4rem" onchange="this.form.submit()" title="Change status">
                                     @foreach(['enquiry','applied','shortlisted','admitted','rejected','withdrawn'] as $s)
                                         <option value="{{ $s }}" @selected($adm->status == $s)>{{ ucfirst($s) }}</option>
                                     @endforeach
                                 </select>
                             </form>
-                            <form action="{{ route('admin.admissions.destroy', $adm) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this record?')">
+                            <form action="{{ route('admin.admissions.destroy', $adm) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete admission record for {{ addslashes($adm->student_name ?? $adm->name ?? 'this student') }}? Confirm this record is not needed for applicant history, enrollment audit, fee records, or reports.')">
                                 @csrf @method('DELETE')
-                                <button class="btn btn-xs btn-outline-danger" title="Delete">
+                                <button class="btn btn-xs btn-outline-danger" title="Delete" aria-label="Delete admission record for {{ $adm->student_name ?? $adm->name ?? 'student' }}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>

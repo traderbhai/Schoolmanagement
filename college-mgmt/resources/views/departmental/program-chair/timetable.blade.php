@@ -13,12 +13,12 @@
                 <table class="table table-sm mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Time</th>
-                            <th>Subject</th>
-                            <th>Group / Batch</th>
-                            <th>Session</th>
-                            <th>Teacher</th>
-                            <th>Room</th>
+                            <th scope="col">Time</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Group / Batch</th>
+                            <th scope="col">Session</th>
+                            <th scope="col">Teacher</th>
+                            <th scope="col">Room</th>
                         </tr>
                     </thead>
                     <tbody>

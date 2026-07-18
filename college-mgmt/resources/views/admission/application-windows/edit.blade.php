@@ -18,7 +18,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Batch <span class="text-muted">(Optional - leave empty for all batches)</span></label>
-                        <select name="batch_id" class="form-control @error('batch_id') is-invalid @enderror">
+                        <select aria-label="Batch" name="batch_id" class="form-control @error('batch_id') is-invalid @enderror">
                             <option value="">All Batches</option>
                             @foreach($batches as $batch)
                                 <option value="{{ $batch->id }}" {{ $window->batch_id === $batch->id ? 'selected' : '' }}>
@@ -33,7 +33,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Application Capacity <span class="text-muted">(Optional - leave empty for unlimited)</span></label>
-                        <input type="number" name="capacity_limit" class="form-control @error('capacity_limit') is-invalid @enderror" min="1" value="{{ $window->capacity_limit }}">
+                        <input aria-label="Capacity Limit" type="number" name="capacity_limit" class="form-control @error('capacity_limit') is-invalid @enderror" min="1" value="{{ $window->capacity_limit }}">
                         <small class="text-muted d-block mt-2">Current applications: {{ $window->current_applications }}</small>
                         @error('capacity_limit')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -44,7 +44,7 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Opens At *</label>
-                        <input type="datetime-local" name="opens_at" class="form-control @error('opens_at') is-invalid @enderror" value="{{ $window->opens_at->format('Y-m-d\TH:i') }}" required>
+                        <input aria-label="Opens At" type="datetime-local" name="opens_at" class="form-control @error('opens_at') is-invalid @enderror" value="{{ $window->opens_at->format('Y-m-d\TH:i') }}" required>
                         @error('opens_at')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -52,7 +52,7 @@
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Closes At *</label>
-                        <input type="datetime-local" name="closes_at" class="form-control @error('closes_at') is-invalid @enderror" value="{{ $window->closes_at->format('Y-m-d\TH:i') }}" required>
+                        <input aria-label="Closes At" type="datetime-local" name="closes_at" class="form-control @error('closes_at') is-invalid @enderror" value="{{ $window->closes_at->format('Y-m-d\TH:i') }}" required>
                         @error('closes_at')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -61,7 +61,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ $window->description }}</textarea>
+                    <textarea aria-label="Description" name="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ $window->description }}</textarea>
                     @error('description')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror

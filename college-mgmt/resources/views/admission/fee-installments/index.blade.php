@@ -36,7 +36,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Program</label>
-                    <select class="form-select form-select-sm" onchange="window.location.href='/admission/fee-installments/'+this.value">
+                    <select aria-label="Fee installment program" class="form-select form-select-sm" onchange="window.location.href='/admission/fee-installments/'+this.value">
                         @foreach($programs as $p)
                             <option value="{{ $p->id }}" {{ $p->id == $program->id ? 'selected' : '' }}>{{ $p->name }}</option>
                         @endforeach
@@ -44,7 +44,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Filter by Batch</label>
-                    <select name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select aria-label="Batch" name="batch_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">All Batches</option>
                         @foreach($batches as $batch)
                             <option value="{{ $batch->id }}" {{ $selectedBatchId == $batch->id ? 'selected' : '' }}>{{ $batch->name }}</option>
@@ -63,10 +63,10 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     <div class="card border-0 shadow-sm">
@@ -90,14 +90,14 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Batch</th>
-                                <th class="text-end">Amount (Rs.)</th>
-                                <th>Due Date</th>
-                                <th>Status</th>
-                                <th>Payments</th>
-                                <th></th>
+                                <th scope="col">#</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Batch</th>
+                                <th scope="col" class="text-end">Amount (Rs.)</th>
+                                <th scope="col">Due Date</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Payments</th>
+                                <th aria-label="Actions" scope="col"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -123,13 +123,13 @@
                                     <td>{{ $inst->payments->count() }}</td>
                                     <td>
                                         <div class="d-flex gap-1 justify-content-end">
-                                            <a href="{{ route('admission.fee-installments.edit', $inst) }}" class="btn btn-sm btn-outline-secondary">
+                                            <a href="{{ route('admission.fee-installments.edit', $inst) }}" class="btn btn-sm btn-outline-secondary" aria-label="Edit fee installment {{ $inst->label ?? $inst->id }}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                             @if($inst->payments->count() === 0)
-                                                <form action="{{ route('admission.fee-installments.destroy', $inst) }}" method="POST" onsubmit="return confirm('Delete this installment?')">
+                                                <form action="{{ route('admission.fee-installments.destroy', $inst) }}" method="POST" onsubmit="return confirm('Delete admission fee installment {{ addslashes($inst->name) }} worth Rs. {{ number_format($inst->amount, 2) }}? Confirm no applicant payment, offer deadline, or finance reconciliation depends on this installment.')">
                                                     @csrf @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                                    <button class="btn btn-sm btn-outline-danger" aria-label="Delete admission fee installment {{ $inst->name }}"><i class="bi bi-trash"></i></button>
                                                 </form>
                                             @endif
                                         </div>

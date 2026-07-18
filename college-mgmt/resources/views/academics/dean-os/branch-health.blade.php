@@ -7,7 +7,7 @@
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Branch</th><th>Risk Band</th><th>Metrics</th><th>Actions</th><th></th></tr></thead>
+                <thead><tr><th scope="col">Branch</th><th scope="col">Risk Band</th><th scope="col">Metrics</th><th scope="col">Actions</th><th aria-label="Actions" scope="col"></th></tr></thead>
                 <tbody>
                 @foreach($branches as $branch)
                     <tr>

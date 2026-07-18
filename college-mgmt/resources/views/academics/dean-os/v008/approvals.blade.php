@@ -15,7 +15,7 @@
         <div class="text-muted mt-2">Approvals should not be used as comments. Return or request evidence when the source record is incomplete; final rows preserve the decision trail.</div>
     </div>
     <div class="row g-2 mb-3">@foreach(['Pending'=>$pending,'Overdue'=>$overdue,'High Risk'=>$high_risk] as $label=>$value)<div class="col-md-4"><div class="card shadow-sm"><div class="card-body py-2"><div class="small text-muted">{{ $label }}</div><div class="h4 mb-0">{{ $value }}</div></div></div></div>@endforeach</div>
-    <div class="card shadow-sm"><div class="card-header py-2 small text-muted">Visible filter summary: all approval streams | sort: latest | export from Dean Reports</div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Approval</th><th>Type</th><th>Owner</th><th>Risk</th><th>Status</th><th>Decision</th></tr></thead><tbody>
+    <div class="card shadow-sm"><div class="card-header py-2 small text-muted">Visible filter summary: all approval streams | sort: latest | export from Dean Reports</div><div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th scope="col">Approval</th><th scope="col">Type</th><th scope="col">Owner</th><th scope="col">Risk</th><th scope="col">Status</th><th scope="col">Decision</th></tr></thead><tbody>
         @foreach($items as $item)
             @php($isFinal = in_array($item->status, ['approved', 'rejected', 'returned', 'escalated', 'cancelled'], true))
             <tr>
@@ -35,15 +35,15 @@
                     @else
                         <form method="POST" action="{{ route('academics.dean-os.approval-cockpit.decide', $item) }}" class="d-flex gap-1">
                             @csrf @method('PATCH')
-                            <select class="form-select form-select-sm" name="status">
+                            <select aria-label="Status" class="form-select form-select-sm" name="status">
                                 <option value="approved">Approve</option>
                                 <option value="requested_evidence">Request evidence</option>
                                 <option value="returned">Return</option>
                                 <option value="rejected">Reject</option>
                                 <option value="escalated">Escalate</option>
                             </select>
-                            <input class="form-control form-control-sm" name="decision_reason" placeholder="Reason required except approval">
-                            <button class="btn btn-sm btn-primary" onclick="return confirm('Record this Dean approval decision?')">Save</button>
+                            <input aria-label="Reason required except approval" class="form-control form-control-sm" name="decision_reason" placeholder="Reason required except approval">
+                            <button class="btn btn-sm btn-primary" onclick="return confirm('Record this Dean approval decision? Confirm decision status, reason, evidence request, escalation impact, and downstream owner visibility before saving.')">Save approval decision</button>
                         </form>
                     @endif
                 </td>

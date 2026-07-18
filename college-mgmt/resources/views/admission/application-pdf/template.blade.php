@@ -371,10 +371,10 @@
 <table class="docs-table">
     <thead>
         <tr>
-            <th style="width:5%;">#</th>
-            <th style="width:50%;">Document Name</th>
-            <th style="width:20%;">Status</th>
-            <th style="width:25%;">Uploaded At</th>
+            <th scope="col" style="width:5%;">#</th>
+            <th scope="col" style="width:50%;">Document Name</th>
+            <th scope="col" style="width:20%;">Status</th>
+            <th scope="col" style="width:25%;">Uploaded At</th>
         </tr>
     </thead>
     <tbody>

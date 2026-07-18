@@ -149,7 +149,8 @@
                         <form method="POST" action="{{ route('admin.specializations.destroy', $spec) }}" class="d-inline">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn btn-link text-danger p-0 ms-2" style="font-size:.75rem;"
-                                onclick="return confirm('Remove specialization?')">
+                                onclick="return confirm('Remove specialization {{ addslashes($spec->name) }} from {{ addslashes($program->name) }}? Confirm curriculum, admissions, seat matrix, course groups, and student records no longer depend on it.')"
+                                aria-label="Remove specialization {{ $spec->name }}">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </form>
@@ -165,11 +166,11 @@
             @csrf
             <div class="col-md-5">
                 <label class="form-label form-label-sm">Specialization Name</label>
-                <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Finance" required>
+                <input aria-label="Program specialization name" type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Finance" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label form-label-sm">Code</label>
-                <input type="text" name="code" class="form-control form-control-sm" placeholder="FIN" maxlength="20" required>
+                <input aria-label="FIN" type="text" name="code" class="form-control form-control-sm" placeholder="FIN" maxlength="20" required>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-sm btn-outline-primary w-100">
@@ -200,14 +201,14 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Batch Name</th>
-                        <th>Code</th>
-                        <th>Academic Year</th>
-                        <th>Dates</th>
-                        <th>Capacity</th>
-                        <th>Terms</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Batch Name</th>
+                        <th scope="col">Code</th>
+                        <th scope="col">Academic Year</th>
+                        <th scope="col">Dates</th>
+                        <th scope="col">Capacity</th>
+                        <th scope="col">Terms</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -232,7 +233,7 @@
                         <td>{{ $batch->terms->count() }}</td>
                         <td><span class="badge {{ $statusBadge }}">{{ ucfirst($batch->status) }}</span></td>
                         <td class="text-end">
-                            <a href="{{ route('admin.batches.show', $batch) }}" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{{ route('admin.batches.show', $batch) }}" class="btn btn-sm btn-outline-secondary" aria-label="View batch {{ $batch->name }}">
                                 <i class="bi bi-eye"></i>
                             </a>
                         </td>

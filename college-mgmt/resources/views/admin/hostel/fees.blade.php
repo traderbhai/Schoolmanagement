@@ -70,11 +70,11 @@
             @csrf
             <div class="col-md-4">
                 <label class="form-label">Month</label>
-                <input type="month" name="month" value="{{ old('month', now()->format('Y-m')) }}" class="form-control" required>
+                <input aria-label="Month" type="month" name="month" value="{{ old('month', now()->format('Y-m')) }}" class="form-control" required>
             </div>
             <div class="col-md-4">
                 <label class="form-label">Due Date</label>
-                <input type="date" name="due_date" value="{{ old('due_date', now()->endOfMonth()->toDateString()) }}" class="form-control" required>
+                <input aria-label="Due Date" type="date" name="due_date" value="{{ old('due_date', now()->endOfMonth()->toDateString()) }}" class="form-control" required>
             </div>
             <div class="col-md-4">
                 <button class="btn btn-primary">
@@ -90,7 +90,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Status</label>
-                <select name="status" class="form-select">
+                <select aria-label="Status" name="status" class="form-select">
                     <option value="">All</option>
                     @foreach(['pending' => 'Pending', 'paid' => 'Paid', 'waived' => 'Waived'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
@@ -99,7 +99,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Month</label>
-                <input type="month" name="month" value="{{ request('month') }}" class="form-control">
+                <input aria-label="Month" type="month" name="month" value="{{ request('month') }}" class="form-control">
             </div>
             <div class="col-md-6 d-flex gap-2">
                 <button class="btn btn-outline-primary">Filter</button>
@@ -120,13 +120,13 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Student</th>
-                            <th>Room</th>
-                            <th>Month</th>
-                            <th class="text-end">Amount</th>
-                            <th>Due Date</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
+                            <th scope="col">Student</th>
+                            <th scope="col">Room</th>
+                            <th scope="col">Month</th>
+                            <th scope="col" class="text-end">Amount</th>
+                            <th scope="col">Due Date</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,11 +154,11 @@
                                 </td>
                                 <td class="text-end">
                                     @if($demand->status === 'pending')
-                                        <form method="POST" action="{{ route('admin.hostel.fees.paid', $demand) }}" class="d-inline" onsubmit="return confirm('Mark this hostel fee demand as paid?')">
+                                        <form method="POST" action="{{ route('admin.hostel.fees.paid', $demand) }}" class="d-inline" onsubmit="return confirm('Mark hostel fee demand of Rs. {{ number_format($demand->amount, 2) }} for {{ addslashes($demand->student->user->name ?? 'this student') }} as paid? Confirm receipt, month, room allocation, and reconciliation reference before closing the demand.')">
                                             @csrf
                                             <button class="btn btn-sm btn-outline-success">Mark Paid</button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.hostel.fees.waive', $demand) }}" class="d-inline" onsubmit="return confirm('Waive this hostel fee demand?')">
+                                        <form method="POST" action="{{ route('admin.hostel.fees.waive', $demand) }}" class="d-inline" onsubmit="return confirm('Waive hostel fee demand of Rs. {{ number_format($demand->amount, 2) }} for {{ addslashes($demand->student->user->name ?? 'this student') }}? Confirm approved waiver authority, audit reason, and NOC/clearance impact before closing the demand.')">
                                             @csrf
                                             <input type="hidden" name="waiver_reason" value="Approved hostel fee waiver from fee review queue.">
                                             <button class="btn btn-sm btn-outline-secondary">Waive</button>

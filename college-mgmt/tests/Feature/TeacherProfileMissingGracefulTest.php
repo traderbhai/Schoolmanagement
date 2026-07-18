@@ -56,7 +56,10 @@ class TeacherProfileMissingGracefulTest extends TestCase
             ->get(route('teacher.attendance.mark'))
             ->assertOk()
             ->assertSee('before marking attendance')
-            ->assertSee('No published classes are scheduled for this date');
+            ->assertSee('No published classes are scheduled for this date')
+            ->assertSee('My timetable')
+            ->assertSee('Availability profile')
+            ->assertSee('Teacher profile');
 
         $this->actingAs($teacherUser)
             ->get(route('teacher.materials.create'))
@@ -89,5 +92,30 @@ class TeacherProfileMissingGracefulTest extends TestCase
             ])
             ->assertRedirect(route('teacher.leaves.index'))
             ->assertSessionHas('error');
+    }
+
+    public function test_teacher_content_delete_actions_explain_student_impact(): void
+    {
+        $expectations = [
+            resource_path('views/teacher/materials/index.blade.php') => [
+                'Confirm students no longer need this file/link for the subject, lecture plan, or assessment preparation.',
+                'aria-label="Delete course material',
+            ],
+            resource_path('views/teacher/announcements/index.blade.php') => [
+                'Confirm students no longer need this message for class, assessment, timetable, or course delivery communication.',
+                'aria-label="Delete announcement',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this material?')", file_get_contents(resource_path('views/teacher/materials/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Delete this announcement?')", file_get_contents(resource_path('views/teacher/announcements/index.blade.php')));
     }
 }

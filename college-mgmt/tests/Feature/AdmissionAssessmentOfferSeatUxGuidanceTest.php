@@ -108,6 +108,17 @@ class AdmissionAssessmentOfferSeatUxGuidanceTest extends TestCase
             ->assertDontSee('Laravel\\', false);
     }
 
+    public function test_merit_list_risky_actions_explain_downstream_impact(): void
+    {
+        $contents = file_get_contents(resource_path('views/admission/merit-list/show.blade.php'));
+
+        $this->assertStringContainsString('Apply bulk selected/waitlist decisions for the current program, batch, and filtered rank list?', $contents);
+        $this->assertStringContainsString('offer letters, seat holds, waitlist movement, and enrollment readiness', $contents);
+        $this->assertStringContainsString('Confirm merit decisions, seat capacity, payment deadlines, and contact details before creating official offers.', $contents);
+        $this->assertStringNotContainsString("confirm('Apply bulk decisions?')", $contents);
+        $this->assertStringNotContainsString("confirm('Generate offer letters for selected applicants?')", $contents);
+    }
+
     public function test_offer_seat_control_empty_states_explain_source_workflow_and_next_actions(): void
     {
         $head = User::where('email', 'head@college.com')->firstOrFail();
@@ -140,5 +151,44 @@ class AdmissionAssessmentOfferSeatUxGuidanceTest extends TestCase
             ->assertDontSeeText('No active seat holds.')
             ->assertDontSeeText('No joining-kit tasks prepared yet.')
             ->assertDontSeeText('No deferral requests.');
+    }
+
+    public function test_assessment_and_offer_controls_use_specific_operational_labels(): void
+    {
+        $assessment = file_get_contents(resource_path('views/admission/v0038/assessment-scheduling.blade.php'));
+        $offerSeat = file_get_contents(resource_path('views/admission/v0038/offer-seat-control.blade.php'));
+        $quickSearch = file_get_contents(resource_path('views/admission/v0038/quick-search.blade.php'));
+
+        foreach ([
+            'Create assessment slot',
+            'Assign candidate',
+            'Bulk assign candidates',
+            'Accept evaluator invite',
+            'Replace evaluator',
+            'Build GD groups',
+            'Mark assessment submission',
+            'Update candidate status',
+        ] as $snippet) {
+            $this->assertStringContainsString($snippet, $assessment);
+        }
+
+        foreach ([
+            'Create offer round',
+            'Publish offer round',
+            'Add applicant to waitlist',
+            'Release seat hold',
+            'Request batch deferral',
+            'Approve batch deferral',
+        ] as $snippet) {
+            $this->assertStringContainsString($snippet, $offerSeat);
+        }
+
+        $this->assertStringContainsString('Search admission records', $quickSearch);
+        $this->assertStringNotContainsString('>Publish</button>', $offerSeat);
+        $this->assertStringNotContainsString('>Release</button>', $offerSeat);
+        $this->assertStringNotContainsString('>Assign</button>', $assessment);
+        $this->assertStringNotContainsString('>Bulk</button>', $assessment);
+        $this->assertStringNotContainsString('>Accept</button>', $assessment);
+        $this->assertStringNotContainsString('>Replace</button>', $assessment);
     }
 }

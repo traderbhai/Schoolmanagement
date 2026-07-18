@@ -60,10 +60,10 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Enrollment No.</th>
-                        <th>Attendance Status</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment No.</th>
+                        <th scope="col">Attendance Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,7 +82,7 @@
                         <div class="d-flex gap-2 flex-wrap">
                             @foreach(['present'=>['success','check-circle-fill'],'absent'=>['danger','x-circle-fill'],'late'=>['warning','clock-fill'],'excused'=>['secondary','shield-check']] as $status=>[$color,$icon])
                             <div class="form-check form-check-inline mb-0">
-                                <input class="form-check-input" type="radio"
+                                <input aria-label="{{ ucfirst($status) }} attendance for {{ $s->user->name }}" class="form-check-input" type="radio"
                                     name="attendance[{{ $s->id }}]"
                                     id="att_{{ $s->id }}_{{ $status }}"
                                     value="{{ $status }}"

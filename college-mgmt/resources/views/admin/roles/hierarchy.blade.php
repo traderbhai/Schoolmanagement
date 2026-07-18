@@ -155,7 +155,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <span class="badge bg-primary-subtle text-primary rounded-pill px-3">{{ $role->name }}</span>
-                        <a href="{{ route('admin.roles.permissions.show', $role) }}" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                    <a href="{{ route('admin.roles.permissions.show', $role) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" aria-label="Edit role permissions for {{ $role->name }}">
                             <i class="bi bi-pencil"></i>
                         </a>
                     </div>

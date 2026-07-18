@@ -10,7 +10,7 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="row g-4">
@@ -35,7 +35,7 @@
                 @if($book->description)<hr><p class="small text-muted">{{ $book->description }}</p>@endif
             </div>
             <div class="card-footer">
-                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal"><i class="bi bi-pencil me-1"></i>Edit</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal"><i class="bi bi-pencil me-1"></i>Edit</button>
             </div>
         </div>
     </div>
@@ -48,7 +48,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
-                            <tr><th>Accession No.</th><th>Condition</th><th>Status</th><th>Borrower</th></tr>
+                            <tr><th scope="col">Accession No.</th><th scope="col">Condition</th><th scope="col">Status</th><th scope="col">Borrower</th></tr>
                         </thead>
                         <tbody>
                             @foreach($copies as $copy)
@@ -90,7 +90,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
-                            <tr><th>Accession</th><th>Borrower</th><th>Issued</th><th>Due</th><th>Returned</th><th>Fine</th></tr>
+                            <tr><th scope="col">Accession</th><th scope="col">Borrower</th><th scope="col">Issued</th><th scope="col">Due</th><th scope="col">Returned</th><th scope="col">Fine</th></tr>
                         </thead>
                         <tbody>
                             @forelse($issueHistory as $issue)
@@ -125,56 +125,56 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Book</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Title *</label>
-                            <input type="text" name="title" class="form-control" value="{{ $book->title }}" required>
+                            <input aria-label="Title" type="text" name="title" class="form-control" value="{{ $book->title }}" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">ISBN</label>
-                            <input type="text" name="isbn" class="form-control" value="{{ $book->isbn }}">
+                            <input aria-label="Isbn" type="text" name="isbn" class="form-control" value="{{ $book->isbn }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Author *</label>
-                            <input type="text" name="author" class="form-control" value="{{ $book->author }}" required>
+                            <input aria-label="Author" type="text" name="author" class="form-control" value="{{ $book->author }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Publisher</label>
-                            <input type="text" name="publisher" class="form-control" value="{{ $book->publisher }}">
+                            <input aria-label="Publisher" type="text" name="publisher" class="form-control" value="{{ $book->publisher }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Edition</label>
-                            <input type="text" name="edition" class="form-control" value="{{ $book->edition }}">
+                            <input aria-label="Edition" type="text" name="edition" class="form-control" value="{{ $book->edition }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Year</label>
-                            <input type="number" name="year_of_publication" class="form-control" value="{{ $book->year_of_publication }}">
+                            <input aria-label="Year Of Publication" type="number" name="year_of_publication" class="form-control" value="{{ $book->year_of_publication }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Category</label>
-                            <input type="text" name="category" class="form-control" value="{{ $book->category }}">
+                            <input aria-label="Category" type="text" name="category" class="form-control" value="{{ $book->category }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Language</label>
-                            <input type="text" name="language" class="form-control" value="{{ $book->language }}">
+                            <input aria-label="Language" type="text" name="language" class="form-control" value="{{ $book->language }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Location</label>
-                            <input type="text" name="location" class="form-control" value="{{ $book->location }}">
+                            <input aria-label="Location" type="text" name="location" class="form-control" value="{{ $book->location }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Status</label>
-                            <select name="is_active" class="form-select">
+                            <select aria-label="Is Active" name="is_active" class="form-select">
                                 <option value="1" {{ $book->is_active ? 'selected' : '' }}>Active</option>
                                 <option value="0" {{ !$book->is_active ? 'selected' : '' }}>Inactive</option>
                             </select>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="3">{{ $book->description }}</textarea>
+                            <textarea aria-label="Description" name="description" class="form-control" rows="3">{{ $book->description }}</textarea>
                         </div>
                     </div>
                 </div>

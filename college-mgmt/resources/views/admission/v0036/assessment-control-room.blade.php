@@ -64,7 +64,7 @@
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Panel Readiness</span><span class="small text-muted">Evaluator, rubric, venue, capacity, and pending score status</span></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Panel</th><th>Type</th><th>Capacity</th><th>Readiness</th><th>Pending</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Panel</th><th scope="col">Type</th><th scope="col">Capacity</th><th scope="col">Readiness</th><th scope="col">Pending</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                     @forelse($dashboard['readiness'] as $row)
                         <tr>
@@ -92,7 +92,7 @@
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center"><span class="fw-bold">Upcoming Sessions</span><span class="small text-muted">Open the source session before assessment day</span></div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Session</th><th>Program</th><th>Date</th><th>Candidates</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Session</th><th scope="col">Program</th><th scope="col">Date</th><th scope="col">Candidates</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                     @foreach($dashboard['sessions'] as $session)
                         <tr>
@@ -100,7 +100,7 @@
                             <td>{{ $session->program?->name }}</td>
                             <td>{{ optional($session->scheduled_date)->format('d M Y') }} {{ $session->start_time }}</td>
                             <td>{{ $session->sessionApplicants->count() }}</td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.sessions.show', $session) }}">Open</a></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.sessions.show', $session) }}">Open session</a></td>
                         </tr>
                     @endforeach
                     </tbody>

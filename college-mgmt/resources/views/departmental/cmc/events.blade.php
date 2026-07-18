@@ -4,7 +4,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
   <form method="GET" class="d-flex gap-2">
-    <select name="type" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+    <select aria-label="Type" name="type" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
       <option value="">All Types</option>
       @foreach(\App\Models\CareerEvent::TYPE_LABELS as $t => $label)
       <option value="{{ $t }}" {{ request('type')===$t?'selected':'' }}>{{ $label }}</option>
@@ -22,7 +22,7 @@
     <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">Title</th><th>Type</th><th>Date</th><th>Venue</th><th>Seats</th><th>Published</th><th class="text-end pe-3">Actions</th></tr>
+        <tr><th scope="col" class="ps-3">Title</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Venue</th><th scope="col">Seats</th><th scope="col">Published</th><th scope="col" class="text-end pe-3">Actions</th></tr>
       </thead>
       <tbody>
         @forelse($events as $e)
@@ -45,7 +45,7 @@
               <i class="bi bi-shield-lock"></i>
             </button>
             @else
-            <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1"
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 ms-1"
                 data-bs-toggle="modal" data-bs-target="#deleteModal"
                 data-action="{{ route('cmc.events.destroy', $e) }}"
                 data-name="{{ $e->title }}" title="Delete">

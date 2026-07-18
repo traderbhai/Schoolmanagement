@@ -5,11 +5,11 @@
 <div class="container-fluid py-4">
   <h4 class="mb-4">Student Grievances</h4>
 
-  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+  @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
 
   <form method="GET" class="row g-2 mb-3">
     <div class="col-md-3">
-      <select name="status" class="form-select" onchange="this.form.submit()">
+      <select aria-label="Status" name="status" class="form-select" onchange="this.form.submit()">
         <option value="">All Status</option>
         <option value="open"         @selected(request('status')==='open')>Open</option>
         <option value="under_review" @selected(request('status')==='under_review')>Under Review</option>
@@ -26,7 +26,7 @@
       <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
           <thead class="table-dark">
-            <tr><th>Student</th><th>Category</th><th>Subject</th><th>Status</th><th>Filed</th><th>Action</th></tr>
+            <tr><th scope="col">Student</th><th scope="col">Category</th><th scope="col">Subject</th><th scope="col">Status</th><th scope="col">Filed</th><th scope="col">Action</th></tr>
           </thead>
           <tbody>
             @forelse($grievances as $g)
@@ -47,11 +47,11 @@
                   @if(in_array($g->status, ['resolved', 'closed'], true))
                     <span class="text-muted small">History locked</span>
                   @else
-                    <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('griev-{{ $g->id }}').classList.toggle('d-none')">Update</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('griev-{{ $g->id }}').classList.toggle('d-none')">Update grievance</button>
                     <div id="griev-{{ $g->id }}" class="d-none mt-2" style="width:280px">
                       <form method="POST" action="{{ route('chair.students.grievances.update', $g) }}">
                         @csrf
-                        <select name="status" class="form-select form-select-sm mb-1">
+                        <select aria-label="Status" name="status" class="form-select form-select-sm mb-1">
                           <option value="open"         @selected($g->status==='open')>Open</option>
                           <option value="under_review" @selected($g->status==='under_review')>Under Review</option>
                           @if(in_array($g->status, ['open', 'under_review'], true))
@@ -59,8 +59,8 @@
                           @endif
                           <option value="resolved"     @selected($g->status==='resolved')>Resolved</option>
                         </select>
-                        <textarea name="resolution_notes" class="form-control form-control-sm mb-1" rows="2" maxlength="1000" placeholder="Resolution notes required when resolving">{{ $g->resolution_notes }}</textarea>
-                        <button type="submit" class="btn btn-sm btn-primary w-100">Save</button>
+                        <textarea aria-label="Resolution notes required when resolving" name="resolution_notes" class="form-control form-control-sm mb-1" rows="2" maxlength="1000" placeholder="Resolution notes required when resolving">{{ $g->resolution_notes }}</textarea>
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Save grievance</button>
                       </form>
                     </div>
                   @endif

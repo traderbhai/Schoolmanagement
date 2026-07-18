@@ -10,10 +10,10 @@
 @section('content')
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Drive Info --}}
@@ -88,7 +88,7 @@
             @csrf
             <div class="col-md-6">
                 <label class="form-label form-label-sm">Select Student</label>
-                <select name="student_id" class="form-select form-select-sm" required>
+                <select aria-label="Student" name="student_id" class="form-select form-select-sm" required>
                     <option value="">Select student</option>
                     @foreach($students as $student)
                         <option value="{{ $student->id }}">
@@ -116,12 +116,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Enrollment</th>
-                        <th>Course</th>
-                        <th>Application Status</th>
-                        <th>Offered Package</th>
-                        <th>Actions</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment</th>
+                        <th scope="col">Course</th>
+                        <th scope="col">Application Status</th>
+                        <th scope="col">Offered Package</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -149,8 +149,8 @@
                         </td>
                         <td>{{ $placement->offered_package ? 'Rs. '.$placement->offered_package.' LPA' : 'Offer package not recorded' }}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateModal{{ $placement->id }}">
-                                <i class="bi bi-pencil"></i> Update
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateModal{{ $placement->id }}">
+                                <i class="bi bi-pencil"></i> Update application
                             </button>
                         </td>
                     </tr>
@@ -163,12 +163,12 @@
                                     @csrf @method('PATCH')
                                     <div class="modal-header">
                                         <h6 class="modal-title">Update Application - {{ $placement->student->user->name ?? 'Student' }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
                                         <div class="mb-3">
                                             <label class="form-label">Application Status</label>
-                                            <select name="application_status" class="form-select" required>
+                                            <select aria-label="Application Status" name="application_status" class="form-select" required>
                                                 @foreach(['applied','shortlisted','interview','selected','rejected','withdrawn'] as $s)
                                                     <option value="{{ $s }}" @selected($placement->application_status === $s)>{{ ucfirst($s) }}</option>
                                                 @endforeach
@@ -176,22 +176,22 @@
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Offered Package (LPA)</label>
-                                            <input type="number" step="0.01" name="offered_package" class="form-control"
+                                            <input aria-label="Offered Package" type="number" step="0.01" name="offered_package" class="form-control"
                                                 value="{{ $placement->offered_package }}">
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Joining Date</label>
-                                            <input type="date" name="joining_date" class="form-control"
+                                            <input aria-label="Joining Date" type="date" name="joining_date" class="form-control"
                                                 value="{{ $placement->joining_date ? $placement->joining_date->format('Y-m-d') : '' }}">
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Remarks</label>
-                                            <textarea name="remarks" class="form-control" rows="2">{{ $placement->remarks }}</textarea>
+                                            <textarea aria-label="Remarks" name="remarks" class="form-control" rows="2">{{ $placement->remarks }}</textarea>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button class="btn btn-primary">Update</button>
+                                        <button class="btn btn-primary">Update application</button>
                                     </div>
                                 </form>
                             </div>

@@ -113,9 +113,9 @@
             <a href="{{ url('/') }}" class="btn btn-primary">
                 <i class="bi bi-house me-2"></i>Go to my dashboard
             </a>
-            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+            <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
                 <i class="bi bi-arrow-left me-2"></i>Go back
-            </a>
+            </button>
         </div>
     </section>
     <section class="help-strip">

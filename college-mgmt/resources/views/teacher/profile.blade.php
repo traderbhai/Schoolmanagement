@@ -116,25 +116,25 @@
 
                             <div class="mb-3">
                                 <label class="form-label form-label-sm">Designation</label>
-                                <input type="text" name="designation" class="form-control form-control-sm @error('designation') is-invalid @enderror"
+                                <input aria-label="Designation" type="text" name="designation" class="form-control form-control-sm @error('designation') is-invalid @enderror"
                                        value="{{ old('designation', $teacher->designation) }}" maxlength="100" @disabled($teacher->status !== 'active')>
                                 @error('designation')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label form-label-sm">Phone</label>
-                                <input type="text" name="phone" class="form-control form-control-sm @error('phone') is-invalid @enderror"
+                                <input aria-label="Phone" type="text" name="phone" class="form-control form-control-sm @error('phone') is-invalid @enderror"
                                        value="{{ old('phone', $teacher->phone) }}" maxlength="20" @disabled($teacher->status !== 'active')>
                                 @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label form-label-sm">Qualification</label>
-                                <input type="text" name="qualification" class="form-control form-control-sm @error('qualification') is-invalid @enderror"
+                                <input aria-label="Qualification" type="text" name="qualification" class="form-control form-control-sm @error('qualification') is-invalid @enderror"
                                        value="{{ old('qualification', $teacher->qualification) }}" maxlength="200" @disabled($teacher->status !== 'active')>
                                 @error('qualification')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label form-label-sm">Specialization</label>
-                                <input type="text" name="specialization" class="form-control form-control-sm @error('specialization') is-invalid @enderror"
+                                <input aria-label="Specialization" type="text" name="specialization" class="form-control form-control-sm @error('specialization') is-invalid @enderror"
                                        value="{{ old('specialization', $teacher->specialization) }}" maxlength="200" @disabled($teacher->status !== 'active')>
                                 @error('specialization')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>

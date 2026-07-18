@@ -15,7 +15,7 @@
         <div class="card-body">
             <table class="table table-hover">
                 <thead>
-                    <tr><th>Event Name</th><th>Date</th><th>Type</th><th>Holiday</th><th>Actions</th></tr>
+                    <tr><th scope="col">Event Name</th><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Holiday</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
                     @foreach($events as $event)

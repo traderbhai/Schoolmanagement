@@ -21,7 +21,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-sm-4">
                         <label class="form-label small">Batch</label>
-                        <select name="batch_id" class="form-select form-select-sm" required>
+                        <select aria-label="Batch" name="batch_id" class="form-select form-select-sm" required>
                             <option value="">Select Batch</option>
                             @foreach($batches ?? [] as $b)
                             <option value="{{ $b->id }}">{{ $b->name }} ({{ $b->program->name ?? 'Program not linked' }})</option>
@@ -30,7 +30,7 @@
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label small">Term</label>
-                        <select name="term_id" class="form-select form-select-sm" required>
+                        <select aria-label="Term" name="term_id" class="form-select form-select-sm" required>
                             <option value="">Select Term</option>
                             @foreach($terms ?? [] as $t)
                             <option value="{{ $t->id }}">{{ $t->name }}</option>
@@ -39,7 +39,7 @@
                     </div>
                     <div class="col-sm-4">
                         <button type="submit" class="btn btn-primary btn-sm"
-                            onclick="return confirm('Generate fee demands for all active students in this batch/term?')">
+                            onclick="return confirm('Generate fee demands for all active students in the selected batch and term? Confirm the fee structure, due dates, scholarships, and active student list are final before creating finance ledger records.')">
                             <i class="bi bi-lightning me-1"></i>Generate Demands
                         </button>
                     </div>
@@ -56,7 +56,7 @@
             <form method="POST" action="{{ route('academic.fee-demands.apply-penalties') }}" class="ms-auto">
                 @csrf
                 <button type="submit" class="btn btn-warning btn-sm"
-                    onclick="return confirm('Apply penalties to all overdue demands?')">
+                    onclick="return confirm('Apply late penalties to all overdue pending demands? Confirm the penalty policy, due dates, and any approved waivers before updating student balances.')">
                     <i class="bi bi-exclamation-triangle me-1"></i>Apply Penalties
                 </button>
             </form>
@@ -71,14 +71,14 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Student</th>
-                        <th>Term</th>
-                        <th>Total</th>
-                        <th>Final Amount</th>
-                        <th>Penalty</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Term</th>
+                        <th scope="col">Total</th>
+                        <th scope="col">Final Amount</th>
+                        <th scope="col">Penalty</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

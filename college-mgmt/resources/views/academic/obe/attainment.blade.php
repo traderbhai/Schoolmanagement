@@ -23,7 +23,7 @@
         <form method="GET" class="row g-2 align-items-end" id="filterForm">
             <div class="col-sm-4">
                 <label class="form-label small mb-1">Program</label>
-                <select name="program_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
                     <option value="">— Select Program —</option>
                     @foreach($programs as $p)
                         <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -32,7 +32,7 @@
             </div>
             <div class="col-sm-3">
                 <label class="form-label small mb-1">Term</label>
-                <select name="term_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
+                <select aria-label="Term" name="term_id" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
                     <option value="">— Select Term —</option>
                     @foreach($terms as $t)
                         <option value="{{ $t->id }}" @selected(request('term_id') == $t->id)>{{ $t->name }}</option>

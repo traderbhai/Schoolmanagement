@@ -23,11 +23,11 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Name or Employee ID…" value="{{ request('search') }}">
+                <input aria-label="Teacher search" type="text" name="search" class="form-control form-control-sm" placeholder="Name or Employee ID…" value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Department</label>
-                <select name="department_id" class="form-select form-select-sm">
+                <select aria-label="Department" name="department_id" class="form-select form-select-sm">
                     <option value="">All Departments</option>
                     @foreach($departments as $d)
                         <option value="{{ $d->id }}" @selected(request('department_id')==$d->id)>{{ $d->name }}</option>
@@ -49,13 +49,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Teacher</th>
-                    <th>Employee ID</th>
-                    <th>Department</th>
-                    <th>Designation</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Teacher</th>
+                    <th scope="col">Employee ID</th>
+                    <th scope="col">Department</th>
+                    <th scope="col">Designation</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,9 +79,10 @@
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.teachers.show', $t) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
-                        <a href="{{ route('admin.teachers.edit', $t) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.teachers.show', $t) }}" class="btn btn-sm btn-outline-secondary" title="View" aria-label="View teacher {{ $t->user->name }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.teachers.edit', $t) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit teacher {{ $t->user->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete teacher {{ $t->user->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.teachers.destroy', $t) }}"
                             data-name="{{ $t->user->name }}">

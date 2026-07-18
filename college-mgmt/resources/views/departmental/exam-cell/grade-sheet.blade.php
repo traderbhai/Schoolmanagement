@@ -10,7 +10,7 @@
     <div class="d-flex gap-2">
         <form method="POST" action="{{ route('exam-cell.publish', $exam) }}">
             @csrf
-            <button class="btn btn-sm btn-success" onclick="return confirm('Publish results for this exam?')" @disabled($exam->published_at)>
+            <button class="btn btn-sm btn-success" onclick="return confirm('Publish results for this exam? Confirm marks, absentees, pass/fail status, student visibility, and post-publication correction workflow before locking this grade sheet.')" @disabled($exam->published_at)>
                 <i class="bi bi-check-circle me-1"></i>Publish Results
             </button>
         </form>
@@ -41,7 +41,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>#</th><th>Student</th><th>Roll No.</th><th>Absent</th><th>Marks (/ {{ $exam->total_marks }})</th><th>Status</th></tr>
+                    <tr><th scope="col">#</th><th scope="col">Student</th><th scope="col">Roll No.</th><th scope="col">Absent</th><th scope="col">Marks (/ {{ $exam->total_marks }})</th><th scope="col">Status</th></tr>
                 </thead>
                 <tbody>
                 @forelse($students as $s)
@@ -51,12 +51,12 @@
                         <td>{{ $s->user?->name ?? '—' }}</td>
                         <td>{{ $s->roll_number ?? $s->enrollment_number ?? '—' }}</td>
                         <td>
-                            <input type="checkbox" name="absent[]" value="{{ $s->id }}" class="form-check-input"
+                            <input aria-label="Absent" type="checkbox" name="absent[]" value="{{ $s->id }}" class="form-check-input"
                                 {{ $r?->is_absent ? 'checked' : '' }}
                                 @disabled($exam->published_at)>
                         </td>
                         <td style="width:130px;">
-                            <input type="number" name="marks[{{ $s->id }}]" class="form-control form-control-sm"
+                            <input aria-label="Marks for {{ $s->user?->name ?? 'student' }}" type="number" name="marks[{{ $s->id }}]" class="form-control form-control-sm"
                                 min="0" max="{{ $exam->total_marks }}" step="0.5"
                                 value="{{ $r && !$r->is_absent ? $r->marks_obtained : '' }}"
                                 placeholder="—"

@@ -10,7 +10,7 @@
 @section('content')
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Status Filter Tabs --}}
@@ -31,14 +31,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Student</th>
-                    <th>Room</th>
-                    <th>Reason</th>
-                    <th>Out DateTime</th>
-                    <th>Expected Return</th>
-                    <th>Actual Return</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Room</th>
+                    <th scope="col">Reason</th>
+                    <th scope="col">Out DateTime</th>
+                    <th scope="col">Expected Return</th>
+                    <th scope="col">Actual Return</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,15 +64,15 @@
                                 @if($isExpiredPending)
                                     <span class="badge bg-secondary me-1">Expired</span>
                                 @else
-                                    <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline" onsubmit="return confirm('Approve this hostel outpass?')">
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.approve', $op) }}" class="d-inline" onsubmit="return confirm('Approve hostel outpass for {{ addslashes($op->student->user->name ?? 'this student') }}? Confirm reason, expected return, guardian/campus policy, and active hostel allocation before allowing exit.')">
                                         @csrf
-                                        <button type="submit" class="btn btn-xs btn-success btn-sm">Approve</button>
+                                        <button type="submit" class="btn btn-xs btn-success btn-sm">Approve outpass</button>
                                     </form>
                                 @endif
-                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $op->id }}">Reject</button>
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $op->id }}">Reject outpass</button>
                             @elseif($op->status === 'approved')
                                 @if($canMarkReturned)
-                                    <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline" onsubmit="return confirm('Mark this student as returned from outpass?')">
+                                    <form method="POST" action="{{ route('admin.hostel.outpasses.return', $op) }}" class="d-inline" onsubmit="return confirm('Mark {{ addslashes($op->student->user->name ?? 'this student') }} as returned from outpass? Confirm physical return, actual time, and any late/escalation notes before closing the movement record.')">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-info">Mark Returned</button>
                                     </form>
@@ -89,14 +89,14 @@
                             <div class="modal-content">
                                 <form method="POST" action="{{ route('admin.hostel.outpasses.reject', $op) }}">
                                     @csrf
-                                    <div class="modal-header"><h6 class="modal-title">Reject Outpass</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                    <div class="modal-header"><h6 class="modal-title">Reject Outpass</h6><button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                     <div class="modal-body">
                                         <label class="form-label">Remarks</label>
-                                        <textarea name="remarks" class="form-control" rows="2"></textarea>
+                                        <textarea aria-label="Remarks" name="remarks" class="form-control" rows="2"></textarea>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                        <button type="submit" class="btn btn-danger btn-sm">Reject outpass</button>
                                     </div>
                                 </form>
                             </div>

@@ -46,7 +46,7 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -96,11 +96,11 @@
             <form action="{{ route('admission.leads.index') }}" method="GET" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small mb-1">Search</label>
-                    <input name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, phone">
+                    <input aria-label="Name, email, phone" name="search" value="{{ $search }}" class="form-control form-control-sm" placeholder="Name, email, phone">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
                         @foreach(['new','contacted','interested','not_interested','converted'] as $leadStatus)
                             <option value="{{ $leadStatus }}" @selected($status === $leadStatus)>{{ ucfirst(str_replace('_', ' ', $leadStatus)) }}</option>
@@ -109,7 +109,7 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Source</label>
-                    <select name="source" class="form-select form-select-sm">
+                    <select aria-label="Source" name="source" class="form-select form-select-sm">
                         <option value="">All Sources</option>
                         @foreach(['web_form','referral','advertisement','social_media','event','agent','other'] as $leadSource)
                             <option value="{{ $leadSource }}" @selected($source === $leadSource)>{{ ucfirst(str_replace('_', ' ', $leadSource)) }}</option>
@@ -118,7 +118,7 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Program</label>
-                    <select name="program_id" class="form-select form-select-sm">
+                    <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                         <option value="">All Programs</option>
                         @foreach($programs as $program)
                             <option value="{{ $program->id }}" @selected($programId == $program->id)>{{ $program->abbreviation ?? $program->name }}</option>
@@ -127,14 +127,14 @@
                 </div>
                 <div class="col-md-1">
                     <label class="form-label small mb-1">Rows</label>
-                    <select name="per_page" class="form-select form-select-sm">
+                    <select aria-label="Per Page" name="per_page" class="form-select form-select-sm">
                         @foreach([10,25,50,100] as $size)
                             <option value="{{ $size }}" @selected(request('per_page', 25) == $size)>{{ $size }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search"></i></button>
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-search me-1"></i>Apply filters</button>
                     <a href="{{ route('admission.leads.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                 </div>
             </form>
@@ -146,15 +146,15 @@
             <table class="table table-hover table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th><a class="sort-link" href="{{ $sortUrl('name') }}">Name <i class="bi {{ $sortIcon('name') }}"></i></a></th>
-                        <th>Email / Phone</th>
-                        <th>Program</th>
-                        <th><a class="sort-link" href="{{ $sortUrl('source') }}">Source <i class="bi {{ $sortIcon('source') }}"></i></a></th>
-                        <th><a class="sort-link" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
-                        <th><a class="sort-link" href="{{ $sortUrl('priority') }}">Priority <i class="bi {{ $sortIcon('priority') }}"></i></a></th>
-                        <th>Owner</th>
-                        <th><a class="sort-link" href="{{ $sortUrl('last_contacted_at') }}">Last Contact <i class="bi {{ $sortIcon('last_contacted_at') }}"></i></a></th>
-                        <th></th>
+                        <th scope="col"><a class="sort-link" href="{{ $sortUrl('name') }}">Name <i class="bi {{ $sortIcon('name') }}"></i></a></th>
+                        <th scope="col">Email / Phone</th>
+                        <th scope="col">Program</th>
+                        <th scope="col"><a class="sort-link" href="{{ $sortUrl('source') }}">Source <i class="bi {{ $sortIcon('source') }}"></i></a></th>
+                        <th scope="col"><a class="sort-link" href="{{ $sortUrl('status') }}">Status <i class="bi {{ $sortIcon('status') }}"></i></a></th>
+                        <th scope="col"><a class="sort-link" href="{{ $sortUrl('priority') }}">Priority <i class="bi {{ $sortIcon('priority') }}"></i></a></th>
+                        <th scope="col">Owner</th>
+                        <th scope="col"><a class="sort-link" href="{{ $sortUrl('last_contacted_at') }}">Last Contact <i class="bi {{ $sortIcon('last_contacted_at') }}"></i></a></th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -172,7 +172,7 @@
                             <td class="small">{{ $lead->assignedTo->name ?? 'Unassigned' }}</td>
                             <td class="small text-muted">{{ $lead->last_contacted_at?->format('d M H:i') ?? 'Never' }}</td>
                             <td class="text-end">
-                                <a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Open</a>
+                                <a href="{{ route('admission.leads.show', $lead) }}" class="btn btn-sm btn-outline-primary py-0 px-2">Open lead</a>
                             </td>
                         </tr>
                     @empty

@@ -39,12 +39,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Subject</th>
-                        <th>Exam</th>
-                        <th>Marks Claimed</th>
-                        <th>Status</th>
-                        <th>Revised Marks</th>
-                        <th>Submitted</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Exam</th>
+                        <th scope="col">Marks Claimed</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Revised Marks</th>
+                        <th scope="col">Submitted</th>
                     </tr>
                 </thead>
                 <tbody>

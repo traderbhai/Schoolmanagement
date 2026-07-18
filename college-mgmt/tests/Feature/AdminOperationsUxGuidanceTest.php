@@ -25,6 +25,8 @@ class AdminOperationsUxGuidanceTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
+            ->assertSee('Setup and operating checklist')
+            ->assertSee('View checklist')
             ->assertSee('Admin operating sequence')
             ->assertSee('1. Check institute KPIs')
             ->assertSee('2. Review attendance/fees')
@@ -65,6 +67,40 @@ class AdminOperationsUxGuidanceTest extends TestCase
             $response->assertSee(route($route), false);
             $this->actingAs($admin)->get(route($route))->assertOk();
         }
+    }
+
+    public function test_fee_management_page_is_mobile_safe_and_icon_actions_are_named(): void
+    {
+        $admin = User::where('email', 'admin@demo.edu')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('admin.fees.index'))
+            ->assertOk()
+            ->assertSee('Fee Management')
+            ->assertSee('flex-column flex-lg-row', false)
+            ->assertSee('table-responsive', false)
+            ->assertSee('aria-label="View fee structure details"', false)
+            ->assertSee('aria-label="Edit fee structure"', false)
+            ->assertSee('aria-label="Delete fee structure"', false)
+            ->assertSee('Rs.', false)
+            ->assertDontSee('â‚¹', false)
+            ->assertDontSee('â€”', false)
+            ->assertDontSee('â€“', false)
+            ->assertDontSee('href="#"', false)
+            ->assertDontSee('SERVICE ERROR', false);
+    }
+
+    public function test_org_hierarchy_risky_visibility_actions_are_named_and_confirmed(): void
+    {
+        $contents = file_get_contents(resource_path('views/admin/org-hierarchy/index.blade.php'));
+
+        $this->assertStringContainsString('Update summary dashboard visibility for this reporting line?', $contents);
+        $this->assertStringContainsString('Update full portal access for this reporting line?', $contents);
+        $this->assertStringContainsString('This immediately changes dashboard visibility and full portal access for affected roles.', $contents);
+        $this->assertStringContainsString('aria-label="{{ $line->can_view_summary ? \'Disable\' : \'Enable\' }} summary dashboard visibility', $contents);
+        $this->assertStringContainsString('aria-label="{{ $line->can_view_full ? \'Disable\' : \'Enable\' }} full portal access', $contents);
+        $this->assertStringContainsString('aria-label="Remove reporting line between', $contents);
+        $this->assertStringNotContainsString("confirm('Remove this reporting line?')", $contents);
     }
 
     public function test_admin_setup_pages_show_configuration_sequence(): void

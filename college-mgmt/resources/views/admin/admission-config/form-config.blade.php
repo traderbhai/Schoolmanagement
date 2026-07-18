@@ -30,10 +30,10 @@
             <table class="table table-sm mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:40%">Field</th>
-                        <th>Type</th>
-                        <th class="text-center">Include</th>
-                        <th class="text-center">Required</th>
+                        <th scope="col" style="width:40%">Field</th>
+                        <th scope="col">Type</th>
+                        <th scope="col" class="text-center">Include</th>
+                        <th scope="col" class="text-center">Required</th>
                     </tr>
                 </thead>
                 <tbody>

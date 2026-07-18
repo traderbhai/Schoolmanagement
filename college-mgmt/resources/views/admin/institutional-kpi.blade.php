@@ -151,10 +151,10 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Program</th>
-                    <th>Active Students</th>
-                    <th style="min-width:200px">Pass Rate</th>
-                    <th>Actions</th>
+                    <th scope="col">Program</th>
+                    <th scope="col">Active Students</th>
+                    <th scope="col" style="min-width:200px">Pass Rate</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -199,10 +199,10 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Batch</th>
-                    <th>Program</th>
-                    <th>Active Students</th>
-                    <th>Start Year</th>
+                    <th scope="col">Batch</th>
+                    <th scope="col">Program</th>
+                    <th scope="col">Active Students</th>
+                    <th scope="col">Start Year</th>
                 </tr>
             </thead>
             <tbody>

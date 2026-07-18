@@ -53,10 +53,10 @@
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Source</th>
-                                <th>Total</th>
-                                <th>Converted</th>
-                                <th>Rate</th>
+                                <th scope="col">Source</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Converted</th>
+                                <th scope="col">Rate</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,10 +94,10 @@
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Program</th>
-                                <th>Total</th>
-                                <th>Converted</th>
-                                <th>Rate</th>
+                                <th scope="col">Program</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">Converted</th>
+                                <th scope="col">Rate</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -137,10 +137,10 @@
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Date</th>
-                                <th>New Leads</th>
-                                <th>Conversions</th>
-                                <th>Daily Rate</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">New Leads</th>
+                                <th scope="col">Conversions</th>
+                                <th scope="col">Daily Rate</th>
                             </tr>
                         </thead>
                         <tbody>

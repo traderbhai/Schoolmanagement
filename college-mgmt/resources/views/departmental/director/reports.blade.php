@@ -126,17 +126,17 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
             <h6 class="fw-semibold mb-0"><i class="bi bi-people me-2 text-primary"></i>Enrollment by Program</h6>
-            <a href="{{ route('director.programs') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            <a href="{{ route('director.programs') }}" class="btn btn-sm btn-outline-secondary">View programs</a>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Program</th>
-                            <th>Code</th>
-                            <th>Enrolled Students</th>
-                            <th>Share</th>
+                            <th scope="col" class="ps-3">Program</th>
+                            <th scope="col">Code</th>
+                            <th scope="col">Enrolled Students</th>
+                            <th scope="col">Share</th>
                         </tr>
                     </thead>
                     <tbody>

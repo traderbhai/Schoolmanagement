@@ -28,7 +28,7 @@
                 <div class="card-body vstack gap-3">
                     <div>
                         <label class="form-label">Lead</label>
-                        <select name="lead_id" class="form-select" required>
+                        <select aria-label="Lead" name="lead_id" class="form-select" required>
                             <option value="">Select lead</option>
                             @foreach($leads as $lead)
                                 <option value="{{ $lead->id }}">
@@ -40,7 +40,7 @@
                     </div>
                     <div>
                         <label class="form-label">Manual priority points</label>
-                        <input name="manual_priority_points" type="number" class="form-control" value="0" min="-50" max="50">
+                        <input aria-label="Manual Priority Points" name="manual_priority_points" type="number" class="form-control" value="0" min="-50" max="50">
                         <div class="form-text">Use this for verified context not captured by activity signals.</div>
                     </div>
                     <button class="btn btn-primary w-100">Recalculate Score</button>
@@ -58,11 +58,11 @@
                     <table class="table table-sm align-middle mb-0" aria-label="Lead score history">
                         <thead class="table-light">
                             <tr>
-                                <th>Lead</th>
-                                <th>Score</th>
-                                <th>Band</th>
-                                <th>Signals</th>
-                                <th>Scored</th>
+                                <th scope="col">Lead</th>
+                                <th scope="col">Score</th>
+                                <th scope="col">Band</th>
+                                <th scope="col">Signals</th>
+                                <th scope="col">Scored</th>
                             </tr>
                         </thead>
                         <tbody>

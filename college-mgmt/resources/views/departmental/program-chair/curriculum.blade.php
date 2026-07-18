@@ -15,7 +15,7 @@
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
                     <thead class="table-light">
-                        <tr><th>Code</th><th>Subject</th><th>Type</th><th>Credits</th><th>Hrs/Week</th></tr>
+                        <tr><th scope="col">Code</th><th scope="col">Subject</th><th scope="col">Type</th><th scope="col">Credits</th><th scope="col">Hrs/Week</th></tr>
                     </thead>
                     <tbody>
                     @foreach($subs as $sub)

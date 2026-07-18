@@ -31,11 +31,11 @@
             <form method="GET" action="{{ route('notifications.index') }}" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted mb-1">Search inbox</label>
-                    <input type="search" name="search" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Title or message">
+                    <input aria-label="Title or message" type="search" name="search" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Title or message">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted mb-1">Read status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All messages</option>
                         <option value="unread" @selected(($filters['status'] ?? '') === 'unread')>Unread only</option>
                         <option value="read" @selected(($filters['status'] ?? '') === 'read')>Read only</option>
@@ -43,7 +43,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted mb-1">Type</label>
-                    <select name="type" class="form-select form-select-sm">
+                    <select aria-label="Type" name="type" class="form-select form-select-sm">
                         <option value="">All types</option>
                         @foreach($typeOptions as $option)
                             <option value="{{ $option }}" @selected(($filters['type'] ?? '') === $option)>{{ ucfirst(str_replace('_', ' ', $option)) }}</option>
@@ -51,7 +51,7 @@
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply</button>
+                    <button type="submit" class="btn btn-sm btn-primary flex-fill">Apply filters</button>
                     <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
                 </div>
             </form>
@@ -110,7 +110,7 @@
                         </div>
                     </div>
                     <a href="{{ route('notifications.show', $notification) }}" class="btn btn-sm btn-outline-primary flex-shrink-0">
-                        Open
+                        Open notification
                     </a>
                 </div>
             </div>

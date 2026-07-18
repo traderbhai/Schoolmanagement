@@ -67,10 +67,10 @@
                 <table class="table table-sm table-bordered mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Reference No.</th>
-                            <th class="text-end">Amount (Rs.)</th>
-                            <th>Method</th>
-                            <th>Verified At</th>
+                            <th scope="col">Reference No.</th>
+                            <th scope="col" class="text-end">Amount (Rs.)</th>
+                            <th scope="col">Method</th>
+                            <th scope="col">Verified At</th>
                         </tr>
                     </thead>
                     <tbody>

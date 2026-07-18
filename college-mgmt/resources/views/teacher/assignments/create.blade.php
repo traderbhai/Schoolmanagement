@@ -6,7 +6,7 @@
 <div class="container-fluid px-4">
 
     <div class="d-flex align-items-center mb-3">
-        <a href="{{ route('teacher.assignments.index') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <a href="{{ route('teacher.assignments.index') }}" class="btn btn-sm btn-outline-secondary me-3" aria-label="Back to assignments">
             <i class="bi bi-arrow-left"></i>
         </a>
         <h4 class="mb-0"><i class="bi bi-journal-plus me-2 text-primary"></i>Create Assignment</h4>
@@ -43,7 +43,7 @@
                     {{-- Subject --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
-                        <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
+                        <select aria-label="Subject" name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required @disabled($actionBlockedReason)>
                             <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
@@ -57,7 +57,7 @@
                     {{-- Max Marks --}}
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Max Marks <span class="text-danger">*</span></label>
-                        <input type="number" name="max_marks" value="{{ old('max_marks', 100) }}"
+                        <input aria-label="Max Marks" type="number" name="max_marks" value="{{ old('max_marks', 100) }}"
                                class="form-control @error('max_marks') is-invalid @enderror"
                                min="1" max="1000" required @disabled($actionBlockedReason)>
                         @error('max_marks')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -66,7 +66,7 @@
                     {{-- Due Date --}}
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Due Date & Time <span class="text-danger">*</span></label>
-                        <input type="datetime-local" name="due_at" value="{{ old('due_at') }}"
+                        <input aria-label="Due At" type="datetime-local" name="due_at" value="{{ old('due_at') }}"
                                class="form-control @error('due_at') is-invalid @enderror" required @disabled($actionBlockedReason)>
                         @error('due_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
@@ -74,7 +74,7 @@
                     {{-- Title --}}
                     <div class="col-12">
                         <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" value="{{ old('title') }}"
+                        <input aria-label="Assignment title" type="text" name="title" value="{{ old('title') }}"
                                class="form-control @error('title') is-invalid @enderror"
                                placeholder="e.g. Assignment 1 - Linked Lists" required @disabled($actionBlockedReason)>
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -83,7 +83,7 @@
                     {{-- Description --}}
                     <div class="col-12">
                         <label class="form-label fw-semibold">Description</label>
-                        <textarea name="description" rows="3"
+                        <textarea aria-label="Brief overview of the assignment" name="description" rows="3"
                                   class="form-control @error('description') is-invalid @enderror"
                                   placeholder="Brief overview of the assignment" @disabled($actionBlockedReason)>{{ old('description') }}</textarea>
                         @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -92,7 +92,7 @@
                     {{-- Instructions --}}
                     <div class="col-12">
                         <label class="form-label fw-semibold">Instructions</label>
-                        <textarea name="instructions" rows="4"
+                        <textarea aria-label="Step-by-step instructions for students" name="instructions" rows="4"
                                   class="form-control @error('instructions') is-invalid @enderror"
                                   placeholder="Step-by-step instructions for students" @disabled($actionBlockedReason)>{{ old('instructions') }}</textarea>
                         @error('instructions')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -111,7 +111,7 @@
                         </div>
                         <div id="late-penalty-row" style="{{ old('allow_late_submission') ? '' : 'display:none' }}">
                             <label class="form-label small">Late Penalty (%)</label>
-                            <input type="number" name="late_penalty_percent"
+                            <input aria-label="Late Penalty Percent" type="number" name="late_penalty_percent"
                                    value="{{ old('late_penalty_percent', 10) }}"
                                    class="form-control form-control-sm @error('late_penalty_percent') is-invalid @enderror"
                                    min="0" max="100" style="max-width:120px;" @disabled($actionBlockedReason)>
@@ -123,7 +123,7 @@
                     {{-- Attachment --}}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Attachment (optional)</label>
-                        <input type="file" name="attachment"
+                        <input aria-label="Attachment" type="file" name="attachment"
                                class="form-control @error('attachment') is-invalid @enderror" @disabled($actionBlockedReason)>
                         <div class="form-text">Reference file for students (PDF, DOCX, etc.).</div>
                         @error('attachment')<div class="invalid-feedback">{{ $message }}</div>@enderror

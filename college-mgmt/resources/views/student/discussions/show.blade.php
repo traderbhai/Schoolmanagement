@@ -73,7 +73,7 @@
             <form method="POST" action="{{ route('student.discussions.reply', [$subject, $discussion]) }}">
                 @csrf
                 <div class="mb-3">
-                    <textarea name="body" rows="4" class="form-control @error('body') is-invalid @enderror"
+                    <textarea aria-label="Discussion reply" name="body" rows="4" class="form-control @error('body') is-invalid @enderror"
                               placeholder="Share your answer or thoughts...">{{ old('body') }}</textarea>
                     @error('body')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>

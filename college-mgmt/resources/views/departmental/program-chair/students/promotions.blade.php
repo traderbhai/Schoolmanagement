@@ -14,14 +14,14 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Batch</th>
-                        <th>From Term</th>
-                        <th>To Term</th>
-                        <th>Status</th>
-                        <th>Processed By</th>
-                        <th>Remarks</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">From Term</th>
+                        <th scope="col">To Term</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Processed By</th>
+                        <th scope="col">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -50,18 +50,18 @@
     <div class="card-header bg-transparent fw-semibold"><i class="bi bi-building me-2 text-primary"></i>Department Details</div>
     <div class="card-body">
         <table class="table table-borderless mb-0" style="font-size:.9rem">
-            <tr><th class="text-muted" style="width:180px">Name</th><td>{{ $department->name }}</td></tr>
-            <tr><th class="text-muted">Code</th><td><code>{{ $department->code }}</code></td></tr>
-            <tr><th class="text-muted">Head of Dept</th><td>{{ $department->head_name ?? '—' }}</td></tr>
-            <tr><th class="text-muted">Description</th><td>{{ $department->description ?? '—' }}</td></tr>
-            <tr><th class="text-muted">Status</th><td>
+            <tr><th scope="row" class="text-muted" style="width:180px">Name</th><td>{{ $department->name }}</td></tr>
+            <tr><th scope="row" class="text-muted">Code</th><td><code>{{ $department->code }}</code></td></tr>
+            <tr><th scope="row" class="text-muted">Head of Dept</th><td>{{ $department->head_name ?? '—' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Description</th><td>{{ $department->description ?? '—' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Status</th><td>
                 @if($department->is_active)
                     <span class="badge bg-success">Active</span>
                 @else
                     <span class="badge bg-danger">Inactive</span>
                 @endif
             </td></tr>
-            <tr><th class="text-muted">Created</th><td>{{ $department->created_at->format('d M Y') }}</td></tr>
+            <tr><th scope="row" class="text-muted">Created</th><td>{{ $department->created_at->format('d M Y') }}</td></tr>
         </table>
     </div>
 </div>

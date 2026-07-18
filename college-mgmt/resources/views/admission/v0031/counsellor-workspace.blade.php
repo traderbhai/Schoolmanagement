@@ -47,11 +47,11 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
                 <span>Assigned Leads</span>
-                <a href="{{ route('admission.leads.index', ['counsellor_id' => auth()->id(), 'per_page' => 25]) }}" class="btn btn-sm btn-outline-primary py-0">View all</a>
+                <a href="{{ route('admission.leads.index', ['counsellor_id' => auth()->id(), 'per_page' => 25]) }}" class="btn btn-sm btn-outline-primary py-0">View assigned leads</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Name</th><th>Program</th><th>Priority</th><th>Next Action</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Name</th><th scope="col">Program</th><th scope="col">Priority</th><th scope="col">Next Action</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                     @forelse($assignedLeads as $lead)
                         <tr>
@@ -59,7 +59,7 @@
                             <td>{{ $lead->program->name ?? 'Program not assigned' }}</td>
                             <td><span class="badge bg-{{ in_array($lead->priority, ['urgent','high']) ? 'danger' : 'secondary' }}">{{ ucfirst($lead->priority ?? 'normal') }}</span></td>
                             <td class="small">{{ $lead->next_action ?: 'Next action not set' }}</td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.leads.show', $lead) }}">Open</a></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.leads.show', $lead) }}">Open lead</a></td>
                         </tr>
                     @empty
                         <tr>
@@ -77,11 +77,11 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
                 <span>Assigned Applicants</span>
-                <a href="{{ route('admission.applicants.index', ['per_page' => 20]) }}" class="btn btn-sm btn-outline-primary py-0">View all</a>
+                <a href="{{ route('admission.applicants.index', ['per_page' => 20]) }}" class="btn btn-sm btn-outline-primary py-0">View applicants</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Applicant</th><th>Status</th><th>Program</th><th>Next Action</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Applicant</th><th scope="col">Status</th><th scope="col">Program</th><th scope="col">Next Action</th><th aria-label="Actions" scope="col"></th></tr></thead>
                     <tbody>
                     @forelse($assignedApplicants as $applicant)
                         <tr>
@@ -89,7 +89,7 @@
                             <td><span class="{{ $applicant->status_badge }}">{{ $applicant->status_label }}</span></td>
                             <td>{{ $applicant->program->name ?? 'Program not assigned' }}</td>
                             <td class="small">{{ $applicant->next_action ?: 'Next action not set' }}</td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.applicants.show', $applicant) }}">Open</a></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admission.applicants.show', $applicant) }}">Open applicant</a></td>
                         </tr>
                     @empty
                         <tr>
@@ -109,7 +109,7 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-transparent fw-bold d-flex justify-content-between align-items-center">
                 <span>Due Reminders</span>
-                <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-primary py-0">All</a>
+                <a href="{{ route('admission.reminders.index') }}" class="btn btn-sm btn-outline-primary py-0">View reminders</a>
             </div>
             <div class="list-group list-group-flush">
                 @forelse($reminders as $reminder)
@@ -118,7 +118,7 @@
                             <div class="fw-semibold">{{ ucfirst(str_replace('_', ' ', $reminder->reason)) }}</div>
                             <div class="small text-muted">{{ class_basename($reminder->subject_type) }} #{{ $reminder->subject_id }} - {{ optional($reminder->due_at)->format('d M Y H:i') }}</div>
                         </div>
-                        <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
+                        <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}">@csrf<button class="btn btn-sm btn-outline-success">Send reminder</button></form>
                     </div>
                 @empty
                     <div class="list-group-item py-3">

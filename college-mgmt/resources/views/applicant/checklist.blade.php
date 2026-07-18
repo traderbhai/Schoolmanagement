@@ -95,11 +95,11 @@
             <table class="table table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 22%">Step</th>
-                        <th style="width: 12%">Status</th>
-                        <th style="width: 14%">Owner</th>
-                        <th>Blocker / confirmation</th>
-                        <th class="text-end" style="width: 14%">Action</th>
+                        <th scope="col" style="width: 22%">Step</th>
+                        <th scope="col" style="width: 12%">Status</th>
+                        <th scope="col" style="width: 14%">Owner</th>
+                        <th scope="col">Blocker / confirmation</th>
+                        <th scope="col" class="text-end" style="width: 14%">Action</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -19,7 +19,7 @@
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -37,7 +37,7 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label small mb-1">Filter by Subject</label>
-                        <select name="subject_id" class="form-select form-select-sm"
+                        <select aria-label="Subject" name="subject_id" class="form-select form-select-sm"
                                 onchange="document.getElementById('filter-form').submit()">
                             <option value="">All Subjects</option>
                             @foreach($subjects as $subject)
@@ -75,13 +75,13 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Title</th>
-                                <th>Subject</th>
-                                <th>Due Date</th>
-                                <th class="text-center">Max Marks</th>
-                                <th class="text-center">Submissions</th>
-                                <th class="text-center">Published</th>
-                                <th class="text-end">Actions</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Due Date</th>
+                                <th scope="col" class="text-center">Max Marks</th>
+                                <th scope="col" class="text-center">Submissions</th>
+                                <th scope="col" class="text-center">Published</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -13,7 +13,7 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -23,7 +23,7 @@
             <form method="GET" action="{{ route('admin.audit.index') }}" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Action</label>
-                    <select name="action" class="form-select form-select-sm">
+                    <select aria-label="Action" name="action" class="form-select form-select-sm">
                         <option value="">All actions</option>
                         @foreach($actions as $action)
                         <option value="{{ $action }}" {{ request('action') === $action ? 'selected' : '' }}>
@@ -34,12 +34,12 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Date From</label>
-                    <input type="date" name="date_from" class="form-control form-control-sm"
+                    <input aria-label="Date From" type="date" name="date_from" class="form-control form-control-sm"
                            value="{{ request('date_from') }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Date To</label>
-                    <input type="date" name="date_to" class="form-control form-control-sm"
+                    <input aria-label="Date To" type="date" name="date_to" class="form-control form-control-sm"
                            value="{{ request('date_to') }}">
                 </div>
                 <div class="col-md-3 d-flex gap-2">
@@ -58,12 +58,12 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Timestamp</th>
-                            <th>Actor</th>
-                            <th>Action</th>
-                            <th>Target</th>
-                            <th>Summary</th>
-                            <th class="text-end pe-3">Details</th>
+                            <th scope="col" class="ps-3">Timestamp</th>
+                            <th scope="col">Actor</th>
+                            <th scope="col">Action</th>
+                            <th scope="col">Target</th>
+                            <th scope="col">Summary</th>
+                            <th scope="col" class="text-end pe-3">Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -104,8 +104,8 @@
                                 @endif
                             </td>
                             <td class="text-end pe-3">
-                                <a href="{{ route('admin.audit.show', $log) }}"
-                                   class="btn btn-sm btn-outline-secondary py-0 px-2">
+                    <a href="{{ route('admin.audit.show', $log) }}"
+                       class="btn btn-sm btn-outline-secondary py-0 px-2" aria-label="View audit log {{ $log->id }}">
                                     <i class="bi bi-eye"></i>
                                 </a>
                             </td>

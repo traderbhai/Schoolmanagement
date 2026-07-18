@@ -13,10 +13,10 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body py-2">
             <form class="row g-2 align-items-end">
-                <div class="col-md-3"><label class="form-label small">Program</label><select class="form-select form-select-sm" name="program_id"><option value="">All programs</option>@foreach($selectorOptions['programs'] ?? [] as $program)<option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>{{ $program->code ?: $program->name }}</option>@endforeach</select></div>
-                <div class="col-md-3"><label class="form-label small">Batch</label><select class="form-select form-select-sm" name="batch_id"><option value="">All batches</option>@foreach($selectorOptions['batches'] ?? [] as $batch)<option value="{{ $batch->id }}" @selected((string) request('batch_id') === (string) $batch->id)>{{ $batch->code ?: $batch->name }}</option>@endforeach</select></div>
-                <div class="col-md-3"><label class="form-label small">Term</label><select class="form-select form-select-sm" name="term_id"><option value="">All terms</option>@foreach($selectorOptions['terms'] ?? [] as $term)<option value="{{ $term->id }}" @selected((string) request('term_id') === (string) $term->id)>{{ $term->name }}</option>@endforeach</select></div>
-                <div class="col-md-3 d-flex gap-1"><button class="btn btn-sm btn-primary">Check Readiness</button><a href="{{ route('academics.pmc.timetable-launch.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+                <div class="col-md-3"><label class="form-label small">Program</label><select aria-label="Program" class="form-select form-select-sm" name="program_id"><option value="">All programs</option>@foreach($selectorOptions['programs'] ?? [] as $program)<option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>{{ $program->code ?: $program->name }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label class="form-label small">Batch</label><select aria-label="Batch" class="form-select form-select-sm" name="batch_id"><option value="">All batches</option>@foreach($selectorOptions['batches'] ?? [] as $batch)<option value="{{ $batch->id }}" @selected((string) request('batch_id') === (string) $batch->id)>{{ $batch->code ?: $batch->name }}</option>@endforeach</select></div>
+                <div class="col-md-3"><label class="form-label small">Term</label><select aria-label="Term" class="form-select form-select-sm" name="term_id"><option value="">All terms</option>@foreach($selectorOptions['terms'] ?? [] as $term)<option value="{{ $term->id }}" @selected((string) request('term_id') === (string) $term->id)>{{ $term->name }}</option>@endforeach</select></div>
+                <div class="col-md-3 d-flex gap-1"><button type="submit" class="btn btn-sm btn-primary">Check launch readiness</button><a href="{{ route('academics.pmc.timetable-launch.index') }}" class="btn btn-sm btn-outline-secondary">Clear readiness filters</a></div>
             </form>
         </div>
     </div>
@@ -34,7 +34,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Prerequisite</th><th>Status</th><th>Ready</th><th>Warnings</th><th>Blockers</th><th>Action</th></tr></thead>
+                <thead><tr><th scope="col">Prerequisite</th><th scope="col">Status</th><th scope="col">Ready</th><th scope="col">Warnings</th><th scope="col">Blockers</th><th scope="col">Action</th></tr></thead>
                 <tbody>
                     @foreach($readiness['checks'] as $check)
                         <tr>
@@ -43,7 +43,7 @@
                             <td>{{ $check['ready'] }}</td>
                             <td>{{ $check['warnings'] }}</td>
                             <td>{{ $check['blockers'] }}</td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route($check['route'], array_filter($check['filters'] ?? [])) }}">Open</a></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route($check['route'], array_filter($check['filters'] ?? [])) }}">Open prerequisite source</a></td>
                         </tr>
                     @endforeach
                 </tbody>

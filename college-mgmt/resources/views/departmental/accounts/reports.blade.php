@@ -24,11 +24,11 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Program</th>
-                        <th>Billed</th>
-                        <th>Collected</th>
-                        <th>Outstanding</th>
-                        <th style="min-width:160px">Collection %</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Billed</th>
+                        <th scope="col">Collected</th>
+                        <th scope="col">Outstanding</th>
+                        <th scope="col" style="min-width:160px">Collection %</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,13 +68,13 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Batch</th>
-                        <th>Program</th>
-                        <th>Active Students</th>
-                        <th>Billed</th>
-                        <th>Collected</th>
-                        <th>Outstanding</th>
-                        <th style="min-width:160px">Collection %</th>
+                        <th scope="col">Batch</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Active Students</th>
+                        <th scope="col">Billed</th>
+                        <th scope="col">Collected</th>
+                        <th scope="col">Outstanding</th>
+                        <th scope="col" style="min-width:160px">Collection %</th>
                     </tr>
                 </thead>
                 <tbody>

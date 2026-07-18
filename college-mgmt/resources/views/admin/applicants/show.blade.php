@@ -5,7 +5,7 @@
 <div class="container-fluid p-4">
 
     <div class="d-flex align-items-center gap-3 mb-4">
-        <a href="{{ route('admin.applicants.index') }}" class="btn btn-outline-secondary btn-sm">
+        <a href="{{ route('admin.applicants.index') }}" class="btn btn-outline-secondary btn-sm" aria-label="Back to applicants">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
@@ -117,7 +117,7 @@
                 <div class="card-body">
                     <form method="POST" action="{{ route('admin.applicants.notes', $applicant) }}">
                         @csrf
-                        <textarea name="notes" rows="5" class="form-control form-control-sm mb-2"
+                        <textarea aria-label="Internal notes (not visible to applicant)" name="notes" rows="5" class="form-control form-control-sm mb-2"
                                   placeholder="Internal notes (not visible to applicant)">{{ $applicant->notes }}</textarea>
                         <button type="submit" class="btn btn-sm btn-primary">Save Notes</button>
                     </form>

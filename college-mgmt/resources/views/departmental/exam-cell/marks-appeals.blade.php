@@ -15,7 +15,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th class="ps-3">Student</th><th>Exam / Subject</th><th>Current Marks</th><th>Reason</th><th>Status</th><th class="text-end pe-3">Action</th></tr>
+        <tr><th scope="col" class="ps-3">Student</th><th scope="col">Exam / Subject</th><th scope="col">Current Marks</th><th scope="col">Reason</th><th scope="col">Status</th><th scope="col" class="text-end pe-3">Action</th></tr>
       </thead>
       <tbody>
         @foreach($appeals as $appeal)
@@ -50,14 +50,14 @@
   <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
     <div class="modal-content">
       <div class="modal-header"><h6 class="modal-title mb-0">Review Marks Appeal</h6>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" aria-label="Close dialog" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="reviewForm" method="POST">
         @csrf
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label small fw-semibold">Decision</label>
-            <select name="action" class="form-select" required>
+            <select aria-label="Action" name="action" class="form-select" required>
               <option value="under_review">Under Review</option>
               <option value="approved">Approved (revise marks)</option>
               <option value="rejected">Rejected</option>
@@ -69,7 +69,7 @@
           </div>
           <div>
             <label class="form-label small fw-semibold">Remarks</label>
-            <textarea name="remarks" class="form-control" rows="2"></textarea>
+            <textarea aria-label="Remarks" name="remarks" class="form-control" rows="2"></textarea>
           </div>
         </div>
         <div class="modal-footer">

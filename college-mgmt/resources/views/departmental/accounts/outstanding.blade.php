@@ -42,14 +42,14 @@
         <table class="table table-hover mb-0 align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Student</th>
-                    <th>Program</th>
-                    <th>Term</th>
-                    <th>Owner / Source</th>
-                    <th>Amount</th>
-                    <th>Penalty</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Program</th>
+                    <th scope="col">Term</th>
+                    <th scope="col">Owner / Source</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Penalty</th>
+                    <th scope="col">Due Date</th>
+                    <th scope="col">Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,12 +91,12 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Owner / Source</th>
-                        <th>Amount Due</th>
-                        <th>Oldest Due Date</th>
-                        <th>Open Demands</th>
-                        <th>Last Payment</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Owner / Source</th>
+                        <th scope="col">Amount Due</th>
+                        <th scope="col">Oldest Due Date</th>
+                        <th scope="col">Open Demands</th>
+                        <th scope="col">Last Payment</th>
                     </tr>
                 </thead>
                 <tbody>

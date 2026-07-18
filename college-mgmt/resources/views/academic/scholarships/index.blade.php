@@ -15,7 +15,7 @@
         <div class="card-body">
             <table class="table table-hover">
                 <thead>
-                    <tr><th>Name</th><th>Type</th><th>Percentage</th><th>Status</th><th>Actions</th></tr>
+                    <tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Percentage</th><th scope="col">Status</th><th scope="col">Actions</th></tr>
                 </thead>
                 <tbody>
                     @foreach($scholarships as $scholarship)

@@ -17,7 +17,7 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Student *</label>
-                        <select name="student_id" class="form-select @error('student_id') is-invalid @enderror" required>
+                        <select aria-label="Student" name="student_id" class="form-select @error('student_id') is-invalid @enderror" required>
                             <option value="">Select student</option>
                             @foreach($students as $s)<option value="{{ $s->id }}" @selected(old('student_id')==$s->id)>{{ $s->user->name }} ({{ $s->enrollment_number }}) – {{ $s->course->code }}</option>@endforeach
                         </select>
@@ -25,7 +25,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Semester *</label>
-                        <select name="semester_id" class="form-select" required>
+                        <select aria-label="Semester" name="semester_id" class="form-select" required>
                             <option value="">Select semester</option>
                             @foreach($semesters as $s)<option value="{{ $s->id }}" @selected(old('semester_id')==$s->id)>{{ $s->name }}</option>@endforeach
                         </select>
@@ -35,7 +35,7 @@
                         <div class="border rounded p-2" style="max-height:250px;overflow-y:auto">
                             @foreach($subjects as $s)
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="subject_ids[]" value="{{ $s->id }}" id="sub_{{ $s->id }}" @checked(in_array($s->id, old('subject_ids', [])))>
+                                <input aria-label="Select subject {{ $s->code ?: $s->name }}" class="form-check-input" type="checkbox" name="subject_ids[]" value="{{ $s->id }}" id="sub_{{ $s->id }}" @checked(in_array($s->id, old('subject_ids', [])))>
                                 <label class="form-check-label small" for="sub_{{ $s->id }}">
                                     <span class="fw-semibold">{{ $s->name }}</span> <span class="text-muted">({{ $s->code }}, {{ $s->credits }} cr)</span>
                                 </label>
@@ -58,7 +58,7 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Course *</label>
-                        <select name="course_id" class="form-select" required>
+                        <select aria-label="Course" name="course_id" class="form-select" required>
                             <option value="">Select course</option>
                             @foreach($students->pluck('course')->unique('id') as $c)
                             <option value="{{ $c->id }}">{{ $c->name }}</option>
@@ -67,7 +67,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Semester *</label>
-                        <select name="semester_id" class="form-select" required>
+                        <select aria-label="Semester" name="semester_id" class="form-select" required>
                             <option value="">Select semester</option>
                             @foreach($semesters as $s)<option value="{{ $s->id }}">{{ $s->name }}</option>@endforeach
                         </select>
@@ -77,13 +77,13 @@
                         <div class="border rounded p-2" style="max-height:200px;overflow-y:auto">
                             @foreach($subjects as $s)
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="subject_ids[]" value="{{ $s->id }}" id="bsub_{{ $s->id }}">
+                                <input aria-label="Select backlog subject {{ $s->code ?: $s->name }}" class="form-check-input" type="checkbox" name="subject_ids[]" value="{{ $s->id }}" id="bsub_{{ $s->id }}">
                                 <label class="form-check-label small" for="bsub_{{ $s->id }}">{{ $s->name }} ({{ $s->code }})</label>
                             </div>
                             @endforeach
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-warning text-dark" onclick="return confirm('Enroll ALL students of selected course?')">Bulk Enroll</button>
+                    <button type="submit" class="btn btn-warning text-dark" onclick="return confirm('Enroll all active students of the selected course into these subjects? Confirm course, semester, subject list, and duplicate enrollment impact before creating bulk enrollments.')">Bulk Enroll</button>
                 </form>
             </div>
         </div>

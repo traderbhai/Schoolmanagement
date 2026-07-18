@@ -23,13 +23,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Code</th>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Duration</th>
-                    <th>Total Students</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Department</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Total Students</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,9 +45,10 @@
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.courses.show', $c) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
-                        <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.courses.show', $c) }}" class="btn btn-sm btn-outline-secondary" title="View" aria-label="View course {{ $c->name }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit course {{ $c->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete course {{ $c->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.courses.destroy', $c) }}"
                             data-name="{{ $c->name }}">

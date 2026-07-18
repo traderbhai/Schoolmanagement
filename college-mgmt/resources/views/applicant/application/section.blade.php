@@ -22,13 +22,13 @@
                 <label class="form-label fw-semibold small">{{ $label }}</label>
 
                 @if($type === 'textarea')
-                    <textarea name="{{ $field['key'] }}" rows="3"
+                    <textarea aria-label="{{ $label }}" name="{{ $field['key'] }}" rows="3"
                         class="form-control @error($field['key']) is-invalid @enderror"
                         {{ $required ? 'required' : '' }}
                         {{ $isLocked ? 'readonly' : '' }}>{{ $val }}</textarea>
 
                 @elseif($type === 'select')
-                    <select name="{{ $field['key'] }}"
+                    <select aria-label="{{ $label }}" name="{{ $field['key'] }}"
                         class="form-select @error($field['key']) is-invalid @enderror"
                         {{ $required ? 'required' : '' }}
                         {{ $isLocked ? 'disabled' : '' }}>
@@ -49,7 +49,7 @@
                     </div>
 
                 @else
-                    <input type="{{ $type }}"
+                    <input aria-label="{{ $field['label'] }}" type="{{ $type }}"
                         name="{{ $field['key'] }}"
                         value="{{ $val }}"
                         class="form-control @error($field['key']) is-invalid @enderror"
@@ -77,7 +77,7 @@
 
             <div class="d-flex gap-2">
                 <button type="submit" name="_next" value="0" class="btn btn-outline-primary">
-                    <i class="bi bi-save me-1"></i> Save
+                    <i class="bi bi-save me-1"></i> Save section
                 </button>
                 @if($stepIndex < count($sections) - 1)
                     <button type="submit" name="_next" value="{{ $stepIndex + 1 }}" class="btn btn-primary">

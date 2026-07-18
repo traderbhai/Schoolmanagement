@@ -13,7 +13,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Batch</label>
-                <input type="text" class="form-control" value="{{ $matrix->batch ? $matrix->batch->name : 'All Batches (Default)' }}" disabled>
+                <input aria-label="Seat matrix batch" type="text" class="form-control" value="{{ $matrix->batch ? $matrix->batch->name : 'All Batches (Default)' }}" disabled>
             </div>
 
             <h5 class="fw-semibold mb-3">Seat Distribution</h5>
@@ -34,7 +34,7 @@
                 @foreach($seatFields as $field)
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">{{ $field['label'] }}</label>
-                    <input type="number" name="{{ $field['key'] }}"
+                    <input aria-label="{{ $field['label'] }} seats" type="number" name="{{ $field['key'] }}"
                            class="form-control @error($field['key']) is-invalid @enderror"
                            value="{{ old($field['key'], $matrix->{$field['key']}) }}"
                            min="0" required>
@@ -44,7 +44,7 @@
 
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">State Quota %</label>
-                    <input type="number" name="state_quota_percentage" class="form-control"
+                    <input aria-label="State Quota Percentage" type="number" name="state_quota_percentage" class="form-control"
                            value="{{ old('state_quota_percentage', $matrix->state_quota_percentage) }}"
                            min="0" max="100" step="0.01">
                 </div>

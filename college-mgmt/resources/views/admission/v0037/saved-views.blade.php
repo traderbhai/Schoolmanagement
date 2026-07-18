@@ -139,10 +139,10 @@
             <table class="table table-sm align-middle mb-0" aria-label="Saved views">
                 <thead>
                     <tr>
-                        <th>View</th>
-                        <th>Surface</th>
-                        <th>Scope</th>
-                        <th>Filters</th>
+                        <th scope="col">View</th>
+                        <th scope="col">Surface</th>
+                        <th scope="col">Scope</th>
+                        <th scope="col">Filters</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -25,13 +25,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Head of Dept</th>
-                    <th>Students</th>
-                    <th>Courses</th>
-                    <th>Actions</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Head of Dept</th>
+                    <th scope="col">Students</th>
+                    <th scope="col">Courses</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>

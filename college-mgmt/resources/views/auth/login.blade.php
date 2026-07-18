@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In — EduManage</title>
+    <title>Sign In - EduManage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/css/app.css" rel="stylesheet">
@@ -17,7 +17,7 @@
             min-height: 100vh;
         }
 
-        /* Left panel — visible only on lg+ */
+        /* Left panel - visible only on lg+ */
         .login-panel {
             flex: 0 0 45%;
             max-width: 45%;
@@ -230,7 +230,7 @@
 
         <h1 class="panel-title">Smarter College<br>Management</h1>
         <p class="panel-tagline">
-            A unified platform for admins, teachers, and students — timetables, attendance, results, fees, and more.
+            A unified platform for admins, teachers, and students - timetables, attendance, results, fees, and more.
         </p>
 
         <ul class="panel-features">
@@ -312,7 +312,7 @@
                             name="password"
                             required
                             autocomplete="current-password"
-                            placeholder="••••••••"
+                            placeholder="Password"
                         >
                         <button type="button" class="toggle-pass" aria-label="Show/hide password" onclick="togglePassword()">
                             <i class="bi bi-eye" id="passEyeIcon"></i>
@@ -334,7 +334,7 @@
             </form>
 
             <div class="powered-by">
-                Powered by <strong style="color:#4f46e5;">EduManage</strong> &mdash; College Management System
+                Powered by <strong style="color:#4f46e5;">EduManage</strong> - College Management System
             </div>
         </div>
     </div>

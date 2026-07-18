@@ -18,7 +18,7 @@
                 <a href="{{ route('academic.academic-calendars.edit', $academicCalendar) }}" class="btn btn-warning">Edit</a>
                 <form action="{{ route('academic.academic-calendars.destroy', $academicCalendar) }}" method="POST" class="d-inline">
                     @csrf @method('DELETE')
-                    <button class="btn btn-danger" onclick="return confirm('Delete this event?')">Delete</button>
+                    <button class="btn btn-danger" onclick="return confirm('Delete calendar event {{ addslashes($academicCalendar->event_name) }} on {{ $academicCalendar->event_date->format('d M Y') }}? Confirm this will not affect published timetables, holidays, exams, attendance windows, or student/faculty communication.')">Delete</button>
                 </form>
             </div>
         </div>

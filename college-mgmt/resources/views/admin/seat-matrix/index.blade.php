@@ -12,10 +12,10 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 @forelse($matrices as $matrix)
@@ -36,9 +36,9 @@
             <a href="{{ route('admission.seat-matrices.edit', $matrix) }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <form method="POST" action="{{ route('admission.seat-matrices.destroy', $matrix) }}" onsubmit="return confirm('Delete this seat matrix?')">
+            <form method="POST" action="{{ route('admission.seat-matrices.destroy', $matrix) }}" onsubmit="return confirm('Delete seat matrix for {{ addslashes($program->name) }}{{ $matrix->batch ? ' / '.addslashes($matrix->batch->name) : ' / all batches' }}? Confirm no offer round, waitlist movement, category allocation, or enrollment report depends on this capacity setup.')">
                 @csrf @method('DELETE')
-                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-sm btn-outline-danger" aria-label="Delete seat matrix for {{ $program->name }}"><i class="bi bi-trash"></i></button>
             </form>
         </div>
     </div>

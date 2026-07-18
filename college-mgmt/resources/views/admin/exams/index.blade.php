@@ -23,7 +23,7 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-4">
                 <label class="form-label form-label-sm mb-1">Semester</label>
-                <select name="semester_id" class="form-select form-select-sm">
+                <select aria-label="Semester" name="semester_id" class="form-select form-select-sm">
                     <option value="">All Semesters</option>
                     @foreach($semesters as $s)
                         <option value="{{ $s->id }}" @selected(request('semester_id')==$s->id)>{{ $s->name }}</option>
@@ -45,14 +45,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Exam Name</th>
-                    <th>Subject</th>
-                    <th>Course</th>
-                    <th>Semester</th>
-                    <th>Type</th>
-                    <th>Date</th>
-                    <th>Marks</th>
-                    <th>Actions</th>
+                    <th scope="col">Exam Name</th>
+                    <th scope="col">Subject</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Semester</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Marks</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>

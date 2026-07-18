@@ -18,7 +18,7 @@
 
 <form method="GET" class="mb-3">
     <div class="d-flex gap-2">
-        <select name="semester_id" class="form-select form-select-sm" style="max-width:260px" onchange="this.form.submit()">
+        <select aria-label="Semester" name="semester_id" class="form-select form-select-sm" style="max-width:260px" onchange="this.form.submit()">
             @foreach($semesters as $sem)
             <option value="{{ $sem->id }}" @selected($sem->id == $semesterId)>
                 {{ $sem->name }} - {{ $sem->academicYear->name ?? '' }}
@@ -34,12 +34,12 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Subject</th>
-                        <th>Exam</th>
-                        <th>Marks Obtained</th>
-                        <th>Total Marks</th>
-                        <th>Grade</th>
-                        <th>Result</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Exam</th>
+                        <th scope="col">Marks Obtained</th>
+                        <th scope="col">Total Marks</th>
+                        <th scope="col">Grade</th>
+                        <th scope="col">Result</th>
                     </tr>
                 </thead>
                 <tbody>

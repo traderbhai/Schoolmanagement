@@ -52,7 +52,7 @@
                                 <span class="text-muted" style="font-size:.75rem">{{ $material->uploader->name ?? '' }} · {{ $material->created_at->format('d M Y') }}</span>
                                 @if($material->external_url)
                                 <a href="{{ $material->external_url }}" target="_blank" class="btn btn-sm btn-outline-{{ $meta['color'] }}">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Open material
                                 </a>
                                 @elseif($material->file_path)
                                 <span class="text-muted small">{{ $material->file_size_kb ? round($material->file_size_kb/1024,1).'MB' : 'File' }}</span>

@@ -52,7 +52,7 @@
         <form method="GET" action="{{ route('accounts.scholarship-disbursements') }}" class="row g-2 align-items-end">
             <div class="col-md-8">
                 <label class="form-label small text-muted mb-1">Program</label>
-                <select name="program_id" class="form-select form-select-sm">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                     <option value="">All Programs</option>
                     @foreach($programs as $program)
                         <option value="{{ $program->id }}" @selected((string) request('program_id') === (string) $program->id)>{{ $program->name }}</option>
@@ -70,12 +70,12 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Applicant</th>
-                        <th>Program</th>
-                        <th>Scheme</th>
-                        <th class="text-end">Amount</th>
-                        <th>Awarded</th>
-                        <th>Status</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Scheme</th>
+                        <th scope="col" class="text-end">Amount</th>
+                        <th scope="col">Awarded</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

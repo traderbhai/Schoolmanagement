@@ -12,7 +12,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Term</label>
-                        <select name="term_id" class="form-select" required>
+                        <select aria-label="Term" name="term_id" class="form-select" required>
                             <option value="">Select Term</option>
                             @foreach($terms as $term)
                                 <option value="{{ $term->id }}" {{ old('term_id')==$term->id?'selected':'' }}>{{ $term->name }}</option>
@@ -22,11 +22,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">CGPA Threshold</label>
-                        <input type="number" name="cgpa_threshold" class="form-control" step="0.01" min="0" max="10" value="{{ old('cgpa_threshold', 2.0) }}">
+                        <input aria-label="Cgpa Threshold" type="number" name="cgpa_threshold" class="form-control" step="0.01" min="0" max="10" value="{{ old('cgpa_threshold', 2.0) }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Attendance Threshold (%)</label>
-                        <input type="number" name="attendance_threshold" class="form-control" step="0.01" min="0" max="100" value="{{ old('attendance_threshold', 75) }}">
+                        <input aria-label="Attendance Threshold" type="number" name="attendance_threshold" class="form-control" step="0.01" min="0" max="100" value="{{ old('attendance_threshold', 75) }}">
                     </div>
                 </div>
                 <div class="mt-4">

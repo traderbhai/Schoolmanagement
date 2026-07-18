@@ -18,12 +18,12 @@
                     @method('PUT')
                     <div class="mb-3">
                         <label class="form-label">Block Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $block->name) }}" required>
+                        <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $block->name) }}" required>
                         @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Gender <span class="text-danger">*</span></label>
-                        <select name="gender" class="form-select" required>
+                        <select aria-label="Gender" name="gender" class="form-select" required>
                             @foreach(['boys','girls','mixed'] as $g)
                                 <option value="{{ $g }}" @selected(old('gender', $block->gender) === $g)>{{ ucfirst($g) }}</option>
                             @endforeach
@@ -31,11 +31,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Total Floors <span class="text-danger">*</span></label>
-                        <input type="number" name="total_floors" class="form-control" value="{{ old('total_floors', $block->total_floors) }}" min="1" required>
+                        <input aria-label="Total Floors" type="number" name="total_floors" class="form-control" value="{{ old('total_floors', $block->total_floors) }}" min="1" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Warden</label>
-                        <select name="warden_id" class="form-select">
+                        <select aria-label="Warden" name="warden_id" class="form-select">
                             <option value="">— None —</option>
                             @foreach($wardens as $w)
                                 <option value="{{ $w->id }}" @selected(old('warden_id', $block->warden_id) == $w->id)>{{ $w->name }}</option>
@@ -44,7 +44,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Address / Notes</label>
-                        <textarea name="address_notes" class="form-control" rows="2">{{ old('address_notes', $block->address_notes) }}</textarea>
+                        <textarea aria-label="Address Notes" name="address_notes" class="form-control" rows="2">{{ old('address_notes', $block->address_notes) }}</textarea>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" name="is_active" value="1" class="form-check-input" id="is_active" @checked(old('is_active', $block->is_active))>

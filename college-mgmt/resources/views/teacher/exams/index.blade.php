@@ -38,14 +38,14 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>#</th>
-                            <th>Exam Name</th>
-                            <th>Subject</th>
-                            <th>Type</th>
-                            <th>Date</th>
-                            <th>Max Marks</th>
-                            <th>Semester</th>
-                            <th>Results</th>
+                            <th scope="col">#</th>
+                            <th scope="col">Exam Name</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Max Marks</th>
+                            <th scope="col">Semester</th>
+                            <th scope="col">Results</th>
                         </tr>
                     </thead>
                     <tbody>

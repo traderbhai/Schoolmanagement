@@ -24,7 +24,7 @@
 <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
     <i class="bi bi-info-circle me-2"></i>
     Download your admit card before each exam. Bring a printed copy and a valid photo ID to the examination hall.
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 
 <div class="row g-3">
@@ -69,7 +69,7 @@
                 </dl>
             </div>
             <div class="card-footer bg-transparent border-0 pt-0 pb-3">
-                <a href="{{ route('student.admit-cards.download', $exam) }}"
+                <a rel="noopener" href="{{ route('student.admit-cards.download', $exam) }}"
                    class="btn btn-sm btn-primary w-100" target="_blank">
                     <i class="bi bi-file-earmark-arrow-down me-1"></i>Download Admit Card
                 </a>

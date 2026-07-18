@@ -37,7 +37,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Academic Year</label>
-                            <select name="academic_year_id" class="form-select">
+                            <select aria-label="Academic Year" name="academic_year_id" class="form-select">
                                 <option value="">None</option>
                                 @foreach($academicYears as $ay)
                                     <option value="{{ $ay->id }}" {{ old('academic_year_id') == $ay->id || $ay->is_current ? 'selected' : '' }}>
@@ -70,12 +70,12 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Intake Capacity <span class="text-danger">*</span></label>
-                            <input type="number" name="intake_capacity" class="form-control"
+                            <input aria-label="Intake Capacity" type="number" name="intake_capacity" class="form-control"
                                 value="{{ old('intake_capacity', 60) }}" min="1" max="500" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-                            <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                            <select aria-label="Status" name="status" class="form-select @error('status') is-invalid @enderror" required>
                                 @foreach(['upcoming','active','completed','cancelled'] as $s)
                                     <option value="{{ $s }}" {{ old('status', 'upcoming') == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                                 @endforeach
@@ -83,7 +83,7 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="2">{{ old('description') }}</textarea>
+                            <textarea aria-label="Description" name="description" class="form-control" rows="2">{{ old('description') }}</textarea>
                         </div>
                         <div class="col-12">
                             <div class="form-check">

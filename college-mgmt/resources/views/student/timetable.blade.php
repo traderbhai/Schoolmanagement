@@ -4,8 +4,44 @@
 
 @section('page-title', 'My Timetable')
 
+@push('styles')
+<style>
+    .student-timetable-page {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .student-timetable-page .alert,
+    .student-timetable-page .card,
+    .student-timetable-page .border {
+        max-width: 100%;
+    }
+
+    .student-timetable-page .alert {
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 575.98px) {
+        .student-timetable-page.container {
+            padding-left: .75rem;
+            padding-right: .75rem;
+        }
+
+        .student-timetable-page .alert {
+            padding: .9rem 1rem;
+            width: calc(100vw - 24px);
+            max-width: 366px;
+        }
+
+        .student-timetable-page .card {
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="container py-4">
+<div class="container py-4 student-timetable-page">
     <div class="mb-4">
         <h2 class="fw-bold mb-0">My Timetable</h2>
         <p class="text-muted mb-0">Schedule for your enrolled subjects this term</p>
@@ -67,10 +103,10 @@
                         <table class="table table-sm mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th>Time</th>
-                                    <th>Subject</th>
-                                    <th>Teacher</th>
-                                    <th>Classroom</th>
+                                    <th scope="col">Time</th>
+                                    <th scope="col">Subject</th>
+                                    <th scope="col">Teacher</th>
+                                    <th scope="col">Classroom</th>
                                 </tr>
                             </thead>
                             <tbody>

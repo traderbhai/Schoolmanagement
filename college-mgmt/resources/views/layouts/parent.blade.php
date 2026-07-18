@@ -11,6 +11,7 @@
     @stack('styles')
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 {{-- ===== DESKTOP SIDEBAR ===== --}}
 <div class="sidebar sidebar-desktop">
@@ -27,7 +28,7 @@
                 <div style="color:rgba(255,255,255,.45);font-size:.65rem;">Parent Portal</div>
             </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close navigation menu"></button>
     </div>
     <div class="offcanvas-body p-0 pb-4">
         <x-ui.manifest-sidebar
@@ -71,7 +72,7 @@
             </button>
 
             <div class="dropdown">
-                <button class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
+                <button type="button" class="user-avatar dropdown-toggle" style="border:none;" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
                     {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width:200px;font-size:.84rem;border-color:var(--clr-border);">
@@ -96,22 +97,22 @@
     </div>
 
     {{-- PAGE BODY --}}
-    <div class="page-body">
+    <main id="main-content" class="page-body" tabindex="-1">
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show js-auto-dismiss" role="alert">
                 <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
             </div>
         @endif
 
         @yield('content')
-    </div>
+    </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

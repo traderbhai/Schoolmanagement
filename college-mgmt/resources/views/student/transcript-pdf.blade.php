@@ -100,15 +100,15 @@
     <table>
         <thead>
             <tr>
-                <th>Subject</th>
-                <th>Code</th>
-                <th style="width:40px">Cr</th>
-                <th style="width:40px">IA1</th>
-                <th style="width:40px">IA2</th>
-                <th style="width:40px">End Sem</th>
-                <th style="width:50px">Total</th>
-                <th style="width:30px">Grade</th>
-                <th style="width:40px">Points</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Code</th>
+                <th scope="col" style="width:40px">Cr</th>
+                <th scope="col" style="width:40px">IA1</th>
+                <th scope="col" style="width:40px">IA2</th>
+                <th scope="col" style="width:40px">End Sem</th>
+                <th scope="col" style="width:50px">Total</th>
+                <th scope="col" style="width:30px">Grade</th>
+                <th scope="col" style="width:40px">Points</th>
             </tr>
         </thead>
         <tbody>

@@ -38,7 +38,7 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Subject <span class="text-danger">*</span></label>
-                        <select name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required>
+                        <select aria-label="Subject" name="subject_id" class="form-select @error('subject_id') is-invalid @enderror" required>
                             <option value="">Select published teaching subject</option>
                             @foreach($subjects as $subject)
                                 <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
@@ -51,7 +51,7 @@
 
                     <div class="col-md-8">
                         <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" value="{{ old('title') }}"
+                        <input aria-label="Announcement title" type="text" name="title" value="{{ old('title') }}"
                                class="form-control @error('title') is-invalid @enderror"
                                placeholder="Announcement title" required>
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -59,7 +59,7 @@
 
                     <div class="col-12">
                         <label class="form-label fw-semibold">Body <span class="text-danger">*</span></label>
-                        <textarea name="body" rows="4"
+                        <textarea aria-label="Announcement body" name="body" rows="4"
                                   class="form-control @error('body') is-invalid @enderror"
                                   placeholder="Write your announcement here..." required>{{ old('body') }}</textarea>
                         @error('body')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -90,13 +90,13 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mb-3">
             {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show mb-3">
             {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -117,10 +117,10 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Title</th>
-                                <th>Subject</th>
-                                <th>Posted At</th>
-                                <th class="text-end">Actions</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Posted At</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -146,10 +146,10 @@
                                         @if($canManageAnnouncements)
                                             <form method="POST"
                                                   action="{{ route('teacher.announcements.destroy', $ann) }}"
-                                                  onsubmit="return confirm('Delete this announcement?')">
+                                                  onsubmit="return confirm('Delete announcement {{ addslashes($ann->title) }}? Confirm students no longer need this message for class, assessment, timetable, or course delivery communication.')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete announcement {{ $ann->title }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>

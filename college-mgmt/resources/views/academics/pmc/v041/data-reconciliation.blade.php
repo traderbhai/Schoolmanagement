@@ -74,7 +74,7 @@
                 <input type="hidden" name="group" value="{{ request('group') }}">
                 <div class="col-md-3">
                     <label class="form-label small">Run Status</label>
-                    <select class="form-select form-select-sm" name="run_status">
+                    <select aria-label="Run Status" class="form-select form-select-sm" name="run_status">
                         <option value="">All run statuses</option>
                         @foreach(['completed', 'failed', 'running'] as $status)
                             <option value="{{ $status }}" @selected(request('run_status') === $status)>{{ str($status)->headline() }}</option>
@@ -82,16 +82,16 @@
                     </select>
                 </div>
                 <div class="col-md-4 d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary">Filter Runs</button>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['run_status', 'audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">All Runs</a>
-                    <a class="btn btn-sm btn-outline-success" href="{{ route('academics.pmc.data-reconciliation.runs.export', ['run_status' => request('run_status')]) }}">Export Runs</a>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Apply run filters</button>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['run_status', 'audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">Clear run filters</a>
+                    <a class="btn btn-sm btn-outline-success" href="{{ route('academics.pmc.data-reconciliation.runs.export', ['run_status' => request('run_status')]) }}">Export run history</a>
                 </div>
                 <div class="col-md-5 small text-muted">Run filter summary: {{ request('run_status') ? 'Run status=' . request('run_status') : 'All run history' }}</div>
             </form>
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Started</th><th>Source</th><th>Status</th><th>Checks</th><th>Mismatches</th><th>Critical</th><th>Repaired</th><th>Actor</th><th>Failure / Note</th><th>Action</th></tr></thead>
+                <thead><tr><th scope="col">Started</th><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Checks</th><th scope="col">Mismatches</th><th scope="col">Critical</th><th scope="col">Repaired</th><th scope="col">Actor</th><th scope="col">Failure / Note</th><th scope="col">Action</th></tr></thead>
                 <tbody>
                     @forelse($runs as $run)
                         <tr>
@@ -110,7 +110,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <input class="form-control form-control-sm" name="reason" value="Stale reconciliation run closed by PMC." aria-label="Close stale run reason">
-                                        <button class="btn btn-sm btn-outline-danger">Mark Failed</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Mark stale run failed</button>
                                     </form>
                                 @else
                                     <span class="small text-muted">No action</span>
@@ -147,7 +147,7 @@
                 <input type="hidden" name="run_status" value="{{ request('run_status') }}">
                 <div class="col-md-4">
                     <label class="form-label small">Audit Action</label>
-                    <select class="form-select form-select-sm" name="audit_action">
+                    <select aria-label="Audit Action" class="form-select form-select-sm" name="audit_action">
                         <option value="">All reconciliation audit actions</option>
                         @foreach([
                             'academic_pmc_v092_data_reconciliation_refreshed' => 'Refresh checks',
@@ -160,15 +160,15 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">From</label>
-                    <input class="form-control form-control-sm" type="date" name="audit_from" value="{{ request('audit_from') }}">
+                    <input aria-label="Audit From" class="form-control form-control-sm" type="date" name="audit_from" value="{{ request('audit_from') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">To</label>
-                    <input class="form-control form-control-sm" type="date" name="audit_to" value="{{ request('audit_to') }}">
+                    <input aria-label="Audit To" class="form-control form-control-sm" type="date" name="audit_to" value="{{ request('audit_to') }}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Actor</label>
-                    <select class="form-select form-select-sm" name="audit_actor_id">
+                    <select aria-label="Audit Actor" class="form-select form-select-sm" name="audit_actor_id">
                         <option value="">All actors</option>
                         @foreach($auditActors as $actor)
                             <option value="{{ $actor->id }}" @selected(request('audit_actor_id') === (string) $actor->id)>{{ $actor->name }}</option>
@@ -176,14 +176,14 @@
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-primary">Filter Audit</button>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">All Audit</a>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Apply audit filters</button>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index', request()->except(['audit_action', 'audit_actor_id', 'audit_from', 'audit_to'])) }}">Clear audit filters</a>
                 </div>
                 <div class="col-md-2 small text-muted">Audit filter summary: {{ $auditSummary }}</div>
             </form>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Reason / Details</th><th>Subject</th></tr></thead>
+                    <thead><tr><th scope="col">When</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Reason / Details</th><th scope="col">Subject</th></tr></thead>
                     <tbody>
                         @forelse($auditTrail as $audit)
                             <tr>
@@ -216,7 +216,7 @@
             <form class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small">Status</label>
-                    <select class="form-select form-select-sm" name="status">
+                    <select aria-label="Status" class="form-select form-select-sm" name="status">
                         <option value="">All statuses</option>
                         @foreach(['ok', 'warn', 'block'] as $status)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
@@ -225,7 +225,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small">Group</label>
-                    <select class="form-select form-select-sm" name="group">
+                    <select aria-label="Group" class="form-select form-select-sm" name="group">
                         <option value="">All groups</option>
                         @foreach(['timetable', 'course_basket', 'sections_groups', 'course_delivery', 'notifications'] as $group)
                             <option value="{{ $group }}" @selected(request('group') === $group)>{{ str($group)->headline() }}</option>
@@ -233,8 +233,8 @@
                     </select>
                 </div>
                 <div class="col-md-3 d-flex gap-1">
-                    <button class="btn btn-sm btn-primary">Filter</button>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index') }}">Reset</a>
+                    <button type="submit" class="btn btn-sm btn-primary">Apply reconciliation filters</button>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('academics.pmc.data-reconciliation.index') }}">Clear reconciliation filters</a>
                 </div>
             </form>
             <div class="d-flex justify-content-between align-items-center mt-2">
@@ -243,7 +243,7 @@
                     <a class="btn btn-sm btn-outline-success" href="{{ route('academics.pmc.data-reconciliation.export', request()->query()) }}">Export Current View</a>
                     <form method="POST" action="{{ route('academics.pmc.data-reconciliation.refresh') }}">
                         @csrf
-                        <button class="btn btn-sm btn-outline-primary">Refresh Checks</button>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Refresh reconciliation checks</button>
                     </form>
                 </div>
             </div>
@@ -254,7 +254,7 @@
         <div class="card-header py-2 fw-semibold">Reconciliation Checks</div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Check</th><th>Group</th><th>Status</th><th>Expected</th><th>Actual</th><th>Mismatch</th><th>Recommended Action</th><th>Checked</th><th>Repair</th></tr></thead>
+                <thead><tr><th scope="col">Check</th><th scope="col">Group</th><th scope="col">Status</th><th scope="col">Expected</th><th scope="col">Actual</th><th scope="col">Mismatch</th><th scope="col">Recommended Action</th><th scope="col">Checked</th><th scope="col">Repair</th></tr></thead>
                 <tbody>
                     @forelse($checks as $check)
                         <tr>
@@ -282,7 +282,7 @@
                                 @if($check->mismatch_count > 0)
                                     <form method="POST" action="{{ route('academics.pmc.data-reconciliation.repair', $check) }}">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-primary">Repair</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm('Repair reconciliation check {{ addslashes($check->title) }}? Confirm the mismatch sample, canonical timetable source, affected bridge/report rows, and audit trail before applying the repair.')">Repair reconciliation check</button>
                                     </form>
                                 @else
                                     <span class="small text-muted">No action</span>

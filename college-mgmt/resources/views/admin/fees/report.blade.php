@@ -26,7 +26,7 @@
         <form method="GET" action="{{ route('admin.fees.report') }}" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label small">Course</label>
-                <select name="course_id" class="form-select form-select-sm">
+                <select aria-label="Course" name="course_id" class="form-select form-select-sm">
                     <option value="">All Courses</option>
                     @foreach($courses as $course)
                         <option value="{{ $course->id }}" @selected(request('course_id') == $course->id)>{{ $course->name }}</option>
@@ -35,7 +35,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label small">Academic Year</label>
-                <select name="academic_year_id" class="form-select form-select-sm">
+                <select aria-label="Academic Year" name="academic_year_id" class="form-select form-select-sm">
                     <option value="">All Years</option>
                     @foreach($academicYears as $yr)
                         <option value="{{ $yr->id }}" @selected(request('academic_year_id') == $yr->id)>{{ $yr->name }}</option>
@@ -44,7 +44,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="all" @selected(!request('status') || request('status') === 'all')>All</option>
                     <option value="paid" @selected(request('status') === 'paid')>Paid</option>
                     <option value="pending" @selected(request('status') === 'pending')>Pending</option>
@@ -52,15 +52,15 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Date From</label>
-                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                <input aria-label="Date From" type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Date To</label>
-                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                <input aria-label="Date To" type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
             </div>
             <div class="col-md-4">
                 <label class="form-label small">Search Student</label>
-                <input type="text" name="student_name" class="form-control form-control-sm" placeholder="Student name…" value="{{ request('student_name') }}">
+                <input aria-label="Student name filter" type="text" name="student_name" class="form-control form-control-sm" placeholder="Student name…" value="{{ request('student_name') }}">
             </div>
             <div class="col-12 d-flex gap-2">
                 <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Apply Filters</button>
@@ -131,15 +131,15 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Student</th>
-                        <th>Enrollment</th>
-                        <th>Course</th>
-                        <th>Fee Type</th>
-                        <th class="text-end">Amount</th>
-                        <th>Date</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment</th>
+                        <th scope="col">Course</th>
+                        <th scope="col">Fee Type</th>
+                        <th scope="col" class="text-end">Amount</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Status</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

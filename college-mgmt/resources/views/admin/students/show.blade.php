@@ -12,7 +12,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div></div>
     <div class="d-flex gap-2">
-        <a href="{{ route('admin.students.report', $student) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+        <a rel="noopener" href="{{ route('admin.students.report', $student) }}" target="_blank" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-file-earmark-pdf me-1"></i>Full Report PDF
         </a>
         <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back to Students</a>
@@ -82,7 +82,7 @@
                 <div class="tab-pane fade show active" id="tab-enrollments">
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0">
-                            <thead class="table-light"><tr><th>Subject</th><th>Code</th><th>Semester</th><th>Status</th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Subject</th><th scope="col">Code</th><th scope="col">Semester</th><th scope="col">Status</th></tr></thead>
                             <tbody>
                             @forelse($student->enrollments as $e)
                             <tr>
@@ -116,7 +116,7 @@
                     </div>
                     <div class="card-body p-0 border-top">
                         <table class="table table-hover mb-0">
-                            <thead class="table-light"><tr><th>Exam</th><th>Subject</th><th>Marks</th><th>Grade</th><th>Result</th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Exam</th><th scope="col">Subject</th><th scope="col">Marks</th><th scope="col">Grade</th><th scope="col">Result</th></tr></thead>
                             <tbody>
                             @forelse($student->examResults->take(10) as $r)
                             <tr>
@@ -150,7 +150,7 @@
                     <div class="card-body p-0 border-top">
                         @if($student->feePayments->count())
                         <table class="table table-sm mb-0">
-                            <thead class="table-light"><tr><th>Receipt #</th><th>Fee Type</th><th>Amount</th><th>Date</th><th>Method</th><th>Status</th><th></th></tr></thead>
+                            <thead class="table-light"><tr><th scope="col">Receipt #</th><th scope="col">Fee Type</th><th scope="col">Amount</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Status</th><th aria-label="Actions" scope="col"></th></tr></thead>
                             <tbody>
                             @foreach($student->feePayments()->with('feeStructure')->latest('payment_date')->get() as $payment)
                             <tr>

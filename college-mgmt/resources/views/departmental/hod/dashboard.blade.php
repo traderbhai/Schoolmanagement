@@ -62,7 +62,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
-                            <tr><th>Subject</th><th>Date</th><th>Results</th><th>Avg Marks</th><th>Pass Count</th></tr>
+                            <tr><th scope="col">Subject</th><th scope="col">Date</th><th scope="col">Results</th><th scope="col">Avg Marks</th><th scope="col">Pass Count</th></tr>
                         </thead>
                         <tbody>
                         @forelse($recentExams as $exam)
@@ -96,7 +96,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead class="table-light">
-                            <tr><th>Name</th><th>Designation</th><th>Status</th></tr>
+                            <tr><th scope="col">Name</th><th scope="col">Designation</th><th scope="col">Status</th></tr>
                         </thead>
                         <tbody>
                         @forelse($faculty as $t)

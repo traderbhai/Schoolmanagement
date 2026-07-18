@@ -41,7 +41,7 @@ tr:nth-child(even) td { background: #f8fafc; }
 @foreach($semesterReports as $sr)
 <div class="sem-header">{{ $sr['semester']?->name ?? 'Semester not linked' }} - SGPA: {{ number_format($sr['report']['sgpa'],2) }} | {{ $sr['report']['result'] ?? 'Result pending' }}</div>
 <table>
-    <thead><tr><th>Subject</th><th>Credits</th><th>Marks</th><th>%</th><th>Grade</th><th>Points</th><th>Status</th></tr></thead>
+    <thead><tr><th scope="col">Subject</th><th scope="col">Credits</th><th scope="col">Marks</th><th scope="col">%</th><th scope="col">Grade</th><th scope="col">Points</th><th scope="col">Status</th></tr></thead>
     <tbody>
     @foreach($sr['report']['subjects'] as $row)
     <tr>

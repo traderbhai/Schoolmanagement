@@ -21,7 +21,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-sm-4">
                     <label class="form-label small fw-semibold text-muted">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All Statuses</option>
                         @foreach(['draft','submitted','under_review','approved','rejected'] as $s)
                             <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucfirst(str_replace('_',' ',$s)) }}</option>
@@ -30,7 +30,7 @@
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label small fw-semibold text-muted">Program</label>
-                    <select name="program_id" class="form-select form-select-sm">
+                    <select aria-label="Program" name="program_id" class="form-select form-select-sm">
                         <option value="">All Programs</option>
                         @foreach($programs as $p)
                             <option value="{{ $p->id }}" @selected(request('program_id') == $p->id)>{{ $p->name }}</option>
@@ -50,13 +50,13 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Title</th>
-                        <th>Program</th>
-                        <th>Type</th>
-                        <th>Proposed By</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th></th>
+                        <th scope="col">Title</th>
+                        <th scope="col">Program</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Proposed By</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Date</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

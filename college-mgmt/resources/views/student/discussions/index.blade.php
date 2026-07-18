@@ -11,7 +11,7 @@
             <span class="text-muted small ms-2">{{ $subject->code ?? '' }}</span>
         </div>
         @if($canParticipate)
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newThreadModal">
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newThreadModal">
             <i class="bi bi-plus-lg me-1"></i>Ask a Question
         </button>
         @else
@@ -74,18 +74,18 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title fw-semibold">Ask a Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                        <input type="text" name="title" class="form-control @error('title') is-invalid @enderror"
+                        <input aria-label="Short, descriptive question title" type="text" name="title" class="form-control @error('title') is-invalid @enderror"
                                value="{{ old('title') }}" placeholder="Short, descriptive question title" required>
                         @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Details <span class="text-danger">*</span></label>
-                        <textarea name="body" rows="5" class="form-control @error('body') is-invalid @enderror"
+                               <textarea aria-label="Discussion question details" name="body" rows="5" class="form-control @error('body') is-invalid @enderror"
                                   placeholder="Provide details, what you've already tried, etc.">{{ old('body') }}</textarea>
                         @error('body')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>

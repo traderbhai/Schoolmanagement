@@ -57,12 +57,12 @@
         <table class="table table-hover mb-0">
             <thead class="bg-light">
                 <tr>
-                    <th>Installment</th>
-                    <th>Amount</th>
-                    <th>Total Applicants</th>
-                    <th>Paid & Verified</th>
-                    <th>Pending</th>
-                    <th>Amount Collected</th>
+                    <th scope="col">Installment</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Total Applicants</th>
+                    <th scope="col">Paid & Verified</th>
+                    <th scope="col">Pending</th>
+                    <th scope="col">Amount Collected</th>
                 </tr>
             </thead>
             <tbody>
@@ -94,7 +94,7 @@
     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
         <h5 class="mb-0 fw-bold">All Payments</h5>
         <form method="GET" class="d-flex gap-2 align-items-center">
-            <select name="installment_id" class="form-select form-select-sm" style="width:auto">
+            <select aria-label="Installment" name="installment_id" class="form-select form-select-sm" style="width:auto">
                 <option value="">All Installments</option>
                 @foreach($installments as $inst)
                     <option value="{{ $inst->id }}" {{ request('installment_id') == $inst->id ? 'selected' : '' }}>
@@ -102,7 +102,7 @@
                     </option>
                 @endforeach
             </select>
-            <select name="status" class="form-select form-select-sm" style="width:auto">
+            <select aria-label="Status" name="status" class="form-select form-select-sm" style="width:auto">
                 <option value="">All Status</option>
                 <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                 <option value="verified" {{ request('status') == 'verified' ? 'selected' : '' }}>Verified</option>
@@ -130,12 +130,12 @@
             <table class="table table-hover mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th>Applicant</th>
-                        <th>Installment</th>
-                        <th>Amount</th>
-                        <th>Mode</th>
-                        <th>Date</th>
-                        <th>Status</th>
+                        <th scope="col">Applicant</th>
+                        <th scope="col">Installment</th>
+                        <th scope="col">Amount</th>
+                        <th scope="col">Mode</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

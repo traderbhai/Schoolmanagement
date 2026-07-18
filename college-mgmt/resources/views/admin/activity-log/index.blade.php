@@ -12,7 +12,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-auto">
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">Action</label>
-                <select name="action" class="form-select form-select-sm">
+                <select aria-label="Action" name="action" class="form-select form-select-sm">
                     <option value="">All Actions</option>
                     @foreach(['created','updated','deleted','login','logout'] as $a)
                     <option value="{{ $a }}" @selected(request('action')==$a)>{{ ucfirst($a) }}</option>
@@ -21,15 +21,15 @@
             </div>
             <div class="col-auto">
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">User</label>
-                <input type="text" name="search" class="form-control form-control-sm" value="{{ request('search') }}" placeholder="Search user…">
+                <input aria-label="Activity log user search" type="text" name="search" class="form-control form-control-sm" value="{{ request('search') }}" placeholder="Search user…">
             </div>
             <div class="col-auto">
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">From</label>
-                <input type="date" name="from" class="form-control form-control-sm" value="{{ request('from') }}">
+                <input aria-label="From" type="date" name="from" class="form-control form-control-sm" value="{{ request('from') }}">
             </div>
             <div class="col-auto">
                 <label class="form-label small fw-semibold mb-1" style="color:var(--clr-text-muted)">To</label>
-                <input type="date" name="to" class="form-control form-control-sm" value="{{ request('to') }}">
+                <input aria-label="To" type="date" name="to" class="form-control form-control-sm" value="{{ request('to') }}">
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filter</button>
@@ -55,11 +55,11 @@
             <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
                 <thead class="table-light">
                     <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Description</th>
-                        <th>IP</th>
+                        <th scope="col">Time</th>
+                        <th scope="col">User</th>
+                        <th scope="col">Action</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">IP</th>
                     </tr>
                 </thead>
                 <tbody>

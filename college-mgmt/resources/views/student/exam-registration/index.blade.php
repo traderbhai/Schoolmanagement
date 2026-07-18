@@ -30,13 +30,13 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Exam</th>
-                        <th>Subject</th>
-                        <th>Date</th>
-                        <th>Attendance</th>
-                        <th>Fee</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">Exam</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Attendance</th>
+                        <th scope="col">Fee</th>
+                        <th scope="col">Status</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

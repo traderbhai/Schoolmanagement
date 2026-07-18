@@ -64,22 +64,22 @@
                         <input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}">
                         <input type="hidden" name="subject_id" value="{{ $active->id }}">
                         <input type="hidden" name="script_template_id" value="{{ $script?->id }}">
-                        <div class="col-md-3"><label class="form-label small">Disposition</label><select name="disposition" class="form-select form-select-sm"><option>connected</option><option>not_reachable</option><option>busy</option><option>wrong_number</option><option>no_answer</option></select></div>
-                        <div class="col-md-3"><label class="form-label small">Outcome</label><select name="outcome" class="form-select form-select-sm"><option value="interested">Interested</option><option value="callback">Callback</option><option value="not_interested">Not Interested</option><option value="parent_pending">Parent Pending</option><option value="escalated">Escalated</option></select></div>
-                        <div class="col-md-3"><label class="form-label small">Retry Due</label><input type="datetime-local" name="retry_due_at" class="form-control form-control-sm"></div>
-                        <div class="col-md-3"><label class="form-label small">Duration Seconds</label><input type="number" name="duration_seconds" value="180" class="form-control form-control-sm"></div>
+                        <div class="col-md-3"><label class="form-label small">Disposition</label><select aria-label="Disposition" name="disposition" class="form-select form-select-sm"><option>connected</option><option>not_reachable</option><option>busy</option><option>wrong_number</option><option>no_answer</option></select></div>
+                        <div class="col-md-3"><label class="form-label small">Outcome</label><select aria-label="Outcome" name="outcome" class="form-select form-select-sm"><option value="interested">Interested</option><option value="callback">Callback</option><option value="not_interested">Not Interested</option><option value="parent_pending">Parent Pending</option><option value="escalated">Escalated</option></select></div>
+                        <div class="col-md-3"><label class="form-label small">Retry Due</label><input aria-label="Retry Due At" type="datetime-local" name="retry_due_at" class="form-control form-control-sm"></div>
+                        <div class="col-md-3"><label class="form-label small">Duration Seconds</label><input aria-label="Duration Seconds" type="number" name="duration_seconds" value="180" class="form-control form-control-sm"></div>
                         @if($script)
                             <div class="col-12">
                                 <div class="card bg-light border">
                                     <div class="card-body p-2">
                                         <div class="small fw-bold mb-1"><i class="bi bi-card-checklist me-1"></i>{{ $script->name }}</div>
-                                        <div class="row g-1">@foreach($script->steps ?? [] as $idx => $step)<div class="col-md-6 col-xl-4"><label class="form-label small mb-0">{{ $step }}</label><select name="script_results[]" class="form-select form-select-sm"><option value="covered">Covered</option><option value="missed">Missed</option><option value="na">Not applicable</option></select></div>@endforeach</div>
+                                        <div class="row g-1">@foreach($script->steps ?? [] as $idx => $step)<div class="col-md-6 col-xl-4"><label class="form-label small mb-0">{{ $step }}</label><select aria-label="Script Results" name="script_results[]" class="form-select form-select-sm"><option value="covered">Covered</option><option value="missed">Missed</option><option value="na">Not applicable</option></select></div>@endforeach</div>
                                     </div>
                                 </div>
                             </div>
                         @endif
-                        <div class="col-md-8"><label class="form-label small">Notes</label><input name="notes" class="form-control form-control-sm" value="Discussed program fit, parent decision, and next action."></div>
-                        <div class="col-md-4"><label class="form-label small">Next Action</label><input name="next_action" class="form-control form-control-sm" value="Send checklist and schedule follow-up"></div>
+                        <div class="col-md-8"><label class="form-label small">Notes</label><input aria-label="Notes" name="notes" class="form-control form-control-sm" value="Discussed program fit, parent decision, and next action."></div>
+                        <div class="col-md-4"><label class="form-label small">Next Action</label><input aria-label="Next Action" name="next_action" class="form-control form-control-sm" value="Send checklist and schedule follow-up"></div>
                         <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
                             <button class="btn btn-sm btn-primary">Save Call Outcome</button>
                             <span class="small text-muted">This updates the timeline, script compliance, retry queue, and next action.</span>
@@ -111,7 +111,7 @@
             <div class="table-responsive">
                 <table class="table table-sm mb-0" aria-label="Next call queue">
                     <thead>
-                        <tr><th>Candidate</th><th>Type</th><th>Score</th><th>Recommended action</th><th class="text-end">Open</th></tr>
+                        <tr><th scope="col">Candidate</th><th scope="col">Type</th><th scope="col">Score</th><th scope="col">Recommended action</th><th scope="col" class="text-end">Open</th></tr>
                     </thead>
                     <tbody>
                         @forelse($queue->take(12) as $item)
@@ -149,7 +149,7 @@
                 </table>
             </div>
         </div>
-        <div class="card border-0 shadow-sm"><div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Recent Objections</span><span class="small text-muted">Use before calling similar leads</span></div><div class="table-responsive"><table class="table table-sm mb-0" aria-label="Recent objections"><thead><tr><th>Subject</th><th>Stage</th><th>Status</th></tr></thead><tbody>@forelse($objections as $objection)<tr><td>@php($subject = $objection->subject)<div class="fw-semibold">{{ $subject instanceof \App\Models\Lead ? $subject->name : ($subject?->user?->name ?? $subject?->application_number ?? 'Admission record') }}</div><div class="small text-muted">{{ $objection->type?->name ?? class_basename($objection->subject_type) }}</div></td><td>{{ $objection->stage }}</td><td>{{ $objection->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted text-center py-3"><div class="fw-semibold text-dark">No objection trends in this scope</div><div class="small">Objection patterns appear after calls are logged with structured objections.</div></td></tr>@endforelse</tbody></table></div></div>
+        <div class="card border-0 shadow-sm"><div class="card-header bg-white d-flex justify-content-between align-items-center"><span class="fw-bold">Recent Objections</span><span class="small text-muted">Use before calling similar leads</span></div><div class="table-responsive"><table class="table table-sm mb-0" aria-label="Recent objections"><thead><tr><th scope="col">Subject</th><th scope="col">Stage</th><th scope="col">Status</th></tr></thead><tbody>@forelse($objections as $objection)<tr><td>@php($subject = $objection->subject)<div class="fw-semibold">{{ $subject instanceof \App\Models\Lead ? $subject->name : ($subject?->user?->name ?? $subject?->application_number ?? 'Admission record') }}</div><div class="small text-muted">{{ $objection->type?->name ?? class_basename($objection->subject_type) }}</div></td><td>{{ $objection->stage }}</td><td>{{ $objection->status }}</td></tr>@empty<tr><td colspan="3" class="text-muted text-center py-3"><div class="fw-semibold text-dark">No objection trends in this scope</div><div class="small">Objection patterns appear after calls are logged with structured objections.</div></td></tr>@endforelse</tbody></table></div></div>
     </div>
 </div>
 </div>

@@ -80,15 +80,42 @@
         @endif
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="d-md-none">
+            <div class="vstack gap-2 p-3">
+                @foreach($feeDemands as $demand)
+                @php
+                    $isOverdue = $demand->status === 'overdue'
+                        || ($demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending');
+                @endphp
+                <div class="border rounded-2 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="fw-semibold">{{ $demand->term->name ?? 'Term not set' }}</div>
+                        @if($demand->status === 'fully_paid')
+                            <span class="badge bg-success">Paid</span>
+                        @elseif($isOverdue)
+                            <span class="badge bg-danger">Overdue</span>
+                        @elseif($demand->status === 'partially_paid')
+                            <span class="badge bg-info">Partial</span>
+                        @else
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        @endif
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Amount</span><span class="fw-semibold">Rs. {{ number_format($demand->final_amount, 2) }}</span></div>
+                    <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Penalty</span><span class="{{ ($demand->penalty_amount ?? 0) > 0 ? 'text-danger fw-semibold' : 'text-muted' }}">{{ ($demand->penalty_amount ?? 0) > 0 ? 'Rs. ' . number_format($demand->penalty_amount, 2) : '-' }}</span></div>
+                    <div class="d-flex justify-content-between small"><span class="text-muted">Due date</span><span class="{{ $isOverdue ? 'text-danger fw-semibold' : '' }}">{{ $demand->due_date ? $demand->due_date->format('d M Y') : '-' }}</span></div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Term</th>
-                        <th class="text-end">Amount</th>
-                        <th class="text-end">Penalty</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
+                        <th scope="col">Term</th>
+                        <th scope="col" class="text-end">Amount</th>
+                        <th scope="col" class="text-end">Penalty</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -141,15 +168,41 @@
         @endif
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="d-md-none">
+            <div class="vstack gap-2 p-3">
+                @foreach($hostelFeeDemands as $demand)
+                @php
+                    $isHostelOverdue = $demand->due_date && $demand->due_date->isPast() && $demand->status === 'pending';
+                @endphp
+                <div class="border rounded-2 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="fw-semibold">{{ $demand->month }}</div>
+                        @if($demand->status === 'paid')
+                            <span class="badge bg-success">Paid</span>
+                        @elseif($demand->status === 'waived')
+                            <span class="badge bg-secondary">Waived</span>
+                        @elseif($isHostelOverdue)
+                            <span class="badge bg-danger">Overdue</span>
+                        @else
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        @endif
+                    </div>
+                    <div class="small text-muted mb-2">{{ $demand->allocation->room->block->name ?? 'Hostel' }} / Room {{ $demand->allocation->room->room_number ?? '-' }}</div>
+                    <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Amount</span><span class="fw-semibold">Rs. {{ number_format($demand->amount, 2) }}</span></div>
+                    <div class="d-flex justify-content-between small"><span class="text-muted">Due date</span><span class="{{ $isHostelOverdue ? 'text-danger fw-semibold' : '' }}">{{ $demand->due_date ? $demand->due_date->format('d M Y') : '-' }}</span></div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Month</th>
-                        <th>Room</th>
-                        <th class="text-end">Amount</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
+                        <th scope="col">Month</th>
+                        <th scope="col">Room</th>
+                        <th scope="col" class="text-end">Amount</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -213,13 +266,33 @@
             <p class="text-muted small mb-0 mt-2">No fee structures defined for your course yet.</p>
         </div>
         @else
-        <div class="table-responsive">
+        <div class="d-md-none">
+            <div class="vstack gap-2 p-3">
+                @foreach($feeStructures as $fs)
+                <div class="border rounded-2 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">{{ ucwords(str_replace('_', ' ', $fs->fee_type)) }}</span>
+                        <span class="fw-semibold">Rs. {{ number_format($fs->amount, 2) }}</span>
+                    </div>
+                    @if($fs->semester_number)
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary mb-2">Sem {{ $fs->semester_number }}</span>
+                    @endif
+                    <div class="small text-muted">{{ $fs->description ?: 'No description recorded' }}</div>
+                </div>
+                @endforeach
+                <div class="border rounded-2 p-3 bg-light d-flex justify-content-between fw-bold">
+                    <span>Total Fee Due</span>
+                    <span class="text-primary">Rs. {{ number_format($totalDue, 2) }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Fee Type</th>
-                        <th>Description</th>
-                        <th class="text-end">Amount</th>
+                        <th scope="col">Fee Type</th>
+                        <th scope="col">Description</th>
+                        <th scope="col" class="text-end">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -266,17 +339,43 @@
             <p class="text-muted small mb-0 mt-2">No payment records found.</p>
         </div>
         @else
-        <div class="table-responsive">
+        <div class="d-md-none">
+            <div class="vstack gap-2 p-3">
+                @foreach($payments as $payment)
+                <div class="border rounded-2 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="fw-semibold">{{ $payment->receipt_number ?: 'Receipt pending' }}</div>
+                        @if($payment->status === 'paid')
+                            <span class="badge-paid">Paid</span>
+                        @elseif($payment->status === 'pending')
+                            <span class="badge-pending">Pending</span>
+                        @else
+                            <span class="badge bg-secondary">{{ ucfirst($payment->status) }}</span>
+                        @endif
+                    </div>
+                    <div class="small text-muted mb-1">{{ $payment->feeStructure ? ucwords(str_replace('_', ' ', $payment->feeStructure->fee_type)) : 'Fee type not linked' }}</div>
+                    <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Amount paid</span><span class="fw-semibold">Rs. {{ number_format($payment->amount_paid, 2) }}</span></div>
+                    <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Date</span><span>{{ $payment->payment_date ? $payment->payment_date->format('d M Y') : '-' }}</span></div>
+                    @if($payment->status === 'paid')
+                    <a href="{{ route('student.reports.fee-receipt', $payment->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary w-100" aria-label="Download receipt PDF">
+                        <i class="bi bi-download me-1"></i>Receipt
+                    </a>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+        </div>
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Receipt #</th>
-                        <th>Fee Type</th>
-                        <th class="text-end">Amount Paid</th>
-                        <th>Date</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th scope="col">Receipt #</th>
+                        <th scope="col">Fee Type</th>
+                        <th scope="col" class="text-end">Amount Paid</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Status</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

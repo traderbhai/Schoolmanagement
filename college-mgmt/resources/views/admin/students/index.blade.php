@@ -28,11 +28,11 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Name, email, enrollment…" value="{{ request('search') }}">
+                <input aria-label="Student search" type="text" name="search" class="form-control form-control-sm" placeholder="Name, email, enrollment…" value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Department</label>
-                <select name="department_id" class="form-select form-select-sm">
+                <select aria-label="Department" name="department_id" class="form-select form-select-sm">
                     <option value="">All Departments</option>
                     @foreach($departments as $d)
                         <option value="{{ $d->id }}" @selected(request('department_id')==$d->id)>{{ $d->name }}</option>
@@ -41,7 +41,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Course</label>
-                <select name="course_id" class="form-select form-select-sm">
+                <select aria-label="Course" name="course_id" class="form-select form-select-sm">
                     <option value="">All Courses</option>
                     @foreach($courses as $c)
                         <option value="{{ $c->id }}" @selected(request('course_id')==$c->id)>{{ $c->code }}</option>
@@ -50,7 +50,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All Status</option>
                     @foreach(['active','inactive','graduated','dropped'] as $s)
                         <option value="{{ $s }}" @selected(request('status')==$s)>{{ ucfirst($s) }}</option>
@@ -73,12 +73,12 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Student</th>
-                    <th>Enrollment No.</th>
-                    <th>Course</th>
-                    <th>Sem</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Student</th>
+                    <th scope="col">Enrollment No.</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Sem</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>

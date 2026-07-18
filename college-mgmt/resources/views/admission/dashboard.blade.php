@@ -182,7 +182,7 @@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center fw-bold">
         <span><i class="bi bi-calendar-event me-1 text-primary"></i> Upcoming Sessions</span>
-        <a href="{{ route('admission.sessions.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        <a href="{{ route('admission.sessions.index') }}" class="btn btn-sm btn-outline-primary">View sessions</a>
     </div>
     <div class="card-body">
         <div class="row g-3">
@@ -234,12 +234,12 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Applicant</th>
-                    <th>Type</th>
-                    <th>Outcome</th>
-                    <th>Notes</th>
-                    <th>Logged By</th>
-                    <th>When</th>
+                    <th scope="col">Applicant</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Outcome</th>
+                    <th scope="col">Notes</th>
+                    <th scope="col">Logged By</th>
+                    <th scope="col">When</th>
                 </tr>
             </thead>
             <tbody>

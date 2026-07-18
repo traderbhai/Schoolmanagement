@@ -10,14 +10,14 @@
                 @csrf
                 <div class="card-header fw-semibold">Config Item</div>
                 <div class="card-body vstack gap-3">
-                    <select name="type" class="form-select">
+                    <select aria-label="Type" name="type" class="form-select">
                         @foreach(['lead_stage','outcome','reason','sla_profile','attention_rule'] as $type)
                             <option value="{{ $type }}">{{ ucwords(str_replace('_', ' ', $type)) }}</option>
                         @endforeach
                     </select>
-                    <input name="label" class="form-control" placeholder="Label" required>
-                    <input name="key" class="form-control" placeholder="Key (optional)">
-                    <input name="sort_order" type="number" class="form-control" value="100">
+                    <input aria-label="Label" name="label" class="form-control" placeholder="Label" required>
+                    <input aria-label="Workflow configuration key" name="key" class="form-control" placeholder="Key (optional)">
+                    <input aria-label="Sort Order" name="sort_order" type="number" class="form-control" value="100">
                     <button class="btn btn-primary">Save Config</button>
                 </div>
             </form>
@@ -25,8 +25,8 @@
                 @csrf
                 <div class="card-header fw-semibold">Tag</div>
                 <div class="card-body vstack gap-3">
-                    <input name="name" class="form-control" placeholder="Tag name" required>
-                    <input name="color" class="form-control" placeholder="Bootstrap color" value="secondary">
+                    <input aria-label="Tag name" name="name" class="form-control" placeholder="Tag name" required>
+                    <input aria-label="Bootstrap color" name="color" class="form-control" placeholder="Bootstrap color" value="secondary">
                     <button class="btn btn-outline-primary">Save Tag</button>
                 </div>
             </form>

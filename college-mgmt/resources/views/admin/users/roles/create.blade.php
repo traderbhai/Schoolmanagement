@@ -19,7 +19,7 @@
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -32,7 +32,7 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">User <span class="text-danger">*</span></label>
-                            <select name="user_id" class="form-select @error('user_id') is-invalid @enderror" required>
+                            <select aria-label="User" name="user_id" class="form-select @error('user_id') is-invalid @enderror" required>
                                 <option value="">— Select user —</option>
                                 @foreach($users as $user)
                                 <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
@@ -47,7 +47,7 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Role <span class="text-danger">*</span></label>
-                            <select name="role_id" class="form-select @error('role_id') is-invalid @enderror" required>
+                            <select aria-label="Role" name="role_id" class="form-select @error('role_id') is-invalid @enderror" required>
                                 <option value="">— Select role —</option>
                                 @foreach($roles as $role)
                                 <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
@@ -75,7 +75,7 @@
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Active Until <span class="text-muted small">(optional)</span></label>
-                            <input type="date" name="active_until"
+                            <input aria-label="Active Until" type="date" name="active_until"
                                    class="form-control @error('active_until') is-invalid @enderror"
                                    value="{{ old('active_until') }}"
                                    min="{{ now()->addDay()->toDateString() }}">

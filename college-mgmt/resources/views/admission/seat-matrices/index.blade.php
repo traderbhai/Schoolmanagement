@@ -29,7 +29,7 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <label class="form-label small text-muted">Program</label>
-            <select class="form-select form-select-sm" style="width:auto" onchange="window.location='/admission/seat-matrices/'+this.value">
+            <select aria-label="Seat matrix program" class="form-select form-select-sm" style="width:auto" onchange="window.location='/admission/seat-matrices/'+this.value">
                 @foreach($programs as $p)
                     <option value="{{ $p->id }}" {{ $p->id == $program->id ? 'selected' : '' }}>{{ $p->name }}</option>
                 @endforeach
@@ -38,7 +38,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show js-auto-dismiss"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     @endif
 
     @if($matrices->isEmpty())
@@ -59,17 +59,17 @@
                     <table class="table table-hover mb-0 align-middle text-center">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-start">Batch Scope</th>
-                                <th>Total</th>
-                                <th>General</th>
-                                <th>OBC</th>
-                                <th>SC</th>
-                                <th>ST</th>
-                                <th>EWS</th>
-                                <th>Mgmt</th>
-                                <th>NRI</th>
-                                <th>Defence</th>
-                                <th></th>
+                                <th scope="col" class="text-start">Batch Scope</th>
+                                <th scope="col">Total</th>
+                                <th scope="col">General</th>
+                                <th scope="col">OBC</th>
+                                <th scope="col">SC</th>
+                                <th scope="col">ST</th>
+                                <th scope="col">EWS</th>
+                                <th scope="col">Mgmt</th>
+                                <th scope="col">NRI</th>
+                                <th scope="col">Defence</th>
+                                <th aria-label="Actions" scope="col"></th>
                             </tr>
                         </thead>
                         <tbody>

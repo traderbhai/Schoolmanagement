@@ -10,10 +10,10 @@
 @section('content')
 
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -23,7 +23,7 @@
     </div>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.hostel.allocations') }}" class="btn btn-sm btn-outline-primary">All Allocations</a>
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoomModal"><i class="bi bi-plus-circle me-1"></i>Add Room</button>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoomModal"><i class="bi bi-plus-circle me-1"></i>Add Room</button>
     </div>
 </div>
 
@@ -32,14 +32,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Room No.</th>
-                    <th>Floor</th>
-                    <th>Type</th>
-                    <th>Capacity</th>
-                    <th>Occupied</th>
-                    <th>Status</th>
-                    <th>Monthly Fee</th>
-                    <th>Actions</th>
+                    <th scope="col">Room No.</th>
+                    <th scope="col">Floor</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col">Occupied</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Monthly Fee</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,7 +62,7 @@
                             @if($room->status === 'available')
                                 <a href="{{ route('admin.hostel.allocations') }}?room={{ $room->id }}" class="btn btn-sm btn-outline-success">Allocate</a>
                             @endif
-                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editRoom{{ $room->id }}">Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editRoom{{ $room->id }}">Edit</button>
                         </td>
                     </tr>
 
@@ -74,21 +74,21 @@
                                     @csrf @method('PUT')
                                     <div class="modal-header">
                                         <h6 class="modal-title">Edit Room {{ $room->room_number }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
                                         <div class="row g-2">
                                             <div class="col-6">
                                                 <label class="form-label">Room Number</label>
-                                                <input type="text" name="room_number" class="form-control" value="{{ $room->room_number }}" required>
+                                                <input aria-label="Room Number" type="text" name="room_number" class="form-control" value="{{ $room->room_number }}" required>
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label">Floor</label>
-                                                <input type="number" name="floor" class="form-control" value="{{ $room->floor }}" min="0" required>
+                                                <input aria-label="Floor" type="number" name="floor" class="form-control" value="{{ $room->floor }}" min="0" required>
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label">Type</label>
-                                                <select name="room_type" class="form-select" required>
+                                                <select aria-label="Room Type" name="room_type" class="form-select" required>
                                                     @foreach(['single','double','triple','dormitory'] as $t)
                                                         <option value="{{ $t }}" @selected($room->room_type === $t)>{{ ucfirst($t) }}</option>
                                                     @endforeach
@@ -96,15 +96,15 @@
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label">Capacity</label>
-                                                <input type="number" name="capacity" class="form-control" value="{{ $room->capacity }}" min="1" max="20" required>
+                                                <input aria-label="Capacity" type="number" name="capacity" class="form-control" value="{{ $room->capacity }}" min="1" max="20" required>
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label">Monthly Fee (Rs.)</label>
-                                                <input type="number" name="monthly_fee" class="form-control" value="{{ $room->monthly_fee }}" min="0" step="0.01">
+                                                <input aria-label="Monthly Fee" type="number" name="monthly_fee" class="form-control" value="{{ $room->monthly_fee }}" min="0" step="0.01">
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label">Status</label>
-                                                <select name="status" class="form-select" required>
+                                                <select aria-label="Status" name="status" class="form-select" required>
                                                     @foreach(['available','occupied','maintenance','reserved'] as $s)
                                                         <option value="{{ $s }}" @selected($room->status === $s)>{{ ucfirst($s) }}</option>
                                                     @endforeach
@@ -114,7 +114,7 @@
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-primary">Save</button>
+                                        <button type="submit" class="btn btn-primary">Save room</button>
                                     </div>
                                 </form>
                             </div>
@@ -140,21 +140,21 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Add Room to {{ $block->name }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="form-label">Room Number <span class="text-danger">*</span></label>
-                            <input type="text" name="room_number" class="form-control" required placeholder="101">
+                            <input aria-label="101" type="text" name="room_number" class="form-control" required placeholder="101">
                         </div>
                         <div class="col-6">
                             <label class="form-label">Floor <span class="text-danger">*</span></label>
-                            <input type="number" name="floor" class="form-control" min="0" value="0" required>
+                            <input aria-label="Floor" type="number" name="floor" class="form-control" min="0" value="0" required>
                         </div>
                         <div class="col-6">
                             <label class="form-label">Type <span class="text-danger">*</span></label>
-                            <select name="room_type" class="form-select" required>
+                            <select aria-label="Room Type" name="room_type" class="form-select" required>
                                 <option value="single">Single</option>
                                 <option value="double" selected>Double</option>
                                 <option value="triple">Triple</option>
@@ -163,11 +163,11 @@
                         </div>
                         <div class="col-6">
                             <label class="form-label">Capacity <span class="text-danger">*</span></label>
-                            <input type="number" name="capacity" class="form-control" min="1" max="20" value="2" required>
+                            <input aria-label="Capacity" type="number" name="capacity" class="form-control" min="1" max="20" value="2" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Monthly Fee (Rs.)</label>
-                            <input type="number" name="monthly_fee" class="form-control" min="0" step="0.01" value="0">
+                            <input aria-label="Monthly Fee" type="number" name="monthly_fee" class="form-control" min="0" step="0.01" value="0">
                         </div>
                     </div>
                 </div>

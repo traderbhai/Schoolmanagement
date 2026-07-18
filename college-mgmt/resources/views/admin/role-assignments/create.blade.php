@@ -19,7 +19,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">User <span class="text-danger">*</span></label>
-                        <select name="user_id" class="form-select @error('user_id') is-invalid @enderror" required>
+                        <select aria-label="User" name="user_id" class="form-select @error('user_id') is-invalid @enderror" required>
                             <option value="">— Select User —</option>
                             @foreach($users as $u)
                                 <option value="{{ $u->id }}" @selected(old('user_id') == $u->id)>
@@ -32,7 +32,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Role <span class="text-danger">*</span></label>
-                        <select name="role_name" class="form-select @error('role_name') is-invalid @enderror" required>
+                        <select aria-label="Role Name" name="role_name" class="form-select @error('role_name') is-invalid @enderror" required>
                             <option value="">— Select Role —</option>
                             @foreach($roles as $key => $desc)
                                 <option value="{{ $key }}" @selected(old('role_name') == $key)>
@@ -59,7 +59,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Batch <span class="text-muted">(optional — only relevant if program is selected)</span></label>
-                        <select name="batch_id" class="form-select @error('batch_id') is-invalid @enderror">
+                        <select aria-label="Batch" name="batch_id" class="form-select @error('batch_id') is-invalid @enderror">
                             <option value="">— All Batches —</option>
                             @foreach($batches as $b)
                                 <option value="{{ $b->id }}" @selected(old('batch_id') == $b->id)>

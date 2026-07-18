@@ -95,6 +95,12 @@ class AdmissionReminderService
             $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
             $query->where(function ($q) use ($visibleIds) {
                 $q->whereIn('assigned_to', $visibleIds)->orWhereIn('owner_user_id', $visibleIds);
+            })->where(function ($q) use ($viewer) {
+                $q->whereHasMorph('subject', [Lead::class], function (Builder $subjectQuery) use ($viewer) {
+                    $this->accessPolicy->applyLeadVisibility($subjectQuery, $viewer);
+                })->orWhereHasMorph('subject', [Applicant::class], function (Builder $subjectQuery) use ($viewer) {
+                    $this->accessPolicy->applyApplicantVisibility($subjectQuery, $viewer);
+                });
             });
         }
 
@@ -109,8 +115,21 @@ class AdmissionReminderService
 
         $visibleIds = $this->accessPolicy->visibleUserIds($viewer)->push($viewer->id)->unique();
 
-        return $visibleIds->contains($reminder->assigned_to)
-            || $visibleIds->contains($reminder->owner_user_id);
+        if (! ($visibleIds->contains($reminder->assigned_to) || $visibleIds->contains($reminder->owner_user_id))) {
+            return false;
+        }
+
+        $subject = $reminder->subject;
+
+        if ($subject instanceof Lead) {
+            return $this->accessPolicy->applyLeadVisibility(Lead::query(), $viewer)->whereKey($subject->getKey())->exists();
+        }
+
+        if ($subject instanceof Applicant) {
+            return $this->accessPolicy->applyApplicantVisibility(Applicant::query(), $viewer)->whereKey($subject->getKey())->exists();
+        }
+
+        return false;
     }
 
     public function complete(AdmissionReminderSchedule $reminder, ?User $actor = null): AdmissionReminderSchedule

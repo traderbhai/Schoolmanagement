@@ -70,17 +70,17 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
                     <h6 class="fw-semibold mb-0">Recent Placement Drives</h6>
-                    <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+                    <a href="{{ route('cmc.drives') }}" class="btn btn-sm btn-outline-secondary">View drives</a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th class="ps-3">Company</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
+                                    <th scope="col" class="ps-3">Company</th>
+                                    <th scope="col">Role</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Date</th>
                                 </tr>
                             </thead>
                             <tbody>

@@ -145,14 +145,14 @@
                                 <label class="form-label fw-semibold">Amount Paid <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">Rs. </span>
-                                    <input type="number" name="amount_paid" class="form-control"
+                                    <input aria-label="Amount Paid" type="number" name="amount_paid" class="form-control"
                                         value="{{ old('amount_paid', $installment->amount) }}"
                                         min="1" step="0.01" required>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Payment Date <span class="text-danger">*</span></label>
-                                <input type="date" name="payment_date" class="form-control"
+                                <input aria-label="Payment Date" type="date" name="payment_date" class="form-control"
                                     value="{{ old('payment_date', date('Y-m-d')) }}"
                                     max="{{ date('Y-m-d') }}" required>
                             </div>
@@ -167,19 +167,19 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Transaction Reference / UTR</label>
-                                <input type="text" name="transaction_reference" class="form-control"
+                                <input aria-label="UTR / Transaction ID / DD Number" type="text" name="transaction_reference" class="form-control"
                                     value="{{ old('transaction_reference') }}"
                                     placeholder="UTR / Transaction ID / DD Number">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Bank Name</label>
-                                <input type="text" name="bank_name" class="form-control"
+                                <input aria-label="Bank name" type="text" name="bank_name" class="form-control"
                                     value="{{ old('bank_name') }}"
                                     placeholder="e.g. SBI, HDFC, ICICI">
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Payment Proof</label>
-                                <input type="file" name="payment_proof" class="form-control"
+                                <input aria-label="Payment Proof" type="file" name="payment_proof" class="form-control"
                                     accept=".jpg,.jpeg,.png,.pdf">
                                 <div class="form-text">Upload screenshot or receipt (JPG, PNG, PDF - max 5MB)</div>
                             </div>

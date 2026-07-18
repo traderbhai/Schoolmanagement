@@ -83,11 +83,11 @@
         <form class="row g-2 align-items-end" method="GET">
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Search</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Title or job role" value="{{ request('search') }}">
+                <input aria-label="Title or job role" type="text" name="search" class="form-control form-control-sm" placeholder="Title or job role" value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     <option value="">All</option>
                     @foreach(['upcoming','ongoing','completed','cancelled'] as $s)
                         <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucfirst($s) }}</option>
@@ -96,7 +96,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Company</label>
-                <select name="company_id" class="form-select form-select-sm">
+                <select aria-label="Company" name="company_id" class="form-select form-select-sm">
                     <option value="">All Companies</option>
                     @foreach($companies as $c)
                         <option value="{{ $c->id }}" @selected(request('company_id') == $c->id)>{{ $c->name }}</option>
@@ -123,14 +123,14 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Drive</th>
-                        <th>Company</th>
-                        <th>Job Role</th>
-                        <th>Package</th>
-                        <th>Drive Date</th>
-                        <th>Applications</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">Drive</th>
+                        <th scope="col">Company</th>
+                        <th scope="col">Job Role</th>
+                        <th scope="col">Package</th>
+                        <th scope="col">Drive Date</th>
+                        <th scope="col">Applications</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -158,9 +158,9 @@
                         <td class="text-end">
                             <a href="{{ route('admin.placement-drives.show', $drive) }}" class="btn btn-sm btn-outline-info me-1" title="View"><i class="bi bi-eye"></i></a>
                             <a href="{{ route('admin.placement-drives.edit', $drive) }}" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
-                            <form method="POST" action="{{ route('admin.placement-drives.destroy', $drive) }}" class="d-inline" onsubmit="return confirm('Delete this drive?')">
+                            <form method="POST" action="{{ route('admin.placement-drives.destroy', $drive) }}" class="d-inline" onsubmit="return confirm('Delete placement drive {{ addslashes($drive->title) }}? Confirm student applications, shortlist/interview records, company communication, and placement reports no longer depend on it.')">
                                 @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete placement drive {{ $drive->title }}"><i class="bi bi-trash"></i></button>
                             </form>
                         </td>
                     </tr>

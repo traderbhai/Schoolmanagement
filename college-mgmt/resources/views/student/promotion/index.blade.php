@@ -58,7 +58,7 @@
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>Criterion</th><th>Value</th><th>Status</th></tr>
+                    <tr><th scope="col">Criterion</th><th scope="col">Value</th><th scope="col">Status</th></tr>
                 </thead>
                 <tbody>
                     <tr>
@@ -95,7 +95,7 @@
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead class="table-light">
-                    <tr><th>From Term</th><th>To Term</th><th>CGPA</th><th>Attendance</th><th>Status</th><th>Date</th></tr>
+                    <tr><th scope="col">From Term</th><th scope="col">To Term</th><th scope="col">CGPA</th><th scope="col">Attendance</th><th scope="col">Status</th><th scope="col">Date</th></tr>
                 </thead>
                 <tbody>
                     @foreach($promotions as $p)

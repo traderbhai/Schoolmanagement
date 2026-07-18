@@ -22,9 +22,9 @@
             <table class="table table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>Item</th>
-                        <th>Status</th>
-                        <th>Due / Date</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Due / Date</th>
                     </tr>
                 </thead>
                 <tbody>

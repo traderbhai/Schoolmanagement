@@ -41,7 +41,7 @@ table.results td { padding:3px 6px; border-bottom:1px solid #e5e7eb; }
 @foreach($semesterReports as $report)
 <div class="term-header">{{ data_get($report, 'term.name', 'Term not linked') }} - SGPA: {{ $report['sgpa'] }} | Credits: {{ $report['earned_credits'] }}/{{ $report['total_credits'] }}</div>
 <table class="results">
-<thead><tr><th>Subject</th><th>Credits</th><th>Marks</th><th>%</th><th>Grade</th><th>Result</th></tr></thead>
+<thead><tr><th scope="col">Subject</th><th scope="col">Credits</th><th scope="col">Marks</th><th scope="col">%</th><th scope="col">Grade</th><th scope="col">Result</th></tr></thead>
 <tbody>
 @foreach($report['subjects'] as $s)
 <tr>

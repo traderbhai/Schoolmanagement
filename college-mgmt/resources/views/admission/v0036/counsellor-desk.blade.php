@@ -123,7 +123,7 @@
                 @forelse($desk['reminders'] as $reminder)
                     <div class="list-group-item d-flex justify-content-between gap-2">
                         <span><strong>{{ ucfirst(str_replace('_', ' ', $reminder->reason)) }}</strong><div class="small text-muted">{{ class_basename($reminder->subject_type) }} #{{ $reminder->subject_id }} | {{ optional($reminder->due_at)->format('d M H:i') }}</div></span>
-                        <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}" onsubmit="return confirm('Queue this reminder through the communication hub?')">@csrf<button class="btn btn-sm btn-outline-success">Send</button></form>
+                <form method="POST" action="{{ route('admission.reminders.send', $reminder) }}" onsubmit="return confirm('Queue this reminder through the communication hub? Confirm recipient, channel, approved template, consent state, and provider readiness before sending.')">@csrf<button class="btn btn-sm btn-outline-success">Send reminder</button></form>
                     </div>
                 @empty
                     <div class="list-group-item text-muted">No reminders due.</div>

@@ -18,8 +18,8 @@
         <form method="GET" class="d-flex gap-2 align-items-end">
             <div class="flex-grow-1">
                 <label class="form-label small text-muted">Filter by Program</label>
-                <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">— All Programs —</option>
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Programs</option>
                     @foreach($programs as $prog)
                         <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>
                             {{ $prog->name }}
@@ -40,24 +40,24 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Applicant</th>
-                            <th>Application Number</th>
-                            <th>Program</th>
-                            <th class="text-end">Actions</th>
+                            <th scope="col">Applicant</th>
+                            <th scope="col">Application Number</th>
+                            <th scope="col">Program</th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($approvals as $approval)
                         <tr>
-                            <td class="fw-semibold">{{ $approval->approvable->user->name ?? '—' }}</td>
+                            <td class="fw-semibold">{{ $approval->approvable->user->name ?? 'Applicant name missing' }}</td>
                             <td class="font-monospace small">{{ $approval->approvable->application_number }}</td>
-                            <td>{{ $approval->approvable->program->name ?? '—' }}</td>
+                            <td>{{ $approval->approvable->program->name ?? 'Program not assigned' }}</td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $approval->id }}">
+                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $approval->id }}">
                                     <i class="bi bi-check"></i> Approve & Generate Offer
                                 </button>
-                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $approval->id }}">
-                                    <i class="bi bi-x"></i> Reject
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $approval->id }}">
+                                    <i class="bi bi-x"></i> Reject request
                                 </button>
                             </td>
 
@@ -67,7 +67,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Approve & Generate Offer Letter</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('dean.approve', $approval) }}" method="POST">
                                             @csrf
@@ -77,7 +77,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-success">Approve</button>
+                                                <button type="submit" class="btn btn-success">Approve request</button>
                                             </div>
                                         </form>
                                     </div>
@@ -90,7 +90,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Reject Approval</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('dean.reject', $approval) }}" method="POST">
                                             @csrf
@@ -100,7 +100,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-danger">Reject</button>
+                                                <button type="submit" class="btn btn-danger">Reject request</button>
                                             </div>
                                         </form>
                                     </div>

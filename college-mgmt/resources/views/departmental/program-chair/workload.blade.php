@@ -101,12 +101,12 @@
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th>Teacher Name</th>
-                                <th>Sessions</th>
-                                <th>Total Hours</th>
-                                <th>Weekly Load</th>
-                                <th>Subjects</th>
-                                <th>Status</th>
+                                <th scope="col">Teacher Name</th>
+                                <th scope="col">Sessions</th>
+                                <th scope="col">Total Hours</th>
+                                <th scope="col">Weekly Load</th>
+                                <th scope="col">Subjects</th>
+                                <th scope="col">Status</th>
                             </tr>
                         </thead>
                         <tbody>

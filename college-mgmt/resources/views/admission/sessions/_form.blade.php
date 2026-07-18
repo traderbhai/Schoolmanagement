@@ -30,7 +30,7 @@
     {{-- Session Name --}}
     <div class="col-md-6">
         <label class="form-label fw-semibold">Session Name <span class="text-danger">*</span></label>
-        <input type="text" name="session_name" class="form-control @error('session_name') is-invalid @enderror"
+        <input aria-label="Session Name" type="text" name="session_name" class="form-control @error('session_name') is-invalid @enderror"
                value="{{ old('session_name', $editing ? $session->session_name : '') }}" placeholder="e.g. WAT Round 1 - Morning Batch" required>
         @error('session_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
@@ -38,7 +38,7 @@
     {{-- Batch --}}
     <div class="col-md-6">
         <label class="form-label fw-semibold">Batch (Optional)</label>
-        <select name="batch_id" class="form-select @error('batch_id') is-invalid @enderror">
+        <select aria-label="Batch" name="batch_id" class="form-select @error('batch_id') is-invalid @enderror">
             <option value="">All Batches</option>
             @foreach($batches as $b)
                 <option value="{{ $b->id }}" @selected(old('batch_id', $editing ? $session->batch_id : '') == $b->id)>{{ $b->name }}</option>
@@ -49,7 +49,7 @@
     {{-- Date --}}
     <div class="col-md-4">
         <label class="form-label fw-semibold">Scheduled Date <span class="text-danger">*</span></label>
-        <input type="date" name="scheduled_date" class="form-control @error('scheduled_date') is-invalid @enderror"
+        <input aria-label="Scheduled Date" type="date" name="scheduled_date" class="form-control @error('scheduled_date') is-invalid @enderror"
                value="{{ old('scheduled_date', $editing ? $session->scheduled_date->format('Y-m-d') : '') }}" required>
         @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
@@ -57,7 +57,7 @@
     {{-- Start Time --}}
     <div class="col-md-4">
         <label class="form-label fw-semibold">Start Time <span class="text-danger">*</span></label>
-        <input type="time" name="start_time" class="form-control @error('start_time') is-invalid @enderror"
+        <input aria-label="Start Time" type="time" name="start_time" class="form-control @error('start_time') is-invalid @enderror"
                value="{{ old('start_time', $editing ? \Carbon\Carbon::parse($session->start_time)->format('H:i') : '') }}" required>
         @error('start_time') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
@@ -65,7 +65,7 @@
     {{-- End Time --}}
     <div class="col-md-4">
         <label class="form-label fw-semibold">End Time <span class="text-danger">*</span></label>
-        <input type="time" name="end_time" class="form-control @error('end_time') is-invalid @enderror"
+        <input aria-label="End Time" type="time" name="end_time" class="form-control @error('end_time') is-invalid @enderror"
                value="{{ old('end_time', $editing ? \Carbon\Carbon::parse($session->end_time)->format('H:i') : '') }}" required>
         @error('end_time') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
@@ -73,21 +73,21 @@
     {{-- Venue --}}
     <div class="col-md-6">
         <label class="form-label fw-semibold">Venue</label>
-        <input type="text" name="venue" class="form-control"
+        <input aria-label="Venue" type="text" name="venue" class="form-control"
                value="{{ old('venue', $editing ? $session->venue : '') }}" placeholder="e.g. Seminar Hall A">
     </div>
 
     {{-- Max Candidates --}}
     <div class="col-md-6">
         <label class="form-label fw-semibold">Max Candidates</label>
-        <input type="number" name="max_candidates" class="form-control" min="1"
+        <input aria-label="Max Candidates" type="number" name="max_candidates" class="form-control" min="1"
                value="{{ old('max_candidates', $editing ? $session->max_candidates : '') }}" placeholder="Leave blank for unlimited">
     </div>
 
     {{-- Instructions --}}
     <div class="col-12">
         <label class="form-label fw-semibold">Instructions</label>
-        <textarea name="instructions" class="form-control" rows="3" placeholder="Special instructions for this session...">{{ old('instructions', $editing ? $session->instructions : '') }}</textarea>
+        <textarea aria-label="Session instructions" name="instructions" class="form-control" rows="3" placeholder="Special instructions for this session...">{{ old('instructions', $editing ? $session->instructions : '') }}</textarea>
     </div>
 
     @if(!$editing)

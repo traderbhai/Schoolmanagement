@@ -36,13 +36,13 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Provider Status</div>
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0" aria-label="Provider status">
+                    <table class="table table-sm align-middle mb-0" aria-label="Integration status">
                         <thead class="table-light">
                             <tr>
-                                <th>Channel</th>
-                                <th>Provider</th>
-                                <th>Mode</th>
-                                <th>Active</th>
+                                <th scope="col">Channel</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">Mode</th>
+                                <th scope="col">Active</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,10 +79,10 @@
                     <table class="table table-sm align-middle mb-0" aria-label="Webhook events">
                         <thead class="table-light">
                             <tr>
-                                <th>Provider</th>
-                                <th>Event</th>
-                                <th>Status</th>
-                                <th>When</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">Event</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">When</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,11 +117,11 @@
             <table class="table table-sm align-middle mb-0" aria-label="Failed communication deliveries">
                 <thead class="table-light">
                     <tr>
-                        <th>Channel</th>
-                        <th>Provider</th>
-                        <th>Recipient</th>
-                        <th>Reason</th>
-                        <th></th>
+                        <th scope="col">Channel</th>
+                        <th scope="col">Provider</th>
+                        <th scope="col">Recipient</th>
+                        <th scope="col">Reason</th>
+                        <th aria-label="Actions" scope="col"></th>
                     </tr>
                 </thead>
                 <tbody>

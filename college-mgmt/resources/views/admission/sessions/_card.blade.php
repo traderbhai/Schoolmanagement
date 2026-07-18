@@ -27,7 +27,7 @@
                 <i class="bi bi-eye me-1"></i> View
             </a>
             @if($session->status === 'scheduled')
-            <a href="{{ route('admission.sessions.edit', $session) }}" class="btn btn-sm btn-outline-secondary">
+        <a href="{{ route('admission.sessions.edit', $session) }}" class="btn btn-sm btn-outline-secondary" aria-label="Edit admission session {{ $session->name ?? $session->id }}">
                 <i class="bi bi-pencil"></i>
             </a>
             @endif

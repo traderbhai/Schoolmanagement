@@ -13,7 +13,7 @@
             <div class="d-flex align-items-center gap-4 mb-4 pb-3 border-bottom">
                 <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;background:#e9ecef;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     @if($student->photo)
-                        <img src="{{ Storage::url($student->photo) }}" alt="Photo" style="width:100%;height:100%;object-fit:cover;">
+                        <img src="{{ Storage::url($student->photo) }}" alt="Profile photo of {{ $student->user->name }}" style="width:100%;height:100%;object-fit:cover;">
                     @else
                         <i class="bi bi-person-fill fs-2 text-secondary"></i>
                     @endif

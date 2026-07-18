@@ -8,7 +8,7 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
@@ -93,19 +93,19 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Issues</h6>
-        <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary">View All</a>
+        <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary">View issues</a>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Book</th>
-                        <th>Accession</th>
-                        <th>Borrower</th>
-                        <th>Issued At</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
+                        <th scope="col">Book</th>
+                        <th scope="col">Accession</th>
+                        <th scope="col">Borrower</th>
+                        <th scope="col">Issued At</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

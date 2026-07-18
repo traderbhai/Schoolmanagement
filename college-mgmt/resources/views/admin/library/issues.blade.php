@@ -9,23 +9,23 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 {{-- Filters + Issue Button --}}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="btn-group" role="group">
-        <a href="{{ route('admin.library.issues') }}" class="btn btn-sm {{ !request('status') || request('status') === 'all' ? 'btn-primary' : 'btn-outline-primary' }}">All</a>
+        <a href="{{ route('admin.library.issues') }}" class="btn btn-sm {{ !request('status') || request('status') === 'all' ? 'btn-primary' : 'btn-outline-primary' }}">All issues</a>
         <a href="{{ route('admin.library.issues') }}?status=issued" class="btn btn-sm {{ request('status') === 'issued' ? 'btn-primary' : 'btn-outline-primary' }}">Issued</a>
         <a href="{{ route('admin.library.issues') }}?status=overdue" class="btn btn-sm {{ request('status') === 'overdue' ? 'btn-danger' : 'btn-outline-danger' }}">Overdue</a>
         <a href="{{ route('admin.library.issues') }}?status=returned" class="btn btn-sm {{ request('status') === 'returned' ? 'btn-success' : 'btn-outline-success' }}">Returned</a>
     </div>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.library.issues.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#issueBookModal"><i class="bi bi-plus-circle me-1"></i>Issue Book</button>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#issueBookModal"><i class="bi bi-plus-circle me-1"></i>Issue Book</button>
     </div>
 </div>
 <div class="text-muted small mb-2">Showing {{ $issues->total() }} issue record(s){{ request('status') ? ' filtered by status: '.request('status') : '' }}.</div>
@@ -36,14 +36,14 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Book</th>
-                        <th>Accession</th>
-                        <th>Borrower</th>
-                        <th>Issued</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                        <th>Fine</th>
-                        <th>Actions</th>
+                        <th scope="col">Book</th>
+                        <th scope="col">Accession</th>
+                        <th scope="col">Borrower</th>
+                        <th scope="col">Issued</th>
+                        <th scope="col">Due Date</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Fine</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,9 +80,9 @@
                         <td>{{ $issue->fine_amount > 0 ? 'Rs. '.number_format((float) $issue->fine_amount, 2) : 'No fine' }}</td>
                         <td>
                             @if(in_array($issue->status, ['issued','overdue']))
-                                <form method="POST" action="{{ route('admin.library.issues.return', $issue) }}" class="d-inline" onsubmit="return confirm('Mark this book as returned?')">
+                                <form method="POST" action="{{ route('admin.library.issues.return', $issue) }}" class="d-inline" onsubmit="return confirm('Mark {{ addslashes($issue->bookCopy->book->title ?? 'this book') }} as returned? Confirm copy condition, borrower, due/fine status, and shelf availability before closing the issue.')">
                                     @csrf
-                                    <button class="btn btn-sm btn-outline-success" title="Return"><i class="bi bi-arrow-return-left"></i></button>
+                                    <button class="btn btn-sm btn-outline-success" title="Return" aria-label="Mark {{ $issue->bookCopy->book->title ?? 'book' }} as returned"><i class="bi bi-arrow-return-left"></i></button>
                                 </form>
                             @endif
                         </td>
@@ -111,12 +111,12 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-arrow-up-right-square me-2"></i>Issue Book</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Available Copy *</label>
-                        <select name="book_copy_id" class="form-select" required>
+                        <select aria-label="Book Copy" name="book_copy_id" class="form-select" required>
                             <option value="">Select available copy</option>
                             @foreach($availableCopies as $copy)
                                 <option value="{{ $copy->id }}">
@@ -129,7 +129,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Borrower *</label>
-                        <select name="borrower_key" class="form-select" required>
+                        <select aria-label="Borrower Key" name="borrower_key" class="form-select" required>
                             <option value="">Select borrower</option>
                             <optgroup label="Students">
                                 @foreach($students as $student)
@@ -150,7 +150,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Due Date *</label>
-                        <input type="date" name="due_date" class="form-control" required min="{{ date('Y-m-d', strtotime('+1 day')) }}">
+                        <input aria-label="Due Date" type="date" name="due_date" class="form-control" required min="{{ date('Y-m-d', strtotime('+1 day')) }}">
                     </div>
                 </div>
                 <div class="modal-footer">

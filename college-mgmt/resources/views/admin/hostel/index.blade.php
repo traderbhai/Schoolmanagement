@@ -10,10 +10,10 @@
 
 {{-- Alert --}}
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="alert alert-info border-0 shadow-sm py-2 mb-3">
@@ -87,7 +87,7 @@
         <a href="{{ route('admin.hostel.complaints') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-exclamation-triangle me-1"></i>Complaints</a>
     </div>
     <div class="col-auto ms-auto">
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBlockModal"><i class="bi bi-plus-circle me-1"></i>Add Block</button>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addBlockModal"><i class="bi bi-plus-circle me-1"></i>Add Block</button>
     </div>
 </div>
 
@@ -98,14 +98,14 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Block Name</th>
-                    <th>Gender</th>
-                    <th>Capacity</th>
-                    <th>Occupied</th>
-                    <th>Available</th>
-                    <th>Warden</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">Block Name</th>
+                    <th scope="col">Gender</th>
+                    <th scope="col">Capacity</th>
+                    <th scope="col">Occupied</th>
+                    <th scope="col">Available</th>
+                    <th scope="col">Warden</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -153,16 +153,16 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Add Hostel Block</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Block Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g. Block A">
+                        <input aria-label="Hostel block name" type="text" name="name" class="form-control" required placeholder="e.g. Block A">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Gender <span class="text-danger">*</span></label>
-                        <select name="gender" class="form-select" required>
+                        <select aria-label="Gender" name="gender" class="form-select" required>
                             <option value="boys">Boys</option>
                             <option value="girls">Girls</option>
                             <option value="mixed">Mixed</option>
@@ -170,11 +170,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Total Floors <span class="text-danger">*</span></label>
-                        <input type="number" name="total_floors" class="form-control" min="1" value="1" required>
+                        <input aria-label="Total Floors" type="number" name="total_floors" class="form-control" min="1" value="1" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Address / Notes</label>
-                        <textarea name="address_notes" class="form-control" rows="2" placeholder="Location, notes..."></textarea>
+                        <textarea aria-label="Hostel block address notes" name="address_notes" class="form-control" rows="2" placeholder="Location, notes..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

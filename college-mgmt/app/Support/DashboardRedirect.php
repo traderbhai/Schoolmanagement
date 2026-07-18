@@ -48,16 +48,21 @@ class DashboardRedirect
 
     public static function forUser(User $user): RedirectResponse
     {
+        return redirect()->route(self::routeNameForUser($user));
+    }
+
+    public static function routeNameForUser(User $user): string
+    {
         foreach (self::ROLE_DASHBOARDS as $role => $routeName) {
             if ($user->hasRole($role)) {
-                return redirect()->route($routeName);
+                return $routeName;
             }
         }
 
         if (\App\Models\AdmissionPartner::where('contact_user_id', $user->id)->orWhere('contact_email', $user->email)->exists()) {
-            return redirect()->route('admission.partner-portal.dashboard');
+            return 'admission.partner-portal.dashboard';
         }
 
-        return redirect()->route('student.dashboard');
+        return 'student.dashboard';
     }
 }

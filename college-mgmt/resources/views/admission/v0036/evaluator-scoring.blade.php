@@ -20,12 +20,12 @@
         </div>
         <form method="POST" action="{{ route('admission.evaluator-scoring.lifecycle', $assignment) }}" class="d-flex gap-2">
             @csrf
-            <select class="form-select form-select-sm" name="lifecycle_status">
+            <select aria-label="Lifecycle Status" class="form-select form-select-sm" name="lifecycle_status">
                 @foreach(['confirmed','checked_in','waiting','in_progress','completed','no_show','rescheduled','cancelled'] as $state)
                     <option value="{{ $state }}">{{ ucwords(str_replace('_', ' ', $state)) }}</option>
                 @endforeach
             </select>
-            <button class="btn btn-sm btn-outline-secondary">Update</button>
+            <button class="btn btn-sm btn-outline-secondary">Update evaluation status</button>
         </form>
     </div>
     <div class="card-body">
@@ -39,13 +39,13 @@
                     <div class="col-lg-6">
                         <div class="border rounded p-2 h-100">
                             <label class="form-label small fw-semibold">{{ $criterion->name }} / {{ $criterion->max_score }}</label>
-                            <input class="form-control form-control-sm mb-2" type="number" name="criteria[{{ $criterion->id }}][score]" min="0" max="{{ $criterion->max_score }}" step="0.5" value="0">
-                            <textarea class="form-control form-control-sm" name="criteria[{{ $criterion->id }}][comment]" rows="2" placeholder="{{ $criterion->requires_comment ? 'Comment required' : 'Comment' }}"></textarea>
+                            <input aria-label="{{ $criterion->name }} score" class="form-control form-control-sm mb-2" type="number" name="criteria[{{ $criterion->id }}][score]" min="0" max="{{ $criterion->max_score }}" step="0.5" value="0">
+                            <textarea aria-label="{{ $criterion->name }} comment" class="form-control form-control-sm" name="criteria[{{ $criterion->id }}][comment]" rows="2" placeholder="{{ $criterion->requires_comment ? 'Comment required' : 'Comment' }}"></textarea>
                         </div>
                     </div>
                 @endforeach
                 <div class="col-md-4">
-                    <select class="form-select form-select-sm" name="recommendation">
+                    <select aria-label="Recommendation" class="form-select form-select-sm" name="recommendation">
                         @foreach(($rubric->recommendation_options ?: ['recommended','waitlist','not_recommended']) as $option)
                             <option value="{{ $option }}">{{ ucwords(str_replace('_', ' ', $option)) }}</option>
                         @endforeach

@@ -49,13 +49,13 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.transport.routes.store') }}" class="vstack gap-3">
                     @csrf
-                    <input name="name" class="form-control" placeholder="Route name" required>
-                    <input name="code" class="form-control" placeholder="Code, e.g. R-01" required>
-                    <input name="start_point" class="form-control" placeholder="Start point" required>
-                    <input name="end_point" class="form-control" placeholder="End point" required>
+                    <input aria-label="Route name" name="name" class="form-control" placeholder="Route name" required>
+                    <input aria-label="Transport route code" name="code" class="form-control" placeholder="Code, e.g. R-01" required>
+                    <input aria-label="Start point" name="start_point" class="form-control" placeholder="Start point" required>
+                    <input aria-label="End point" name="end_point" class="form-control" placeholder="End point" required>
                     <div class="row g-2">
-                        <div class="col-6"><input name="distance_km" type="number" step="0.01" min="0" class="form-control" placeholder="KM"></div>
-                        <div class="col-6"><input name="monthly_fee" type="number" step="0.01" min="0" class="form-control" placeholder="Monthly fee" required></div>
+                        <div class="col-6"><input aria-label="KM" name="distance_km" type="number" step="0.01" min="0" class="form-control" placeholder="KM"></div>
+                        <div class="col-6"><input aria-label="Monthly fee" name="monthly_fee" type="number" step="0.01" min="0" class="form-control" placeholder="Monthly fee" required></div>
                     </div>
                     <button class="btn btn-primary">Save Route</button>
                 </form>
@@ -68,20 +68,20 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.transport.stops.store') }}" class="vstack gap-3">
                     @csrf
-                    <select name="transport_route_id" class="form-select" required>
+                    <select aria-label="Transport Route" name="transport_route_id" class="form-select" required>
                         <option value="">- Select Route -</option>
                         @foreach($routes as $route)
                             @continue(!$route->is_active)
                             <option value="{{ $route->id }}">{{ $route->name }} ({{ $route->code }})</option>
                         @endforeach
                     </select>
-                    <input name="name" class="form-control" placeholder="Stop name" required>
-                    <input name="sequence" type="number" min="1" max="999" value="1" class="form-control" placeholder="Sequence" required>
+                    <input aria-label="Stop name" name="name" class="form-control" placeholder="Stop name" required>
+                    <input aria-label="Sequence" name="sequence" type="number" min="1" max="999" value="1" class="form-control" placeholder="Sequence" required>
                     <div class="row g-2">
-                        <div class="col-6"><input name="pickup_time" type="time" class="form-control"></div>
-                        <div class="col-6"><input name="drop_time" type="time" class="form-control"></div>
+                        <div class="col-6"><input aria-label="Pickup Time" name="pickup_time" type="time" class="form-control"></div>
+                        <div class="col-6"><input aria-label="Drop Time" name="drop_time" type="time" class="form-control"></div>
                     </div>
-                    <input name="monthly_fee_override" type="number" step="0.01" min="0" class="form-control" placeholder="Stop fee override">
+                    <input aria-label="Stop fee override" name="monthly_fee_override" type="number" step="0.01" min="0" class="form-control" placeholder="Stop fee override">
                     <button class="btn btn-primary">Add Stop</button>
                 </form>
             </div>
@@ -93,13 +93,13 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.transport.vehicles.store') }}" class="vstack gap-3">
                     @csrf
-                    <input name="registration_number" class="form-control" placeholder="Registration number" required>
-                    <input name="vehicle_type" class="form-control" value="bus" placeholder="Vehicle type" required>
-                    <input name="capacity" type="number" min="1" max="200" class="form-control" placeholder="Capacity" required>
-                    <input name="driver_name" class="form-control" placeholder="Driver name" required>
-                    <input name="driver_phone" class="form-control" placeholder="Driver phone">
-                    <input name="attendant_name" class="form-control" placeholder="Attendant name">
-                    <select name="status" class="form-select" required>
+                    <input aria-label="Registration number" name="registration_number" class="form-control" placeholder="Registration number" required>
+                    <input aria-label="Vehicle type" name="vehicle_type" class="form-control" value="bus" placeholder="Vehicle type" required>
+                    <input aria-label="Capacity" name="capacity" type="number" min="1" max="200" class="form-control" placeholder="Capacity" required>
+                    <input aria-label="Driver name" name="driver_name" class="form-control" placeholder="Driver name" required>
+                    <input aria-label="Driver phone" name="driver_phone" class="form-control" placeholder="Driver phone">
+                    <input aria-label="Attendant name" name="attendant_name" class="form-control" placeholder="Attendant name">
+                    <select aria-label="Status" name="status" class="form-select" required>
                         <option value="active">Active</option>
                         <option value="maintenance">Maintenance</option>
                         <option value="inactive">Inactive</option>
@@ -122,12 +122,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Vehicle</th>
-                        <th>Capacity</th>
-                        <th>Driver / Contact</th>
-                        <th>Status</th>
-                        <th>Active Assignments</th>
-                        <th class="text-end pe-3">Update</th>
+                        <th scope="col">Vehicle</th>
+                        <th scope="col">Capacity</th>
+                        <th scope="col">Driver / Contact</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Active Assignments</th>
+                        <th scope="col" class="text-end pe-3">Update</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -137,21 +137,21 @@
                                 @csrf
                                 @method('PATCH')
                                 <td>
-                                    <input name="registration_number" class="form-control form-control-sm mb-1" value="{{ old('registration_number', $vehicle->registration_number) }}" required>
-                                    <input name="vehicle_type" class="form-control form-control-sm" value="{{ old('vehicle_type', $vehicle->vehicle_type) }}" required>
+                                    <input aria-label="Registration Number" name="registration_number" class="form-control form-control-sm mb-1" value="{{ old('registration_number', $vehicle->registration_number) }}" required>
+                                    <input aria-label="Vehicle Type" name="vehicle_type" class="form-control form-control-sm" value="{{ old('vehicle_type', $vehicle->vehicle_type) }}" required>
                                 </td>
                                 <td style="width:110px">
-                                    <input name="capacity" type="number" min="1" max="200" class="form-control form-control-sm" value="{{ old('capacity', $vehicle->capacity) }}" required>
+                                    <input aria-label="Capacity" name="capacity" type="number" min="1" max="200" class="form-control form-control-sm" value="{{ old('capacity', $vehicle->capacity) }}" required>
                                 </td>
                                 <td>
-                                    <input name="driver_name" class="form-control form-control-sm mb-1" value="{{ old('driver_name', $vehicle->driver_name) }}" required>
+                                    <input aria-label="Driver Name" name="driver_name" class="form-control form-control-sm mb-1" value="{{ old('driver_name', $vehicle->driver_name) }}" required>
                                     <div class="row g-1">
-                                        <div class="col-6"><input name="driver_phone" class="form-control form-control-sm" value="{{ old('driver_phone', $vehicle->driver_phone) }}" placeholder="Driver phone"></div>
-                                        <div class="col-6"><input name="attendant_name" class="form-control form-control-sm" value="{{ old('attendant_name', $vehicle->attendant_name) }}" placeholder="Attendant"></div>
+                                        <div class="col-6"><input aria-label="Driver Phone" name="driver_phone" class="form-control form-control-sm" value="{{ old('driver_phone', $vehicle->driver_phone) }}" placeholder="Driver phone"></div>
+                                        <div class="col-6"><input aria-label="Attendant Name" name="attendant_name" class="form-control form-control-sm" value="{{ old('attendant_name', $vehicle->attendant_name) }}" placeholder="Attendant"></div>
                                     </div>
                                 </td>
                                 <td style="width:150px">
-                                    <select name="status" class="form-select form-select-sm" required>
+                                    <select aria-label="Status" name="status" class="form-select form-select-sm" required>
                                         @foreach(['active' => 'Active', 'maintenance' => 'Maintenance', 'inactive' => 'Inactive'] as $status => $label)
                                             <option value="{{ $status }}" @selected(old('status', $vehicle->status) === $status)>{{ $label }}</option>
                                         @endforeach
@@ -163,7 +163,7 @@
                                     </span>
                                 </td>
                                 <td class="text-end pe-3">
-                                    <button class="btn btn-sm btn-outline-primary">Save</button>
+                                    <button class="btn btn-sm btn-outline-primary">Save route</button>
                                 </td>
                             </form>
                         </tr>
@@ -188,7 +188,7 @@
             @csrf
             <div class="col-md-3">
                 <label class="form-label">Student</label>
-                <select name="student_id" class="form-select" required>
+                <select aria-label="Student" name="student_id" class="form-select" required>
                     <option value="">- Select Student -</option>
                     @foreach($students as $student)
                         <option value="{{ $student->id }}">{{ $student->user?->name }} ({{ $student->enrollment_number }})</option>
@@ -197,7 +197,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Route</label>
-                <select name="transport_route_id" class="form-select" required>
+                <select aria-label="Transport Route" name="transport_route_id" class="form-select" required>
                     <option value="">- Route -</option>
                     @foreach($routes as $route)
                         @continue(!$route->is_active)
@@ -207,7 +207,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Stop</label>
-                <select name="transport_stop_id" class="form-select">
+                <select aria-label="Transport Stop" name="transport_stop_id" class="form-select">
                     <option value="">- Stop -</option>
                     @foreach($routes as $route)
                         @foreach($route->stops as $stop)
@@ -219,7 +219,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Vehicle</label>
-                <select name="transport_vehicle_id" class="form-select">
+                <select aria-label="Transport Vehicle" name="transport_vehicle_id" class="form-select">
                     <option value="">- Vehicle -</option>
                     @foreach($vehicles as $vehicle)
                         @continue($vehicle->status !== 'active')
@@ -229,13 +229,13 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" value="{{ now()->toDateString() }}" class="form-control" required>
+                <input aria-label="Start Date" type="date" name="start_date" value="{{ now()->toDateString() }}" class="form-control" required>
             </div>
             <div class="col-md-1">
                 <button class="btn btn-primary w-100">Assign</button>
             </div>
             <div class="col-12">
-                <input name="notes" class="form-control" placeholder="Notes, pickup instructions, or parent contact preferences">
+                <input aria-label="Notes, pickup instructions, or parent contact preferences" name="notes" class="form-control" placeholder="Notes, pickup instructions, or parent contact preferences">
             </div>
         </form>
     </div>
@@ -248,7 +248,7 @@
                 <form method="GET" class="row g-2 align-items-end">
                     <div class="col-md-6">
                         <label class="form-label small text-muted mb-1">Active Assignments</label>
-                        <input type="search" name="assignment_search" value="{{ request('assignment_search') }}" class="form-control form-control-sm" placeholder="Search student, route, stop, or vehicle">
+                        <input aria-label="Search student, route, stop, or vehicle" type="search" name="assignment_search" value="{{ request('assignment_search') }}" class="form-control form-control-sm" placeholder="Search student, route, stop, or vehicle">
                     </div>
                     <div class="col-md-6 d-flex gap-2">
                         <button class="btn btn-sm btn-primary">Filter</button>
@@ -263,11 +263,11 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Student</th>
-                                <th>Route / Stop</th>
-                                <th>Vehicle</th>
-                                <th class="text-end">Monthly Fee</th>
-                                <th></th>
+                                <th scope="col">Student</th>
+                                <th scope="col">Route / Stop</th>
+                                <th scope="col">Vehicle</th>
+                                <th scope="col" class="text-end">Monthly Fee</th>
+                                <th aria-label="Actions" scope="col"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -284,7 +284,7 @@
                                     <td>{{ $assignment->vehicle->registration_number ?? 'Vehicle not assigned' }}</td>
                                     <td class="text-end">Rs. {{ number_format($assignment->monthly_fee, 2) }}</td>
                                     <td class="text-end">
-                                        <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline" onsubmit="return confirm('End this transport assignment from today?')">
+                                        <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline" onsubmit="return confirm('End transport assignment for {{ addslashes($assignment->student->user->name ?? 'this student') }} from today? Confirm route/stop removal, monthly fee impact, vehicle capacity release, and student communication before ending access.')">
                                             @csrf
                                             <input type="hidden" name="end_date" value="{{ now()->toDateString() }}">
                                             <button class="btn btn-sm btn-outline-danger">End</button>

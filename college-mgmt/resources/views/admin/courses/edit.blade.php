@@ -20,32 +20,32 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Department <span class="text-danger">*</span></label>
-                    <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
+                    <select aria-label="Department" name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
                         @foreach($departments as $d)<option value="{{ $d->id }}" @selected($d->id==old('department_id',$course->department_id))>{{ $d->name }}</option>@endforeach
                     </select>
                     @error('department_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-8">
                     <label class="form-label">Course Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $course->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $course->name) }}" required>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Code <span class="text-danger">*</span></label>
-                    <input type="text" name="code" class="form-control @error('code') is-invalid @enderror" value="{{ old('code', $course->code) }}" required>
+                    <input aria-label="Code" type="text" name="code" class="form-control @error('code') is-invalid @enderror" value="{{ old('code', $course->code) }}" required>
                     @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Duration (Years)</label>
-                    <input type="number" name="duration_years" class="form-control" value="{{ old('duration_years', $course->duration_years) }}" min="1" max="6">
+                    <input aria-label="Duration Years" type="number" name="duration_years" class="form-control" value="{{ old('duration_years', $course->duration_years) }}" min="1" max="6">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Total Semesters</label>
-                    <input type="number" name="total_semesters" class="form-control" value="{{ old('total_semesters', $course->total_semesters) }}" min="1" max="12">
+                    <input aria-label="Total Semesters" type="number" name="total_semesters" class="form-control" value="{{ old('total_semesters', $course->total_semesters) }}" min="1" max="12">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="3">{{ old('description', $course->description) }}</textarea>
+                    <textarea aria-label="Description" name="description" class="form-control" rows="3">{{ old('description', $course->description) }}</textarea>
                 </div>
                 <div class="col-12">
                     <div class="form-check">

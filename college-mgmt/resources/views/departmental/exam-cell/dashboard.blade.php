@@ -100,7 +100,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
-                            <tr><th>Exam</th><th>Subject</th><th>Program</th><th>Date</th><th>Results</th><th>Avg</th><th>Pass %</th></tr>
+                            <tr><th scope="col">Exam</th><th scope="col">Subject</th><th scope="col">Program</th><th scope="col">Date</th><th scope="col">Results</th><th scope="col">Avg</th><th scope="col">Pass %</th></tr>
                         </thead>
                         <tbody>
                         @forelse($recentExams as $exam)

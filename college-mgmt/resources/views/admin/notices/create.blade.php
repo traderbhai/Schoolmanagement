@@ -31,19 +31,19 @@
             <div class="row g-3 mb-3">
                 <div class="col-12">
                     <label class="form-label">Title <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title') }}" required>
+                    <input aria-label="Title" type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title') }}" required>
                     <div class="form-text">Brief, descriptive title for the notice.</div>
                     @error('title')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">
                     <label class="form-label">Content <span class="text-danger">*</span></label>
-                    <textarea name="content" class="form-control @error('content') is-invalid @enderror" rows="5" required>{{ old('content') }}</textarea>
+                    <textarea aria-label="Content" name="content" class="form-control @error('content') is-invalid @enderror" rows="5" required>{{ old('content') }}</textarea>
                     <div class="form-text">Full notice body / message.</div>
                     @error('content')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Audience <span class="text-danger">*</span></label>
-                    <select name="audience" class="form-select @error('audience') is-invalid @enderror" required>
+                    <select aria-label="Audience" name="audience" class="form-select @error('audience') is-invalid @enderror" required>
                         @foreach(['all' => 'All users', 'students' => 'Students / parents', 'teachers' => 'Teachers', 'admin' => 'Admin / staff'] as $a => $label)
                             <option value="{{ $a }}" @selected(old('audience')==$a)>{{ $label }}</option>
                         @endforeach
@@ -53,13 +53,13 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Publish Date <span class="text-danger">*</span></label>
-                    <input type="date" name="publish_date" class="form-control @error('publish_date') is-invalid @enderror" value="{{ old('publish_date', date('Y-m-d')) }}" required>
+                    <input aria-label="Publish Date" type="date" name="publish_date" class="form-control @error('publish_date') is-invalid @enderror" value="{{ old('publish_date', date('Y-m-d')) }}" required>
                     <div class="form-text">When the notice goes live.</div>
                     @error('publish_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Expiry Date</label>
-                    <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
+                    <input aria-label="Expiry Date" type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
                     <div class="form-text">Leave blank for no expiry.</div>
                 </div>
                 <div class="col-12">

@@ -9,32 +9,44 @@
 .text-xs { font-size: .76rem; }
 .text-sm { font-size: .875rem; }
 .fw-600 { font-weight: 600; }
+.admin-checklist summary { cursor: pointer; list-style: none; }
+.admin-checklist summary::-webkit-details-marker { display: none; }
 </style>
 @endpush
 
 @section('content')
 
-@include('admin.partials.setup-sequence')
-
-<div class="alert alert-info border-0 shadow-sm py-2 mb-3">
-    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+<details class="card admin-checklist mb-3">
+    <summary class="card-body py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
-            <div class="fw-semibold">Admin operating sequence</div>
-            <div class="small text-muted">Start with institute health, then use quick actions for setup, governance, finance, academics, and operations.</div>
-            <div class="small text-muted mt-1">
-                <span class="badge text-bg-light me-1">Owner: Admin / Director</span>
-                <span class="badge text-bg-light">Source: institute master data, attendance, fees, notices, exams, and audit logs</span>
+            <div class="fw-semibold">Setup and operating checklist</div>
+            <div class="small text-muted">Open when configuring an institute, reviewing daily health, or training a new admin.</div>
+        </div>
+        <span class="btn btn-sm btn-outline-primary">View checklist</span>
+    </summary>
+    <div class="border-top">
+        @include('admin.partials.setup-sequence', ['compact' => true])
+        <div class="alert alert-info border-0 rounded-0 shadow-none py-2 mb-0">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                <div>
+                    <div class="fw-semibold">Admin operating sequence</div>
+                    <div class="small text-muted">Start with institute health, then use quick actions for setup, governance, finance, academics, and operations.</div>
+                    <div class="small text-muted mt-1">
+                        <span class="badge text-bg-light me-1">Owner: Admin / Director</span>
+                        <span class="badge text-bg-light">Source: institute master data, attendance, fees, notices, exams, and audit logs</span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-1">
+                    <span class="badge text-bg-light">1. Check institute KPIs</span>
+                    <span class="badge text-bg-light">2. Review attendance/fees</span>
+                    <span class="badge text-bg-light">3. Open quick action</span>
+                    <span class="badge text-bg-light">4. Verify audit/security</span>
+                    <span class="badge text-bg-light">5. Export or report</span>
+                </div>
             </div>
         </div>
-        <div class="d-flex flex-wrap gap-1">
-            <span class="badge text-bg-light">1. Check institute KPIs</span>
-            <span class="badge text-bg-light">2. Review attendance/fees</span>
-            <span class="badge text-bg-light">3. Open quick action</span>
-            <span class="badge text-bg-light">4. Verify audit/security</span>
-            <span class="badge text-bg-light">5. Export or report</span>
-        </div>
     </div>
-</div>
+</details>
 
 {{-- A) KPI Cards Row --}}
 <div class="row g-3 mb-4">
@@ -365,15 +377,15 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-600 text-sm"><i class="bi bi-person-plus me-2 text-primary"></i>Recent Enrolments</span>
-                <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <a href="{{ route('admin.students.index') }}" class="btn btn-sm btn-outline-primary">View students</a>
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Student</th>
-                            <th>Enrol No.</th>
-                            <th>Status</th>
+                            <th scope="col">Student</th>
+                            <th scope="col">Enrol No.</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -405,7 +417,7 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-600 text-sm"><i class="bi bi-calendar-event me-2 text-danger"></i>Upcoming Exams</span>
-                <a href="{{ route('admin.exams.index') }}" class="btn btn-sm btn-outline-secondary">All</a>
+                <a href="{{ route('admin.exams.index') }}" class="btn btn-sm btn-outline-secondary">View exams</a>
             </div>
             <div class="list-group list-group-flush">
                 @forelse($upcomingExams as $exam)
@@ -439,18 +451,18 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-600 text-sm"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i>Recent Timetable Entries</span>
-                <a href="{{ route('admin.timetable.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <a href="{{ route('admin.timetable.index') }}" class="btn btn-sm btn-outline-primary">View timetable</a>
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Subject</th>
-                            <th>Course</th>
-                            <th>Teacher</th>
-                            <th>Room</th>
-                            <th>Day</th>
-                            <th>Slot</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Course</th>
+                            <th scope="col">Teacher</th>
+                            <th scope="col">Room</th>
+                            <th scope="col">Day</th>
+                            <th scope="col">Slot</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -482,7 +494,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-600 text-sm"><i class="bi bi-megaphone me-2 text-warning"></i>Recent Notices</span>
-                <a href="{{ route('admin.notices.index') }}" class="btn btn-sm btn-outline-secondary">All</a>
+                <a href="{{ route('admin.notices.index') }}" class="btn btn-sm btn-outline-secondary">View notices</a>
             </div>
             <div class="list-group list-group-flush">
                 @forelse($recentNotices as $n)

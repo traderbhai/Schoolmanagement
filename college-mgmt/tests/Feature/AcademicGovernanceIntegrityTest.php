@@ -20,6 +20,67 @@ class AcademicGovernanceIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_academic_calendar_and_obe_removal_actions_explain_downstream_impact(): void
+    {
+        $expectations = [
+            resource_path('views/academic/academic-calendars/show.blade.php') => [
+                'Confirm this will not affect published timetables, holidays, exams, attendance windows, or student/faculty communication.',
+            ],
+            resource_path('views/academic/obe/co-index.blade.php') => [
+                'Confirm it is not used in OBE mappings, attainment records, assessment rubrics, curriculum reports, or accreditation evidence.',
+                'aria-label="Remove course outcome',
+            ],
+            resource_path('views/academic/obe/po-index.blade.php') => [
+                'Confirm it is not used in OBE mappings, attainment records, curriculum reports, or accreditation evidence.',
+                'Confirm it is not used in OBE mappings, specialization evidence, curriculum reports, or accreditation submissions.',
+                'aria-label="Remove program outcome',
+                'aria-label="Remove program specific outcome',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this event?')", file_get_contents(resource_path('views/academic/academic-calendars/show.blade.php')));
+        $this->assertStringNotContainsString("confirm('Remove {{ \$co->code }}?')", file_get_contents(resource_path('views/academic/obe/co-index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Remove {{ \$po->code }}?')", file_get_contents(resource_path('views/academic/obe/po-index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Remove {{ \$pso->code }}?')", file_get_contents(resource_path('views/academic/obe/po-index.blade.php')));
+    }
+
+    public function test_scholarship_and_curriculum_decisions_explain_finance_and_delivery_impact(): void
+    {
+        $expectations = [
+            resource_path('views/academic/scholarships/show.blade.php') => [
+                'Confirm no student awards, fee-demand discounts, eligibility rules, or finance reports still depend on this scheme.',
+            ],
+            resource_path('views/admin/student-scholarships/index.blade.php') => [
+                'Confirm the rejection reason explains eligibility, fee impact, and student communication before closing the request.',
+            ],
+            resource_path('views/academic/curriculum-changes/show.blade.php') => [
+                'Confirm downstream timetable, course groups, OBE mapping, faculty load, and student communication impact before approval.',
+                'Confirm the rejection reason is specific enough for Program Chair, Dean, and audit review.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $expectedSnippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($expectedSnippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        $this->assertStringNotContainsString("confirm('Delete this scholarship?')", file_get_contents(resource_path('views/academic/scholarships/show.blade.php')));
+        $this->assertStringNotContainsString("confirm('Reject this scholarship application?')", file_get_contents(resource_path('views/admin/student-scholarships/index.blade.php')));
+        $this->assertStringNotContainsString("confirm('Approve this curriculum change?')", file_get_contents(resource_path('views/academic/curriculum-changes/show.blade.php')));
+        $this->assertStringNotContainsString("confirm('Reject this curriculum change?')", file_get_contents(resource_path('views/academic/curriculum-changes/show.blade.php')));
+    }
+
     private function userWithRole(string $role): User
     {
         Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);

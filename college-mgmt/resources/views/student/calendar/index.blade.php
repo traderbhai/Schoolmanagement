@@ -24,7 +24,7 @@
                         <thead class="table-light text-center">
                             <tr>
                                 @foreach(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $day)
-                                <th class="py-2">{{ $day }}</th>
+                                <th scope="col" class="py-2">{{ $day }}</th>
                                 @endforeach
                             </tr>
                         </thead>

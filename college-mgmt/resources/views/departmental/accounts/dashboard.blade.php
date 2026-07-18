@@ -136,7 +136,7 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-sm mb-0">
-                        <thead class="table-light"><tr><th>Student</th><th>Amount</th><th>Date</th><th>Method</th></tr></thead>
+                        <thead class="table-light"><tr><th scope="col">Student</th><th scope="col">Amount</th><th scope="col">Date</th><th scope="col">Method</th></tr></thead>
                         <tbody>
                         @forelse($recentPayments as $p)
                             <tr>

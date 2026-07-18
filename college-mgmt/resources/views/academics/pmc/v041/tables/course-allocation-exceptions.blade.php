@@ -1,7 +1,7 @@
 <div class="card shadow-sm mt-3">
     <div class="card-header py-2 fw-semibold">Course Basket Exceptions</div>
     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-        <thead><tr><th>Student</th><th>Subject</th><th>Type</th><th>Status</th><th>Flags</th><th>Decision</th></tr></thead>
+        <thead><tr><th scope="col">Student</th><th scope="col">Subject</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Flags</th><th scope="col">Decision</th></tr></thead>
         <tbody>
             @forelse($allocationExceptions as $exception)
                 <tr>
@@ -13,13 +13,13 @@
                     <td>
                         <form method="POST" action="{{ route('academics.pmc.course-allocation-exceptions.decide', $exception) }}" class="d-flex flex-column gap-1">
                             @csrf @method('PATCH')
-                            <select name="status" class="form-select form-select-sm">
+                            <select aria-label="Status" name="status" class="form-select form-select-sm">
                                 <option value="approved">approved</option>
                                 <option value="returned">returned</option>
                                 <option value="rejected">rejected</option>
                             </select>
-                            <input name="decision_note" class="form-control form-control-sm" placeholder="Decision note" required>
-                            <button class="btn btn-sm btn-outline-primary">Save</button>
+                            <input aria-label="Decision note" name="decision_note" class="form-control form-control-sm" placeholder="Decision note" required>
+                            <button class="btn btn-sm btn-outline-primary">Save decision</button>
                         </form>
                     </td>
                 </tr>

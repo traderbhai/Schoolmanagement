@@ -15,7 +15,7 @@
         </button>
     </form>
 @elseif(($action['type'] ?? 'link') === 'modal')
-    <button class="btn {{ $btnClass }} btn-{{ $size }}" data-bs-toggle="modal" data-bs-target="{{ $action['target'] }}">
+    <button type="button" class="btn {{ $btnClass }} btn-{{ $size }}" data-bs-toggle="modal" data-bs-target="{{ $action['target'] }}">
         <i class="bi bi-{{ $icon }} me-1"></i>{{ $action['label'] }}
     </button>
 @else

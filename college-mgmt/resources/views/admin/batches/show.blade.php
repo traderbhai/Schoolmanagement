@@ -77,12 +77,12 @@
             <table class="table table-sm mb-0">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Current</th>
-                        <th class="text-end">Actions</th>
+                        <th scope="col">#</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Start</th>
+                        <th scope="col">End</th>
+                        <th scope="col">Current</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -126,21 +126,21 @@
             <input type="hidden" name="batch_id" value="{{ $batch->id }}">
             <div class="col-md-1">
                 <label class="form-label form-label-sm">#</label>
-                <input type="number" name="term_number" class="form-control form-control-sm"
+                <input aria-label="Term Number" type="number" name="term_number" class="form-control form-control-sm"
                     value="{{ $batch->terms->count() + 1 }}" min="1" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label form-label-sm">Name</label>
-                <input type="text" name="name" class="form-control form-control-sm"
+                <input aria-label="Semester I" type="text" name="name" class="form-control form-control-sm"
                     placeholder="Semester I" required>
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm">Start Date</label>
-                <input type="date" name="start_date" class="form-control form-control-sm">
+                <input aria-label="Start Date" type="date" name="start_date" class="form-control form-control-sm">
             </div>
             <div class="col-md-2">
                 <label class="form-label form-label-sm">End Date</label>
-                <input type="date" name="end_date" class="form-control form-control-sm">
+                <input aria-label="End Date" type="date" name="end_date" class="form-control form-control-sm">
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-sm btn-outline-primary w-100">
@@ -165,11 +165,11 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Student</th>
-                        <th>Enrollment</th>
-                        <th>Specialization</th>
-                        <th>Current Term</th>
-                        <th>Status</th>
+                        <th scope="col">Student</th>
+                        <th scope="col">Enrollment</th>
+                        <th scope="col">Specialization</th>
+                        <th scope="col">Current Term</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>

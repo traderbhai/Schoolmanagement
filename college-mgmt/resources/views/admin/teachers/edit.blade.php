@@ -22,12 +22,12 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="form-label">Full Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $teacher->user->name) }}" required>
+                    <input aria-label="Name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $teacher->user->name) }}" required>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $teacher->user->email) }}" required>
+                    <input aria-label="Email" type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $teacher->user->email) }}" required>
                     @error('email')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
             </div>
@@ -36,34 +36,34 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Department <span class="text-danger">*</span></label>
-                    <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
+                    <select aria-label="Department" name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
                         @foreach($departments as $d)<option value="{{ $d->id }}" @selected($d->id==old('department_id',$teacher->department_id))>{{ $d->name }}</option>@endforeach
                     </select>
                     @error('department_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Designation</label>
-                    <input type="text" name="designation" class="form-control" value="{{ old('designation', $teacher->designation) }}">
+                    <input aria-label="Designation" type="text" name="designation" class="form-control" value="{{ old('designation', $teacher->designation) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Qualification</label>
-                    <input type="text" name="qualification" class="form-control" value="{{ old('qualification', $teacher->qualification) }}">
+                    <input aria-label="Qualification" type="text" name="qualification" class="form-control" value="{{ old('qualification', $teacher->qualification) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Specialization</label>
-                    <input type="text" name="specialization" class="form-control" value="{{ old('specialization', $teacher->specialization) }}">
+                    <input aria-label="Specialization" type="text" name="specialization" class="form-control" value="{{ old('specialization', $teacher->specialization) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Phone</label>
-                    <input type="text" name="phone" class="form-control" value="{{ old('phone', $teacher->phone) }}">
+                    <input aria-label="Phone" type="text" name="phone" class="form-control" value="{{ old('phone', $teacher->phone) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Date of Joining</label>
-                    <input type="date" name="date_of_joining" class="form-control" value="{{ old('date_of_joining', optional($teacher->date_of_joining)->format('Y-m-d')) }}">
+                    <input aria-label="Date Of Joining" type="date" name="date_of_joining" class="form-control" value="{{ old('date_of_joining', optional($teacher->date_of_joining)->format('Y-m-d')) }}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Employment Type</label>
-                    <select name="employment_type" class="form-select">
+                    <select aria-label="Employment Type" name="employment_type" class="form-select">
                         @foreach(['full_time'=>'Full Time','part_time'=>'Part Time','visiting'=>'Visiting'] as $v=>$l)
                             <option value="{{ $v }}" @selected(old('employment_type',$teacher->employment_type)==$v)>{{ $l }}</option>
                         @endforeach
@@ -71,7 +71,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-select @error('status') is-invalid @enderror">
+                    <select aria-label="Status" name="status" class="form-select @error('status') is-invalid @enderror">
                         @foreach(['active'=>'Active','inactive'=>'Inactive','on_leave'=>'On Leave'] as $v=>$l)
                             <option value="{{ $v }}" @selected(old('status',$teacher->status)==$v)>{{ $l }}</option>
                         @endforeach

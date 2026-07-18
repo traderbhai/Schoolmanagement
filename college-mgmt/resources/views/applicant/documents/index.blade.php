@@ -25,21 +25,21 @@
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
     @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
@@ -158,7 +158,7 @@
                                     {{ $doc->accepted_formats_for_input }} &bull;
                                     Max {{ $doc->max_size_kb >= 1024 ? number_format($doc->max_size_kb/1024,1).' MB' : $doc->max_size_kb.' KB' }}
                                 </p>
-                                <input type="file" name="document" class="position-absolute top-0 start-0 w-100 h-100 opacity-0"
+                                <input aria-label="Document" type="file" name="document" class="position-absolute top-0 start-0 w-100 h-100 opacity-0"
                                        accept="{{ $doc->accepted_formats_for_input }}"
                                        style="cursor:pointer;"
                                        onchange="showFileName(this)">
@@ -177,7 +177,7 @@
                     <form method="POST" action="{{ route('applicant.documents.destroy', $uploadedDoc) }}" class="mt-2">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-link btn-sm text-danger p-0"
-                                onclick="return confirm('Remove this document?')">
+                                onclick="return confirm('Remove uploaded document {{ addslashes($doc->name ?? $uploadedDoc->original_name ?? 'this document') }}? Confirm you will upload the correct file again before document verification or admission readiness checks.')">
                             <i class="bi bi-trash me-1"></i>Remove
                         </button>
                     </form>

@@ -9,10 +9,10 @@
 
 @section('content')
 @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    <div class="alert alert-danger alert-dismissible fade show">{{ $errors->first() }}<button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 @endif
 
 <div class="card border-0 shadow-sm mb-3">
@@ -20,18 +20,18 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label small text-muted mb-1">Search</label>
-                <input type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Book, ISBN, borrower">
+                <input aria-label="Book, ISBN, borrower" type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Book, ISBN, borrower">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Status</label>
-                <select name="status" class="form-select form-select-sm">
+                <select aria-label="Status" name="status" class="form-select form-select-sm">
                     @foreach(['all' => 'All', 'pending' => 'Pending', 'fulfilled' => 'Fulfilled', 'cancelled' => 'Cancelled', 'expired' => 'Expired'] as $value => $label)
                         <option value="{{ $value }}" @selected(request('status', 'pending') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-sm btn-primary">Apply</button>
+                <button class="btn btn-sm btn-primary">Apply filters</button>
                 <a href="{{ route('admin.library.reservations') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
                 <a href="{{ route('admin.library.reservations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary ms-auto">Export Current View</a>
                 <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary">Issues</a>
@@ -46,13 +46,13 @@
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Book</th>
-                    <th>Borrower</th>
-                    <th>Reserved</th>
-                    <th>Expires</th>
-                    <th>Status</th>
-                    <th>Available</th>
-                    <th class="text-end">Action</th>
+                    <th scope="col">Book</th>
+                    <th scope="col">Borrower</th>
+                    <th scope="col">Reserved</th>
+                    <th scope="col">Expires</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Available</th>
+                    <th scope="col" class="text-end">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -77,11 +77,11 @@
                     <td><span class="badge text-bg-{{ $available > 0 ? 'success' : 'secondary' }}">{{ $available }}</span></td>
                     <td class="text-end">
                         @if($reservation->status === 'pending')
-                            <form method="POST" action="{{ route('admin.library.reservations.fulfill', $reservation) }}" class="d-inline" onsubmit="return confirm('Fulfil this reservation and issue the available copy?')">
+                            <form method="POST" action="{{ route('admin.library.reservations.fulfill', $reservation) }}" class="d-inline" onsubmit="return confirm('Fulfil reservation for {{ addslashes($reservation->book?->title ?? 'this book') }} and issue an available copy to {{ addslashes($borrower) }}? Confirm copy availability, borrower eligibility, due date, and queue fairness before issuing.')">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-success" @disabled($available < 1)>Fulfil</button>
                             </form>
-                            <form method="POST" action="{{ route('admin.library.reservations.cancel', $reservation) }}" class="d-inline" onsubmit="return confirm('Cancel this library reservation?')">
+                            <form method="POST" action="{{ route('admin.library.reservations.cancel', $reservation) }}" class="d-inline" onsubmit="return confirm('Cancel reservation for {{ addslashes($reservation->book?->title ?? 'this book') }} by {{ addslashes($borrower) }}? Confirm borrower communication and queue impact before cancellation.')">
                                 @csrf
                                 <button class="btn btn-sm btn-outline-danger">Cancel</button>
                             </form>

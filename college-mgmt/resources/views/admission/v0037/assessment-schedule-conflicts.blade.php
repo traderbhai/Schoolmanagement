@@ -24,7 +24,7 @@
             <div class="card-header bg-transparent fw-bold">Open Conflict Queue</div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0">
-                    <thead class="table-light"><tr><th>Panel</th><th>Issue</th><th>Owner</th><th>Severity</th><th>Detected</th></tr></thead>
+                    <thead class="table-light"><tr><th scope="col">Panel</th><th scope="col">Issue</th><th scope="col">Owner</th><th scope="col">Severity</th><th scope="col">Detected</th></tr></thead>
                     <tbody>
                     @forelse($dashboard['openConflicts'] as $conflict)
                         <tr>

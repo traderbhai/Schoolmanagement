@@ -317,6 +317,17 @@ class AdmissionRefundWorkflowTest extends TestCase
         $this->assertSame('Refund-UTR-Case-1', $firstRefund->fresh()->utr_number);
     }
 
+    public function test_refund_lifecycle_actions_use_specific_finance_confirmation_copy(): void
+    {
+        $contents = file_get_contents(resource_path('views/admission/refunds/show.blade.php'));
+
+        $this->assertStringContainsString('Confirm verified payment balance, bank details, policy eligibility, and audit notes before approval.', $contents);
+        $this->assertStringContainsString('Confirm the rejection reason is specific enough for applicant communication and audit review.', $contents);
+        $this->assertStringContainsString('Confirm the bank transfer is complete, the UTR is final, and finance reconciliation can use this reference.', $contents);
+        $this->assertStringNotContainsString("confirm('Approve this refund for the entered amount?')", $contents);
+        $this->assertStringNotContainsString("confirm('Are you sure you want to reject this refund request?')", $contents);
+    }
+
     public function test_refund_routes_respect_admission_hierarchy_scope(): void
     {
         $department = Department::where('code', 'ADM')->firstOrFail();

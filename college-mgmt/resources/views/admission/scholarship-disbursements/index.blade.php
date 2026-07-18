@@ -34,7 +34,7 @@
         <form method="GET" class="d-flex gap-2 align-items-end flex-wrap">
             <div class="flex-grow-1">
                 <label class="form-label small text-muted mb-1">Filter by Program</label>
-                <select name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <select aria-label="Program" name="program_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Programs</option>
                     @foreach($programs as $prog)
                         <option value="{{ $prog->id }}" {{ request('program_id') == $prog->id ? 'selected' : '' }}>{{ $prog->name }}</option>
@@ -54,7 +54,7 @@
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show mb-3">
                 {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
@@ -94,13 +94,13 @@
                     <caption class="visually-hidden">Awarded applicant scholarships pending disbursement</caption>
                     <thead class="bg-light">
                         <tr>
-                            <th>Applicant</th>
-                            <th>Application No.</th>
-                            <th>Program</th>
-                            <th>Scheme</th>
-                            <th class="text-end">Amount (Rs.)</th>
-                            <th>Awarded On</th>
-                            <th class="text-end">Action</th>
+                            <th scope="col">Applicant</th>
+                            <th scope="col">Application No.</th>
+                            <th scope="col">Program</th>
+                            <th scope="col">Scheme</th>
+                            <th scope="col" class="text-end">Amount (Rs.)</th>
+                            <th scope="col">Awarded On</th>
+                            <th scope="col" class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -116,7 +116,7 @@
                                 <td class="text-end fw-bold text-success">Rs. {{ number_format($award->awarded_amount, 2) }}</td>
                                 <td class="small text-muted">{{ $award->awarded_at?->format('d M Y') ?? 'Award date not recorded' }}</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#disburseModal{{ $award->id }}">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#disburseModal{{ $award->id }}">
                                         <i class="bi bi-send me-1"></i>Disburse
                                     </button>
                                 </td>
@@ -127,7 +127,7 @@
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Disburse Scholarship</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form action="{{ route('admission.scholarships.disburse', $award) }}" method="POST">
                                             @csrf

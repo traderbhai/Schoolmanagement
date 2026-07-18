@@ -61,7 +61,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Stage</th><th>Done</th><th>Blockers</th><th>Recommended Action</th><th>Source</th></tr></thead>
+                <thead><tr><th scope="col">Stage</th><th scope="col">Done</th><th scope="col">Blockers</th><th scope="col">Recommended Action</th><th scope="col">Source</th></tr></thead>
                 <tbody>
                     @foreach($launchControl['stages'] ?? [] as $stage)
                         <tr>
@@ -72,7 +72,7 @@
                             <td>{{ $stage['done_count'] }}</td>
                             <td>{{ $stage['blocker_count'] }}</td>
                             <td class="small">{{ $stage['recommended_action'] }}</td>
-                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route($stage['route'], $stage['filters'] ?? []) }}">Open</a></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="{{ route($stage['route'], $stage['filters'] ?? []) }}">Open source list</a></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -313,7 +313,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header py-2 d-flex justify-content-between">
                     <span class="fw-semibold">Latest Generation</span>
-                    <a class="small" href="{{ route('academics.pmc.timetable-generator.index') }}">Open</a>
+                    <a class="small" href="{{ route('academics.pmc.timetable-generator.index') }}">Open generator</a>
                 </div>
                 <div class="card-body">
                     @if($latestRun)
@@ -355,7 +355,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Constraint</th><th>Severity</th><th>Affected</th><th>Recommended Fix</th></tr></thead>
+                <thead><tr><th scope="col">Constraint</th><th scope="col">Severity</th><th scope="col">Affected</th><th scope="col">Recommended Fix</th></tr></thead>
                 <tbody>
                     @forelse($constraints as $constraint)
                         <tr>

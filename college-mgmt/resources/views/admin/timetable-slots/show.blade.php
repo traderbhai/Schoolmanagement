@@ -19,24 +19,24 @@
     <div class="card-header bg-transparent fw-semibold"><i class="bi bi-clock me-2 text-primary"></i>Slot Details</div>
     <div class="card-body">
         <table class="table table-borderless mb-0" style="font-size:.9rem">
-            <tr><th class="text-muted" style="width:160px">Name</th><td>{{ $timetableSlot->name }}</td></tr>
-            <tr><th class="text-muted">Start Time</th><td>{{ \Carbon\Carbon::parse($timetableSlot->start_time)->format('h:i A') }}</td></tr>
-            <tr><th class="text-muted">End Time</th><td>{{ \Carbon\Carbon::parse($timetableSlot->end_time)->format('h:i A') }}</td></tr>
-            <tr><th class="text-muted">Duration</th><td>
+            <tr><th scope="row" class="text-muted" style="width:160px">Name</th><td>{{ $timetableSlot->name }}</td></tr>
+            <tr><th scope="row" class="text-muted">Start Time</th><td>{{ \Carbon\Carbon::parse($timetableSlot->start_time)->format('h:i A') }}</td></tr>
+            <tr><th scope="row" class="text-muted">End Time</th><td>{{ \Carbon\Carbon::parse($timetableSlot->end_time)->format('h:i A') }}</td></tr>
+            <tr><th scope="row" class="text-muted">Duration</th><td>
                 @php
                     $mins = (\Carbon\Carbon::parse($timetableSlot->end_time)->diffInMinutes(\Carbon\Carbon::parse($timetableSlot->start_time)));
                 @endphp
                 {{ $mins }} minutes
             </td></tr>
-            <tr><th class="text-muted">Type</th><td>
+            <tr><th scope="row" class="text-muted">Type</th><td>
                 @if($timetableSlot->is_break)
                     <span class="badge bg-warning text-dark">Break</span>
                 @else
                     <span class="badge bg-primary">Class Period</span>
                 @endif
             </td></tr>
-            <tr><th class="text-muted">Sort Order</th><td>{{ $timetableSlot->sort_order }}</td></tr>
-            <tr><th class="text-muted">Status</th><td>
+            <tr><th scope="row" class="text-muted">Sort Order</th><td>{{ $timetableSlot->sort_order }}</td></tr>
+            <tr><th scope="row" class="text-muted">Status</th><td>
                 @if($timetableSlot->is_active)
                     <span class="badge bg-success">Active</span>
                 @else

@@ -35,7 +35,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="">All statuses</option>
                         @foreach(['open','under_review','escalated','resolved','closed'] as $s)
                         <option value="{{ $s }}" @selected(request('status') === $s)>{{ ucwords(str_replace('_',' ',$s)) }}</option>
@@ -44,7 +44,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Category</label>
-                    <select name="category" class="form-select form-select-sm">
+                    <select aria-label="Category" name="category" class="form-select form-select-sm">
                         <option value="">All categories</option>
                         @foreach(['academic','financial','facility','faculty','administrative','other'] as $c)
                         <option value="{{ $c }}" @selected(request('category') === $c)>{{ ucfirst($c) }}</option>
@@ -53,7 +53,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Priority</label>
-                    <select name="priority" class="form-select form-select-sm">
+                    <select aria-label="Priority" name="priority" class="form-select form-select-sm">
                         <option value="">All priorities</option>
                         @foreach(['urgent','high','normal','low'] as $p)
                         <option value="{{ $p }}" @selected(request('priority') === $p)>{{ ucfirst($p) }}</option>
@@ -74,15 +74,15 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">#</th>
-                            <th>Student</th>
-                            <th>Title</th>
-                            <th>Category</th>
-                            <th>Priority</th>
-                            <th>Status</th>
-                            <th>Assigned To</th>
-                            <th>Submitted</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th scope="col" class="ps-3">#</th>
+                            <th scope="col">Student</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Priority</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Assigned To</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col" class="text-end pe-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -100,7 +100,7 @@
                             <td class="small text-muted">{{ $g->assignedTo?->name ?? '-' }}</td>
                             <td class="small text-muted">{{ $g->created_at->format('d M Y') }}</td>
                             <td class="text-end pe-3">
-                                <a href="{{ route('admin.grievances.show', $g) }}" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-eye"></i></a>
+                                <a href="{{ route('admin.grievances.show', $g) }}" class="btn btn-sm btn-outline-primary py-0 px-2" aria-label="View grievance {{ $g->title }}"><i class="bi bi-eye"></i></a>
                             </td>
                         </tr>
                         @empty

@@ -19,20 +19,20 @@
     <div class="card-header bg-transparent fw-semibold"><i class="bi bi-calendar3 me-2 text-primary"></i>Entry Details</div>
     <div class="card-body">
         <table class="table table-borderless mb-0" style="font-size:.9rem">
-            <tr><th class="text-muted" style="width:160px">Subject</th><td>{{ $entry->subject?->name ?? '—' }} <span class="text-muted small">({{ $entry->subject?->code ?? '' }})</span></td></tr>
-            <tr><th class="text-muted">Teacher</th><td>{{ $entry->teacher?->user?->name ?? '—' }}</td></tr>
-            <tr><th class="text-muted">Classroom</th><td>{{ $entry->classroom?->name ?? '—' }} {{ $entry->classroom ? '('.$entry->classroom->room_number.')' : '' }}</td></tr>
-            <tr><th class="text-muted">Day</th><td>{{ ucfirst($entry->day_of_week) }}</td></tr>
-            <tr><th class="text-muted">Slot</th><td>
+            <tr><th scope="row" class="text-muted" style="width:160px">Subject</th><td>{{ $entry->subject?->name ?? '—' }} <span class="text-muted small">({{ $entry->subject?->code ?? '' }})</span></td></tr>
+            <tr><th scope="row" class="text-muted">Teacher</th><td>{{ $entry->teacher?->user?->name ?? '—' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Classroom</th><td>{{ $entry->classroom?->name ?? '—' }} {{ $entry->classroom ? '('.$entry->classroom->room_number.')' : '' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Day</th><td>{{ ucfirst($entry->day_of_week) }}</td></tr>
+            <tr><th scope="row" class="text-muted">Slot</th><td>
                 @if($entry->slot)
                     {{ $entry->slot->name }} &mdash; {{ \Carbon\Carbon::parse($entry->slot->start_time)->format('h:i A') }} to {{ \Carbon\Carbon::parse($entry->slot->end_time)->format('h:i A') }}
                 @else
                     —
                 @endif
             </td></tr>
-            <tr><th class="text-muted">Semester</th><td>{{ $entry->semester?->name ?? '—' }}</td></tr>
-            <tr><th class="text-muted">Course</th><td>{{ $entry->course?->name ?? '—' }}</td></tr>
-            <tr><th class="text-muted">Status</th><td>
+            <tr><th scope="row" class="text-muted">Semester</th><td>{{ $entry->semester?->name ?? '—' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Course</th><td>{{ $entry->course?->name ?? '—' }}</td></tr>
+            <tr><th scope="row" class="text-muted">Status</th><td>
                 @if($entry->is_active)
                     <span class="badge bg-success">Active</span>
                 @else

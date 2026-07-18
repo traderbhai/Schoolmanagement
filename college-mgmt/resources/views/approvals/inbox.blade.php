@@ -18,13 +18,13 @@
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
     @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button aria-label="Close alert" type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
@@ -34,7 +34,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Status</label>
-                    <select name="status" class="form-select form-select-sm">
+                    <select aria-label="Status" name="status" class="form-select form-select-sm">
                         <option value="pending" {{ request('status','pending') === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
                         <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
@@ -43,7 +43,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold mb-1">Workflow Type</label>
-                    <select name="workflow_type" class="form-select form-select-sm">
+                    <select aria-label="Workflow Type" name="workflow_type" class="form-select form-select-sm">
                         <option value="">All types</option>
                         @foreach($workflowTypes as $type)
                         <option value="{{ $type }}" {{ request('workflow_type') === $type ? 'selected' : '' }}>
@@ -68,13 +68,13 @@
                 <table class="table align-middle table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Subject</th>
-                            <th>Workflow</th>
-                            <th>Step</th>
-                            <th>Role</th>
-                            <th>SLA / Due</th>
-                            <th>Status</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th scope="col" class="ps-3">Subject</th>
+                            <th scope="col">Workflow</th>
+                            <th scope="col">Step</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">SLA / Due</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-end pe-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -126,8 +126,8 @@
                             </td>
                             <td class="text-end pe-3">
                                 <div class="d-flex gap-1 justify-content-end">
-                                    <a href="{{ route('approvals.chain', $approval) }}"
-                                       class="btn btn-sm btn-outline-secondary py-0 px-2">
+                        <a href="{{ route('approvals.chain', $approval) }}"
+                           class="btn btn-sm btn-outline-secondary py-0 px-2" aria-label="View approval chain {{ $approval->id }}">
                                         <i class="bi bi-diagram-2"></i>
                                     </a>
                                     @if($approval->status === 'pending')
@@ -151,21 +151,21 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h6 class="modal-title fw-semibold">Approve Step {{ $approval->step_order }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <form method="POST" action="{{ route('approvals.approve', $approval) }}">
                                         @csrf
                                         <div class="modal-body">
                                             <div class="mb-3">
                                                 <label class="form-label small">Remarks (optional)</label>
-                                                <textarea name="remarks" class="form-control form-control-sm" rows="3"
+                                                <textarea aria-label="Approval decision notes" name="remarks" class="form-control form-control-sm" rows="3"
                                                           placeholder="Add any notes..."></textarea>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                                             <button type="submit" class="btn btn-success btn-sm">
-                                                <i class="bi bi-check-lg me-1"></i>Approve
+                                                <i class="bi bi-check-lg me-1"></i>Approve step
                                             </button>
                                         </div>
                                     </form>
@@ -179,21 +179,21 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h6 class="modal-title fw-semibold text-danger">Reject Step {{ $approval->step_order }}</h6>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        <button aria-label="Close dialog" type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <form method="POST" action="{{ route('approvals.reject', $approval) }}">
                                         @csrf
                                         <div class="modal-body">
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Reason for rejection <span class="text-danger">*</span></label>
-                                                <textarea name="rejection_reason" class="form-control form-control-sm" rows="3"
+                                                <textarea aria-label="Approval rejection reason" name="rejection_reason" class="form-control form-control-sm" rows="3"
                                                           placeholder="State the reason for rejection..." required></textarea>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                                             <button type="submit" class="btn btn-danger btn-sm">
-                                                <i class="bi bi-x-lg me-1"></i>Reject
+                                                <i class="bi bi-x-lg me-1"></i>Reject step
                                             </button>
                                         </div>
                                     </form>

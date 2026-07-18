@@ -150,9 +150,9 @@
             <table class="table table-bordered timetable-grid mb-0">
                 <thead>
                     <tr>
-                        <th style="min-width:80px">Slot</th>
+                        <th scope="col" style="min-width:80px">Slot</th>
                         @foreach(['Mon','Tue','Wed','Thu','Fri','Sat'] as $d)
-                        <th class="day-header text-center">{{ $d }}</th>
+                        <th scope="col" class="day-header text-center">{{ $d }}</th>
                         @endforeach
                     </tr>
                 </thead>

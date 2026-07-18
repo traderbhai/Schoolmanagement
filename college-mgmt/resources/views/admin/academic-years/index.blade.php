@@ -25,13 +25,13 @@
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Semesters</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Start Date</th>
+                    <th scope="col">End Date</th>
+                    <th scope="col">Semesters</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,9 +51,10 @@
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="{{ route('admin.academic-years.show', $y) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
-                        <a href="{{ route('admin.academic-years.edit', $y) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <a href="{{ route('admin.academic-years.show', $y) }}" class="btn btn-sm btn-outline-secondary" title="View" aria-label="View academic year {{ $y->name }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.academic-years.edit', $y) }}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit academic year {{ $y->name }}"><i class="bi bi-pencil"></i></a>
                         <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                            aria-label="Delete academic year {{ $y->name }}"
                             data-bs-toggle="modal" data-bs-target="#deleteModal"
                             data-action="{{ route('admin.academic-years.destroy', $y) }}"
                             data-name="{{ $y->name }}">

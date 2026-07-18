@@ -20,35 +20,35 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-8">
                     <label class="form-label">Room Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. Lecture Hall A" required>
+                    <input aria-label="Classroom name" type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="e.g. Lecture Hall A" required>
                     <div class="form-text">Descriptive name for the room.</div>
                     @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Room Number <span class="text-danger">*</span></label>
-                    <input type="text" name="room_number" class="form-control @error('room_number') is-invalid @enderror" value="{{ old('room_number') }}" placeholder="LH-A" required>
+                    <input aria-label="LH-A" type="text" name="room_number" class="form-control @error('room_number') is-invalid @enderror" value="{{ old('room_number') }}" placeholder="LH-A" required>
                     <div class="form-text">Short room code.</div>
                     @error('room_number')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Type <span class="text-danger">*</span></label>
-                    <select name="type" class="form-select" required>
+                    <select aria-label="Type" name="type" class="form-select" required>
                         @foreach(['lecture','lab','seminar','auditorium'] as $t)<option value="{{ $t }}" @selected(old('type')==$t)>{{ ucfirst($t) }}</option>@endforeach
                     </select>
                     <div class="form-text">Room category.</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Capacity <span class="text-danger">*</span></label>
-                    <input type="number" name="capacity" class="form-control" value="{{ old('capacity', 60) }}" min="1" required>
+                    <input aria-label="Capacity" type="number" name="capacity" class="form-control" value="{{ old('capacity', 60) }}" min="1" required>
                     <div class="form-text">Seating capacity.</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Floor</label>
-                    <input type="text" name="floor" class="form-control" value="{{ old('floor') }}" placeholder="Ground, 1st…">
+                    <input aria-label="Classroom floor" type="text" name="floor" class="form-control" value="{{ old('floor') }}" placeholder="Ground, 1st…">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Building</label>
-                    <input type="text" name="building" class="form-control" value="{{ old('building') }}" placeholder="Main Block">
+                    <input aria-label="Main Block" type="text" name="building" class="form-control" value="{{ old('building') }}" placeholder="Main Block">
                 </div>
                 <div class="col-12">
                     <label class="form-label d-block">Facilities</label>

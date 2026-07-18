@@ -31,18 +31,18 @@
         <div class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Search</label>
-                <input class="form-control form-control-sm" name="q" value="{{ $q }}" placeholder="Applicant name or application number">
+                <input aria-label="Applicant name or application number" class="form-control form-control-sm" name="q" value="{{ $q }}" placeholder="Applicant name or application number">
             </div>
             <div class="col-md-3">
                 <label class="form-label small">Status</label>
-                <select class="form-select form-select-sm" name="status">
+                <select aria-label="Status" class="form-select form-select-sm" name="status">
                     <option value="">All statuses</option>
                     @foreach(['pending_admission_completion','blocked','ready_for_academics','handed_off','returned_for_correction'] as $state)
                         <option value="{{ $state }}" @selected($status === $state)>{{ str_replace('_', ' ', ucfirst($state)) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">Apply</button></div>
+            <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">Apply handoff filters</button></div>
             <div class="col-md-3 small text-muted">Filters: {{ $q ? 'search='.$q.'; ' : '' }}{{ $status ? 'status='.$status : 'all records' }}</div>
         </div>
     </form>
@@ -50,7 +50,7 @@
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Applicant</th><th>Status</th><th>Blockers</th><th>Documents</th><th>Fees</th><th>Joining Kit</th><th>Actions</th></tr></thead>
+                <thead><tr><th scope="col">Applicant</th><th scope="col">Status</th><th scope="col">Blockers</th><th scope="col">Documents</th><th scope="col">Fees</th><th scope="col">Joining Kit</th><th scope="col">Actions</th></tr></thead>
                 <tbody>
                 @forelse($records as $record)
                     @php
@@ -68,9 +68,9 @@
                         <td class="small">{{ $kit['completed'] ?? 0 }}/{{ $kit['total'] ?? 0 }}</td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
-                                <form method="POST" action="{{ route('admission.handoff.refresh', $record->applicant_id) }}">@csrf<button class="btn btn-sm btn-outline-secondary">Refresh</button></form>
-                                <form method="POST" action="{{ route('admission.handoff.mark-handed-off', $record->id) }}">@csrf<button class="btn btn-sm btn-success">Hand off</button></form>
-                                <form method="POST" action="{{ route('admission.handoff.return', $record->id) }}" class="d-flex gap-1">@csrf<input name="reason" class="form-control form-control-sm" placeholder="Correction reason" required><button class="btn btn-sm btn-warning">Return</button></form>
+                                <form method="POST" action="{{ route('admission.handoff.refresh', $record->applicant_id) }}" onsubmit="return confirm('Refresh handoff readiness for {{ addslashes($record->applicant_name ?: 'this applicant') }}? Confirm document, fee, joining-kit, and student-profile checks should be recalculated before acting.')">@csrf<button type="submit" class="btn btn-sm btn-outline-secondary">Refresh readiness</button></form>
+                                <form method="POST" action="{{ route('admission.handoff.mark-handed-off', $record->id) }}" onsubmit="return confirm('Hand off {{ addslashes($record->applicant_name ?: 'this applicant') }} to Academics/PMC? Confirm admission completion, verified documents, fee clearance, joining kit, and roll/student-profile readiness before transfer.')">@csrf<button type="submit" class="btn btn-sm btn-success">Hand off to Academics</button></form>
+                                <form method="POST" action="{{ route('admission.handoff.return', $record->id) }}" class="d-flex gap-1" onsubmit="return confirm('Return {{ addslashes($record->applicant_name ?: 'this applicant') }} for Admission correction? Confirm the reason is specific enough for the owning team and applicant timeline before returning.')">@csrf<input aria-label="Correction reason" name="reason" class="form-control form-control-sm" placeholder="Correction reason" required><button type="submit" class="btn btn-sm btn-warning">Return for correction</button></form>
                             </div>
                         </td>
                     </tr>

@@ -134,13 +134,13 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Roll Number <span class="text-danger">*</span></label>
-                    <input type="text" name="roll_number" class="form-control @error('roll_number') is-invalid @enderror"
+                    <input aria-label="Enrollment roll number" type="text" name="roll_number" class="form-control @error('roll_number') is-invalid @enderror"
                            value="{{ old('roll_number') }}" placeholder="e.g. PGDM-24-001" required>
                     @error('roll_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Specialization</label>
-                    <select name="specialization_id" class="form-select">
+                    <select aria-label="Specialization" name="specialization_id" class="form-select">
                         <option value="">No specialization</option>
                         @foreach($specializations as $s)
                             <option value="{{ $s->id }}" @selected(old('specialization_id') == $s->id)>{{ $s->name }}</option>
@@ -149,7 +149,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Term</label>
-                    <select name="term_id" class="form-select">
+                    <select aria-label="Term" name="term_id" class="form-select">
                         <option value="">Term not selected</option>
                         @foreach($terms as $t)
                             <option value="{{ $t->id }}" @selected(old('term_id') == $t->id)>{{ $t->name }}</option>
@@ -158,7 +158,7 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Notes</label>
-                    <textarea name="notes" rows="3" class="form-control" placeholder="Optional enrollment handoff note">{{ old('notes') }}</textarea>
+                    <textarea aria-label="Enrollment handoff note" name="notes" rows="3" class="form-control" placeholder="Optional enrollment handoff note">{{ old('notes') }}</textarea>
                 </div>
             </div>
         </div>
