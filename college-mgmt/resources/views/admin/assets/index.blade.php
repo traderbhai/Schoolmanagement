@@ -92,7 +92,7 @@
             <div class="col-md-1"><label class="form-label">Stock</label><input aria-label="Current Stock" name="current_stock" type="number" min="0" value="0" class="form-control" required></div>
             <div class="col-md-2"><label class="form-label">Reorder Level</label><input aria-label="Reorder Level" name="reorder_level" type="number" min="0" value="0" class="form-control" required></div>
             <div class="col-md-1"><label class="form-label">Location</label><input aria-label="Store" name="location" class="form-control" placeholder="Store"></div>
-            <div class="col-md-1"><button class="btn btn-primary w-100">Create</button></div>
+            <div class="col-md-1"><button type="submit" class="btn btn-primary w-100">Create stock item</button></div>
         </form>
     </div>
 </div>
@@ -106,7 +106,7 @@
                     @csrf
                     <input aria-label="Category name" name="name" class="form-control" placeholder="Category name" required>
                     <input aria-label="Asset code" name="code" class="form-control" placeholder="Code, e.g. IT" required>
-                    <button class="btn btn-primary">Save Category</button>
+                    <button type="submit" class="btn btn-primary">Save asset category</button>
                 </form>
             </div>
         </div>
@@ -141,7 +141,7 @@
                         </select>
                     </div>
                     <div class="col-md-7"><input aria-label="Notes" name="notes" class="form-control" placeholder="Notes"></div>
-                    <div class="col-md-2"><button class="btn btn-primary w-100">Add Asset</button></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Add fixed asset</button></div>
                 </form>
             </div>
         </div>
@@ -174,8 +174,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-outline-primary">Filter</button>
-                <a href="{{ route('admin.assets.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <button type="submit" class="btn btn-outline-primary">Apply asset filters</button>
+                <a href="{{ route('admin.assets.index') }}" class="btn btn-outline-secondary">Clear asset filters</a>
             </div>
         </form>
     </div>
@@ -217,7 +217,7 @@
                             <td class="text-end">Rs. {{ number_format($asset->purchase_cost, 2) }}</td>
                             <td class="text-end">
                                 @if($asset->status === 'available')
-                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignAsset{{ $asset->id }}">Assign</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignAsset{{ $asset->id }}">Assign custody</button>
                                 @else
                                     <span class="text-muted small">No action</span>
                                 @endif
@@ -273,7 +273,7 @@
                                     @csrf
                                     <input type="hidden" name="returned_on" value="{{ now()->toDateString() }}">
                                     <input type="hidden" name="condition" value="good">
-                                    <button class="btn btn-sm btn-outline-success">Return Good</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Return asset in good condition</button>
                                 </form>
                             </td>
                         </tr>
@@ -432,8 +432,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-primary">Assign Asset</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close assignment dialog</button>
+                        <button type="submit" class="btn btn-primary">Assign asset custody</button>
                     </div>
                 </form>
             </div>
@@ -460,8 +460,8 @@
                     <div class="mb-3"><label class="form-label">Remarks</label><textarea aria-label="Remarks" name="remarks" rows="3" class="form-control"></textarea></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-success">Receive Stock</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close receive dialog</button>
+                    <button type="submit" class="btn btn-success">Receive stock into inventory</button>
                 </div>
             </form>
         </div>
@@ -494,8 +494,8 @@
                     <div class="mb-3"><label class="form-label">Remarks</label><textarea aria-label="Remarks" name="remarks" rows="3" class="form-control"></textarea></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary">Issue Stock</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close issue dialog</button>
+                    <button type="submit" class="btn btn-primary">Issue stock from inventory</button>
                 </div>
             </form>
         </div>

@@ -50,7 +50,7 @@
                 @foreach($dashboard['panels'] as $panel)
                     <div class="list-group-item d-flex justify-content-between gap-2">
                         <span><strong>{{ $panel->name }}</strong><div class="small text-muted">{{ $panel->members->pluck('user.name')->filter()->join(', ') ?: 'No evaluators' }}</div></span>
-                        <form method="POST" action="{{ route('admission.assessment-schedule-conflicts.refresh', $panel) }}">@csrf<button class="btn btn-sm btn-outline-primary">Refresh</button></form>
+                        <form method="POST" action="{{ route('admission.assessment-schedule-conflicts.refresh', $panel) }}" onsubmit="return confirm('Refresh assessment conflicts for this panel? Confirm evaluator availability, room/resource usage, capacity, rubric readiness, and double-booking impact before recalculating conflicts.')">@csrf<button type="submit" class="btn btn-sm btn-outline-primary">Refresh panel conflicts</button></form>
                     </div>
                 @endforeach
             </div>
@@ -59,7 +59,7 @@
             <div class="card-header bg-transparent fw-bold">Evaluator Availability</div>
             <div class="list-group list-group-flush">
                 @forelse($dashboard['availability'] as $availability)
-                    <div class="list-group-item small"><strong>{{ $availability->user?->name }}</strong><div class="text-muted">{{ $availability->available_from->format('d M H:i') }} - {{ $availability->available_until->format('d M H:i') }} · {{ ucfirst($availability->location_mode ?? 'any') }}</div></div>
+                    <div class="list-group-item small"><strong>{{ $availability->user?->name }}</strong><div class="text-muted">{{ $availability->available_from->format('d M H:i') }} - {{ $availability->available_until->format('d M H:i') }} | {{ ucfirst($availability->location_mode ?? 'any') }}</div></div>
                 @empty
                     <div class="list-group-item text-muted">No evaluator availability seeded.</div>
                 @endforelse

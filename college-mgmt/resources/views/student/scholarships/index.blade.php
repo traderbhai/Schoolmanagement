@@ -155,7 +155,7 @@
                             @endif
                             <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                                 <div class="small text-muted">Minimum 50 characters. Staff will review this with your academic record.</div>
-                                <button class="btn btn-sm btn-primary">Submit Application</button>
+                                <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Submit this scholarship application? Confirm your reason, eligibility details, proof document if required, CGPA, and family-income information before sending it for review.')">Submit scholarship application</button>
                             </div>
                         </form>
                     </div>

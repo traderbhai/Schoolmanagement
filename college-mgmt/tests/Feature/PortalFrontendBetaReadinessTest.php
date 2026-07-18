@@ -548,6 +548,52 @@ class PortalFrontendBetaReadinessTest extends TestCase
             ->assertDontSee('SERVICE ERROR', false);
     }
 
+    public function test_student_self_service_actions_use_specific_labels_and_confirmations(): void
+    {
+        $expectations = [
+            resource_path('views/student/library/index.blade.php') => [
+                'Cancel reservation',
+                'Reserve book',
+                'Confirm you no longer need this book before releasing your place in the reservation queue.',
+                'You will be added to the queue and should collect it before the reservation expires after library fulfilment.',
+            ],
+            resource_path('views/student/exam-registration/index.blade.php') => [
+                'Register for exam',
+                'Confirm the subject, exam date, attendance eligibility, and fee-dues status before submitting your exam registration.',
+            ],
+            resource_path('views/student/career-events/index.blade.php') => [
+                'Cancel event registration',
+                'Register for event',
+                'Confirm you no longer plan to attend before releasing the seat for another student.',
+                'Confirm the event date, venue, registration deadline, and seat availability before booking your place.',
+            ],
+            resource_path('views/student/scholarships/index.blade.php') => [
+                'Submit scholarship application',
+                'Confirm your reason, eligibility details, proof document if required, CGPA, and family-income information before sending it for review.',
+            ],
+        ];
+
+        foreach ($expectations as $path => $snippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($snippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+        }
+
+        foreach ([
+            resource_path('views/student/library/index.blade.php'),
+            resource_path('views/student/exam-registration/index.blade.php'),
+            resource_path('views/student/career-events/index.blade.php'),
+        ] as $path) {
+            $contents = file_get_contents($path);
+
+            $this->assertStringNotContainsString('>Cancel</button>', $contents, $path);
+            $this->assertStringNotContainsString('>Reserve</button>', $contents, $path);
+            $this->assertStringNotContainsString('>Register</button>', $contents, $path);
+        }
+    }
+
     private function internalGetLinks(string $html): array
     {
         preg_match_all('/href=["\']([^"\']+)["\']/i', $html, $matches);

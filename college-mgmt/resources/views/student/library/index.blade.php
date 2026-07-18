@@ -69,9 +69,9 @@
                             <td><small>{{ $reservation->expires_at?->format('d M Y') }}</small></td>
                             <td class="text-end">
                                 @if($reservation->status === 'pending')
-                                    <form method="POST" action="{{ route('student.library.reservations.cancel', $reservation) }}">
+                                    <form method="POST" action="{{ route('student.library.reservations.cancel', $reservation) }}" onsubmit="return confirm('Cancel this library reservation? Confirm you no longer need this book before releasing your place in the reservation queue.')">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel reservation</button>
                                     </form>
                                 @endif
                             </td>
@@ -101,10 +101,10 @@
                                     @if($book->issuable_copies_count > 0)
                                         <span class="text-muted small">Available at counter</span>
                                     @else
-                                        <form method="POST" action="{{ route('student.library.reservations.store') }}">
+                                        <form method="POST" action="{{ route('student.library.reservations.store') }}" onsubmit="return confirm('Reserve this library book? You will be added to the queue and should collect it before the reservation expires after library fulfilment.')">
                                             @csrf
                                             <input type="hidden" name="book_id" value="{{ $book->id }}">
-                                            <button class="btn btn-sm btn-outline-primary">Reserve</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Reserve book</button>
                                         </form>
                                     @endif
                                 </td>

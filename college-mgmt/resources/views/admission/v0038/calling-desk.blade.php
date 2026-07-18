@@ -59,7 +59,7 @@
                         <i class="bi bi-info-circle me-1"></i>
                         Use <strong>Disposition</strong> for call result, <strong>Outcome</strong> for admission intent, and <strong>Next Action</strong> for the next owner-visible task.
                     </div>
-                    <form method="POST" action="{{ route('admission.calling-desk.outcome') }}" class="row g-2 mt-3">
+                    <form method="POST" action="{{ route('admission.calling-desk.outcome') }}" class="row g-2 mt-3" onsubmit="return confirm('Save this call outcome? Confirm disposition, admission intent, script coverage, retry time, next action, and candidate timeline impact before updating the calling desk.')">
                         @csrf
                         <input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}">
                         <input type="hidden" name="subject_id" value="{{ $active->id }}">
@@ -81,16 +81,16 @@
                         <div class="col-md-8"><label class="form-label small">Notes</label><input aria-label="Notes" name="notes" class="form-control form-control-sm" value="Discussed program fit, parent decision, and next action."></div>
                         <div class="col-md-4"><label class="form-label small">Next Action</label><input aria-label="Next Action" name="next_action" class="form-control form-control-sm" value="Send checklist and schedule follow-up"></div>
                         <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
-                            <button class="btn btn-sm btn-primary">Save Call Outcome</button>
+                            <button type="submit" class="btn btn-sm btn-primary">Save call outcome</button>
                             <span class="small text-muted">This updates the timeline, script compliance, retry queue, and next action.</span>
                         </div>
                     </form>
-                    <form method="POST" action="{{ route('admission.call-attempts.skip') }}" class="mt-2">
+                    <form method="POST" action="{{ route('admission.call-attempts.skip') }}" class="mt-2" onsubmit="return confirm('Skip this calling-desk record for now? Confirm the reason, retry ownership, and queue impact before moving to the next candidate.')">
                         @csrf
                         <input type="hidden" name="subject_type" value="{{ $isLead ? 'lead' : 'applicant' }}">
                         <input type="hidden" name="subject_id" value="{{ $active->id }}">
                         <input type="hidden" name="reason" value="Temporarily skipped during calling desk session">
-                        <button class="btn btn-sm btn-outline-secondary">Skip This Record</button>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Skip current call record</button>
                     </form>
                 @else
                     <x-ui.empty-state

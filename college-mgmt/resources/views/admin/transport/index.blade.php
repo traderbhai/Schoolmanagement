@@ -57,7 +57,7 @@
                         <div class="col-6"><input aria-label="KM" name="distance_km" type="number" step="0.01" min="0" class="form-control" placeholder="KM"></div>
                         <div class="col-6"><input aria-label="Monthly fee" name="monthly_fee" type="number" step="0.01" min="0" class="form-control" placeholder="Monthly fee" required></div>
                     </div>
-                    <button class="btn btn-primary">Save Route</button>
+                    <button type="submit" class="btn btn-primary">Create transport route</button>
                 </form>
             </div>
         </div>
@@ -82,7 +82,7 @@
                         <div class="col-6"><input aria-label="Drop Time" name="drop_time" type="time" class="form-control"></div>
                     </div>
                     <input aria-label="Stop fee override" name="monthly_fee_override" type="number" step="0.01" min="0" class="form-control" placeholder="Stop fee override">
-                    <button class="btn btn-primary">Add Stop</button>
+                    <button type="submit" class="btn btn-primary">Add route stop</button>
                 </form>
             </div>
         </div>
@@ -104,7 +104,7 @@
                         <option value="maintenance">Maintenance</option>
                         <option value="inactive">Inactive</option>
                     </select>
-                    <button class="btn btn-primary">Add Vehicle</button>
+                    <button type="submit" class="btn btn-primary">Add transport vehicle</button>
                 </form>
             </div>
         </div>
@@ -163,7 +163,7 @@
                                     </span>
                                 </td>
                                 <td class="text-end pe-3">
-                                    <button class="btn btn-sm btn-outline-primary">Save route</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Save vehicle details</button>
                                 </td>
                             </form>
                         </tr>
@@ -232,7 +232,7 @@
                 <input aria-label="Start Date" type="date" name="start_date" value="{{ now()->toDateString() }}" class="form-control" required>
             </div>
             <div class="col-md-1">
-                <button class="btn btn-primary w-100">Assign</button>
+                <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Assign this student to transport? Confirm route, stop, vehicle capacity, start date, monthly fee impact, and student visibility before saving.')">Assign transport</button>
             </div>
             <div class="col-12">
                 <input aria-label="Notes, pickup instructions, or parent contact preferences" name="notes" class="form-control" placeholder="Notes, pickup instructions, or parent contact preferences">
@@ -251,9 +251,9 @@
                         <input aria-label="Search student, route, stop, or vehicle" type="search" name="assignment_search" value="{{ request('assignment_search') }}" class="form-control form-control-sm" placeholder="Search student, route, stop, or vehicle">
                     </div>
                     <div class="col-md-6 d-flex gap-2">
-                        <button class="btn btn-sm btn-primary">Filter</button>
-                        <a href="{{ route('admin.transport.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                        <a href="{{ route('admin.transport.assignments.export', request()->only('assignment_search')) }}" class="btn btn-sm btn-outline-secondary ms-auto"><i class="bi bi-download me-1"></i>Export Current View</a>
+                        <button type="submit" class="btn btn-sm btn-primary">Apply assignment filters</button>
+                        <a href="{{ route('admin.transport.index') }}" class="btn btn-sm btn-outline-secondary">Clear assignment filters</a>
+                        <a href="{{ route('admin.transport.assignments.export', request()->only('assignment_search')) }}" class="btn btn-sm btn-outline-secondary ms-auto"><i class="bi bi-download me-1"></i>Export assignment view</a>
                     </div>
                 </form>
                 <div class="text-muted small mt-2">Showing {{ $assignments->total() }} active assignment record(s){{ request('assignment_search') ? ' for search: '.request('assignment_search') : '' }}.</div>
@@ -287,7 +287,7 @@
                                         <form method="POST" action="{{ route('admin.transport.assignments.end', $assignment) }}" class="d-inline" onsubmit="return confirm('End transport assignment for {{ addslashes($assignment->student->user->name ?? 'this student') }} from today? Confirm route/stop removal, monthly fee impact, vehicle capacity release, and student communication before ending access.')">
                                             @csrf
                                             <input type="hidden" name="end_date" value="{{ now()->toDateString() }}">
-                                            <button class="btn btn-sm btn-outline-danger">End</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">End transport assignment</button>
                                         </form>
                                     </td>
                                 </tr>

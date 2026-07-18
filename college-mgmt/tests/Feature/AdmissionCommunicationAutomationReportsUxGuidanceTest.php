@@ -265,4 +265,53 @@ class AdmissionCommunicationAutomationReportsUxGuidanceTest extends TestCase
         $this->assertStringContainsString('the applicant communication or webhook payload will not be duplicated incorrectly', $contents);
         $this->assertStringNotContainsString('>Retry</button>', $contents);
     }
+
+    public function test_admission_operating_actions_use_specific_safety_labels(): void
+    {
+        $communicationSafety = file_get_contents(resource_path('views/admission/v0038/communication-safety.blade.php'));
+        $callingDesk = file_get_contents(resource_path('views/admission/v0038/calling-desk.blade.php'));
+        $integrations = file_get_contents(resource_path('views/admission/v0037/integrations.blade.php'));
+        $conflicts = file_get_contents(resource_path('views/admission/v0037/assessment-schedule-conflicts.blade.php'));
+
+        foreach ([
+            'Save communication consent',
+            'Request template approval',
+            'Preview safe audience',
+            'Approve template version',
+            'downstream campaign/reminder impact',
+            'consent rules, quiet-hour handling, duplicate blocking, and opt-out checks',
+        ] as $snippet) {
+            $this->assertStringContainsString($snippet, $communicationSafety);
+        }
+
+        foreach ([
+            'Save call outcome',
+            'Skip current call record',
+            'Confirm disposition, admission intent, script coverage, retry time, next action, and candidate timeline impact',
+            'Confirm the reason, retry ownership, and queue impact',
+        ] as $snippet) {
+            $this->assertStringContainsString($snippet, $callingDesk);
+        }
+
+        foreach ([
+            'sandbox test',
+            'Retry provider delivery',
+            'Confirm sandbox credentials, test recipient behavior, webhook capture, and provider rate limits',
+            'Confirm the failure reason, recipient, provider health, consent state, and duplicate-message risk',
+        ] as $snippet) {
+            $this->assertStringContainsString($snippet, $integrations);
+        }
+
+        $this->assertStringContainsString('Refresh panel conflicts', $conflicts);
+        $this->assertStringContainsString('Confirm evaluator availability, room/resource usage, capacity, rubric readiness, and double-booking impact', $conflicts);
+        $this->assertStringNotContainsString('>Save Consent</button>', $communicationSafety);
+        $this->assertStringNotContainsString('>Request</button>', $communicationSafety);
+        $this->assertStringNotContainsString('>Preview Audience</button>', $communicationSafety);
+        $this->assertStringNotContainsString('>Save Call Outcome</button>', $callingDesk);
+        $this->assertStringNotContainsString('>Skip This Record</button>', $callingDesk);
+        $this->assertStringNotContainsString('>Sandbox Test</button>', $integrations);
+        $this->assertStringNotContainsString('>Retry</button>', $integrations);
+        $this->assertStringNotContainsString('>Refresh</button>', $conflicts);
+        $this->assertStringNotContainsString(' Â· ', $conflicts);
+    }
 }

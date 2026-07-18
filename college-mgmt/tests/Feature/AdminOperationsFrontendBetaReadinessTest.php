@@ -412,6 +412,7 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
                 'Confirm quantity, recipient, purpose, and low-stock impact before recording the movement.',
             ],
             resource_path('views/admin/transport/index.blade.php') => [
+                'Confirm route, stop, vehicle capacity, start date, monthly fee impact, and student visibility before saving.',
                 'Confirm route/stop removal, monthly fee impact, vehicle capacity release, and student communication before ending access.',
             ],
             resource_path('views/admin/hostel/fees.blade.php') => [
@@ -443,6 +444,54 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
         $this->assertStringContainsString('Confirm copy condition, borrower, due/fine status, and shelf availability before closing the issue.', $issuesContents);
         $this->assertStringContainsString('aria-label="Mark', $issuesContents);
         $this->assertStringNotContainsString("confirm('Mark this book as returned?')", $issuesContents);
+    }
+
+    public function test_admin_asset_transport_and_library_actions_use_specific_operational_labels(): void
+    {
+        $expectations = [
+            resource_path('views/admin/assets/index.blade.php') => [
+                'Create stock item',
+                'Save asset category',
+                'Add fixed asset',
+                'Apply asset filters',
+                'Clear asset filters',
+                'Return asset in good condition',
+                'Assign asset custody',
+                'Receive stock into inventory',
+                'Issue stock from inventory',
+            ],
+            resource_path('views/admin/transport/index.blade.php') => [
+                'Create transport route',
+                'Add route stop',
+                'Add transport vehicle',
+                'Save vehicle details',
+                'Assign transport',
+                'Apply assignment filters',
+                'Clear assignment filters',
+                'Export assignment view',
+                'End transport assignment',
+            ],
+            resource_path('views/admin/library/reservations.blade.php') => [
+                'Apply reservation filters',
+                'Clear reservation filters',
+                'Export reservation view',
+                'Fulfil reservation',
+                'Cancel reservation',
+            ],
+        ];
+
+        foreach ($expectations as $path => $snippets) {
+            $contents = file_get_contents($path);
+
+            foreach ($snippets as $snippet) {
+                $this->assertStringContainsString($snippet, $contents, $path);
+            }
+
+            $this->assertStringNotContainsString('>Filter</button>', $contents, $path);
+            $this->assertStringNotContainsString('>Reset</a>', $contents, $path);
+            $this->assertStringNotContainsString('>Assign</button>', $contents, $path);
+            $this->assertStringNotContainsString('>End</button>', $contents, $path);
+        }
     }
 
     public function test_role_permission_revoke_actions_explain_access_impact(): void
@@ -651,7 +700,7 @@ class AdminOperationsFrontendBetaReadinessTest extends TestCase
         foreach ([
             'admin.library.books' => ['Add Book', 'Export Current View'],
             'admin.library.issues' => ['Issue Book', 'Export Current View'],
-            'admin.library.reservations' => ['Issues', 'Export Current View'],
+            'admin.library.reservations' => ['Issues', 'Export reservation view'],
             'admin.library.fines' => ['Unpaid Library Fines', 'Export Current View'],
             'admin.hostel.index' => ['Add Block', 'Create Block'],
             'admin.hostel.allocations' => ['Hostel Allocations', 'Export Current View'],

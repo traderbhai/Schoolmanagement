@@ -37,7 +37,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Update Consent</div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admission.consent-center.store') }}" class="row g-2">
+                    <form method="POST" action="{{ route('admission.consent-center.store') }}" class="row g-2" onsubmit="return confirm('Save this communication consent change? Confirm subject, channel, opt-in or opt-out status, source note, and downstream campaign/reminder impact before updating consent.')">
                         @csrf
                         <div class="col-12">
                             <select name="subject_key" class="form-select form-select-sm" aria-label="Lead or applicant" required>
@@ -69,7 +69,7 @@
                             </select>
                         </div>
                         <div class="col-12"><input aria-label="Reason/source note" name="reason" class="form-control form-control-sm" placeholder="Reason/source note"></div>
-                        <div class="col-12"><button class="btn btn-sm btn-primary">Save Consent</button></div>
+                        <div class="col-12"><button type="submit" class="btn btn-sm btn-primary">Save communication consent</button></div>
                     </form>
                 </div>
             </div>
@@ -87,9 +87,9 @@
                                 <td>{{ $template->name }}</td>
                                 <td>{{ $template->channel }}</td>
                                 <td>
-                                    <form method="POST" action="{{ route('admission.template-approvals.request', $template->id) }}">
+                                    <form method="POST" action="{{ route('admission.template-approvals.request', $template->id) }}" onsubmit="return confirm('Request approval for this communication template? Confirm channel, message text, consent usage, and campaign/reminder workflows before sending it for review.')">
                                         @csrf
-                                        <button class="btn btn-sm btn-outline-primary">Request</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Request template approval</button>
                                     </form>
                                 </td>
                             </tr>
@@ -106,7 +106,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Bulk Safety Preview</div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admission.communication-safety.preview') }}" class="row g-2">
+                    <form method="POST" action="{{ route('admission.communication-safety.preview') }}" class="row g-2" onsubmit="return confirm('Preview this communication audience? Confirm the template, audience type, consent rules, quiet-hour handling, duplicate blocking, and opt-out checks before calculating recipients.')">
                         @csrf
                         <div class="col-12">
                             <select name="template_id" class="form-select form-select-sm" aria-label="Template">
@@ -121,7 +121,7 @@
                                 <option>applicants</option>
                             </select>
                         </div>
-                        <div class="col-12"><button class="btn btn-sm btn-primary">Preview Audience</button></div>
+                        <div class="col-12"><button type="submit" class="btn btn-sm btn-primary">Preview safe audience</button></div>
                     </form>
                 </div>
             </div>
@@ -143,9 +143,9 @@
                                 <td><span class="badge text-bg-secondary">{{ str($approval->status)->headline() }}</span></td>
                                 <td>
                                     @if($approval->status !== 'approved')
-                                        <form method="POST" action="{{ route('admission.template-approvals.approve', $approval->id) }}">
+                                        <form method="POST" action="{{ route('admission.template-approvals.approve', $approval->id) }}" onsubmit="return confirm('Approve this communication template version? Confirm wording, channel policy, consent rules, quiet-hour safety, and downstream automation/campaign usage before approval.')">
                                             @csrf
-                                            <button class="btn btn-sm btn-outline-success">Approve template</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Approve template version</button>
                                         </form>
                                     @endif
                                 </td>

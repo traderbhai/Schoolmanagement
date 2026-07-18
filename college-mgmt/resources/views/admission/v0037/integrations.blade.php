@@ -19,12 +19,12 @@
     <div class="row g-2 mb-3">
         @foreach(['sms', 'whatsapp', 'dialer', 'video', 'signature'] as $channel)
             <div class="col-6 col-lg">
-                <form method="POST" action="{{ route('admission.integrations.test') }}" class="card border-0 shadow-sm h-100">
+                <form method="POST" action="{{ route('admission.integrations.test') }}" class="card border-0 shadow-sm h-100" onsubmit="return confirm('Run a sandbox integration test for {{ strtoupper($channel) }}? Confirm sandbox credentials, test recipient behavior, webhook capture, and provider rate limits before running the test.')">
                     @csrf
                     <input type="hidden" name="channel" value="{{ $channel }}">
                     <div class="card-body py-2">
                         <div class="small text-muted">{{ strtoupper($channel) }}</div>
-                        <button class="btn btn-sm btn-primary mt-1">Sandbox Test</button>
+                        <button type="submit" class="btn btn-sm btn-primary mt-1">Run {{ strtoupper($channel) }} sandbox test</button>
                     </div>
                 </form>
             </div>
@@ -132,9 +132,9 @@
                             <td>{{ $log->recipient ?: 'Recipient not captured' }}</td>
                             <td>{{ $log->failure_reason ?: 'Failure reason not returned' }}</td>
                             <td class="text-end">
-                                <form method="POST" action="{{ route('admission.integrations.retry', $log) }}">
+                                <form method="POST" action="{{ route('admission.integrations.retry', $log) }}" onsubmit="return confirm('Retry this failed provider delivery? Confirm the failure reason, recipient, provider health, consent state, and duplicate-message risk before retrying.')">
                                     @csrf
-                                    <button class="btn btn-sm btn-outline-primary">Retry</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Retry provider delivery</button>
                                 </form>
                             </td>
                         </tr>

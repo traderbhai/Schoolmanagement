@@ -238,6 +238,8 @@ class CmcDashboardGuidanceTest extends TestCase
             ->get(route('cmc.companies', ['search' => 'Searchable']))
             ->assertStatus(200)
             ->assertSee(route('cmc.companies.export', ['search' => 'Searchable']))
+            ->assertSee('Search companies')
+            ->assertSee('Export Current View')
             ->assertSee('Showing 1 company record(s)')
             ->assertSee($company->name)
             ->assertDontSee('Other Recruiter');

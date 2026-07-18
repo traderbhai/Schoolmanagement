@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <form method="GET" class="d-flex gap-2">
     <input aria-label="Company search" type="search" name="search" class="form-control form-control-sm" placeholder="Search companies..." value="{{ request('search') }}" style="width:220px;">
-    <button class="btn btn-sm btn-outline-secondary">Search</button>
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Search companies</button>
   </form>
   <div class="d-flex gap-2">
     <a href="{{ route('cmc.companies.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Export Current View</a>
@@ -24,9 +24,9 @@
         @forelse($companies as $c)
         <tr>
           <td class="ps-3 fw-medium">{{ $c->name }}</td>
-          <td class="small text-muted">{{ $c->industry ?? '—' }}</td>
-          <td class="small">{{ $c->contact_person ?? '—' }}</td>
-          <td class="small">{{ $c->contact_email ?? '—' }}</td>
+          <td class="small text-muted">{{ $c->industry ?? '-' }}</td>
+          <td class="small">{{ $c->contact_person ?? '-' }}</td>
+          <td class="small">{{ $c->contact_email ?? '-' }}</td>
           <td>{{ $c->drives_count }}</td>
           <td><span class="badge bg-{{ $c->is_active ? 'success' : 'secondary' }}">{{ $c->is_active ? 'Yes' : 'No' }}</span></td>
           <td class="text-end pe-3">

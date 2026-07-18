@@ -76,9 +76,9 @@
                         </td>
                         <td>
                             @if(!$reg && $canReg)
-                            <form method="POST" action="{{ route('student.exam-reg.register', $exam) }}">
+                            <form method="POST" action="{{ route('student.exam-reg.register', $exam) }}" onsubmit="return confirm('Register for this exam? Confirm the subject, exam date, attendance eligibility, and fee-dues status before submitting your exam registration.')">
                                 @csrf
-                                <button class="btn btn-sm btn-primary">Register</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Register for exam</button>
                             </form>
                             @elseif(!$reg && !$attOk)
                                 <span class="text-danger small">Att. < 75%</span>

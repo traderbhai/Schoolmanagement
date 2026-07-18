@@ -31,9 +31,9 @@
                 </select>
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-sm btn-primary">Apply filters</button>
-                <a href="{{ route('admin.library.reservations') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                <a href="{{ route('admin.library.reservations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary ms-auto">Export Current View</a>
+                <button type="submit" class="btn btn-sm btn-primary">Apply reservation filters</button>
+                <a href="{{ route('admin.library.reservations') }}" class="btn btn-sm btn-outline-secondary">Clear reservation filters</a>
+                <a href="{{ route('admin.library.reservations.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary ms-auto">Export reservation view</a>
                 <a href="{{ route('admin.library.issues') }}" class="btn btn-sm btn-outline-primary">Issues</a>
             </div>
         </form>
@@ -79,11 +79,11 @@
                         @if($reservation->status === 'pending')
                             <form method="POST" action="{{ route('admin.library.reservations.fulfill', $reservation) }}" class="d-inline" onsubmit="return confirm('Fulfil reservation for {{ addslashes($reservation->book?->title ?? 'this book') }} and issue an available copy to {{ addslashes($borrower) }}? Confirm copy availability, borrower eligibility, due date, and queue fairness before issuing.')">
                                 @csrf
-                                <button class="btn btn-sm btn-outline-success" @disabled($available < 1)>Fulfil</button>
+                                <button type="submit" class="btn btn-sm btn-outline-success" @disabled($available < 1)>Fulfil reservation</button>
                             </form>
                             <form method="POST" action="{{ route('admin.library.reservations.cancel', $reservation) }}" class="d-inline" onsubmit="return confirm('Cancel reservation for {{ addslashes($reservation->book?->title ?? 'this book') }} by {{ addslashes($borrower) }}? Confirm borrower communication and queue impact before cancellation.')">
                                 @csrf
-                                <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancel reservation</button>
                             </form>
                         @else
                             <span class="text-muted small">No action</span>

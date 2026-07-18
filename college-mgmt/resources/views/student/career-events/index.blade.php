@@ -32,17 +32,17 @@
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Registered</span>
                                 @if($canManageCareerEventRegistrations && $event->isOpen())
-                                    <form method="POST" action="{{ route('student.career-events.cancel', $event) }}">
+                                    <form method="POST" action="{{ route('student.career-events.cancel', $event) }}" onsubmit="return confirm('Cancel this career-event registration? Confirm you no longer plan to attend before releasing the seat for another student.')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel event registration</button>
                                     </form>
                                 @endif
                             </div>
                         @elseif($canManageCareerEventRegistrations && $event->isOpen())
-                            <form method="POST" action="{{ route('student.career-events.register', $event) }}">
+                            <form method="POST" action="{{ route('student.career-events.register', $event) }}" onsubmit="return confirm('Register for this career event? Confirm the event date, venue, registration deadline, and seat availability before booking your place.')">
                                 @csrf
-                                <button class="btn btn-sm btn-outline-primary">Register</button>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Register for event</button>
                             </form>
                         @elseif(!$canManageCareerEventRegistrations)
                             <span class="badge bg-secondary">Active students only</span>
